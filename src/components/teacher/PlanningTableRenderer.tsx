@@ -1123,9 +1123,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     toast.info("🔄 मूळ एडमिन फाईल यशस्वीरित्या रिस्टोअर झाली.");
   };
 
-  // Generate Multi-Subject / Single-Subject PDF using jsPDF + html2canvas (Direct Subject Capture)
+  // Generate Multi-Subject / Single-Subject PDF preserving exact web structure & per-subject clean pagebreaks
   const handleDownloadCombinedPdf = async () => {
     const printElement = printContainerRef.current;
+    if (!printElement) {
+      toast.error("प्रिन्ट घटक उपलब्ध नाही.");
+      return;
+    }
+
     try {
       setIsGeneratingPdf(true);
       const isSingleSubject = selectedSubjectFilter !== "all";
@@ -1134,15 +1139,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           ? `⚡ विषय : ${selectedSubjectFilter} चे PDF तयार होत आहे...`
           : "⚡ सर्व विषयांचे एकत्र (Combined) PDF तयार होत आहे..."
       );
-
-      if (!printElement) {
-        toast.error("प्रिन्ट घटक उपलब्ध नाही.");
-        setIsGeneratingPdf(false);
-        return;
-      }
-
-      // Activate PDF export mode on live element
-      printElement.classList.add("pdf-export-active");
 
       const { jsPDF } = await import("jspdf");
       const html2canvasModule = await import("html2canvas");
@@ -1165,63 +1161,134 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         return;
       }
 
-      let isFirstPage = true;
-
       // Capture school header canvas once
       let headerCanvas: HTMLCanvasElement | null = null;
       if (schoolHeader) {
-        headerCanvas = await html2canvas(schoolHeader, {
+        const headerClone = schoolHeader.cloneNode(true) as HTMLElement;
+        headerClone.querySelectorAll(".print\\:hidden, .no-print, button, svg").forEach((el: any) => el.remove());
+        
+        const tempHeader = document.createElement("div");
+        tempHeader.style.position = "absolute";
+        tempHeader.style.left = "-9999px";
+        tempHeader.style.top = "0px";
+        tempHeader.style.width = "1000px";
+        tempHeader.style.backgroundColor = "#ffffff";
+        tempHeader.appendChild(headerClone);
+        document.body.appendChild(tempHeader);
+
+        headerCanvas = await html2canvas(headerClone, {
           scale: 2,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
+          windowWidth: 1000,
         });
+
+        document.body.removeChild(tempHeader);
       }
+
+      let isFirstPdfPage = true;
 
       for (let i = 0; i < subjectSections.length; i++) {
         const sec = subjectSections[i];
 
-        const secCanvas = await html2canvas(sec, {
+        // Clone section to remove non-printable buttons/inputs
+        const secClone = sec.cloneNode(true) as HTMLElement;
+        secClone.querySelectorAll(".print\\:hidden, .no-print, button, svg.lucide-edit-3").forEach((el: any) => el.remove());
+        secClone.querySelectorAll("input, textarea").forEach((input: any) => {
+          const span = document.createElement("span");
+          span.textContent = input.value || " ";
+          span.className = "inline-block font-black text-slate-900";
+          input.parentNode?.replaceChild(span, input);
+        });
+
+        const tempContainer = document.createElement("div");
+        tempContainer.style.position = "absolute";
+        tempContainer.style.left = "-9999px";
+        tempContainer.style.top = "0px";
+        tempContainer.style.width = "1000px";
+        tempContainer.style.backgroundColor = "#ffffff";
+        tempContainer.appendChild(secClone);
+        document.body.appendChild(tempContainer);
+
+        const secCanvas = await html2canvas(secClone, {
           scale: 2,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
+          windowWidth: 1000,
         });
 
-        const imgWidth = 190; // A4 width 210mm - 20mm margin
-        const pageHeight = 277; // A4 height 297mm - 20mm margin
+        document.body.removeChild(tempContainer);
 
-        if (!isFirstPage) {
+        const pdfWidth = 190; // A4 width 210mm - 20mm margin
+        const pdfPageHeight = 277; // A4 height 297mm - 20mm margin
+
+        if (!isFirstPdfPage) {
           pdf.addPage();
         }
 
-        let startY = 10;
+        let currentY = 10;
 
-        // Draw school header on Page 1 above subject 1
+        // On Page 1, place School Header first
         if (i === 0 && headerCanvas) {
           const headerImgData = headerCanvas.toDataURL("image/jpeg", 0.98);
-          const headerHeight = (headerCanvas.height * imgWidth) / headerCanvas.width;
-          pdf.addImage(headerImgData, "JPEG", 10, 10, imgWidth, headerHeight);
-          startY = 10 + headerHeight + 4;
+          const headerHeight = (headerCanvas.height * pdfWidth) / headerCanvas.width;
+          pdf.addImage(headerImgData, "JPEG", 10, currentY, pdfWidth, headerHeight);
+          currentY += headerHeight + 4;
         }
 
-        const secImgData = secCanvas.toDataURL("image/jpeg", 0.98);
-        const secHeight = (secCanvas.height * imgWidth) / secCanvas.width;
+        const secHeight = (secCanvas.height * pdfWidth) / secCanvas.width;
 
-        let heightLeft = secHeight;
-        let position = startY;
+        // If subject section fits within remaining height of current page
+        if (currentY + secHeight <= pdfPageHeight + 10) {
+          const secImgData = secCanvas.toDataURL("image/jpeg", 0.98);
+          pdf.addImage(secImgData, "JPEG", 10, currentY, pdfWidth, secHeight);
+        } else {
+          // If subject section is taller than remaining height, break into precise page slices
+          let remainingHeight = secHeight;
+          let canvasY = 0;
 
-        pdf.addImage(secImgData, "JPEG", 10, position, imgWidth, secHeight);
-        heightLeft -= (pageHeight - startY + 10);
+          while (remainingHeight > 0) {
+            const maxAllowedHeight = pdfPageHeight - currentY + 10;
+            const sliceHeightMm = Math.min(remainingHeight, maxAllowedHeight);
+            const sliceHeightPx = (sliceHeightMm * secCanvas.width) / pdfWidth;
 
-        while (heightLeft > 0) {
-          position = heightLeft - secHeight + 10;
-          pdf.addPage();
-          pdf.addImage(secImgData, "JPEG", 10, position, imgWidth, secHeight);
-          heightLeft -= pageHeight;
+            // Crop canvas slice using 2D context
+            const sliceCanvas = document.createElement("canvas");
+            sliceCanvas.width = secCanvas.width;
+            sliceCanvas.height = sliceHeightPx;
+            const ctx = sliceCanvas.getContext("2d");
+            if (ctx) {
+              ctx.fillStyle = "#ffffff";
+              ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+              ctx.drawImage(
+                secCanvas,
+                0,
+                canvasY,
+                secCanvas.width,
+                sliceHeightPx,
+                0,
+                0,
+                secCanvas.width,
+                sliceHeightPx
+              );
+            }
+
+            const sliceImgData = sliceCanvas.toDataURL("image/jpeg", 0.98);
+            pdf.addImage(sliceImgData, "JPEG", 10, currentY, pdfWidth, sliceHeightMm);
+
+            remainingHeight -= sliceHeightMm;
+            canvasY += sliceHeightPx;
+
+            if (remainingHeight > 0) {
+              pdf.addPage();
+              currentY = 10;
+            }
+          }
         }
 
-        isFirstPage = false;
+        isFirstPdfPage = false;
       }
 
       const filename = isSingleSubject
@@ -1239,9 +1306,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       console.error("PDF download error:", err);
       toast.error("PDF डाऊनलोड करताना अडचण आली.");
     } finally {
-      if (printElement) {
-        printElement.classList.remove("pdf-export-active");
-      }
       setIsGeneratingPdf(false);
     }
   };
@@ -1520,103 +1584,28 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     }
                   }
 
-                  /* Dedicated Clean PDF Export Mode (Activated ONLY during handleDownloadCombinedPdf) */
+                  /* Dedicated Clean PDF Export Mode */
                   .pdf-export-active .print\:hidden,
                   .pdf-export-active .no-print,
                   .pdf-export-active input,
-                  .pdf-export-active select {
+                  .pdf-export-active select,
+                  .pdf-export-active button {
                     display: none !important;
-                  }
-                  .pdf-export-active .pdf-school-header {
-                    background: transparent !important;
-                    border: none !important;
-                    border-bottom: 2px solid #000 !important;
-                    border-radius: 0 !important;
-                    padding: 4px 0 8px 0 !important;
-                    margin-bottom: 10px !important;
-                    box-shadow: none !important;
-                  }
-                  .pdf-export-active .pdf-school-header h2 {
-                    font-size: 15px !important;
-                    color: #000 !important;
-                    margin-bottom: 2px !important;
-                  }
-                  .pdf-export-active .pdf-school-header h3 {
-                    font-size: 12px !important;
-                    color: #000 !important;
                   }
                   .pdf-export-active .pdf-subject-section {
                     box-sizing: border-box !important;
-                    border-top: none !important;
-                    padding-top: 0 !important;
-                  }
-                  .pdf-export-active .pdf-subject-section.html2pdf__page-break {
-                    page-break-before: always !important;
-                    break-before: page !important;
-                    margin-top: 0 !important;
-                    padding-top: 0 !important;
-                  }
-                  .pdf-export-active .pdf-subject-banner {
-                    background: transparent !important;
-                    color: #000 !important;
-                    border-bottom: 1.5px solid #000 !important;
-                    border-radius: 0 !important;
-                    padding: 2px 0 4px 0 !important;
-                    margin-bottom: 6px !important;
-                    box-shadow: none !important;
-                  }
-                  .pdf-export-active .pdf-subject-banner h3 {
-                    font-size: 13px !important;
-                    color: #000 !important;
-                    font-weight: 800 !important;
-                  }
-                  .pdf-export-active .pdf-subject-banner span {
-                    color: #000 !important;
-                  }
-                  .pdf-export-active .pdf-subject-banner svg,
-                  .pdf-export-active .pdf-subject-banner button,
-                  .pdf-export-active .pdf-subject-banner div span {
-                    display: none !important;
                   }
                   .pdf-export-active table {
                     border-collapse: collapse !important;
-                    border: 1px solid #000000 !important;
-                    font-size: 10px !important;
-                    line-height: 1.25 !important;
                     width: 100% !important;
-                    background-color: #ffffff !important;
-                  }
-                  .pdf-export-active th {
-                    background-color: #f1f5f9 !important;
-                    background: #f1f5f9 !important;
-                    color: #000000 !important;
-                    border: 1px solid #000000 !important;
-                    padding: 4px 6px !important;
-                    font-size: 10.5px !important;
-                    font-weight: 800 !important;
                   }
                   .pdf-export-active tr {
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
-                    background-color: #ffffff !important;
-                    background: #ffffff !important;
                   }
-                  .pdf-export-active td {
-                    border: 1px solid #000000 !important;
-                    padding: 4px 6px !important;
-                    font-size: 10px !important;
-                    color: #000000 !important;
-                    font-weight: 600 !important;
-                    background-color: #ffffff !important;
-                    background: #ffffff !important;
-                    vertical-align: middle !important;
-                  }
-                  .pdf-export-active .pdf-signature-bar {
-                    border-top: 1px solid #000 !important;
-                    padding-top: 6px !important;
-                    margin-top: 8px !important;
-                    font-size: 10px !important;
-                    color: #000 !important;
+                  .pdf-export-active td, .pdf-export-active th {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
                   }
                 `}</style>
                 {/* Header Title & School Info Card at START of Document (First Page Only) */}

@@ -162,7 +162,7 @@ function LandingPage() {
       </div>
 
       {/* Hero Video Section with Right-Aligned Vertical Overlay Cards */}
-      <div className="relative w-full overflow-hidden z-10 border-b border-border mt-[50px] md:mt-0 min-h-[480px] md:min-h-[620px] lg:min-h-[700px] flex items-center bg-slate-950">
+      <div className="relative w-full overflow-hidden z-10 border-b border-border mt-0 min-h-[460px] xs:min-h-[520px] sm:min-h-[600px] md:min-h-[660px] lg:min-h-[700px] flex items-center bg-slate-950">
         <video
           key={heroVideo}
           src={heroVideo}
@@ -170,14 +170,14 @@ function LandingPage() {
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-[75%_center] sm:object-center"
         />
 
         {/* Gradient Overlay for high left-side contrast */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/30 to-black/20 pointer-events-none z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/20 pointer-events-none z-10 sm:from-black/70 sm:via-black/40" />
 
         {/* Floating Vertical Cards Container on Left Side (Flush to Left Edge) */}
-        <div className="relative z-20 w-full pl-3 sm:pl-5 md:pl-7 lg:pl-10 pr-4 pt-20 md:pt-28 lg:pt-32 pb-8 flex justify-start">
+        <div className="relative z-20 w-full px-2.5 xs:px-4 sm:px-6 md:px-8 lg:px-10 pt-14 xs:pt-16 sm:pt-20 md:pt-28 lg:pt-32 pb-4 sm:pb-8 flex justify-start">
           <motion.div
             initial="hidden"
             animate="show"
@@ -188,7 +188,7 @@ function LandingPage() {
                 transition: { staggerChildren: 0.12, delayChildren: 0.3 },
               },
             }}
-            className="flex flex-col gap-2.5 sm:gap-3 w-full sm:w-[290px] md:w-[320px] lg:w-[340px]"
+            className="flex flex-col gap-1.5 xs:gap-2 sm:gap-3 w-full max-w-[280px] xs:max-w-[310px] sm:max-w-none sm:w-[290px] md:w-[320px] lg:w-[340px]"
           >
             {landingCards.map((card, index) => {
               const Icon = card.icon;
@@ -239,7 +239,7 @@ function LandingPage() {
                       navigate({ to: card.to as any, search: (card as any).search });
                     }
                   }}
-                  className={`relative text-left group transition-all duration-300 flex flex-col justify-between rounded-xl border border-white/20 bg-black/35 dark:bg-black/45 backdrop-blur-md shadow-xl hover:bg-black/55 hover:border-white/40 overflow-hidden cursor-pointer ${customStyles.glowBg}`}
+                  className={`relative text-left group transition-all duration-300 flex flex-col justify-between rounded-xl border border-white/25 bg-black/45 dark:bg-black/55 backdrop-blur-md shadow-xl hover:bg-black/65 hover:border-white/40 overflow-hidden cursor-pointer ${customStyles.glowBg}`}
                 >
                   {/* Diagonal Gloss Shine Overlay */}
                   <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out z-10 pointer-events-none" />
@@ -248,32 +248,32 @@ function LandingPage() {
                   <div className={`absolute -inset-px rounded-xl bg-gradient-to-r ${customStyles.gradient} opacity-0 group-hover:opacity-25 transition-opacity duration-500 blur z-0`} />
 
                   {/* Content */}
-                  <div className="relative z-20 p-3 sm:p-3.5 flex flex-col justify-between w-full">
-                    <div className="flex items-start gap-2.5 sm:gap-3">
+                  <div className="relative z-20 p-2 xs:p-2.5 sm:p-3.5 flex flex-col justify-between w-full">
+                    <div className="flex items-start gap-1.5 xs:gap-2 sm:gap-3">
                       {/* Transparent Soft Icon Container */}
                       <div
-                        className={`size-8 sm:size-9 shrink-0 rounded-lg bg-white/15 backdrop-blur-md text-white flex items-center justify-center shadow-sm border border-white/30 transition-all duration-500 group-hover:bg-white group-hover:text-slate-950 group-hover:shadow-md group-hover:scale-105`}
+                        className={`size-6.5 xs:size-7.5 sm:size-9 shrink-0 rounded-lg bg-white/15 backdrop-blur-md text-white flex items-center justify-center shadow-sm border border-white/30 transition-all duration-500 group-hover:bg-white group-hover:text-slate-950 group-hover:shadow-md group-hover:scale-105`}
                       >
-                        <Icon size={16} className="transition-transform duration-500" strokeWidth={2} />
+                        <Icon className="size-3 xs:size-3.5 sm:size-4 transition-transform duration-500" strokeWidth={2} />
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-base sm:text-lg font-black text-white tracking-tight transition-colors duration-300">
+                        <h3 className="text-[11px] xs:text-xs sm:text-base md:text-lg font-black text-white tracking-tight transition-colors duration-300 leading-tight">
                           {card.title}
                         </h3>
-                        <p className="text-white/80 text-[11px] sm:text-xs font-medium leading-relaxed tracking-wide group-hover:text-white transition-all duration-300 line-clamp-2 group-hover:line-clamp-none mt-0.5 whitespace-pre-line">
-                          {card.desc}
+                        <p className="text-white/85 text-[9.5px] xs:text-[10.5px] sm:text-xs font-medium leading-tight sm:leading-relaxed tracking-wide group-hover:text-white transition-all duration-300 line-clamp-1 xs:line-clamp-2 group-hover:line-clamp-none mt-0.5">
+                          {card.desc.split('\n')[0]}
                         </p>
                       </div>
                     </div>
 
                     {/* Bottom Action Section */}
-                    <div className="pt-2 mt-2 flex items-center justify-between gap-2 border-t border-white/20 transition-colors duration-300">
-                      <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.12em] text-white/90 group-hover:text-white transition-colors duration-300">
+                    <div className="pt-1 mt-1 sm:pt-2 sm:mt-2 flex items-center justify-between gap-1.5 border-t border-white/20 transition-colors duration-300">
+                      <span className="text-[8.5px] xs:text-[9.5px] sm:text-[11px] font-black uppercase tracking-[0.1em] text-white/90 group-hover:text-white transition-colors duration-300">
                         {card.actionText}
                       </span>
-                      <div className="size-6 sm:size-6.5 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-500 group-hover:scale-105 shadow-sm text-white group-hover:bg-white group-hover:text-slate-950">
-                        <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform duration-300" />
+                      <div className="size-4.5 xs:size-5 sm:size-6.5 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-500 group-hover:scale-105 shadow-sm text-white group-hover:bg-white group-hover:text-slate-950">
+                        <ArrowRight className="size-2 xs:size-2.5 sm:size-3 group-hover:translate-x-0.5 transition-transform duration-300" />
                       </div>
                     </div>
                   </div>
