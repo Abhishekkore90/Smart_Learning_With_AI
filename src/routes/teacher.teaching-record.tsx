@@ -347,7 +347,7 @@ function TeachingRecordPage() {
       const collectionRef = collection(db, "teacher_diaries", cls, med);
       const querySnapshot = await getDocs(collectionRef);
 
-      const uniqueMap = new Map<string, any>();
+      const groupMap = new Map<string, { mainRecord: any; dayEntriesMap: Map<string, any> }>();
 
       querySnapshot.docs.forEach((docSnap) => {
         const data = docSnap.data();
@@ -365,30 +365,121 @@ function TeachingRecordPage() {
         }
         if (data.day === "रविवार" || data.day?.toLowerCase() === "sunday") return;
 
-        const groupKey = sanitizedUrl ? sanitizedUrl.split("?")[0] : (data.fileName || docSnap.id);
+        const groupTime = data.uploadedAt ? Math.floor(data.uploadedAt / 120000) : 0;
+        const groupWeek = data.week || data.selectedWeek || "";
+        const groupKey = data.fileId ||
+          (data.fileName && groupWeek ? `${data.fileName}_${groupWeek}_${groupTime}` :
+          (data.fileName && groupTime ? `${data.fileName}_${groupTime}` :
+          (sanitizedUrl ? sanitizedUrl.split("?")[0] : docSnap.id)));
 
-        if (!uniqueMap.has(groupKey)) {
-          uniqueMap.set(groupKey, {
-            id: docSnap.id,
-            diaryDate: dateKey,
-            pageNumber: data.pageNumber || 1,
-            pageUrl: sanitizedUrl,
-            fileName: data.fileName || "Teaching_Diary.docx",
-            uploadedAt: data.uploadedAt || 0,
-            ...data,
+        const isMasterDoc = docSnap.id === "master_diary" || docSnap.id.startsWith("file_") || (Array.isArray(data.structuredData) && data.structuredData.length > 1) || Boolean(data.masterPdfUrl);
+
+        if (!groupMap.has(groupKey)) {
+          groupMap.set(groupKey, {
+            mainRecord: {
+              id: docSnap.id,
+              diaryDate: dateKey,
+              pageNumber: data.pageNumber || 1,
+              pageUrl: sanitizedUrl,
+              fileName: data.fileName || "Teaching_Diary.docx",
+              uploadedAt: data.uploadedAt || 0,
+              ...data,
+            },
+            dayEntriesMap: new Map(),
           });
+        }
+
+        const group = groupMap.get(groupKey)!;
+
+        if (isMasterDoc || (data.masterPdfUrl && !group.mainRecord.masterPdfUrl)) {
+          group.mainRecord = {
+            ...group.mainRecord,
+            ...data,
+            id: docSnap.id,
+            diaryDate: data.diaryDate || group.mainRecord.diaryDate,
+            fileName: data.fileName || group.mainRecord.fileName,
+            pageUrl: data.masterPdfUrl ? data.masterPdfUrl.replace(/vz-7a00d099-4a8\.b-cdn\.net/g, "sgkbrainova.b-cdn.net") : (sanitizedUrl || group.mainRecord.pageUrl),
+            uploadedAt: Math.max(data.uploadedAt || 0, group.mainRecord.uploadedAt || 0),
+            structuredData: (Array.isArray(data.structuredData) && data.structuredData.length > 0) ? data.structuredData : group.mainRecord.structuredData,
+          };
         } else {
-          const existing = uniqueMap.get(groupKey)!;
-          if (!existing.structuredData && data.structuredData) {
-            existing.structuredData = data.structuredData;
+          if ((data.uploadedAt || 0) > (group.mainRecord.uploadedAt || 0)) {
+            group.mainRecord.uploadedAt = data.uploadedAt;
           }
-          if ((data.uploadedAt || 0) > (existing.uploadedAt || 0)) {
-            existing.uploadedAt = data.uploadedAt;
+          if (!group.mainRecord.pageUrl && sanitizedUrl) {
+            group.mainRecord.pageUrl = sanitizedUrl;
+          }
+        }
+
+        if (Array.isArray(data.structuredData) && data.structuredData.length > 0) {
+          data.structuredData.forEach((entry: any) => {
+            const dStr = entry.date || entry.displayDate || entry.diaryDate || "";
+            if (dStr) group.dayEntriesMap.set(dStr, entry);
+          });
+        }
+
+        if (dateKey && dateKey !== "master_diary" && !docSnap.id.startsWith("file_")) {
+          const dayObj = {
+            date: dateKey,
+            day: data.day || "",
+            thought: data.thought || (data.parsedContent ? data.parsedContent.thought : ""),
+            dinvishesh: data.dinvishesh || (data.parsedContent ? data.parsedContent.dinvishesh : ""),
+            highlights: data.highlights || (data.parsedContent ? data.parsedContent.highlights : ""),
+            periods: data.periods || (data.parsedContent ? data.parsedContent.periods : []),
+            scannedPageUrl: data.scannedPageUrl || data.pageUrl || "",
+          };
+          if (!group.dayEntriesMap.has(dateKey)) {
+            group.dayEntriesMap.set(dateKey, dayObj);
           }
         }
       });
 
-      const allDocs = Array.from(uniqueMap.values());
+      const getDayNum = (dStr?: string): number => {
+        if (!dStr) return 0;
+        const clean = String(dStr).trim();
+        let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (m) return parseInt(m[3], 10);
+        m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (m) return parseInt(m[1], 10);
+        return 0;
+      };
+
+      const allDocs: any[] = [];
+      groupMap.forEach(({ mainRecord, dayEntriesMap }) => {
+        const isTrueMaster = mainRecord.id.startsWith("file_") ||
+          mainRecord.id === "master_diary" ||
+          Boolean(mainRecord.masterPdfUrl) ||
+          (Array.isArray(mainRecord.structuredData) && mainRecord.structuredData.length > 0);
+
+        if (!isTrueMaster) {
+          return; // Skip orphan standalone day entries
+        }
+
+        let allDays = Array.from(dayEntriesMap.values());
+        const wStr = (mainRecord.week || "").trim();
+
+        allDays = allDays.filter((entry) => {
+          const dayNum = getDayNum(entry.date || entry.displayDate || entry.diaryDate);
+          if (dayNum === 0) return true;
+          if (wStr === "1 to 10" || wStr === "Week 1") return dayNum >= 1 && dayNum <= 10;
+          if (wStr === "11 to 20" || wStr === "Week 2") return dayNum >= 11 && dayNum <= 20;
+          if (wStr === "21 to 31" || wStr.includes("21 to 30")) return dayNum >= 21;
+          return true;
+        });
+
+        allDays.sort((a, b) => {
+          const dayA = getDayNum(a.date || a.displayDate || a.diaryDate);
+          const dayB = getDayNum(b.date || b.displayDate || b.diaryDate);
+          if (dayA && dayB) return dayA - dayB;
+          return String(a.date || "").localeCompare(String(b.date || ""));
+        });
+
+        allDocs.push({
+          ...mainRecord,
+          structuredData: allDays.length > 0 ? allDays : (mainRecord.structuredData || []),
+        });
+      });
+
       allDocs.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
       setDiaryRecords(allDocs);
     } catch (err: any) {
