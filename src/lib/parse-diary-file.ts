@@ -22,6 +22,62 @@ export interface ParsedDiaryContent {
   periods: ParsedPeriod[];
 }
 
+export const DEFAULT_MARATHI_SUVICHARS = [
+  "ज्ञान हीच खरी संपत्ती आहे.",
+  "प्रयत्नांती परमेश्वर मिळतो.",
+  "वाचाल तर वाचाल.",
+  "अथक परिश्रम हीच यशाची गुरुकिल्ली आहे.",
+  "सत्य आणि अहिंसा हीच मानवी मूल्यांची खरी ओळख आहे.",
+  "वेळेचे नियोजन म्हणजेच आयुष्याचे यश.",
+  "सकारात्मक विचार आणि प्रामाणिक प्रयत्न नेहमी यश देतात.",
+  "जिद्द, चिकाटी आणि मेहनत या यशाच्या तीन पायऱ्या आहेत.",
+  "नम्रता हा माणसाचा खरा दागिना आहे.",
+  "उत्तम आरोग्य हीच खरी श्रीमंती आहे.",
+  "आत्मविश्वास आणि मेहनत हीच यशाची पहिली पायरी आहे.",
+  "सत्कर्म हाच खरा धर्म आहे.",
+  "वाचनाने माणसाचे विचार प्रगल्भ होतात.",
+  "आदर देणे ही सुसंस्कृतपणाची पहिली पायरी आहे.",
+  "परिश्रमाशिवाय कोणतेही मोठे यश मिळत नाही.",
+  "अज्ञानाचा अंधार दूर करणे हेच ज्ञानाचे खरे कार्य आहे.",
+  "मोठे स्वप्न पहा आणि ते पूर्ण करण्यासाठी कठोर परिश्रम करा.",
+  "संघर्ष हाच जीवनाचा खरा सौंदर्य आहे.",
+  "एकता हीच संघटित समाजाची ताकद आहे.",
+  "शांतता आणि सहकार्य यामुळेच प्रगती साध्य होते.",
+  "प्रामाणिकपणा हाच सर्वोत्कृष्ट गुण आहे.",
+  "सतत शिकत राहणे हेच समृद्ध जीवनाचे रहस्य आहे.",
+  "स्वावलंबन हेच श्रेष्ठ जीवनमूल्य आहे.",
+  "सदाचार आणि सद्भावना यानेच समाज जोडला जातो.",
+  "ज्ञान हे वाटल्याने वाढते.",
+  "संकटावर मात करणे म्हणजेच खरा पुरुषार्थ.",
+  "ध्येयावर निष्ठा ठेवून केलेली वाटचाल यशस्वी होते.",
+  "निसर्गाचा आदर करणे हेच आपले कर्तव्य आहे.",
+  "वेळेचा योग्य वापर हेच प्रगतीचे मर्म आहे.",
+  "उत्कृष्टता हे एका दिवसाचे काम नसून ती एक सवय आहे.",
+  "सेवाभावी वृत्तीमुळेच जीवनाला खरा अर्थ प्राप्त होतो."
+];
+
+export function getDefaultSuvicharForDate(dateStr?: string | null): string {
+  return "";
+}
+
+export function isDefaultFallbackThought(thoughtStr?: string | null): boolean {
+  if (!thoughtStr) return true;
+  const clean = cleanThoughtText(thoughtStr);
+  if (!clean || clean.includes("प्रविष्ट करण्यासाठी") || clean.includes("उपलब्ध नाही")) return true;
+  return DEFAULT_MARATHI_SUVICHARS.some(d => d === clean || clean.includes(d));
+}
+
+export function cleanThoughtText(str?: string | null): string {
+  if (!str) return "";
+  let cleaned = String(str).replace(/[\u200B\u200C\u200D\uFEFF]/g, "").trim();
+  while (/^["'”’„«»]|["'”’„«»]$/.test(cleaned)) {
+    const prev = cleaned;
+    cleaned = cleaned.replace(/^["'”’„«»\s]+|["'”’„«»\s]+$/g, "").trim();
+    if (cleaned === prev) break;
+  }
+  return cleaned;
+}
+
 // ─── Text Extraction ───
 
 /**
@@ -786,12 +842,153 @@ export function parseExcelToDiaries(arrayBuffer: ArrayBuffer, className: string)
   return Object.values(entriesMap);
 }
 
-export function parseDocxHtmlToDiaries(html: string, className: string): ParsedDiaryContent[] {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
+export async function parseDiaryImagesWithAI(
+  imageUrls: string[],
+  className: string
+): Promise<ParsedDiaryContent[] | null> {
+  try {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("parseDiaryImagesWithAI: VITE_GEMINI_API_KEY is not defined in env.");
+      return null;
+    }
 
-  // Query ALL table elements anywhere in the HTML document
+    const systemPrompt = `You are an expert Marathi school teacher's daily diary OCR & table parser.
+I will give you an image of a daily teaching diary page.
+Read all Marathi & English text in the table and header of the image.
+Extract:
+1. date (standardized as YYYY-MM-DD)
+2. day (in Marathi, e.g. सोमवार, मंगळवार, बुधवार, गुरुवार, शुक्रवार, शनिवार, रविवार)
+3. thought (सुविचार)
+4. periods: list of all table period rows (तासिका 1, 2, 3...).
+For each period row, extract:
+- period: number (1, 2, 3...)
+- subject: subject name (मराठी, गणित, इंग्रजी, विज्ञान...)
+- topic: topic / पाठ्यघटक / मुद्दा (e.g. ४. माझी जोडी, ३. आधी नंतर, 1.3 My home...)
+- outcome: learning outcome / अध्ययन निष्पत्ती (e.g. १.७: चित्र आणि संदर्भ..., 8.2: अवकाशीय संबोध...)
+- experience: learning experience / अध्ययनाचे स्वरूप (अनुभव / कृती) (e.g. चित्रे बघा, ओळखा..., नंतर घडणाऱ्या...)
+- tools: teaching tools / साधन तंत्रे (e.g. तोंडीकाम, वर्गकार्य, स्वाध्याय, Class work...)
+- materials: teaching materials / शैक्षणिक साहित्य (e.g. चित्रे, रंग, -...)
+
+Return ONLY a valid JSON object matching:
+{
+  "date": "YYYY-MM-DD",
+  "day": "वार",
+  "thought": "सुविचार",
+  "periods": [
+    {
+      "period": "1",
+      "subject": "विषय",
+      "topic": "पाठाचे नाव / मुद्दा",
+      "outcome": "अध्ययन निष्पत्ती",
+      "experience": "अध्ययन अनुभव",
+      "tools": "साधन तंत्रे",
+      "materials": "शैक्षणिक साहित्य"
+    }
+  ]
+}`;
+
+    const parsedResults: ParsedDiaryContent[] = [];
+
+    for (let i = 0; i < imageUrls.length; i++) {
+      let rawImg = imageUrls[i];
+      if (!rawImg || !rawImg.includes("base64,")) continue;
+      rawImg = rawImg.substring(rawImg.indexOf("base64,") + 7);
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{
+            role: "user",
+            parts: [
+              { text: `Class: ${className}\nExtract complete teacher diary table from scanned page ${i + 1}.` },
+              { inline_data: { mime_type: "image/jpeg", data: rawImg } }
+            ]
+          }],
+          generationConfig: { responseMimeType: "application/json" }
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (jsonText) {
+          try {
+            const parsedObj = JSON.parse(jsonText.trim());
+            const item = Array.isArray(parsedObj) ? parsedObj[0] : parsedObj;
+            if (item && item.periods && item.periods.length > 0) {
+              parsedResults.push({
+                date: item.date || "",
+                day: item.day || "",
+                thought: item.thought || "",
+                dinvishesh: "",
+                highlights: "",
+                periods: item.periods.map((p: any) => ({ ...p, class: className })),
+                pageUrl: imageUrls[i],
+                scannedPageUrl: imageUrls[i],
+              } as any);
+            }
+          } catch (e) {
+            console.warn("Failed to parse Gemini OCR JSON response for page", i + 1, e);
+          }
+        }
+      }
+    }
+
+    return parsedResults.length > 0 ? parsedResults : null;
+  } catch (err) {
+    console.error("parseDiaryImagesWithAI error:", err);
+    return null;
+  }
+}
+
+export async function parseDocxHtmlToDiaries(html: string, className: string): Promise<ParsedDiaryContent[]> {
+  const cleanHtml = (html || "").replace(/[\u200B\u200C\u200D\uFEFF]/g, "");
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(cleanHtml, "text/html");
+
+  // Query ALL table elements and image elements in the HTML document
   const tables = Array.from(doc.querySelectorAll("table"));
+  const imgs = Array.from(doc.querySelectorAll("img"));
+
+  // 1. Scanned Image Pages Fallback: Word file contains scanned diary page images
+  if (tables.length === 0 && imgs.length > 0) {
+    const imageSrcs = imgs.map((img) => img.getAttribute("src") || "").filter((src) => src.includes("data:image/"));
+    if (imageSrcs.length > 0) {
+      const aiParsed = await parseDiaryImagesWithAI(imageSrcs, className);
+      if (aiParsed && aiParsed.length > 0) {
+        return aiParsed;
+      }
+    }
+
+    return imgs.map((img, idx) => {
+      const src = img.getAttribute("src") || "";
+      return {
+        date: "",
+        day: "",
+        thought: "",
+        dinvishesh: "",
+        highlights: `स्कॅन केलेले टाचण पान (${idx + 1}/${imgs.length})`,
+        periods: [
+          {
+            period: "1",
+            class: className,
+            subject: "",
+            topic: "",
+            experience: "",
+            tools: "",
+            materials: "",
+            outcome: "",
+          }
+        ],
+        pageUrl: src,
+        scannedPageUrl: src,
+      } as any;
+    });
+  }
 
   if (tables.length > 0) {
     const rawParsedList: ParsedDiaryContent[] = [];
@@ -808,15 +1005,20 @@ export function parseDocxHtmlToDiaries(html: string, className: string): ParsedD
       prevText = textParts.join("\n");
 
       const secData = parseHtmlSection({ textElements: [], table: tableEl }, className);
-      if (prevText) {
-        const dMatch = prevText.match(/(?:तारीख|दिनांक|Date)\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/i);
-        if (dMatch) {
+      const combinedText = (prevText || "") + "\n" + (tableEl.textContent || "");
+      if (combinedText) {
+        const dMatch = combinedText.match(/(?:तारीख|दिनांक|Date)\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/i);
+        if (dMatch && !secData.date) {
           const parsedD = parseAndStandardizeDate(dMatch[1]);
           if (parsedD) secData.date = parsedD;
         }
-        const tMatch = prevText.match(/(?:आजचा\s*सुविचार|सुविचार|Thought)\s*[:：\-]?\s*([^\n\r]+)/i);
+        const tMatch = combinedText.match(/(?:आजचा\s*सुव\u200Dिचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r]+)/i);
         if (tMatch && !secData.thought) {
-          secData.thought = tMatch[1].trim();
+          secData.thought = tMatch[1]
+            .replace(/^[:\s\u0903\-"'”’„«»]+/, "")
+            .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
+            .replace(/^["'”’„«»]+|["'”’„«»]+$/g, "")
+            .trim();
         }
       }
 
@@ -871,6 +1073,42 @@ export function parseDocxHtmlToDiaries(html: string, className: string): ParsedD
           }
         } else {
           expandedEntries.push(entry);
+        }
+      });
+
+      // Extract ALL sequential date+thought pairs found in doc HTML
+      const dateRegex = /(?:(?:तारीख|दिनांक|Date)\s*[:：\-]?\s*)?([\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{2,4})/gi;
+      const datePairs: { dateStr: string; thought: string; index: number }[] = [];
+      let match;
+      const docHtml = cleanHtml;
+      while ((match = dateRegex.exec(docHtml)) !== null) {
+        datePairs.push({ dateStr: match[1].replace(/\s+/g, ""), thought: "", index: match.index });
+      }
+
+      datePairs.forEach((dp, i) => {
+        const start = dp.index;
+        const end = i + 1 < datePairs.length ? datePairs[i + 1].index : docHtml.length;
+        const chunkText = docHtml.substring(start, end).replace(/<[^>]+>/g, "\n");
+        const tMatch = chunkText.match(/(?:आजचा\s*सुव\u200Dिचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r<]+)/i);
+        if (tMatch && tMatch[1]) {
+          const ct = cleanThoughtText(tMatch[1])
+            .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
+            .trim();
+          if (ct && ct.length > 1 && !ct.includes("प्रविष्ट करा")) {
+            dp.thought = ct;
+          }
+        }
+      });
+
+      const docThoughts: string[] = datePairs.map(dp => dp.thought).filter(Boolean);
+
+      expandedEntries.forEach((entry, idx) => {
+        if (datePairs[idx] && datePairs[idx].thought) {
+          entry.thought = datePairs[idx].thought;
+        } else if (docThoughts[idx]) {
+          entry.thought = docThoughts[idx];
+        } else if (entry.thought && isDefaultFallbackThought(entry.thought)) {
+          entry.thought = "";
         }
       });
 
@@ -1221,7 +1459,7 @@ export async function parseDiaryFileFromArrayBuffer(
       const mammoth = await import("mammoth");
       const result = await mammoth.convertToHtml({ arrayBuffer });
       const html = result.value;
-      return parseDocxHtmlToDiaries(html, className);
+      return await parseDocxHtmlToDiaries(html, className);
     } else if (
       lowerType.includes("msword") ||
       lowerType.includes("doc")
@@ -1371,37 +1609,49 @@ export async function saveParsedEntriesToFirestore({
 
   batch.set(masterDocRef, masterData, { merge: true });
 
-  const count = validEntries.length > 1 ? validEntries.length : 31;
+  const count = validEntries.length > 0 ? validEntries.length : 1;
 
   for (let idx = 0; idx < count; idx++) {
     const entry = validEntries[idx] || null;
 
-    let targetDateStr = "";
-    if (entry?.date) {
-      targetDateStr = parseAndStandardizeDate(entry.date) || "";
-    }
-
-    if (!targetDateStr) {
-      while (dateCursor.getDay() === 0) { // skip Sundays
-        dateCursor.setDate(dateCursor.getDate() + 1);
-      }
-      targetDateStr = format(dateCursor, "yyyy-MM-dd");
+    while (dateCursor.getDay() === 0) { // skip Sundays
       dateCursor.setDate(dateCursor.getDate() + 1);
     }
+    const targetDateStr = format(dateCursor, "yyyy-MM-dd");
+    const displayDateStr = `${dateCursor.getDate()}/${dateCursor.getMonth() + 1}/${dateCursor.getFullYear()}`;
+    const dayName = daysOfWeek[dateCursor.getDay()];
 
-    const parts = targetDateStr.split("-");
-    let dObj: Date | null = null;
-    if (parts.length === 3) {
-      dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    if (entry) {
+      entry.date = displayDateStr;
+      entry.day = dayName;
     }
 
-    // Skip Sundays (School holiday)
-    if (dObj && !isNaN(dObj.getTime()) && dObj.getDay() === 0) {
-      continue;
+    let finalThought = entry?.thought || "";
+    if (!finalThought && targetDateStr) {
+      try {
+        const { getDoc, doc } = await import("firebase/firestore");
+        const pSnap = await getDoc(doc(db, "daily_paripath_archive", targetDateStr));
+        if (pSnap.exists()) {
+          const pData = pSnap.data();
+          finalThought = cleanThoughtText(pData.suvichar || pData.thought || pData.thoughtOfTheDay);
+        }
+      } catch (e) {}
     }
 
-    const dayName = dObj && !isNaN(dObj.getTime()) ? daysOfWeek[dObj.getDay()] : (entry?.day || "");
-    const periods = entry?.periods || (validEntries[0]?.periods || []);
+    if (entry && finalThought) {
+      entry.thought = finalThought;
+    }
+
+    if (finalThought && targetDateStr && typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`suvichar_${selectedClass}_${selectedMedium}_${targetDateStr}`, finalThought);
+        localStorage.setItem(`suvichar_${targetDateStr}`, finalThought);
+      } catch (e) {}
+    }
+
+    dateCursor.setDate(dateCursor.getDate() + 1);
+
+    const periods = entry?.periods || [];
 
     const recordData = cleanFirestoreData({
       pageUrl: fileUrl,
@@ -1410,17 +1660,17 @@ export async function saveParsedEntriesToFirestore({
       uploadedAt: Date.now(),
       diaryDate: targetDateStr,
       date: targetDateStr,
-      displayDate: targetDateStr,
+      displayDate: displayDateStr,
       day: dayName,
       className: selectedClass,
       medium: selectedMedium,
       pageNumber: idx + 1,
       week: selectedWeek,
       month: selectedMonth,
-      thought: entry?.thought || "",
+      thought: finalThought,
       dinvishesh: entry?.dinvishesh || "",
       periods: periods,
-      parsedContent: entry || { date: targetDateStr, day: dayName, periods },
+      parsedContent: entry ? { ...entry, thought: finalThought } : { date: displayDateStr, day: dayName, thought: finalThought, periods },
       structuredData: validEntries.length > 0 ? validEntries : [],
     });
 

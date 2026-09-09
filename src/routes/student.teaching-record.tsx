@@ -112,32 +112,83 @@ function StudentTeachingRecordPage() {
       const querySnapshot = await getDocs(collectionRef);
 
       if (!querySnapshot.empty) {
-        const allDocs: any[] = querySnapshot.docs
-          .map((docSnap) => {
-            const data = docSnap.data();
-            const rawUrl = data.pageUrl || data.masterPdfUrl || data.pageURL || "";
-            const sanitizedUrl = rawUrl.replace(/vz-7a00d099-4a8\.b-cdn\.net/g, "sgkbrainova.b-cdn.net");
-            return {
-              id: docSnap.id,
-              diaryDate: data.diaryDate || docSnap.id,
-              pageUrl: sanitizedUrl,
-              fileName: data.fileName || "Teaching_Diary.pdf",
-              uploadedAt: data.uploadedAt || 0,
-              ...data,
-            };
-          })
-          .filter((rec: any) => {
-            if (rec.diaryDate) {
-              const parts = rec.diaryDate.split("-");
-              if (parts.length === 3) {
-                const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-                if (!isNaN(dObj.getTime()) && dObj.getDay() === 0) return false;
-              }
+        const groupMap = new Map<string, { mainRecord: any; dayEntriesMap: Map<string, any> }>();
+
+        querySnapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          const rawUrl = data.pageUrl || data.masterPdfUrl || data.pageURL || "";
+          const sanitizedUrl = rawUrl.replace(/vz-7a00d099-4a8\.b-cdn\.net/g, "sgkbrainova.b-cdn.net");
+          const dateKey = data.diaryDate || docSnap.id;
+
+          // Skip Sunday records
+          if (dateKey) {
+            const parts = dateKey.split("-");
+            if (parts.length === 3) {
+              const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+              if (!isNaN(dObj.getTime()) && dObj.getDay() === 0) return;
             }
-            if (rec.day === "रविवार" || rec.day?.toLowerCase() === "sunday") return false;
-            return true;
+          }
+          if (data.day === "रविवार" || data.day?.toLowerCase() === "sunday") return;
+
+          const groupTime = data.uploadedAt ? Math.floor(data.uploadedAt / 120000) : 0;
+          const groupKey = data.fileId ||
+            (data.fileName && data.fileName !== "Teaching_Diary.pdf" && data.fileName !== "Teaching_Diary.docx" ? data.fileName :
+            (data.fileName && groupTime ? `${data.fileName}_${groupTime}` :
+            (sanitizedUrl ? sanitizedUrl.split("?")[0] : docSnap.id)));
+
+          if (!groupMap.has(groupKey)) {
+            groupMap.set(groupKey, {
+              mainRecord: {
+                id: docSnap.id,
+                diaryDate: dateKey,
+                pageUrl: sanitizedUrl,
+                fileName: data.fileName || "Teaching_Diary.pdf",
+                uploadedAt: data.uploadedAt || 0,
+                ...data,
+              },
+              dayEntriesMap: new Map(),
+            });
+          }
+
+          const group = groupMap.get(groupKey)!;
+          if ((data.uploadedAt || 0) > (group.mainRecord.uploadedAt || 0)) {
+            group.mainRecord.uploadedAt = data.uploadedAt;
+          }
+
+          if (Array.isArray(data.structuredData) && data.structuredData.length > 0) {
+            data.structuredData.forEach((entry: any) => {
+              const dStr = entry.date || entry.displayDate || entry.diaryDate || "";
+              if (dStr) group.dayEntriesMap.set(dStr, entry);
+            });
+          }
+
+          if (dateKey && dateKey !== "master_diary" && !docSnap.id.startsWith("file_")) {
+            const dayObj = {
+              date: dateKey,
+              day: data.day || "",
+              thought: data.thought || (data.parsedContent ? data.parsedContent.thought : ""),
+              dinvishesh: data.dinvishesh || (data.parsedContent ? data.parsedContent.dinvishesh : ""),
+              highlights: data.highlights || (data.parsedContent ? data.parsedContent.highlights : ""),
+              periods: data.periods || (data.parsedContent ? data.parsedContent.periods : []),
+              scannedPageUrl: data.scannedPageUrl || data.pageUrl || "",
+            };
+            if (!group.dayEntriesMap.has(dateKey)) {
+              group.dayEntriesMap.set(dateKey, dayObj);
+            }
+          }
+        });
+
+        const allDocs: any[] = [];
+        groupMap.forEach(({ mainRecord, dayEntriesMap }) => {
+          const allDays = Array.from(dayEntriesMap.values());
+          allDays.sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+          allDocs.push({
+            ...mainRecord,
+            structuredData: allDays.length > 0 ? allDays : (mainRecord.structuredData || []),
           });
-        allDocs.sort((a, b) => b.diaryDate.localeCompare(a.diaryDate)); // sort descending
+        });
+
+        allDocs.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
         setDiaryRecords(allDocs);
       } else {
         setDiaryRecords([]);

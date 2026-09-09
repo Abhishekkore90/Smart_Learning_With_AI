@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { DocumentLivePreview } from "@/components/DocumentLivePreview";
 import { useAuth } from "@/hooks/use-auth";
+import { cleanThoughtText, getDefaultSuvicharForDate } from "@/lib/parse-diary-file";
 
 interface PeriodItem {
   period: string;
@@ -327,6 +328,101 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   const displayFormattedDate = activeDate ? format(activeDate, "eeee, dd MMMM yyyy") : "...";
   const isToday = activeDate ? format(new Date(), "yyyy-MM-dd") === isoDate : false;
 
+  const resolveThoughtForDate = async (
+    dateIso: string,
+    cls: string,
+    med: string,
+    existingThought?: string
+  ): Promise<string> => {
+    // 1. Check local storage for date-specific thought
+    const localThought = cleanThoughtText(
+      localStorage.getItem(`suvichar_${cls}_${med}_${dateIso}`) ||
+      localStorage.getItem(`suvichar_${dateIso}`)
+    );
+    if (localThought && !localThought.includes("सुविचार उपलब्ध नाही")) {
+      return localThought;
+    }
+
+    // 2. Check teaching_diaries doc for specific dateIso
+    try {
+      const tdDocId = `${cls}_${med}_${dateIso}`;
+      const tdSnap = await getDoc(doc(db, "teaching_diaries", tdDocId));
+      if (tdSnap.exists()) {
+        const tData = tdSnap.data();
+        const tThought = cleanThoughtText(tData.thought || tData.suvichar);
+        if (tThought && !tThought.includes("सुविचार उपलब्ध नाही")) {
+          return tThought;
+        }
+      }
+    } catch (e) {}
+
+    // 3. Check daily_paripath_archive for dateIso
+    try {
+      const paripathSnap = await getDoc(doc(db, "daily_paripath_archive", dateIso));
+      if (paripathSnap.exists()) {
+        const pData = paripathSnap.data();
+        const pThought = cleanThoughtText(pData.suvichar || pData.thought || pData.thoughtOfTheDay);
+        if (pThought && !pThought.includes("सुविचार उपलब्ध नाही")) {
+          return pThought;
+        }
+      }
+    } catch (e) {}
+
+    // 4. Check admin_daily_paripath current
+    try {
+      const currentRef = doc(db, "admin_daily_paripath", "current");
+      const cSnap = await getDoc(currentRef);
+      if (cSnap.exists()) {
+        const cData = cSnap.data();
+        if (cData.archivedDate === dateIso || cData.date === dateIso) {
+          const cThought = cleanThoughtText(cData.suvichar || cData.thought || cData.thoughtOfTheDay);
+          if (cThought && !cThought.includes("सुविचार उपलब्ध नाही")) {
+            return cThought;
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 5. Check teacher_diaries doc for dateIso
+    try {
+      const altSnap = await getDoc(doc(db, "teacher_diaries", cls, med, dateIso));
+      if (altSnap.exists()) {
+        const aData = altSnap.data();
+        const aThought = cleanThoughtText(
+          aData.thought || aData.suvichar || (aData.parsedContent ? aData.parsedContent.thought || aData.parsedContent.suvichar : "")
+        );
+        if (aThought && !aThought.includes("सुविचार उपलब्ध नाही")) {
+          return aThought;
+        }
+      }
+    } catch (e) {}
+
+    // 6. Check teacher_diaries master docs with structuredData for matching date
+    try {
+      const colRef = collection(db, "teacher_diaries", cls, med);
+      const snap = await getDocs(colRef);
+      for (const dSnap of snap.docs) {
+        const dData = dSnap.data();
+        if (dData.structuredData && Array.isArray(dData.structuredData)) {
+          const match = findMatchingEntryForDate(dData.structuredData, dateIso);
+          if (match) {
+            const sThought = cleanThoughtText(match.thought || match.suvichar);
+            if (sThought && !sThought.includes("सुविचार उपलब्ध नाही")) {
+              return sThought;
+            }
+          }
+        }
+      }
+    } catch (e) {}
+
+    const cleanedExisting = cleanThoughtText(existingThought);
+    if (cleanedExisting && !cleanedExisting.includes("सुविचार उपलब्ध नाही")) {
+      return cleanedExisting;
+    }
+
+    return "";
+  };
+
   useEffect(() => {
     async function fetchDiaryForDate() {
       if (!isoDate) return; // not yet initialized client-side
@@ -349,10 +445,13 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
         if (docSnap.exists()) {
           const data = docSnap.data() as DailyDiary;
-          const localThought = localStorage.getItem(`suvichar_${selectedClass}_${selectedMedium}_${isoDate}`) || localStorage.getItem(`suvichar_${isoDate}`);
-          if (localThought && (!data.thought || data.thought.trim() === "")) {
-            data.thought = localThought;
-          }
+          const resolvedThought = await resolveThoughtForDate(
+            isoDate,
+            selectedClass,
+            selectedMedium,
+            data.thought || (data as any).suvichar
+          );
+          data.thought = resolvedThought;
           const rawPageUrl = data.pageUrl || (data as any).pageURL || (data as any).masterPdfUrl || (data as any).pdfUrl || "";
           const dataMonth = data.date ? data.date.split("-")[1] : (data.displayDate ? data.displayDate.split("-")[1] : targetMonthStr);
           
@@ -411,12 +510,18 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             }
 
             const singleDayPeriods = extractSingleDayPeriods(periodList, isoDate, activeDate);
+            const resolvedThought = await resolveThoughtForDate(
+              isoDate,
+              selectedClass,
+              selectedMedium,
+              parsed.thought || altData.thought
+            );
 
             setTodayDiary({
               date: isoDate,
               displayDate: displayFormattedDate,
               day: parsed.day || altData.day || "",
-              thought: parsed.thought || altData.thought || "",
+              thought: resolvedThought,
               dinvishesh: parsed.dinvishesh || altData.dinvishesh || "",
               className: selectedClass,
               medium: selectedMedium,
@@ -483,12 +588,19 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
           const rawPageUrl = masterDoc.pageUrl || masterDoc.pageURL || masterDoc.masterPdfUrl || masterDoc.pdfUrl || (entryToUse ? entryToUse.pageUrl || entryToUse.masterPdfUrl : "");
 
+          const resolvedThought = await resolveThoughtForDate(
+            isoDate,
+            selectedClass,
+            selectedMedium,
+            entryToUse?.thought || masterDoc.thought
+          );
+
           setTodayDiary({
             id: masterDoc.id,
             date: isoDate,
             displayDate: displayFormattedDate,
             day: entryToUse?.day || masterDoc.day || "",
-            thought: entryToUse?.thought || masterDoc.thought || "",
+            thought: resolvedThought,
             dinvishesh: entryToUse?.dinvishesh || masterDoc.dinvishesh || "",
             className: selectedClass,
             medium: selectedMedium,
@@ -497,6 +609,26 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             fileName: masterDoc.fileName || "Teaching_Diary.pdf",
             uploadedAt: masterDoc.uploadedAt || Date.now(),
             structuredData: masterDoc.structuredData,
+          } as any);
+          setLoading(false);
+          return;
+        }
+
+        // Even if no period document exists for this date/month, resolve thought for this date
+        const fallbackThought = await resolveThoughtForDate(isoDate, selectedClass, selectedMedium, "");
+        if (fallbackThought) {
+          setTodayDiary({
+            date: isoDate,
+            displayDate: displayFormattedDate,
+            day: "",
+            thought: fallbackThought,
+            dinvishesh: "",
+            className: selectedClass,
+            medium: selectedMedium,
+            periods: [],
+            pageUrl: "",
+            fileName: "Teaching_Diary.pdf",
+            uploadedAt: Date.now(),
           } as any);
           setLoading(false);
           return;
@@ -534,14 +666,15 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
   const handleThoughtChange = (newThought: string) => {
     if (!todayDiary) return;
+    const cleaned = cleanThoughtText(newThought);
     setTodayDiary({
       ...todayDiary,
-      thought: newThought,
+      thought: cleaned,
     });
     if (isoDate) {
       try {
-        localStorage.setItem(`suvichar_${selectedClass}_${selectedMedium}_${isoDate}`, newThought);
-        localStorage.setItem(`suvichar_${isoDate}`, newThought);
+        localStorage.setItem(`suvichar_${selectedClass}_${selectedMedium}_${isoDate}`, cleaned);
+        localStorage.setItem(`suvichar_${isoDate}`, cleaned);
       } catch (e) {}
 
       try {
@@ -551,7 +684,15 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           className: selectedClass,
           medium: selectedMedium,
           date: isoDate,
-          thought: newThought,
+          thought: cleaned,
+          updatedAt: Date.now(),
+        }, { merge: true });
+      } catch (e) {}
+
+      try {
+        const teacherDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, isoDate);
+        setDoc(teacherDocRef, {
+          thought: cleaned,
           updatedAt: Date.now(),
         }, { merge: true });
       } catch (e) {}
@@ -702,8 +843,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       </table>
 
       <!-- Suvichar Box -->
-      ${todayDiary.thought ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 8px; padding: 10px 16px; margin-bottom: 14px; font-size: 13.5px; color: #78350f; text-align: center;">
-        <strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> "${todayDiary.thought}"
+      ${cleanThoughtText(todayDiary.thought) ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 8px; padding: 10px 16px; margin-bottom: 14px; font-size: 13.5px; color: #78350f; text-align: center;">
+        <strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> "${cleanThoughtText(todayDiary.thought)}"
       </div>` : ''}
 
       <!-- Main Table -->
@@ -1070,11 +1211,19 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-center font-bold text-slate-900">
               <div>
                 <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">दिनांक</span>
-                <span className="text-indigo-700 font-black text-base block">{todayDiary.displayDate || (activeDate ? format(activeDate, "d/M/yyyy") : "-")}</span>
+                <span className="text-indigo-700 font-black text-base block">
+                  {todayDiary.displayDate && todayDiary.displayDate !== "-"
+                    ? todayDiary.displayDate
+                    : (activeDate ? format(activeDate, "d/M/yyyy") : "-")}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">वार</span>
-                <span className="text-slate-900 font-black text-base block">{todayDiary.day || (activeDate ? format(activeDate, "eeee") : "-")}</span>
+                <span className="text-slate-900 font-black text-base block">
+                  {todayDiary.day && todayDiary.day !== "-"
+                    ? todayDiary.day
+                    : (activeDate ? ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"][activeDate.getDay()] : "-")}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">वर्गशिक्षक</span>
@@ -1137,7 +1286,9 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               className="font-extrabold text-sm text-amber-900 not-italic hover:bg-amber-100/80 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text inline-block min-w-[200px]"
               title="सुविचार बदलण्यासाठी येथे क्लिक करा"
             >
-              "{todayDiary.thought || "आजचा सुविचार प्रविष्ट करण्यासाठी येथे क्लिक करा..."}"
+              {cleanThoughtText(todayDiary.thought)
+                ? `"${cleanThoughtText(todayDiary.thought)}"`
+                : "आजचा सुविचार प्रविष्ट करण्यासाठी येथे क्लिक करा..."}
             </span>
           </div>
 

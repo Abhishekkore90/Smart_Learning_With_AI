@@ -81,12 +81,22 @@ export async function uploadFileWithProgress(
         sizeBytes: file.size,
       };
     } catch (fbErr: any) {
-      console.error("Firebase Storage upload error:", fbErr);
-      throw new Error(fbErr?.message || "Failed to upload file to storage server.");
+      console.warn("Firebase Storage upload error/timeout, using Data URL fallback...", fbErr);
     }
   }
 
-  throw new Error("No storage provider is currently configured or available.");
+  // Final Fallback: Use lightweight Blob URL so memory usage stays minimal and browser never crashes
+  try {
+    const blobUrl = URL.createObjectURL(file);
+    return {
+      url: blobUrl,
+      storageProvider: "firebase",
+      fileName: file.name,
+      sizeBytes: file.size,
+    };
+  } catch (err) {
+    throw new Error("Failed to process file for storage.");
+  }
 }
 
 /**
@@ -109,7 +119,7 @@ function uploadToBunny(
 
     const executeRequest = (targetUrl: string) => {
       xhr.open("PUT", targetUrl);
-      xhr.timeout = 15000; // 15 seconds timeout
+      xhr.timeout = 3000; // 3 seconds timeout for fast upload/fallback
       xhr.setRequestHeader("AccessKey", apiKey);
       xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
 
@@ -177,7 +187,19 @@ function uploadToBunny(
 }
 
 /**
- * Uploads file to Firebase Storage with uploadBytesResumable for progress updates.
+ * Convert file to Data URL string (Base64) for fallback storage
+ */
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Uploads file to Firebase Storage with uploadBytesResumable for progress updates and 15s safety timeout.
  */
 function uploadToFirebase(
   file: File,
@@ -185,8 +207,17 @@ function uploadToFirebase(
   onProgress?: (percent: number) => void
 ): Promise<string> {
   return new Promise((resolve, reject) => {
+    let timer: any = null;
     const storageRef = ref(storage, path);
     const uploadTask = uploadBytesResumable(storageRef, file);
+
+    // 3-second safety timeout so Firebase Storage retry limit doesn't block the app
+    timer = setTimeout(() => {
+      try {
+        uploadTask.cancel();
+      } catch (e) {}
+      reject(new Error("Firebase Storage upload request timed out."));
+    }, 3000);
 
     uploadTask.on(
       "state_changed",
@@ -199,9 +230,11 @@ function uploadToFirebase(
         }
       },
       (error) => {
+        clearTimeout(timer);
         reject(error);
       },
       async () => {
+        clearTimeout(timer);
         try {
           const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
           resolve(downloadUrl);

@@ -46,9 +46,13 @@ interface DiaryRecordItem {
   diaryDate: string;
   fileName: string;
   pageUrl: string;
+  masterPdfUrl?: string;
+  fileId?: string;
   uploadedAt: number;
   className: string;
   medium: string;
+  week?: string;
+  month?: string;
   structuredData?: any[];
 }
 
@@ -196,11 +200,15 @@ function TeacherDiaryAdmin() {
   ];
 
   const weeks = [
-    { id: "Week 1", label: "Week 1", mr: "पहिला आठवडा" },
-    { id: "Week 2", label: "Week 2", mr: "दुसरा आठवडा" },
-    { id: "Week 3", label: "Week 3", mr: "तिसरा आठवडा" },
-    { id: "Week 4", label: "Week 4", mr: "चौथा आठवडा" },
-    { id: "Week 5", label: "Week 5", mr: "पाचवा आठवडा" },
+    { id: "1 to 10", label: "1 to 10", mr: "1 ते 10 तारीख" },
+    { id: "11 to 20", label: "11 to 20", mr: "11 ते 20 तारीख" },
+    { id: "21 to 31", label: "21 to 30/31", mr: "21 ते 30/31 तारीख" },
+  ];
+
+  const dateRangeTabs = [
+    { id: "1 to 10", label: "1 to 10", mr: "1 ते 10 तारीख", baseDay: 1 },
+    { id: "11 to 20", label: "11 to 20", mr: "11 ते 20 तारीख", baseDay: 11 },
+    { id: "21 to 31", label: "21 to 30/31", mr: "21 ते 30/31 तारीख", baseDay: 21 },
   ];
 
   // Auth guard
@@ -229,7 +237,7 @@ function TeacherDiaryAdmin() {
     try {
       const collectionRef = collection(db, "teacher_diaries", cls, med);
       const snapshot = await getDocs(collectionRef);
-      const uniqueMap = new Map<string, DiaryRecordItem>();
+      const groupMap = new Map<string, { mainRecord: DiaryRecordItem; dayEntriesMap: Map<string, any> }>();
 
       snapshot.docs.forEach((docSnap) => {
         const data = docSnap.data();
@@ -246,31 +254,125 @@ function TeacherDiaryAdmin() {
         if (data.day === "रविवार" || data.day?.toLowerCase() === "sunday") return;
 
         const rawUrl = data.pageUrl || data.masterPdfUrl || "";
-        const groupKey = rawUrl ? rawUrl.split("?")[0] : (data.fileName || docSnap.id);
+        const groupTime = data.uploadedAt ? Math.floor(data.uploadedAt / 120000) : 0;
+        const groupWeek = data.week || data.selectedWeek || "";
+        const groupKey = data.fileId ||
+          (data.fileName && groupWeek ? `${data.fileName}_${groupWeek}_${groupTime}` :
+          (data.fileName && groupTime ? `${data.fileName}_${groupTime}` :
+          (rawUrl && !rawUrl.startsWith("data:") ? rawUrl.split("?")[0] : docSnap.id)));
 
-        if (!uniqueMap.has(groupKey)) {
-          uniqueMap.set(groupKey, {
-            id: docSnap.id,
-            diaryDate: diaryDate,
-            fileName: data.fileName || "Teaching_Diary.docx",
-            pageUrl: rawUrl,
-            uploadedAt: data.uploadedAt || Date.now(),
-            className: data.className || cls,
-            medium: data.medium || med,
-            ...data,
+        const isMasterDoc = docSnap.id === "master_diary" || docSnap.id.startsWith("file_") || (Array.isArray(data.structuredData) && data.structuredData.length > 1) || Boolean(data.masterPdfUrl);
+
+        if (!groupMap.has(groupKey)) {
+          groupMap.set(groupKey, {
+            mainRecord: {
+              id: docSnap.id,
+              diaryDate: diaryDate,
+              fileName: data.fileName || "Teaching_Diary.docx",
+              pageUrl: rawUrl,
+              uploadedAt: data.uploadedAt || Date.now(),
+              className: data.className || cls,
+              medium: data.medium || med,
+              ...data,
+            },
+            dayEntriesMap: new Map(),
           });
+        }
+
+        const group = groupMap.get(groupKey)!;
+
+        // If this doc is the master doc or contains masterPdfUrl / multi-day structuredData, update mainRecord
+        if (isMasterDoc || (data.masterPdfUrl && !group.mainRecord.masterPdfUrl)) {
+          group.mainRecord = {
+            ...group.mainRecord,
+            ...data,
+            id: docSnap.id,
+            diaryDate: data.diaryDate || group.mainRecord.diaryDate,
+            fileName: data.fileName || group.mainRecord.fileName,
+            pageUrl: data.masterPdfUrl || data.pageUrl || rawUrl || group.mainRecord.pageUrl,
+            uploadedAt: Math.max(data.uploadedAt || 0, group.mainRecord.uploadedAt || 0),
+            structuredData: (Array.isArray(data.structuredData) && data.structuredData.length > 0) ? data.structuredData : group.mainRecord.structuredData,
+          };
         } else {
-          const existing = uniqueMap.get(groupKey)!;
-          if (!existing.structuredData && data.structuredData) {
-            existing.structuredData = data.structuredData;
+          if ((data.uploadedAt || 0) > (group.mainRecord.uploadedAt || 0)) {
+            group.mainRecord.uploadedAt = data.uploadedAt;
           }
-          if ((data.uploadedAt || 0) > (existing.uploadedAt || 0)) {
-            existing.uploadedAt = data.uploadedAt;
+          if (!group.mainRecord.pageUrl && rawUrl) {
+            group.mainRecord.pageUrl = rawUrl;
+          }
+        }
+
+        // Collect multi-day entries from master structuredData if present
+        if (Array.isArray(data.structuredData) && data.structuredData.length > 0) {
+          data.structuredData.forEach((entry: any) => {
+            const dStr = entry.date || entry.displayDate || entry.diaryDate || "";
+            if (dStr) group.dayEntriesMap.set(dStr, entry);
+          });
+        }
+
+        // Collect individual day doc entry
+        if (diaryDate && diaryDate !== "master_diary" && !docSnap.id.startsWith("file_")) {
+          const dayObj = {
+            date: diaryDate,
+            day: data.day || "",
+            thought: data.thought || (data.parsedContent ? data.parsedContent.thought : ""),
+            dinvishesh: data.dinvishesh || (data.parsedContent ? data.parsedContent.dinvishesh : ""),
+            highlights: data.highlights || (data.parsedContent ? data.parsedContent.highlights : ""),
+            periods: data.periods || (data.parsedContent ? data.parsedContent.periods : []),
+            scannedPageUrl: data.scannedPageUrl || data.pageUrl || "",
+          };
+          if (!group.dayEntriesMap.has(diaryDate)) {
+            group.dayEntriesMap.set(diaryDate, dayObj);
           }
         }
       });
 
-      const records = Array.from(uniqueMap.values());
+      const getDayNum = (dStr?: string): number => {
+        if (!dStr) return 0;
+        const clean = String(dStr).trim();
+        let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (m) return parseInt(m[3], 10);
+        m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (m) return parseInt(m[1], 10);
+        return 0;
+      };
+
+      const records: DiaryRecordItem[] = [];
+      groupMap.forEach(({ mainRecord, dayEntriesMap }) => {
+        const isTrueMaster = mainRecord.id.startsWith("file_") ||
+          mainRecord.id === "master_diary" ||
+          Boolean(mainRecord.masterPdfUrl) ||
+          (Array.isArray(mainRecord.structuredData) && mainRecord.structuredData.length > 0);
+
+        if (!isTrueMaster) {
+          return; // Skip orphan standalone day entries so fake cards do not show under 11-20/21-31 tabs
+        }
+
+        let allDays = Array.from(dayEntriesMap.values());
+        const weekCategory = getTabCategory(mainRecord.week, mainRecord);
+
+        allDays = allDays.filter((entry) => {
+          const dayNum = getDayNum(entry.date || entry.displayDate || entry.diaryDate);
+          if (dayNum === 0) return true;
+          if (weekCategory === "1 to 10") return dayNum >= 1 && dayNum <= 10;
+          if (weekCategory === "11 to 20") return dayNum >= 11 && dayNum <= 20;
+          if (weekCategory === "21 to 31") return dayNum >= 21;
+          return true;
+        });
+
+        allDays.sort((a, b) => {
+          const dayA = getDayNum(a.date || a.displayDate || a.diaryDate);
+          const dayB = getDayNum(b.date || b.displayDate || b.diaryDate);
+          if (dayA && dayB) return dayA - dayB;
+          return String(a.date || "").localeCompare(String(b.date || ""));
+        });
+
+        records.push({
+          ...mainRecord,
+          structuredData: allDays.length > 0 ? allDays : (mainRecord.structuredData || []),
+        });
+      });
+
       records.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
       setExistingRecords(records);
 
@@ -292,6 +394,81 @@ function TeacherDiaryAdmin() {
     } finally {
       setLoadingRecords(false);
     }
+  };
+
+  // Helper to determine date range tab category ("1 to 10", "11 to 20", or "21 to 31")
+  const getTabCategory = (weekStr?: string | null, rec?: DiaryRecordItem): string => {
+    const w = (rec?.week || weekStr || "").trim();
+    if (w === "1 to 10" || w === "Week 1") return "1 to 10";
+    if (w === "11 to 20" || w === "Week 2") return "11 to 20";
+    if (w === "21 to 31" || w === "21 to 30" || w === "21 to 30/31" || w === "Week 3" || w === "Week 4" || w === "Week 5") return "21 to 31";
+
+    const dStr = rec?.diaryDate || "";
+    if (dStr && dStr.includes("-")) {
+      const parts = dStr.split("-");
+      if (parts.length === 3) {
+        const day = parseInt(parts[2], 10);
+        if (!isNaN(day)) {
+          if (day <= 10) return "1 to 10";
+          if (day <= 20) return "11 to 20";
+          return "21 to 31";
+        }
+      }
+    }
+
+    if (rec?.structuredData && Array.isArray(rec.structuredData) && rec.structuredData.length > 0) {
+      const firstD = rec.structuredData[0]?.date || rec.structuredData[0]?.displayDate || "";
+      if (firstD && firstD.includes("-")) {
+        const parts = firstD.split("-");
+        if (parts.length === 3) {
+          const day = parseInt(parts[2], 10);
+          if (!isNaN(day)) {
+            if (day <= 10) return "1 to 10";
+            if (day <= 20) return "11 to 20";
+            return "21 to 31";
+          }
+        }
+      }
+    }
+
+    return "1 to 10";
+  };
+
+  // Helper to check if a record matches the active month & date range tab
+  const isRecordInTab = (rec: DiaryRecordItem, month: string | null, week: string | null): boolean => {
+    if (!month || !week) return false;
+
+    // 1. Month check
+    let monthMatch = false;
+    if (rec.month && String(rec.month).padStart(2, "0") === month) {
+      monthMatch = true;
+    } else if (rec.diaryDate && typeof rec.diaryDate === "string" && rec.diaryDate.includes("-")) {
+      const parts = rec.diaryDate.split("-");
+      if (parts.length >= 2 && parts[1] === month) {
+        monthMatch = true;
+      }
+    } else if (rec.structuredData && Array.isArray(rec.structuredData) && rec.structuredData.length > 0) {
+      monthMatch = rec.structuredData.some((entry: any) => {
+        const d = entry.date || entry.displayDate || "";
+        if (!d) return false;
+        const parts = String(d).split(/[\/\-\.]/);
+        if (parts.length === 3) {
+          const m = parts[0].length === 4 ? parts[1] : parts[1];
+          return String(m).padStart(2, "0") === month;
+        }
+        return false;
+      });
+    } else if (rec.diaryDate === "master_diary") {
+      monthMatch = true;
+    }
+
+    if (!monthMatch) return false;
+
+    // 2. Date range tab check
+    const targetCategory = getTabCategory(week);
+    const recCategory = getTabCategory(rec.week, rec);
+
+    return targetCategory === recCategory;
   };
 
 
@@ -329,10 +506,9 @@ function TeacherDiaryAdmin() {
     if (!selectedClass || !selectedMedium || !selectedYear || !selectedMonth || !selectedWeek) return;
 
     let day = 1;
-    if (selectedWeek === "Week 2") day = 8;
-    else if (selectedWeek === "Week 3") day = 15;
-    else if (selectedWeek === "Week 4") day = 22;
-    else if (selectedWeek === "Week 5") day = 29;
+    if (selectedWeek === "11 to 20" || selectedWeek === "Week 2") day = 11;
+    else if (selectedWeek === "21 to 31" || selectedWeek === "21 to 30" || selectedWeek === "Week 3" || selectedWeek === "Week 4" || selectedWeek === "Week 5") day = 21;
+    else day = 1;
 
     const monthStr = selectedMonth || "01";
     const dateStr = `${selectedYear}-${monthStr}-${String(day).padStart(2, "0")}`;
@@ -740,7 +916,7 @@ function TeacherDiaryAdmin() {
                     whileTap={{ scale: 0.97 }}
                     onClick={() => {
                       setSelectedMonth(m.id);
-                      setSelectedWeek("Week 1");
+                      setSelectedWeek("1 to 10");
                       const updatedDate = new Date(selectedDate);
                       updatedDate.setFullYear(selectedYear);
                       updatedDate.setMonth(parseInt(m.id, 10) - 1);
@@ -781,35 +957,63 @@ function TeacherDiaryAdmin() {
               className="max-w-3xl mx-auto w-full space-y-6"
             >
               {/* Top bar showing selection + back button */}
-              <div className="flex items-center justify-between gap-4 bg-slate-900 text-white p-3 rounded-2xl border border-slate-800 shadow-md">
+              <div className="flex items-center justify-between gap-4 bg-slate-900 text-white p-3.5 rounded-2xl border border-slate-800 shadow-md">
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => setSelectedWeek(null)}
+                    onClick={() => setSelectedMonth(null)}
                     className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors cursor-pointer"
-                    title="Back to Week Selection"
+                    title="Back to Month Selection"
                   >
                     <ArrowLeft className="size-4" />
                   </button>
                   <div className="flex items-center gap-2">
                     <Layers className="size-4 text-indigo-400" />
                     <span className="text-xs font-black">
-                      {selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"} • {selectedClass} • {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}
+                      {selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"} • {selectedClass} • {months.find(m => m.id === selectedMonth)?.mr} • {dateRangeTabs.find(w => w.id === selectedWeek)?.mr || selectedWeek}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => { setSelectedWeek(null); setSelectedMonth(null); }}
+                    onClick={() => { setSelectedMonth(null); }}
                     className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                   >
                     Change Month
                   </button>
                   <button
-                    onClick={() => { setSelectedWeek(null); setSelectedMonth(null); setSelectedClass(null); }}
+                    onClick={() => { setSelectedMonth(null); setSelectedClass(null); }}
                     className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                   >
                     Change Class
                   </button>
+                </div>
+              </div>
+
+              {/* 3 Date Range Tabs (1 to 10, 11 to 20, 21 to 30/31) */}
+              <div className="bg-white border border-slate-200/80 p-3 rounded-3xl shadow-sm space-y-2">
+                <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider px-1 flex items-center gap-1.5">
+                  <Calendar className="size-3.5 text-indigo-600" />
+                  तारीख कालावधी निवडा (Select Date Range Tab):
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {dateRangeTabs.map((tab) => {
+                    const isActive = selectedWeek === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setSelectedWeek(tab.id)}
+                        className={`py-3 px-2 sm:px-4 rounded-2xl text-xs sm:text-sm font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer ${
+                          isActive
+                            ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-purple-700 text-white shadow-lg shadow-indigo-500/25 scale-[1.02]"
+                            : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+                        }`}
+                      >
+                        <Calendar className={`size-4 ${isActive ? "text-amber-300 animate-pulse" : "text-slate-400"}`} />
+                        <span>{tab.mr}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -821,7 +1025,7 @@ function TeacherDiaryAdmin() {
                   </div>
                   <div>
                     <h2 className="text-base font-extrabold text-slate-900">Upload Teaching Diary</h2>
-                    <p className="text-xs text-slate-500">{selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}</p>
+                    <p className="text-xs text-slate-500">{selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr} • <span className="font-extrabold text-indigo-600">{dateRangeTabs.find(w => w.id === selectedWeek)?.mr || selectedWeek}</span></p>
                   </div>
                 </div>
                 {/* SINGLE DATE FILE UPLOADER */}
@@ -873,10 +1077,10 @@ function TeacherDiaryAdmin() {
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
                     <BookOpen className="size-4 text-indigo-600" />
-                    Uploaded Records: {selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr}
+                    Uploaded Records: {selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr} • {dateRangeTabs.find(w => w.id === selectedWeek)?.mr || selectedWeek}
                   </h3>
                   <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-black">
-                    Total {existingRecords.filter(rec => rec.diaryDate === "master_diary" || rec.diaryDate.split("-")[1] === selectedMonth || !rec.diaryDate.includes("-")).length}
+                    Total {existingRecords.filter(rec => isRecordInTab(rec, selectedMonth, selectedWeek)).length}
                   </span>
                 </div>
 
@@ -884,10 +1088,10 @@ function TeacherDiaryAdmin() {
                   <div className="flex items-center justify-center py-8 text-xs font-bold text-slate-400 gap-2">
                     <Loader2 className="size-4 animate-spin text-indigo-600" /> Loading records...
                   </div>
-                ) : existingRecords.filter(rec => rec.diaryDate === "master_diary" || rec.diaryDate.split("-")[1] === selectedMonth || !rec.diaryDate.includes("-")).length > 0 ? (
+                ) : existingRecords.filter(rec => isRecordInTab(rec, selectedMonth, selectedWeek)).length > 0 ? (
                   <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
                     {existingRecords
-                      .filter(rec => rec.diaryDate === "master_diary" || rec.diaryDate.split("-")[1] === selectedMonth || !rec.diaryDate.includes("-"))
+                      .filter(rec => isRecordInTab(rec, selectedMonth, selectedWeek))
                       .map((rec) => {
                         const isWord = isWordDoc(rec.fileName || rec.pageUrl);
                         return (
@@ -938,7 +1142,7 @@ function TeacherDiaryAdmin() {
                 ) : (
                   <div className="text-center py-8 text-slate-400 space-y-2">
                     <AlertTriangle className="size-6 text-amber-500 mx-auto" />
-                    <p className="text-xs font-bold text-slate-500">No teaching diary uploaded yet for {selectedClass} ({selectedMedium}) in {months.find(m => m.id === selectedMonth)?.mr}.</p>
+                    <p className="text-xs font-bold text-slate-500">No teaching diary uploaded yet for {selectedClass} ({selectedMedium}) in {months.find(m => m.id === selectedMonth)?.mr} ({dateRangeTabs.find(w => w.id === selectedWeek)?.mr || selectedWeek}).</p>
                   </div>
                 )}
               </div>

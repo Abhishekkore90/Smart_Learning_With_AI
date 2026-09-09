@@ -18,24 +18,27 @@ import {
 import { getBunnyStorageUrl } from "@/lib/bunny-auth-pdf";
 import { showToast as toast } from "@/lib/custom-toast";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
+import { doc, updateDoc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
+import { cleanThoughtText, getDefaultSuvicharForDate, isDefaultFallbackThought } from "@/lib/parse-diary-file";
 
 export const formatCleanDate = (raw: string | undefined | null) => {
   if (!raw) return "-";
   const cleaned = raw.trim();
   let m = cleaned.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
   if (m) {
-    const year = m[1];
+    let year = parseInt(m[1], 10);
     const month = parseInt(m[2], 10);
     const day = parseInt(m[3], 10);
+    if (year < 2020 || year > 2035) year = 2026;
     return `${day}/${month}/${year}`;
   }
   m = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
   if (m) {
     const day = parseInt(m[1], 10);
     const month = parseInt(m[2], 10);
-    let year = m[3];
-    if (year.length === 2) year = `20${year}`;
+    let year = parseInt(m[3], 10);
+    if (year < 100) year += 2000;
+    if (year < 2020 || year > 2035) year = 2026;
     return `${day}/${month}/${year}`;
   }
   return cleaned;
@@ -48,7 +51,8 @@ export const formatDateToIso = (raw: string | undefined | null): string => {
   // 1. Direct YYYY-MM-DD pattern
   let m = cleaned.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
   if (m) {
-    const year = m[1];
+    let year = parseInt(m[1], 10);
+    if (year < 2020 || year > 2035) year = 2026;
     const month = m[2].padStart(2, "0");
     const day = m[3].padStart(2, "0");
     return `${year}-${month}-${day}`;
@@ -59,8 +63,9 @@ export const formatDateToIso = (raw: string | undefined | null): string => {
   if (m) {
     const day = m[1].padStart(2, "0");
     const month = m[2].padStart(2, "0");
-    let year = m[3];
-    if (year.length === 2) year = `20${year}`;
+    let year = parseInt(m[3], 10);
+    if (year < 100) year += 2000;
+    if (year < 2020 || year > 2035) year = 2026;
     return `${year}-${month}-${day}`;
   }
 
@@ -68,7 +73,8 @@ export const formatDateToIso = (raw: string | undefined | null): string => {
   try {
     const dateObj = new Date(cleaned);
     if (!isNaN(dateObj.getTime())) {
-      const year = dateObj.getFullYear();
+      let year = dateObj.getFullYear();
+      if (year < 2020 || year > 2035) year = 2026;
       const month = String(dateObj.getMonth() + 1).padStart(2, "0");
       const day = String(dateObj.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
@@ -256,12 +262,14 @@ export function isSunday(dayStr?: string, dateStr?: string): boolean {
 export function parseMultiPageTextToStructuredDiaries(fullText: string): StructuredDayPage[] {
   if (!fullText || fullText.trim().length === 0) return [];
 
-  const pageChunks = fullText
+  const cleanFullText = fullText.replace(/[\u200B\u200C\u200D\uFEFF]/g, "");
+
+  const pageChunks = cleanFullText
     .split(/(?=(?:दैनंदिन पाठ टाचण|दैनिक पाठ टाचण|दिनांक\s*[:：]?\s*\d{1,2}\s*[\/\-\.]\s*\d{1,2}))/gi)
     .map((chunk) => chunk.trim())
     .filter((chunk) => chunk.length > 20);
 
-  const finalChunks = pageChunks.length > 0 ? pageChunks : [fullText];
+  const finalChunks = pageChunks.length > 0 ? pageChunks : [cleanFullText];
 
   const knownSubjects = [
     "मराठी", "गणित", "इंग्रजी", "हिंदी", "विज्ञान", "सामाजिक शास्त्र",
@@ -410,8 +418,9 @@ export function parseMultiPageTextToStructuredDiaries(fullText: string): Structu
 export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayPage[] {
   if (!htmlString || htmlString.trim().length === 0) return [];
 
+  const cleanHtml = htmlString.replace(/[\u200B\u200C\u200D\uFEFF]/g, "");
   const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlString, "text/html");
+  const doc = parser.parseFromString(cleanHtml, "text/html");
 
   // Find ALL table elements in the HTML document (even if wrapped inside div/section containers)
   const tables = Array.from(doc.querySelectorAll("table"));
@@ -508,14 +517,12 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
     const rows = table.querySelectorAll("tr");
     if (rows.length < 2) return { periods: [], columnHeaders: [] };
 
-    // Find the header row (contains column titles like तासिका, विषय, etc.)
+    // Find the header row (contains column titles like तासिका, विषय, घटक, etc.)
     let headerRowIdx = -1;
-    for (let i = 0; i < Math.min(rows.length, 4); i++) {
+    for (let i = 0; i < Math.min(rows.length, 6); i++) {
       const rowText = rows[i].textContent?.trim() || "";
       if (
-        rowText.includes("तासिका") ||
-        rowText.includes("विषय") ||
-        rowText.includes("अध्ययन")
+        /तास|तासिका|विषय|घटक|मुद्दा|पाठाचे|पाठ|निष्पत्ती|अनुभव|साधन|साहित्य|Period|Subject|Topic|Outcome|Experience|Sr|No|अ\.?\s*क्र|अनुक्रमाणिका/i.test(rowText)
       ) {
         headerRowIdx = i;
         break;
@@ -523,12 +530,7 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
     }
 
     if (headerRowIdx === -1) {
-      const firstRowCells = rows[0].querySelectorAll("td, th");
-      if (firstRowCells.length >= 5) {
-        headerRowIdx = 0;
-      } else {
-        return { periods: [], columnHeaders: [] };
-      }
+      headerRowIdx = 0;
     }
 
     // Extract actual column header labels from the header row
@@ -543,13 +545,13 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
       const normHeaders = columnHeaders.map(h => h.trim().toLowerCase());
       const findCol = (pattern: RegExp) => normHeaders.findIndex(h => pattern.test(h));
 
-      const pIdx = findCol(/तास|तासिका|period|time/i);
+      const pIdx = findCol(/तास|तासिका|period|time|अ\.?\s*क्र|अनुक्रमाणिका|sr|no/i);
       const sIdx = findCol(/विषय|subject/i);
-      const tIdx = findCol(/मुद्दा|पाठ्यांश|पाठ्यघटक|घटक|पाठ|topic|chapter/i);
-      const oIdx = findCol(/निष्पत्ती|निष्पती|दर्शक|दर्शके|outcome|result/i);
-      const eIdx = findCol(/अनुभव|अनुभवाचे|स्वरूप|कृती|experience/i);
-      const tlIdx = findCol(/साधन|तंत्र|tools|method/i);
-      const mIdx = findCol(/साहित्य|materials/i);
+      const tIdx = findCol(/मुद्दा|पाठ्यांश|पाठ्यघटक|घटक|पाठ|पाठाचे|घटकाचे|नाव|topic|chapter|unit/i);
+      const oIdx = findCol(/निष्पत्ती|निष्पती|दर्शक|दर्शके|outcome|result|learning outcome/i);
+      const eIdx = findCol(/अनुभव|अनुभवाचे|स्वरूप|कृती|experience|learning experience|activity/i);
+      const tlIdx = findCol(/साधन|तंत्र|साधने|tools|method|technique/i);
+      const mIdx = findCol(/साहित्य|materials|tlm/i);
 
       if (pIdx !== -1) colMap.period = pIdx;
       if (sIdx !== -1) colMap.subject = sIdx;
@@ -565,7 +567,7 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
 
     for (let i = headerRowIdx + 1; i < rows.length; i++) {
       const cells = rows[i].querySelectorAll("td, th");
-      if (cells.length < 2) continue;
+      if (cells.length === 0) continue;
 
       const cellTexts = Array.from(cells).map(
         (cell) => (cell.textContent || "").trim()
@@ -586,23 +588,38 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
       // Skip empty rows
       if (cellTexts.every((t) => !t || t.length === 0)) continue;
 
-      const period = (colMap.period < cellTexts.length && cellTexts[colMap.period]) ? cellTexts[colMap.period] : cellTexts[0] || String(periodCounter);
-      const subject = (colMap.subject < cellTexts.length && cellTexts[colMap.subject]) ? cellTexts[colMap.subject] : cellTexts[1] || "";
-      const topic = (colMap.topic < cellTexts.length && cellTexts[colMap.topic]) ? cellTexts[colMap.topic] : cellTexts[2] || "";
-      const outcome = (colMap.outcome < cellTexts.length && cellTexts[colMap.outcome]) ? cellTexts[colMap.outcome] : (cellTexts.length >= 4 ? cellTexts[3] : "");
-      const experience = (colMap.experience < cellTexts.length && cellTexts[colMap.experience]) ? cellTexts[colMap.experience] : (cellTexts.length >= 5 ? cellTexts[4] : "");
-      const tools = (colMap.tools < cellTexts.length && cellTexts[colMap.tools]) ? cellTexts[colMap.tools] : (cellTexts.length >= 6 ? cellTexts[5] : "");
-      const materials = (colMap.materials < cellTexts.length && cellTexts[colMap.materials]) ? cellTexts[colMap.materials] : (cellTexts.length >= 7 ? cellTexts[6] : "");
+      let period = (colMap.period < cellTexts.length && cellTexts[colMap.period]) ? cellTexts[colMap.period] : cellTexts[0] || String(periodCounter);
+      let subject = (colMap.subject < cellTexts.length && cellTexts[colMap.subject]) ? cellTexts[colMap.subject] : cellTexts[1] || "";
+      let topic = (colMap.topic < cellTexts.length && cellTexts[colMap.topic]) ? cellTexts[colMap.topic] : cellTexts[2] || "";
+      let outcome = (colMap.outcome < cellTexts.length && cellTexts[colMap.outcome]) ? cellTexts[colMap.outcome] : (cellTexts.length >= 4 ? cellTexts[3] : "");
+      let experience = (colMap.experience < cellTexts.length && cellTexts[colMap.experience]) ? cellTexts[colMap.experience] : (cellTexts.length >= 5 ? cellTexts[4] : "");
+      let tools = (colMap.tools < cellTexts.length && cellTexts[colMap.tools]) ? cellTexts[colMap.tools] : (cellTexts.length >= 6 ? cellTexts[5] : "");
+      let materials = (colMap.materials < cellTexts.length && cellTexts[colMap.materials]) ? cellTexts[colMap.materials] : (cellTexts.length >= 7 ? cellTexts[6] : "");
 
-      if (subject || topic || outcome || experience) {
+      // Smart positional fallback if column headers were not mapped
+      const nonHeaderCells = cellTexts.filter(Boolean);
+      if (!subject && !topic && !outcome && !experience && nonHeaderCells.length > 0) {
+        let cellIdx = 0;
+        if (/^\d{1,2}$/.test(nonHeaderCells[0])) {
+          cellIdx = 1;
+        }
+        if (nonHeaderCells[cellIdx]) subject = nonHeaderCells[cellIdx];
+        if (nonHeaderCells[cellIdx + 1]) topic = nonHeaderCells[cellIdx + 1];
+        if (nonHeaderCells[cellIdx + 2]) outcome = nonHeaderCells[cellIdx + 2];
+        if (nonHeaderCells[cellIdx + 3]) experience = nonHeaderCells[cellIdx + 3];
+        if (nonHeaderCells[cellIdx + 4]) tools = nonHeaderCells[cellIdx + 4];
+        if (nonHeaderCells[cellIdx + 5]) materials = nonHeaderCells[cellIdx + 5];
+      }
+
+      if (subject || topic || outcome || experience || tools || materials) {
         periods.push({
           period: String(periodCounter++),
-          subject,
-          topic,
-          outcome,
-          experience,
-          tools,
-          materials,
+          subject: subject || "-",
+          topic: topic || "-",
+          outcome: outcome || "-",
+          experience: experience || "-",
+          tools: tools || "-",
+          materials: materials || "-",
         });
       }
     }
@@ -687,6 +704,8 @@ export interface GroupedDayRecord {
   periods: PeriodRowItem[];
   columnHeaders?: string[];
   rawText: string;
+  pageUrl?: string;
+  scannedPageUrl?: string;
 }
 
 export function splitLargePagesIntoDayChunks(pages: StructuredDayPage[]): StructuredDayPage[] {
@@ -721,6 +740,19 @@ export function splitLargePagesIntoDayChunks(pages: StructuredDayPage[]): Struct
     const chunkSize = 9;
     const totalChunks = Math.ceil(p.periods.length / chunkSize);
 
+    const docThoughts: string[] = [];
+    if (p.rawText) {
+      const matches = p.rawText.matchAll(/(?:आजचा\s*सुव\u200Dिचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r<]+)/gi);
+      for (const tm of matches) {
+        if (tm[1]) {
+          const ct = cleanThoughtText(tm[1]);
+          if (ct && ct.length > 1 && !ct.includes("प्रविष्ट करा")) {
+            docThoughts.push(ct);
+          }
+        }
+      }
+    }
+
     for (let c = 0; c < totalChunks; c++) {
       while (currentDateCursor.getDay() === 0) { // Skip Sundays
         currentDateCursor.setDate(currentDateCursor.getDate() + 1);
@@ -734,11 +766,19 @@ export function splitLargePagesIntoDayChunks(pages: StructuredDayPage[]): Struct
       const dStr = `${currentDateCursor.getFullYear()}-${String(currentDateCursor.getMonth() + 1).padStart(2, "0")}-${String(currentDateCursor.getDate()).padStart(2, "0")}`;
       const dayName = daysOfWeek[currentDateCursor.getDay()];
 
+      let chunkThought = "";
+      if (docThoughts[c]) {
+        chunkThought = docThoughts[c];
+      } else if (c === 0) {
+        chunkThought = p.thought || "";
+      }
+
       result.push({
         ...p,
         pageNumber: c + 1,
         date: dStr,
         day: dayName,
+        thought: chunkThought,
         periods: chunkPeriods,
       });
 
@@ -749,60 +789,86 @@ export function splitLargePagesIntoDayChunks(pages: StructuredDayPage[]): Struct
   return result;
 }
 
-export function groupStructuredPagesByDay(pages: StructuredDayPage[]): GroupedDayRecord[] {
+export function groupStructuredPagesByDay(pages: StructuredDayPage[], defaultBaseDate?: string): GroupedDayRecord[] {
   const partitionedPages = splitLargePagesIntoDayChunks(pages);
-  const grouped: Record<string, GroupedDayRecord> = {};
   const list: GroupedDayRecord[] = [];
 
-  partitionedPages.forEach((p, idx) => {
-    // If date is repeated across pages or hardcoded in templates, treat each page chunk as a distinct day
-    const rawKey = p.date ? p.date.trim() : "";
-    const dateKey = (rawKey && !grouped[rawKey]) ? rawKey : `day_page_${idx + 1}`;
-    
-    if (!grouped[dateKey]) {
-      grouped[dateKey] = {
-        date: p.date,
-        day: p.day,
-        std: p.std,
-        year: p.year,
-        teacher: p.teacher,
-        school: p.school,
-        thought: p.thought,
-        dinvishesh: p.dinvishesh,
-        periods: [...p.periods],
-        columnHeaders: p.columnHeaders ? [...p.columnHeaders] : undefined,
-        rawText: p.rawText,
-      };
-      list.push(grouped[dateKey]);
-    } else {
-      p.periods.forEach((newPeriod) => {
-        const exists = grouped[dateKey].periods.some(
-          (existing) => 
-            existing.period === newPeriod.period && 
-            existing.subject === newPeriod.subject && 
-            existing.topic === newPeriod.topic
-        );
-        if (!exists) {
-          grouped[dateKey].periods.push(newPeriod);
-        }
-      });
+  let startYear = 2026;
+  let startMonth = 7; // 0-indexed (August = 7)
+  let startDay = 1;
 
-      if (!grouped[dateKey].day && p.day) grouped[dateKey].day = p.day;
-      if (!grouped[dateKey].std && p.std) grouped[dateKey].std = p.std;
-      if (!grouped[dateKey].year && p.year) grouped[dateKey].year = p.year;
-      if (!grouped[dateKey].teacher && p.teacher) grouped[dateKey].teacher = p.teacher;
-      if (!grouped[dateKey].school && p.school) grouped[dateKey].school = p.school;
-      if (!grouped[dateKey].thought && p.thought) grouped[dateKey].thought = p.thought;
-      if (!grouped[dateKey].dinvishesh && p.dinvishesh) grouped[dateKey].dinvishesh = p.dinvishesh;
-      
-      grouped[dateKey].rawText += "\n\n" + p.rawText;
+  if (defaultBaseDate) {
+    const cleanDefault = defaultBaseDate.trim();
+    let m = cleanDefault.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+    if (m) {
+      startYear = parseInt(m[1], 10);
+      startMonth = parseInt(m[2], 10) - 1;
+      startDay = parseInt(m[3], 10);
+    } else {
+      m = cleanDefault.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+      if (m) {
+        startDay = parseInt(m[1], 10);
+        startMonth = parseInt(m[2], 10) - 1;
+        let yr = parseInt(m[3], 10);
+        if (yr < 100) yr += 2000;
+        startYear = yr;
+      }
     }
+  }
+
+  if (startYear < 2020 || startYear > 2035) {
+    startYear = 2026;
+  }
+
+  const currentDateCursor = new Date(startYear, startMonth, startDay);
+
+  partitionedPages.forEach((p, idx) => {
+    if (idx > 0) {
+      currentDateCursor.setDate(currentDateCursor.getDate() + 1);
+    }
+    while (currentDateCursor.getDay() === 0) { // Skip Sundays
+      currentDateCursor.setDate(currentDateCursor.getDate() + 1);
+    }
+
+    const assignedDate = `${currentDateCursor.getDate()}/${currentDateCursor.getMonth() + 1}/${currentDateCursor.getFullYear()}`;
+    const isoDateStr = formatDateToIso(assignedDate);
+    const localThought = (isoDateStr && (localStorage.getItem(`suvichar_${p.std || ""}_${p.school || ""}_${isoDateStr}`) || localStorage.getItem(`suvichar_${isoDateStr}`))) || "";
+
+    // If this is a split multi-day page (idx > 0) and p.thought is identical to page 0's thought, use local date-wise thought or clear duplicate thought so it resolves date-wise
+    let dayThought = p.thought || "";
+    if (isDefaultFallbackThought(dayThought)) {
+      dayThought = (localThought && !isDefaultFallbackThought(localThought)) ? localThought : "";
+    }
+
+    list.push({
+      date: assignedDate,
+      day: getMarathiDayName(assignedDate) || (p.day && p.day !== "-" ? p.day : ""),
+      std: p.std,
+      year: p.year,
+      teacher: p.teacher,
+      school: p.school,
+      thought: dayThought,
+      dinvishesh: p.dinvishesh,
+      periods: [...p.periods],
+      columnHeaders: p.columnHeaders ? [...p.columnHeaders] : undefined,
+      rawText: p.rawText,
+      pageUrl: (p as any).pageUrl || (p as any).scannedPageUrl || (p as any).pageURL || "",
+      scannedPageUrl: (p as any).scannedPageUrl || (p as any).pageUrl || "",
+    });
   });
 
-  // Re-index periods to keep them sequential per day table (1..9)
+  // Re-index periods to keep them sequential per day table (1..9) & sanitize dummy fallback text
   list.forEach((dayRec) => {
     dayRec.periods.forEach((period, index) => {
       period.period = String(index + 1);
+      if (period.subject === "माहिती संकलन" || (period.experience && period.experience.includes("स्कॅन केलेले टाचण पान"))) {
+        period.subject = "";
+        period.topic = "";
+        period.outcome = "";
+        period.experience = "";
+        period.tools = "";
+        period.materials = "";
+      }
     });
   });
 
@@ -813,13 +879,27 @@ export interface StructuredDayPageListRef {
   getEditedData: () => any[];
 }
 
-export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { pages: StructuredDayPage[], schoolProfile?: any }>(({ pages, schoolProfile }, ref) => {
+const isImageUrl = (url?: string) => {
+  if (!url) return false;
+  const lower = url.toLowerCase();
+  return (
+    lower.startsWith("data:image/") ||
+    lower.endsWith(".png") ||
+    lower.endsWith(".jpg") ||
+    lower.endsWith(".jpeg") ||
+    lower.endsWith(".webp") ||
+    lower.endsWith(".gif") ||
+    lower.includes("blob:")
+  );
+};
+
+export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { pages: StructuredDayPage[], schoolProfile?: any, defaultBaseDate?: string }>(({ pages, schoolProfile, defaultBaseDate }, ref) => {
   const [dayRecords, setDayRecords] = useState<any[]>([]);
   const profile = useMemo(() => schoolProfile || getStoredSchoolProfile(), [schoolProfile]);
 
   useEffect(() => {
-    setDayRecords(groupStructuredPagesByDay(pages));
-  }, [pages]);
+    setDayRecords(groupStructuredPagesByDay(pages, defaultBaseDate));
+  }, [pages, defaultBaseDate]);
 
   useImperativeHandle(ref, () => ({
     getEditedData: () => dayRecords
@@ -952,13 +1032,30 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                   onBlur={(e) => updateHeader(idx, "thought", e.currentTarget.textContent || "")}
                   className="font-bold text-sm text-amber-900 not-italic inline-block outline-indigo-500 focus:bg-white px-2 py-0.5 rounded cursor-text border border-dashed border-amber-300 hover:border-amber-500 transition-colors"
                 >
-                  {p.thought && p.thought.trim() && !p.thought.includes("प्रविष्ट करण्यासाठी")
-                    ? p.thought.replace(/^["'”’„«»]+|["'”’„«»]+$/g, "").trim()
+                  {cleanThoughtText(p.thought) && !cleanThoughtText(p.thought).includes("प्रविष्ट करण्यासाठी")
+                    ? `"${cleanThoughtText(p.thought)}"`
                     : "आजचा सुविचार प्रविष्ट करा..."}
                 </span>
               </div>
             </div>
           </div>
+
+          {/* Display Scanned Page Image ONLY if valid image format AND periods table missing */}
+          {isImageUrl(p.scannedPageUrl || p.pageUrl) && p.periods.length === 0 && (
+            <div className="w-full rounded-2xl overflow-hidden border-2 border-slate-300 shadow-sm bg-slate-50 p-3 my-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-extrabold text-indigo-900 flex items-center gap-1.5">
+                  <FileText className="size-4 text-indigo-600" />
+                  स्कॅन केलेले टाचण पान (Scanned Diary Page {idx + 1}):
+                </p>
+              </div>
+              <img 
+                src={p.scannedPageUrl || p.pageUrl} 
+                alt={`Scanned Page ${idx + 1}`} 
+                className="w-full max-h-[650px] object-contain rounded-xl border border-slate-200 shadow-inner bg-white" 
+              />
+            </div>
+          )}
 
           {p.periods.length > 0 ? (
             <div className="overflow-x-auto no-scrollbar rounded-2xl border-2 border-slate-400 shadow-md">
@@ -1170,7 +1267,8 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       // 2. Update teaching_diaries documents for ALL dates in editedData
       if (Array.isArray(editedData) && editedData.length > 0) {
         for (const dayEntry of editedData) {
-          const dKey = (dayEntry as any).dateISO || (dayEntry as any).dateKey || dayEntry.date || savedRecord.diaryDate || savedRecord.id;
+          const rawDKey = (dayEntry as any).dateISO || (dayEntry as any).dateKey || dayEntry.date || savedRecord.diaryDate || savedRecord.id;
+          const dKey = formatDateToIso(rawDKey) || (rawDKey && String(rawDKey).match(/^\d{4}-\d{2}-\d{2}$/) ? rawDKey : "");
           if (dKey && String(dKey).match(/^\d{4}-\d{2}-\d{2}$/)) {
             const tdDocId = `${cls}_${med}_${dKey}`;
             const tdDocRef = doc(db, "teaching_diaries", tdDocId);
@@ -1186,6 +1284,13 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
               updatedAt: Date.now(),
             });
             await setDoc(tdDocRef, cleanTdPayload, { merge: true });
+
+            if (dayEntry.thought) {
+              try {
+                localStorage.setItem(`suvichar_${cls}_${med}_${dKey}`, dayEntry.thought);
+                localStorage.setItem(`suvichar_${dKey}`, dayEntry.thought);
+              } catch (e) {}
+            }
           }
         }
       }
@@ -1211,8 +1316,8 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   const isPdf = activeExt === "pdf" || 
                 selectedFile?.type === "application/pdf" || 
                 pageUrlLower.endsWith(".pdf") || 
-                pageUrlLower.includes("/pages/") || 
-                pageUrlLower.includes("pdf");
+                pageUrlLower.includes(".pdf?") ||
+                pageUrlLower.includes(".pdf#");
 
   useEffect(() => {
     if (selectedFile && (selectedFile.type === "application/pdf" || activeExt === "pdf")) {
@@ -1234,19 +1339,113 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     setViewMode(isPdf ? "original" : "structured");
     setFilterSingleDate(false);
 
-    if (savedRecord && (savedRecord as any).structuredData && (savedRecord as any).structuredData.length > 0) {
+    if (savedRecord) {
       const cls = savedRecord.className || "";
       const med = savedRecord.medium || "";
-      const enrichedPages = ((savedRecord as any).structuredData as StructuredDayPage[]).map((p) => {
+      const pagesList = ((savedRecord as any).structuredData && (savedRecord as any).structuredData.length > 0)
+        ? (savedRecord as any).structuredData
+        : [{
+            date: savedRecord.diaryDate || savedRecord.date || "",
+            day: savedRecord.day || "",
+            thought: savedRecord.thought || (savedRecord.parsedContent ? savedRecord.parsedContent.thought : ""),
+            dinvishesh: savedRecord.dinvishesh || (savedRecord.parsedContent ? savedRecord.parsedContent.dinvishesh : ""),
+            highlights: savedRecord.highlights || (savedRecord.parsedContent ? savedRecord.parsedContent.highlights : ""),
+            periods: savedRecord.periods || (savedRecord.parsedContent ? savedRecord.parsedContent.periods : []),
+          }];
+
+      const enrichedPages = (pagesList as StructuredDayPage[]).map((p) => {
         const isoDate = formatDateToIso(p.date);
         const localThought = (isoDate && (localStorage.getItem(`suvichar_${cls}_${med}_${isoDate}`) || localStorage.getItem(`suvichar_${isoDate}`))) || "";
-        if (localThought && (!p.thought || p.thought.trim() === "" || p.thought.includes("प्रविष्ट करण्यासाठी"))) {
+        if (localThought && isDefaultFallbackThought(p.thought)) {
           return { ...p, thought: localThought };
         }
         return p;
       });
       setStructuredPages(enrichedPages);
-      setViewMode("structured");
+
+      // Asynchronously re-parse DOCX file from Bunny Storage to extract true file thoughts
+      const fetchTarget = savedRecord.pageUrl || (savedRecord as any).masterPdfUrl;
+      if (fetchTarget && !isPdf) {
+        const targetUrl = getBunnyStorageUrl(fetchTarget);
+        const headers: Record<string, string> = {
+          AccessKey: import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "",
+        };
+
+        fetch(targetUrl, { headers })
+          .then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.arrayBuffer();
+          })
+          .then(async (buffer) => {
+            try {
+              const mammoth = await import("mammoth");
+              const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
+              if (result.value && result.value.trim().length > 0) {
+                setHtmlContent(result.value);
+                const { parseDocxHtmlToDiaries } = await import("@/lib/parse-diary-file");
+                const parsedFromHtml = await parseDocxHtmlToDiaries(result.value, savedRecord?.className || "पहिली");
+                if (parsedFromHtml.length > 0) {
+                  setStructuredPages(parsedFromHtml as any);
+                  return;
+                }
+              }
+            } catch (err) {}
+          })
+          .catch(() => {});
+      }
+
+      // Async fetch sibling days ONLY if structuredData is missing on master record
+      if (cls && med && (!savedRecord.structuredData || (Array.isArray(savedRecord.structuredData) && savedRecord.structuredData.length === 0))) {
+        const targetFileId = savedRecord.fileId;
+        const targetFileName = savedRecord.fileName;
+        const targetUploadedAt = savedRecord.uploadedAt;
+        const targetWeek = savedRecord.week || savedRecord.selectedWeek || "";
+        const groupTime = targetUploadedAt ? Math.floor(targetUploadedAt / 120000) : 0;
+
+        getDocs(collection(db, "teacher_diaries", cls, med)).then((qSnap) => {
+          const siblingEntriesMap = new Map<string, any>();
+          qSnap.docs.forEach((docSnap) => {
+            const d = docSnap.data();
+            const dGroupTime = d.uploadedAt ? Math.floor(d.uploadedAt / 120000) : 0;
+            const matchesFile = Boolean(targetFileId && d.fileId === targetFileId);
+            const matchesNameTime = Boolean(targetFileName && d.fileName === targetFileName && (!groupTime || !dGroupTime || Math.abs(groupTime - dGroupTime) <= 1));
+            const matchesWeek = Boolean(!targetWeek || !d.week || d.week === targetWeek);
+
+            if ((matchesFile || matchesNameTime) && matchesWeek) {
+              if (Array.isArray(d.structuredData) && d.structuredData.length > 0) {
+                d.structuredData.forEach((p: any) => {
+                  const pDate = p.date || p.displayDate || "";
+                  if (pDate) siblingEntriesMap.set(pDate, p);
+                });
+              } else if (d.diaryDate && d.diaryDate !== "master_diary" && !docSnap.id.startsWith("file_")) {
+                siblingEntriesMap.set(d.diaryDate, {
+                  date: d.diaryDate,
+                  day: d.day || "",
+                  thought: d.thought || (d.parsedContent ? d.parsedContent.thought : ""),
+                  dinvishesh: d.dinvishesh || (d.parsedContent ? d.parsedContent.dinvishesh : ""),
+                  highlights: d.highlights || (d.parsedContent ? d.parsedContent.highlights : ""),
+                  periods: d.periods || (d.parsedContent ? d.parsedContent.periods : []),
+                });
+              }
+            }
+          });
+
+          if (siblingEntriesMap.size > 0) {
+            const allSorted = Array.from(siblingEntriesMap.values()).sort((a, b) =>
+              String(a.date || "").localeCompare(String(b.date || ""))
+            );
+            if (allSorted.length > 0) {
+              setStructuredPages(allSorted);
+            }
+          }
+        }).catch(() => {});
+      }
+
+      if (isPdf) {
+        setViewMode("original");
+      } else {
+        setViewMode("structured");
+      }
       return;
     }
 
@@ -1339,60 +1538,84 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           })
           .finally(() => setLoadingContent(false));
       }
-    } else if (savedRecord && savedRecord.pageUrl) {
-      const fileNameLower = (savedRecord.fileName || savedRecord.pageUrl).toLowerCase();
-      if (fileNameLower.endsWith(".docx") || fileNameLower.endsWith(".doc")) {
-        setLoadingContent(true);
+    } else if (savedRecord && (savedRecord.pageUrl || (savedRecord as any).masterPdfUrl) && !isPdf) {
+      const fetchTarget = savedRecord.pageUrl || (savedRecord as any).masterPdfUrl;
+      setLoadingContent(true);
 
-        const targetUrl = getBunnyStorageUrl(savedRecord.pageUrl);
-        const headers: Record<string, string> = {
-          AccessKey: import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "",
-        };
+      const targetUrl = getBunnyStorageUrl(fetchTarget);
+      const headers: Record<string, string> = {
+        AccessKey: import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "",
+      };
 
-        fetch(targetUrl, { headers })
-          .then((res) => {
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.arrayBuffer();
-          })
-          .then(async (buffer) => {
-            try {
-              const mammoth = await import("mammoth");
-              const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
-              if (result.value && result.value.trim().length > 0) {
-                setHtmlContent(result.value);
-                const parsedFromHtml = parseHtmlToStructuredDiaries(result.value);
-                if (parsedFromHtml.length > 0) {
-                  setStructuredPages(parsedFromHtml);
-                } else {
-                  const rawTxt = await mammoth.extractRawText({ arrayBuffer: buffer });
-                  const parsed = parseMultiPageTextToStructuredDiaries(rawTxt.value);
-                  if (parsed.length > 0) setStructuredPages(parsed);
-                }
+      fetch(targetUrl, { headers })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.arrayBuffer();
+        })
+        .then(async (buffer) => {
+          try {
+            const mammoth = await import("mammoth");
+            const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
+            if (result.value && result.value.trim().length > 0) {
+              setHtmlContent(result.value);
+              const { parseDocxHtmlToDiaries } = await import("@/lib/parse-diary-file");
+              const parsedFromHtml = await parseDocxHtmlToDiaries(result.value, savedRecord?.className || "पहिली");
+              if (parsedFromHtml.length > 0) {
+                setStructuredPages(parsedFromHtml as any);
                 return;
-              }
-            } catch (err) {}
-
-            const extractedText = extractTextFromBinaryDoc(buffer);
-            if (extractedText && extractedText.length > 0) {
-              const parsed = parseMultiPageTextToStructuredDiaries(extractedText);
-              if (parsed.length > 0) {
-                setStructuredPages(parsed);
+              } else {
+                const rawTxt = await mammoth.extractRawText({ arrayBuffer: buffer });
+                const parsed = parseMultiPageTextToStructuredDiaries(rawTxt.value);
+                if (parsed.length > 0) {
+                  setStructuredPages(parsed);
+                  return;
+                }
               }
             }
-          })
-          .catch((err) => {
-            setErrorMsg("Document preview is ready for download.");
-          })
-          .finally(() => setLoadingContent(false));
-      }
+          } catch (err) {}
+
+          const extractedText = extractTextFromBinaryDoc(buffer);
+          if (extractedText && extractedText.length > 0) {
+            const parsed = parseMultiPageTextToStructuredDiaries(extractedText);
+            if (parsed.length > 0) {
+              setStructuredPages(parsed);
+            }
+          }
+        })
+        .catch((err) => {
+          setErrorMsg("Document preview is ready for download.");
+        })
+        .finally(() => setLoadingContent(false));
     }
   }, [selectedFile, savedRecord, isPdf]);
 
   const [filterSingleDate, setFilterSingleDate] = useState<boolean>(false);
 
-  const pdfUrlToDisplay = selectedFile && isPdf
-    ? localPdfBlobUrl
-    : (authenticatedPdfUrl || savedRecord?.pageUrl || null);
+  const effectiveBaseDate = useMemo(() => {
+    const weekStr = savedRecord?.week || savedRecord?.selectedWeek || "";
+    const fileNameStr = savedRecord?.fileName || selectedFile?.name || "";
+    
+    if (weekStr.includes("1 to 10") || weekStr === "Week 1" || fileNameStr.includes("1_to_10") || fileNameStr.includes("1-10") || fileNameStr.includes("1_10")) {
+      const yearStr = savedRecord?.year || "2026";
+      const monthStr = savedRecord?.month || selectedMonth || "08";
+      return `${yearStr}-${String(monthStr).padStart(2, "0")}-01`;
+    }
+    if (weekStr.includes("11 to 20") || weekStr === "Week 2" || fileNameStr.includes("11_to_20") || fileNameStr.includes("11-20") || fileNameStr.includes("11_20")) {
+      const yearStr = savedRecord?.year || "2026";
+      const monthStr = savedRecord?.month || selectedMonth || "08";
+      return `${yearStr}-${String(monthStr).padStart(2, "0")}-11`;
+    }
+    if (weekStr.includes("21 to 31") || weekStr.includes("21 to 30") || weekStr === "Week 3" || weekStr === "Week 4" || weekStr === "Week 5" || fileNameStr.includes("21_to_31") || fileNameStr.includes("21-31")) {
+      const yearStr = savedRecord?.year || "2026";
+      const monthStr = savedRecord?.month || selectedMonth || "08";
+      return `${yearStr}-${String(monthStr).padStart(2, "0")}-21`;
+    }
+    return savedRecord?.diaryDate || savedRecord?.date || "2026-08-01";
+  }, [savedRecord, selectedFile, selectedMonth]);
+
+  const pdfUrlToDisplay = isPdf
+    ? (selectedFile ? localPdfBlobUrl : (authenticatedPdfUrl || savedRecord?.masterPdfUrl || savedRecord?.pageUrl || null))
+    : null;
 
   const targetNormalizedDate = useMemo(() => {
     return normalizeDateStr(savedRecord?.diaryDate);
@@ -1453,8 +1676,10 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           return changed ? next : prevPages;
         });
 
-        // 2. Asynchronously fetch thoughts from Firestore once per savedRecord
-        const pagesList = savedRecord.structuredData || [];
+        // 2. Asynchronously fetch thoughts from Firestore once per savedRecord or structuredPages
+        const pagesList = (savedRecord.structuredData && Array.isArray(savedRecord.structuredData) && savedRecord.structuredData.length > 0)
+          ? savedRecord.structuredData
+          : structuredPages;
         if (!Array.isArray(pagesList) || pagesList.length === 0) return;
 
         const docPromises = pagesList.map(async (p: any) => {
@@ -1466,7 +1691,8 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
             const tdDocId = `${cls}_${med}_${isoDate}`;
             const tdSnap = await getDoc(doc(db, "teaching_diaries", tdDocId));
             if (tdSnap.exists() && tdSnap.data().thought) {
-              foundThought = tdSnap.data().thought;
+              const t = cleanThoughtText(tdSnap.data().thought);
+              if (!isDefaultFallbackThought(t)) foundThought = t;
             }
           } catch (e) {}
 
@@ -1475,7 +1701,19 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
               const altSnap = await getDoc(doc(db, "teacher_diaries", cls, med, isoDate));
               if (altSnap.exists()) {
                 const aData = altSnap.data();
-                foundThought = aData.thought || (aData.parsedContent ? aData.parsedContent.thought : "");
+                const t = cleanThoughtText(aData.thought || (aData.parsedContent ? aData.parsedContent.thought : ""));
+                if (!isDefaultFallbackThought(t)) foundThought = t;
+              }
+            } catch (e) {}
+          }
+
+          if (!foundThought) {
+            try {
+              const pSnap = await getDoc(doc(db, "daily_paripath_archive", isoDate));
+              if (pSnap.exists()) {
+                const pData = pSnap.data();
+                const t = cleanThoughtText(pData.suvichar || pData.thought || pData.thoughtOfTheDay);
+                if (!isDefaultFallbackThought(t)) foundThought = t;
               }
             } catch (e) {}
           }
@@ -1499,9 +1737,12 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           const next = prevPages.map((p) => {
             const iso = formatDateToIso(p.date);
             const match = results.find((r) => (r.isoDate && r.isoDate === iso) || (r.date && r.date === p.date));
-            if (match && match.thought && match.thought !== p.thought) {
+            if (match && match.thought && !isDefaultFallbackThought(match.thought) && match.thought !== p.thought && (isDefaultFallbackThought(p.thought) || !p.thought)) {
               hasUpdate = true;
               return { ...p, thought: match.thought };
+            } else if (isDefaultFallbackThought(p.thought)) {
+              hasUpdate = true;
+              return { ...p, thought: "" };
             }
             return p;
           });
@@ -1518,10 +1759,44 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     };
   }, [savedRecord?.id]);
 
+  const getDayOfMonthNumber = (dateStr?: string): number => {
+    if (!dateStr) return 0;
+    const cleaned = dateStr.trim();
+    let m = cleaned.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+    if (m) return parseInt(m[3], 10);
+    m = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+    if (m) return parseInt(m[1], 10);
+    return 0;
+  };
+
   const pagesToDisplay = useMemo(() => {
     if (!structuredPages || structuredPages.length === 0) return [];
-    if (!selectedMonth) return structuredPages;
-    return structuredPages.filter((p) => {
+
+    let filtered = structuredPages;
+
+    // Filter by week range if savedRecord specifies a week/range (e.g. 1 to 10, 11 to 20)
+    const weekStr = savedRecord?.week || savedRecord?.selectedWeek || "";
+    if (weekStr) {
+      if (weekStr.includes("1 to 10") || weekStr === "Week 1") {
+        filtered = filtered.filter((p) => {
+          const dayNum = getDayOfMonthNumber(p.date);
+          return dayNum === 0 || (dayNum >= 1 && dayNum <= 10);
+        });
+      } else if (weekStr.includes("11 to 20") || weekStr === "Week 2") {
+        filtered = filtered.filter((p) => {
+          const dayNum = getDayOfMonthNumber(p.date);
+          return dayNum === 0 || (dayNum >= 11 && dayNum <= 20);
+        });
+      } else if (weekStr.includes("21 to 31") || weekStr.includes("21 to 30") || weekStr === "Week 3" || weekStr === "Week 4" || weekStr === "Week 5") {
+        filtered = filtered.filter((p) => {
+          const dayNum = getDayOfMonthNumber(p.date);
+          return dayNum === 0 || dayNum >= 21;
+        });
+      }
+    }
+
+    if (!selectedMonth) return filtered;
+    return filtered.filter((p) => {
       const d = p.date || (p as any).displayDate || "";
       if (!d) return true;
       const clean = String(d).trim();
@@ -1531,7 +1806,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
       return true;
     });
-  }, [structuredPages, selectedMonth]);
+  }, [structuredPages, selectedMonth, savedRecord?.week, savedRecord?.selectedWeek]);
 
   const hasStructuredView = pagesToDisplay && pagesToDisplay.length > 0;
   const downloadUrl = savedRecord?.pageUrl || (selectedFile ? localPdfBlobUrl : null);
@@ -1931,32 +2206,10 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         <div className="flex items-center gap-2 shrink-0">
 
 
-          {isPdf && hasStructuredView && (
-            <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs font-bold">
-              {isPdf && (
-                <button
-                  onClick={() => setViewMode("original")}
-                  className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
-                    viewMode === "original"
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  <Eye className="size-3.5" /> PDF प्रिव्ह्यू
-                </button>
-              )}
-              <button
-                onClick={() => setViewMode("structured")}
-                className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
-                  viewMode === "structured"
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                <LayoutGrid className="size-3.5" /> स्ट्रक्चर्ड टाचण
-              </button>
-            </div>
-          )}
+          {/* Single PDF View Mode Badge (Dual options removed as requested) */}
+          <div className="flex items-center bg-indigo-600 px-3 py-1.5 rounded-xl text-white text-xs font-bold gap-1.5 shadow-sm">
+            <Eye className="size-3.5" /> PDF प्रिव्ह्यू
+          </div>
 
           {(downloadUrl || hasStructuredView) && (
             <div className="flex items-center gap-2">
@@ -2002,7 +2255,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
               Loading document preview...
             </span>
           </div>
-        ) : isPdf && pdfUrlToDisplay && viewMode === "original" && isRecordMatchingMonth ? (
+        ) : (isPdf || pdfUrlToDisplay) && pdfUrlToDisplay && isRecordMatchingMonth ? (
           <div className="w-full h-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner flex flex-col relative">
             <iframe
               src={pdfUrlToDisplay.includes("#") ? pdfUrlToDisplay : `${pdfUrlToDisplay}#view=FitH`}
@@ -2012,7 +2265,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           </div>
         ) : viewMode === "structured" && pagesToDisplay.length > 0 ? (
           <div className="w-full">
-            <StructuredDayPageList ref={structuredListRef} pages={pagesToDisplay} schoolProfile={schoolProfile} />
+            <StructuredDayPageList ref={structuredListRef} pages={pagesToDisplay} schoolProfile={schoolProfile} defaultBaseDate={effectiveBaseDate} />
           </div>
         ) : htmlContent ? (
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl mx-auto prose prose-slate text-sm font-sans leading-relaxed text-slate-800">
