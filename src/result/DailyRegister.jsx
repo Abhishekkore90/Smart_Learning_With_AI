@@ -650,7 +650,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
         <div class="cover-page">
           ${schoolLogo ? `<img class="cover-logo" src="${schoolLogo}" alt="Logo">` : ""}
           <h1 class="cover-title">${schoolNameFallback}</h1>
-          <p style="font-size: 13px; font-weight: bold; margin: -5px 0 25px 0; color: #555;">UDISE: ${udiseNumber || "27350800701"}</p>
+          <p style="font-size: 13px; font-weight: bold; margin: -5px 0 25px 0; color: #555;">UDISE: ${udiseNumber || ""}</p>
           <h2 class="cover-subtitle">सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही</h2>
           <div style="margin-top: 35px; padding: 22px; background-color: #f4fcf7; border-radius: 8px; border: 1px dashed #1e3a2f; width: 60%; margin-left: auto; margin-right: auto; text-align: left;">
             <p class="cover-details"><strong>शैक्षणिक वर्ष (Academic Year):</strong> ${academicYear}</p>

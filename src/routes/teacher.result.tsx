@@ -196,6 +196,68 @@ function TeacherResultsPage() {
 
   const teacherId = getTeacherId(user, profile);
 
+  // Total teacher student count across ALL classes & mediums for per-student pricing
+  const [totalTeacherStudents, setTotalTeacherStudents] = useState<number>(0);
+
+  useEffect(() => {
+    if (!teacherId) return;
+
+    let unsubUsers: (() => void) | undefined;
+    let unsubStudents: (() => void) | undefined;
+
+    const userKeys = Array.from(
+      new Set(
+        [
+          teacherId,
+          user?.uid,
+          user?.email,
+          profile?.id,
+          profile?.email,
+          localStorage.getItem("teacher_email"),
+          localStorage.getItem("user_email"),
+        ].filter((k): k is string => Boolean(k))
+      )
+    );
+
+    try {
+      const qUsers = query(collection(db, "users"), where("role", "==", "student"));
+      unsubUsers = onSnapshot(qUsers, (snapUsers) => {
+        const userStudentIds = new Set<string>();
+        snapUsers.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          const sTeacher = data.teacherId || data.createdById || data.userId;
+          if (sTeacher && userKeys.includes(sTeacher)) {
+            userStudentIds.add(docSnap.id);
+          }
+        });
+
+        const qStudents = query(collection(db, "students"));
+        unsubStudents = onSnapshot(qStudents, (snapStudents) => {
+          const studentDocsIds = new Set<string>();
+          snapStudents.docs.forEach((docSnap) => {
+            const data = docSnap.data();
+            const sTeacher = data.teacherId || data.createdById || data.userId;
+            if (sTeacher && userKeys.includes(sTeacher)) {
+              studentDocsIds.add(docSnap.id);
+            }
+          });
+
+          const combinedCount = new Set([...Array.from(userStudentIds), ...Array.from(studentDocsIds)]).size;
+          setTotalTeacherStudents(combinedCount);
+        });
+      }, (e) => {
+        console.warn("Total teacher students error:", e);
+      });
+    } catch (e) {
+      console.warn("Sync error:", e);
+    }
+
+    return () => {
+      if (unsubUsers) unsubUsers();
+      if (unsubStudents) unsubStudents();
+    };
+  }, [teacherId, user, profile]);
+
   // Real-time student count sync for selected class AND medium (isolated by teacherId)
   useEffect(() => {
     let isSubscribed = true;
@@ -472,8 +534,14 @@ function TeacherResultsPage() {
     currentPage * entriesPerPage,
   );
 
+  const isFreeTab = activeTab === "dashboard" || activeTab === "settings" || activeTab === "student-progress";
+
   return (
-    <ModulePaywall moduleId="cce-result">
+    <ModulePaywall
+      moduleId="cce-result"
+      totalStudentsCount={totalTeacherStudents || studentsCount || 0}
+      isPaidTab={!isFreeTab}
+    >
       <div className="min-h-screen bg-slate-50/50">
         <TeacherHeader />
         <TeacherSidebar />
@@ -581,7 +649,10 @@ function TeacherResultsPage() {
                       <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     </div>
                     <div>
-                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-slate-900 transition-colors tracking-tight">शाळेची माहिती</h3>
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-slate-900 transition-colors tracking-tight">शाळेची माहिती</h3>
+                        <span className="px-2 py-0.5 text-[9.5px] font-black bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200 shadow-2xs">मोफत</span>
+                      </div>
                       <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">मूल्यमापन व शाळा सेटिंग्ज</p>
                     </div>
                   </div>
@@ -601,7 +672,10 @@ function TeacherResultsPage() {
                       <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                     </div>
                     <div>
-                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-blue-600 transition-colors tracking-tight">विद्यार्थी ({studentsCount})</h3>
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-blue-600 transition-colors tracking-tight">विद्यार्थी ({studentsCount})</h3>
+                        <span className="px-2 py-0.5 text-[9.5px] font-black bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200 shadow-2xs">मोफत</span>
+                      </div>
                       <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">विद्यार्थ्यांची यादी व प्रगती</p>
                     </div>
                   </div>

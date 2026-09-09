@@ -5951,6 +5951,7 @@ function TeacherSqaafPage() {
 
     container.innerHTML = finalHtml;
     container.style.width = "793px";
+    container.style.margin = "0 auto";
     container.style.padding = "20px";
     container.style.boxSizing = "border-box";
     container.style.backgroundColor = "white";
@@ -5965,7 +5966,7 @@ function TeacherSqaafPage() {
         scale: 1.5, 
         useCORS: true, 
         logging: false,
-        windowWidth: 850
+        windowWidth: 793
       },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     }).from(container);
@@ -6985,8 +6986,9 @@ function TeacherSqaafPage() {
               </tbody>
             </table>
 
+
             <!-- Summary Totals Chart - Always force new page -->
-            <div class="html2pdf__page-break" style="page-break-before: always !important; break-before: page !important; margin-top: 30px; padding-top: 10px;">
+            <div class="html2pdf__page-break" style="page-break-before: always !important; break-before: page !important; page-break-inside: avoid !important; break-inside: avoid !important; margin-top: 20px; padding-top: 10px;">
               <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid black; font-size: 10px; font-family: 'Noto Sans Devanagari', Arial, sans-serif;">
                 <colgroup>
                   <col style="width: 55px;">
@@ -7005,12 +7007,12 @@ function TeacherSqaafPage() {
                 </colgroup>
                 <thead>
                   <tr>
-                    <th colspan="13" style="border: 1px solid black; padding: 8px 6px; text-align: center; font-size: 14px; font-weight: 900; background-color: #f8fafc;">
+                    <th colspan="13" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 13px; font-weight: 900; background-color: #f8fafc;">
                       SQAAF - क्षेत्र,उपक्षेत्र,आणि मानके / लहान गट - पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६ वी ते ८ वी )
                     </th>
                   </tr>
                   <tr>
-                    <th colspan="13" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 10.5px; font-weight: bold; background-color: #f8fafc; line-height: 1.3; white-space: nowrap;">
+                    <th colspan="13" style="border: 1px solid black; padding: 4px 4px; text-align: center; font-size: 10px; font-weight: bold; background-color: #f8fafc; line-height: 1.2; white-space: nowrap;">
                       ${schoolName ? `<span style="font-weight: 900;">शाळेचे नाव -</span> ${schoolName} &nbsp;&nbsp;&nbsp;` : ""}
                       ${udise ? `<span style="font-weight: 900;">यू-डायस -</span> ${udise} &nbsp;&nbsp;&nbsp;` : ""}
                       ${headmaster ? `<span style="font-weight: 900;">मुख्याध्यापक -</span> ${headmaster} &nbsp;&nbsp;&nbsp;` : ""}
@@ -7022,82 +7024,82 @@ function TeacherSqaafPage() {
                     </th>
                   </tr>
                   <tr>
-                    <th rowspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; width: 55px; font-size: 12.5px; font-weight: 900;">मानक क्र.</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; width: 45px; font-size: 12px; font-weight: 900;">लागू<br/>मानक<br/>संख्या</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; width: 170px; font-size: 13px; font-weight: 900;">क्षेत्र</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 12.5px; font-weight: 900;">स्तर १</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 12.5px; font-weight: 900;">स्तर २</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 12.5px; font-weight: 900;">स्तर ३</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 12.5px; font-weight: 900;">स्तर ४</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 12.5px; font-weight: 900;">एकूण</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px 2px; text-align: center; width: 55px; font-size: 11.5px; font-weight: 900;">मानक क्र.</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px 2px; text-align: center; width: 45px; font-size: 11px; font-weight: 900;">लागू<br/>मानक<br/>संख्या</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px 4px; text-align: center; width: 170px; font-size: 12px; font-weight: 900;">क्षेत्र</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 4px 2px; text-align: center; font-size: 11.5px; font-weight: 900;">स्तर १</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 4px 2px; text-align: center; font-size: 11.5px; font-weight: 900;">स्तर २</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 4px 2px; text-align: center; font-size: 11.5px; font-weight: 900;">स्तर ३</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 4px 2px; text-align: center; font-size: 11.5px; font-weight: 900;">स्तर ४</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 4px 2px; text-align: center; font-size: 11.5px; font-weight: 900;">एकूण</th>
                   </tr>
                   <tr>
-                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
-                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
-                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
-                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
-                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
-                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
-                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
-                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
-                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
-                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 3px 1px; text-align: center; font-size: 9.5px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 3px 1px; text-align: center; font-size: 9.5px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 3px 1px; text-align: center; font-size: 9.5px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 3px 1px; text-align: center; font-size: 9.5px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 3px 1px; text-align: center; font-size: 9.5px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 3px 1px; text-align: center; font-size: 9.5px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 3px 1px; text-align: center; font-size: 9.5px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 3px 1px; text-align: center; font-size: 9.5px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 3px 1px; text-align: center; font-size: 9.5px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 3px 1px; text-align: center; font-size: 9.5px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${domainRowsLegacyHtml}
                   <tr>
-                    <td colspan="1" style="border: 1px solid black; padding: 5px;"></td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13px;">${totalApplicable}</td>
-                    <td style="border: 1px solid black; padding: 5px 8px; text-align: right; font-weight: 900; font-size: 13px;">एकूण</td>
-                    <td colspan="8" style="border: 1px solid black; padding: 5px;"></td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px; color: #1e1b4b;">${obtainedMarks_}</td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px;"></td>
+                    <td colspan="1" style="border: 1px solid black; padding: 3.5px;"></td>
+                    <td style="border: 1px solid black; padding: 3.5px; text-align: center; font-weight: 900; font-size: 12px;">${totalApplicable}</td>
+                    <td style="border: 1px solid black; padding: 3.5px 6px; text-align: right; font-weight: 900; font-size: 12px;">एकूण</td>
+                    <td colspan="8" style="border: 1px solid black; padding: 3.5px;"></td>
+                    <td style="border: 1px solid black; padding: 3.5px; text-align: center; font-weight: 900; font-size: 12.5px; color: #1e1b4b;">${obtainedMarks_}</td>
+                    <td style="border: 1px solid black; padding: 3.5px; text-align: center; font-weight: 900; font-size: 12.5px;"></td>
                   </tr>
                   <tr>
-                    <td colspan="2" style="border: 1px solid black; padding: 5px;"></td>
-                    <td style="border: 1px solid black; padding: 5px 8px; text-align: right; font-weight: 900; font-size: 13px;">एकूण पैकी</td>
-                    <td colspan="8" style="border: 1px solid black; padding: 5px;"></td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px; color: #1e1b4b;">${totalPossibleMarks}</td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px;"></td>
+                    <td colspan="2" style="border: 1px solid black; padding: 3.5px;"></td>
+                    <td style="border: 1px solid black; padding: 3.5px 6px; text-align: right; font-weight: 900; font-size: 12px;">एकूण पैकी</td>
+                    <td colspan="8" style="border: 1px solid black; padding: 3.5px;"></td>
+                    <td style="border: 1px solid black; padding: 3.5px; text-align: center; font-weight: 900; font-size: 12.5px; color: #1e1b4b;">${totalPossibleMarks}</td>
+                    <td style="border: 1px solid black; padding: 3.5px; text-align: center; font-weight: 900; font-size: 12.5px;"></td>
                   </tr>
                   <tr>
-                    <td colspan="2" style="border: 1px solid black; padding: 5px;"></td>
-                    <td style="border: 1px solid black; padding: 5px 8px; text-align: right; font-weight: 900; font-size: 13px;">टक्केवारी</td>
-                    <td colspan="8" style="border: 1px solid black; padding: 5px;"></td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px; color: #1e1b4b;">${overallSelfPct}%</td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px;"></td>
+                    <td colspan="2" style="border: 1px solid black; padding: 3.5px;"></td>
+                    <td style="border: 1px solid black; padding: 3.5px 6px; text-align: right; font-weight: 900; font-size: 12px;">टक्केवारी</td>
+                    <td colspan="8" style="border: 1px solid black; padding: 3.5px;"></td>
+                    <td style="border: 1px solid black; padding: 3.5px; text-align: center; font-weight: 900; font-size: 12.5px; color: #1e1b4b;">${overallSelfPct}%</td>
+                    <td style="border: 1px solid black; padding: 3.5px; text-align: center; font-weight: 900; font-size: 12.5px;"></td>
                   </tr>
                   <tr>
-                    <td colspan="2" style="border: 1px solid black; padding: 5px;"></td>
-                    <td style="border: 1px solid black; padding: 5px 8px; text-align: right; font-weight: 900; font-size: 13px;">श्रेणी</td>
-                    <td colspan="8" style="border: 1px solid black; padding: 5px;"></td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 15px; color: #16a34a;">${getGrade(overallSelfPct)}</td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px;"></td>
+                    <td colspan="2" style="border: 1px solid black; padding: 3.5px;"></td>
+                    <td style="border: 1px solid black; padding: 3.5px 6px; text-align: right; font-weight: 900; font-size: 12px;">श्रेणी</td>
+                    <td colspan="8" style="border: 1px solid black; padding: 3.5px;"></td>
+                    <td style="border: 1px solid black; padding: 3.5px; text-align: center; font-weight: 900; font-size: 14px; color: #16a34a;">${getGrade(overallSelfPct)}</td>
+                    <td style="border: 1px solid black; padding: 3.5px; text-align: center; font-weight: 900; font-size: 12.5px;"></td>
                   </tr>
                 </tbody>
               </table>
               
-              <div style="margin-top: 18px; font-size: 12.5px; font-weight: bold; font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif;">
-                <div style="margin-bottom: 8px;">(गुणांकन : स्तर १ - १ गुण, स्तर २ - २ गुण, स्तर ३ - ३ गुण, स्तर ४ - ४ गुण)</div>
-                <div style="margin-bottom: 4px; font-weight: 900;">श्रेणी तक्ता :</div>
-                <table style="font-size: 12px; font-weight: bold; border-collapse: collapse;">
-                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #15803d;">A+</td><td style="padding: 3px 0;">= ९१ ते १००</td></tr>
-                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #16a34a;">A</td><td style="padding: 3px 0;">= ८१ ते ९०</td></tr>
-                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #ca8a04;">B+</td><td style="padding: 3px 0;">= ७१ ते ८०</td></tr>
-                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #f97316;">B</td><td style="padding: 3px 0;">= ६१ ते ७०</td></tr>
-                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #ea580c;">C+</td><td style="padding: 3px 0;">= ५१ ते ६०</td></tr>
-                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #dc2626;">C</td><td style="padding: 3px 0;">= ५० पेक्षा कमी</td></tr>
+              <div style="margin-top: 12px; font-size: 11.5px; font-weight: bold; font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif;">
+                <div style="margin-bottom: 4px;">(गुणांकन : स्तर १ - १ गुण, स्तर २ - २ गुण, स्तर ३ - ३ गुण, स्तर ४ - ४ गुण)</div>
+                <div style="margin-bottom: 2px; font-weight: 900;">श्रेणी तक्ता :</div>
+                <table style="font-size: 11px; font-weight: bold; border-collapse: collapse;">
+                  <tr><td style="padding: 2px 14px 2px 0; font-weight: 900; color: #15803d;">A+</td><td style="padding: 2px 0;">= ९१ ते १००</td></tr>
+                  <tr><td style="padding: 2px 14px 2px 0; font-weight: 900; color: #16a34a;">A</td><td style="padding: 2px 0;">= ८१ ते ९०</td></tr>
+                  <tr><td style="padding: 2px 14px 2px 0; font-weight: 900; color: #ca8a04;">B+</td><td style="padding: 2px 0;">= ७१ ते ८०</td></tr>
+                  <tr><td style="padding: 2px 14px 2px 0; font-weight: 900; color: #f97316;">B</td><td style="padding: 2px 0;">= ६१ ते ७०</td></tr>
+                  <tr><td style="padding: 2px 14px 2px 0; font-weight: 900; color: #ea580c;">C+</td><td style="padding: 2px 0;">= ५१ ते ६०</td></tr>
+                  <tr><td style="padding: 2px 14px 2px 0; font-weight: 900; color: #dc2626;">C</td><td style="padding: 2px 0;">= ५० पेक्षा कमी</td></tr>
                 </table>
               </div>
 
               <!-- Footer -->
-              <div style="margin-top: 30px; padding: 12px 24px; border-top: 2px solid #e2e8f0; display: flex; justify-content: flex-end; align-items: flex-end;">
+              <div style="margin-top: 16px; padding: 6px 16px; border-top: 1.5px solid #e2e8f0; display: flex; justify-content: flex-end; align-items: flex-end;">
                 <div style="display: flex; gap: 40px;">
                   <div style="text-align: center;">
-                    <div style="height: 70px;"></div>
-                    <div style="width: 200px; border-bottom: 2px solid #334155; margin-bottom: 6px; height: 0px;"></div>
-                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1px;"}">${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}</div>
+                    <div style="height: 35px;"></div>
+                    <div style="width: 180px; border-bottom: 2px solid #334155; margin-bottom: 4px; height: 0px;"></div>
+                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1px;"}">${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}</div>
                   </div>
                 </div>
               </div>
@@ -7354,47 +7356,64 @@ function TeacherSqaafPage() {
           }
         }
 
-        if (summaryTable) {
+        const summaryBlock = tempDiv.querySelector(".html2pdf__page-break") as HTMLElement;
+        if (summaryBlock) {
+          await saveCurrentPageToPdf();
+          currentPage = createNewPageContainer();
+
+          const clonedSummary = summaryBlock.cloneNode(true) as HTMLElement;
+          clonedSummary.style.marginTop = "0";
+          clonedSummary.style.paddingTop = "0";
+          clonedSummary.style.pageBreakBefore = "avoid";
+          clonedSummary.style.pageBreakInside = "avoid";
+
+          // Compactly style table cells so that the complete summary table, grade table, and signature fit cleanly on 1 page
+          const sCells = clonedSummary.querySelectorAll("td, th");
+          sCells.forEach(td => {
+            (td as HTMLElement).style.padding = "3.5px 4px";
+            (td as HTMLElement).style.border = "1px solid #475569";
+            (td as HTMLElement).style.color = "#0f172a";
+          });
+
+          currentPage.appendChild(clonedSummary);
+          await saveCurrentPageToPdf();
+        } else if (summaryTable) {
           await saveCurrentPageToPdf();
           currentPage = createNewPageContainer();
 
           summaryTable.style.width = "100%";
           summaryTable.style.borderCollapse = "collapse";
           summaryTable.style.fontFamily = "sans-serif";
-          summaryTable.style.fontSize = "12px";
+          summaryTable.style.fontSize = "11px";
 
           const sCells = summaryTable.querySelectorAll("td, th");
           sCells.forEach(td => {
-            (td as HTMLElement).style.padding = "6px 8px";
+            (td as HTMLElement).style.padding = "4px 6px";
             (td as HTMLElement).style.border = "1px solid #94a3b8";
             (td as HTMLElement).style.color = "#0f172a";
           });
 
           const clonedSummary = summaryTable.cloneNode(true) as HTMLElement;
           currentPage.appendChild(clonedSummary);
-        }
 
-        // Add Headmaster Signature option strictly on the table page in PDF, with margin safety
-        const sigDiv = document.createElement("div");
-        sigDiv.style.marginTop = "8px";
-        sigDiv.style.paddingTop = "2px";
-        sigDiv.style.paddingBottom = "10px";
-        sigDiv.style.display = "flex";
-        sigDiv.style.justifyContent = "flex-end";
-        sigDiv.style.alignItems = "flex-end";
-        sigDiv.style.width = "100%";
-        sigDiv.innerHTML = `
-          <div style="text-align: center; display: inline-block;">
-            <div style="height: 70px;"></div>
-            <div style="width: 190px; border-bottom: 2px solid #0f172a; margin-bottom: 6px; height: 0px;"></div>
-            <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"}">
-              ${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}
+          const sigDiv = document.createElement("div");
+          sigDiv.style.marginTop = "12px";
+          sigDiv.style.display = "flex";
+          sigDiv.style.justifyContent = "flex-end";
+          sigDiv.style.alignItems = "flex-end";
+          sigDiv.style.width = "100%";
+          sigDiv.innerHTML = `
+            <div style="text-align: center; display: inline-block;">
+              <div style="height: 40px;"></div>
+              <div style="width: 180px; border-bottom: 2px solid #0f172a; margin-bottom: 4px; height: 0px;"></div>
+              <div style="font-size: 12px; font-weight: 900; color: #0f172a; text-transform: uppercase;">
+                ${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}
+              </div>
             </div>
-          </div>
-        `;
-        currentPage.appendChild(sigDiv);
-
-        await saveCurrentPageToPdf();
+          `;
+          currentPage.appendChild(sigDiv);
+          await saveCurrentPageToPdf();
+        }
         document.body.removeChild(renderContainer);
 
         const filename = `SQAAF_Report_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -7653,6 +7672,7 @@ function TeacherSqaafPage() {
           container.innerHTML = finalHtml;
           container.style.position = "static";
           container.style.width = "1040px";
+          container.style.margin = "0 auto";
           container.style.padding = "4px 8px";
           container.style.boxSizing = "border-box";
           container.style.backgroundColor = "white";
@@ -7661,14 +7681,14 @@ function TeacherSqaafPage() {
           document.body.appendChild(wrapper);
           
           const pdfOptions = {
-            margin: [4, 4, 4, 4],
+            margin: [4, 6, 4, 6],
             filename: `SQAAF_Summary_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
             image: { type: "jpeg", quality: 0.95 },
             html2canvas: { 
               scale: 1.5, 
               useCORS: true, 
               logging: false,
-              windowWidth: 1120
+              windowWidth: 1040
             },
             jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: false },
             pagebreak: { mode: ["css", "legacy"] },
@@ -7706,6 +7726,7 @@ function TeacherSqaafPage() {
         container.innerHTML = finalHtml;
         container.style.position = "static";
         container.style.width = "1040px";
+        container.style.margin = "0 auto";
         container.style.padding = "12px 15px";
         container.style.boxSizing = "border-box";
         container.style.backgroundColor = "white";
@@ -7721,7 +7742,7 @@ function TeacherSqaafPage() {
             scale: 1.5, 
             useCORS: true, 
             logging: false,
-            windowWidth: 1120
+            windowWidth: 1040
           },
           jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: false },
           pagebreak: { mode: ["css", "legacy"], before: ".html2pdf__page-break" },

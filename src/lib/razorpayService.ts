@@ -84,6 +84,13 @@ export const processRazorpayPayment = async (options: RazorpayPaymentOptions) =>
     theme: {
       color: "#2563eb",
     },
+    modal: {
+      ondismiss: function () {
+        if (options.onError) {
+          options.onError("पेमेंट रद्द केले गेले आहे. पुन्हा प्रयत्न करा.");
+        }
+      },
+    },
   };
 
   if (generatedOrderId) {

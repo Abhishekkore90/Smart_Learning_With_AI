@@ -54,6 +54,10 @@ interface ModulePricing {
   description?: string;
   upiId?: string;
   qrImageUrl?: string;
+  perStudentPrice?: number;
+  monthlyPrice?: number;
+  yearlyPrice?: number;
+  classPrices?: Record<string, number>;
 }
 
 interface TeacherPaymentRecord {
@@ -82,14 +86,18 @@ interface UniqueTeacher {
 }
 
 const DEFAULT_MODULES: { id: string; title: string; defaultPrice: number }[] = [
-  { id: "cce-result", title: "सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही (CCE Evaluation)", defaultPrice: 199 },
-  { id: "mdm-register", title: "माध्यान्ह भोजन योजना नोंदवही (MDM Register)", defaultPrice: 149 },
-  { id: "meeting-register", title: "माता-पालक व शिक्षक सभा नोंदवही (Meeting Register)", defaultPrice: 99 },
-  { id: "sqaf-register", title: "शालेय गुणवत्ता आश्वासन व प्रमाणीकरण (SQAAF)", defaultPrice: 299 },
-  { id: "question-bank", title: "प्रश्नपेढी व्यवस्थापन (Question Bank Generator)", defaultPrice: 149 },
-  { id: "academic-planning", title: "वार्षिक व मासिक नियोजन (Academic Planning)", defaultPrice: 99 },
-  { id: "paripath", title: "दैनिक परिपाठ (Daily Assembly)", defaultPrice: 0 },
-  { id: "timetable", title: "वेळापत्रक व्यवस्थापन (School Timetable)", defaultPrice: 0 },
+  { id: "timetable", title: "१. वेळापत्रक", defaultPrice: 0 },
+  { id: "templates", title: "२. टेम्पलेट", defaultPrice: 149 },
+  { id: "special-day", title: "३. परिपाठ", defaultPrice: 299 },
+  { id: "meeting-register", title: "४. मासिक सभा", defaultPrice: 99 },
+  { id: "mdm-register", title: "५. माध्यान्ह भोजन", defaultPrice: 149 },
+  { id: "sqaf-register", title: "६. SQAAF मूल्यमापन", defaultPrice: 299 },
+  { id: "cce-result", title: "७. CCE निकाल", defaultPrice: 199 },
+  { id: "hpc-card", title: "८. Holistic Progress Card (HPC)", defaultPrice: 199 },
+  { id: "stats-teacher", title: "९. शिक्षक संचिका", defaultPrice: 99 },
+  { id: "stats-student", title: "१०. विद्यार्थी संचिका", defaultPrice: 99 },
+  { id: "annual-monthly-planning", title: "११. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी", defaultPrice: 149 },
+  { id: "teaching-record", title: "१२. टाचणवही", defaultPrice: 99 },
 ];
 
 function AdminModulePaymentsPage() {
@@ -123,7 +131,7 @@ function AdminModulePaymentsPage() {
         map[d.id] = d.data() as ModulePricing;
       });
 
-      // Fill defaults if missing
+      // Fill defaults if missing or update title
       DEFAULT_MODULES.forEach((mod) => {
         if (!map[mod.id]) {
           map[mod.id] = {
@@ -138,6 +146,8 @@ function AdminModulePaymentsPage() {
             ],
             validityDays: 365,
           };
+        } else {
+          map[mod.id].title = mod.title;
         }
       });
       setPricings(map);
@@ -202,6 +212,14 @@ function AdminModulePaymentsPage() {
     setSaving(true);
     try {
       await setDoc(doc(db, "cce_module_pricing", modId), item, { merge: true });
+      if (modId === "special-day") {
+        await setDoc(doc(db, "cce_module_pricing", "paripath"), { ...item, id: "paripath" }, { merge: true });
+      } else if (modId === "annual-monthly-planning") {
+        await setDoc(doc(db, "cce_module_pricing", "academic-planning"), { ...item, id: "academic-planning" }, { merge: true });
+        await setDoc(doc(db, "cce_module_pricing", "question-bank"), { ...item, id: "question-bank" }, { merge: true });
+      } else if (modId === "teaching-record") {
+        await setDoc(doc(db, "cce_module_pricing", "teaching-record-notebook"), { ...item, id: "teaching-record-notebook" }, { merge: true });
+      }
       toast.success(`'${item.title}' चे दर यशस्वीरित्या जतन झाले!`);
     } catch (err: any) {
       toast.error("जतन अयशस्वी: " + err.message);
@@ -214,6 +232,14 @@ function AdminModulePaymentsPage() {
     try {
       for (const [modId, item] of Object.entries(pricings)) {
         await setDoc(doc(db, "cce_module_pricing", modId), item, { merge: true });
+        if (modId === "special-day") {
+          await setDoc(doc(db, "cce_module_pricing", "paripath"), { ...item, id: "paripath" }, { merge: true });
+        } else if (modId === "annual-monthly-planning") {
+          await setDoc(doc(db, "cce_module_pricing", "academic-planning"), { ...item, id: "academic-planning" }, { merge: true });
+          await setDoc(doc(db, "cce_module_pricing", "question-bank"), { ...item, id: "question-bank" }, { merge: true });
+        } else if (modId === "teaching-record") {
+          await setDoc(doc(db, "cce_module_pricing", "teaching-record-notebook"), { ...item, id: "teaching-record-notebook" }, { merge: true });
+        }
       }
       toast.success("सर्व मॉड्यूल्सचे दर यशस्वीरित्या जतन झाले!");
     } catch (err: any) {
@@ -225,19 +251,42 @@ function AdminModulePaymentsPage() {
   // Compile list of unique real teachers & users from Firestore users collection
   const teacherMap = new Map<string, UniqueTeacher>();
 
-  // 1. Add ALL real registered users from Firestore users collection (teacher & user roles)
+  // 1. Add ONLY real registered users from Firestore users collection (excluding CCE students & dummy entries)
   usersTeachers.forEach((u) => {
+    // Exclude student accounts added in CCE or having student role/IDs/teacherId
+    const isStudent =
+      u.role === "student" ||
+      u.isStudent === true ||
+      !!u.teacherId ||
+      (typeof u.id === "string" && u.id.startsWith("student_")) ||
+      (typeof u.uid === "string" && u.uid.startsWith("student_"));
+
+    if (isStudent) return;
+
     const email = (u.email || "").trim().toLowerCase();
-    const id = u.uid || u.id || email;
-    if (id || email) {
-      const key = email || id;
-      teacherMap.set(key, {
-        teacherId: u.uid || u.id || email,
-        teacherName: u.displayName || u.name || u.teacherName || (email ? email.split("@")[0] : id),
-        teacherEmail: u.email || (id.includes("@") ? id : ""),
-        teacherPhone: u.phone || u.phoneNumber || u.mobile || "",
-      });
-    }
+    const phone = (u.phone || u.phoneNumber || u.mobile || "").trim();
+
+    // Verify it's a genuine registered account from Firebase (must have valid email/phone or explicit teacher role)
+    const isRealUser =
+      (email !== "" && email.includes("@")) ||
+      phone !== "" ||
+      u.role === "teacher" ||
+      u.is_teacher === true ||
+      u.isTeacher === true;
+
+    if (!isRealUser) return;
+
+    const id = u.uid || u.id;
+    const name = u.displayName || u.name || u.teacherName || u.fullName || u.schoolName || (email ? email.split("@")[0] : id);
+    const teacherObj: UniqueTeacher = {
+      teacherId: id || email,
+      teacherName: name,
+      teacherEmail: u.email || (id && id.includes("@") ? id : ""),
+      teacherPhone: phone,
+    };
+
+    if (id) teacherMap.set(id, teacherObj);
+    if (email) teacherMap.set(email, teacherObj);
   });
 
   // 2. Enhance metadata for existing real users from access & payment logs (without creating fake users)
@@ -274,6 +323,10 @@ function AdminModulePaymentsPage() {
   });
 
   const filteredPayments = payments.filter((p) => {
+    // Exclude UPI QR payments as requested by admin
+    const isUpiQr = p.paymentMethod === "UPI_QR" || (typeof p.utrNumber === "string" && p.utrNumber.trim() !== "");
+    if (isUpiQr) return false;
+
     const term = searchTerm.toLowerCase();
     return (
       (p.teacherName || "").toLowerCase().includes(term) ||
@@ -283,7 +336,7 @@ function AdminModulePaymentsPage() {
     );
   });
 
-  const totalRevenue = payments.reduce((acc, p) => acc + (p.amount || 0), 0);
+  const totalRevenue = filteredPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
 
   // Check if specific module is granted to a teacher
   const isModuleGranted = (tId: string, mId: string) => {
@@ -491,7 +544,7 @@ function AdminModulePaymentsPage() {
             }`}
           >
             <Users className="size-4" />
-            <span>पेमेंट इतिहास ({payments.length})</span>
+            <span>पेमेंट इतिहास ({filteredPayments.length})</span>
           </button>
         </div>
 
@@ -689,7 +742,7 @@ function AdminModulePaymentsPage() {
                             </>
                           )}
                         </span>
-                        <h4 className="text-sm font-black text-slate-900 mt-1.5 leading-snug">{item.title}</h4>
+                        <h4 className="text-sm font-black text-slate-900 mt-1.5 leading-snug">{mod.title || item.title}</h4>
                       </div>
 
                       {/* Toggle Paywall */}
@@ -705,37 +758,267 @@ function AdminModulePaymentsPage() {
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                      <div>
-                        <label className="text-[11px] font-extrabold text-slate-600 block mb-1">दर (रु. मध्ये)</label>
-                        <div className="relative">
-                          <span className="absolute left-3.5 top-3 text-slate-400 font-bold text-sm">₹</span>
+                    {mod.id === "cce-result" ? (
+                      <div className="space-y-3 pt-2">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
+                              विद्यार्थी दर (₹ / विद्यार्थी)*
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-3 text-emerald-600 font-black text-sm">₹</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.perStudentPrice ?? 5}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  setPricings((prev) => ({
+                                    ...prev,
+                                    [mod.id]: {
+                                      ...prev[mod.id],
+                                      perStudentPrice: val,
+                                      price: val, // Fallback sync
+                                    },
+                                  }));
+                                }}
+                                className="w-full pl-8 pr-4 py-2.5 bg-emerald-50/60 border border-emerald-300 focus:border-emerald-500 rounded-xl text-sm font-black text-emerald-950 outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">शुल्क पद्धत</label>
+                            <div className="px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1">
+                              <span>प्रति विद्यार्थी शुल्क (Per Student)</span>
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
+                    ) : mod.id === "meeting-register" || mod.id === "mdm-register" ? (
+                      <div className="space-y-3 pt-2">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
+                              मासिक दर (₹ / महिना)*
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-3 text-amber-600 font-black text-sm">₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={item.monthlyPrice ?? item.price ?? (mod.id === "mdm-register" ? 50 : 100)}
+                                onChange={(e) => {
+                                  const val = Math.max(0, parseInt(e.target.value) || 0);
+                                  setPricings((prev) => ({
+                                    ...prev,
+                                    [mod.id]: {
+                                      ...prev[mod.id],
+                                      monthlyPrice: val,
+                                      price: val,
+                                    },
+                                  }));
+                                }}
+                                className="w-full pl-8 pr-4 py-2.5 bg-amber-50/60 border border-amber-300 focus:border-amber-500 rounded-xl text-sm font-black text-amber-950 outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
+                              वार्षिक दर (₹ / संपूर्ण वर्ष)*
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-3 text-emerald-600 font-black text-sm">₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={item.yearlyPrice ?? (mod.id === "mdm-register" ? 299 : 700)}
+                                onChange={(e) => {
+                                  const val = Math.max(0, parseInt(e.target.value) || 0);
+                                  setPricings((prev) => ({
+                                    ...prev,
+                                    [mod.id]: {
+                                      ...prev[mod.id],
+                                      yearlyPrice: val,
+                                    },
+                                  }));
+                                }}
+                                className="w-full pl-8 pr-4 py-2.5 bg-emerald-50/60 border border-emerald-300 focus:border-emerald-500 rounded-xl text-sm font-black text-emerald-950 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (mod.id === "annual-monthly-planning" || mod.id === "teaching-record") ? (
+                      <div className="space-y-4 pt-2">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
+                              मूलभूत दर (₹ / इयत्ता)*
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-3 text-indigo-600 font-black text-sm">₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={item.price}
+                                onChange={(e) => handlePriceChange(mod.id, parseInt(e.target.value) || 0)}
+                                className="w-full pl-8 pr-4 py-2.5 bg-indigo-50/60 border border-indigo-300 focus:border-indigo-500 rounded-xl text-sm font-black text-indigo-950 outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">वैधता (दिवस)</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.validityDays || 365}
+                              onChange={(e) =>
+                                setPricings((prev) => ({
+                                  ...prev,
+                                  [mod.id]: { ...prev[mod.id], validityDays: parseInt(e.target.value) || 365 },
+                                }))
+                              }
+                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-extrabold text-slate-900 outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Class & Medium Specific Price Customizer */}
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h5 className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                              <Sliders className="size-3.5 text-indigo-600" />
+                              इयत्ता व माध्यमनिहाय स्वतंत्र दर (Class & Medium Pricing Matrix)
+                            </h5>
+                            <span className="text-[10px] font-bold text-slate-500">
+                              (प्रत्येक इयत्तेचा वेगळा दर ठेऊ शकता)
+                            </span>
+                          </div>
+
+                          <div className="space-y-3 pt-1">
+                            {/* Marathi Medium Classes */}
+                            <div className="space-y-1.5">
+                              <span className="text-[11px] font-black text-emerald-700 block">
+                                📘 मराठी माध्यम (Marathi Medium):
+                              </span>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"].map((clsId) => {
+                                  const key = `marathi_${clsId}`;
+                                  const classPrice = item.classPrices?.[key] ?? item.price ?? 299;
+                                  return (
+                                    <div key={key} className="bg-white p-2 rounded-xl border border-slate-200">
+                                      <label className="text-[10px] font-black text-slate-600 block">
+                                        इयत्ता {clsId === "1st" ? "१ ली" : clsId === "2nd" ? "२ री" : clsId === "3rd" ? "३ री" : clsId === "4th" ? "४ थी" : clsId === "5th" ? "५ वी" : clsId === "6th" ? "६ वी" : clsId === "7th" ? "७ वी" : "८ वी"}
+                                      </label>
+                                      <div className="relative mt-1">
+                                        <span className="absolute left-2 top-1.5 text-xs font-bold text-slate-400">₹</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={classPrice}
+                                          onChange={(e) => {
+                                            const val = parseInt(e.target.value) || 0;
+                                            setPricings((prev) => ({
+                                              ...prev,
+                                              [mod.id]: {
+                                                ...prev[mod.id],
+                                                classPrices: {
+                                                  ...(prev[mod.id]?.classPrices || {}),
+                                                  [key]: val,
+                                                },
+                                              },
+                                            }));
+                                          }}
+                                          className="w-full pl-5 pr-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-black text-slate-900 outline-none focus:border-indigo-500"
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Semi Medium Classes */}
+                            <div className="space-y-1.5 pt-1">
+                              <span className="text-[11px] font-black text-indigo-700 block">
+                                📙 सेमी-इंग्रजी माध्यम (Semi-English Medium):
+                              </span>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"].map((clsId) => {
+                                  const key = `semi_${clsId}`;
+                                  const classPrice = item.classPrices?.[key] ?? item.price ?? 299;
+                                  return (
+                                    <div key={key} className="bg-white p-2 rounded-xl border border-slate-200">
+                                      <label className="text-[10px] font-black text-slate-600 block">
+                                        इयत्ता {clsId === "1st" ? "१ ली" : clsId === "2nd" ? "२ री" : clsId === "3rd" ? "३ री" : clsId === "4th" ? "४ थी" : clsId === "5th" ? "५ वी" : clsId === "6th" ? "६ वी" : clsId === "7th" ? "७ वी" : "८ वी"}
+                                      </label>
+                                      <div className="relative mt-1">
+                                        <span className="absolute left-2 top-1.5 text-xs font-bold text-slate-400">₹</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={classPrice}
+                                          onChange={(e) => {
+                                            const val = parseInt(e.target.value) || 0;
+                                            setPricings((prev) => ({
+                                              ...prev,
+                                              [mod.id]: {
+                                                ...prev[mod.id],
+                                                classPrices: {
+                                                  ...(prev[mod.id]?.classPrices || {}),
+                                                  [key]: val,
+                                                },
+                                              },
+                                            }));
+                                          }}
+                                          className="w-full pl-5 pr-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-black text-slate-900 outline-none focus:border-indigo-500"
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3 pt-2">
+                        <div>
+                          <label className="text-[11px] font-extrabold text-slate-600 block mb-1">दर (रु. मध्ये)</label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-3 text-slate-400 font-bold text-sm">₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={item.price}
+                              onChange={(e) => handlePriceChange(mod.id, parseInt(e.target.value) || 0)}
+                              className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-extrabold text-slate-900 outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-extrabold text-slate-600 block mb-1">वैधता (दिवस)</label>
                           <input
                             type="number"
-                            min="0"
-                            value={item.price}
-                            onChange={(e) => handlePriceChange(mod.id, parseInt(e.target.value) || 0)}
-                            className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-extrabold text-slate-900 outline-none"
+                            min="1"
+                            value={item.validityDays || 365}
+                            onChange={(e) =>
+                              setPricings((prev) => ({
+                                ...prev,
+                                [mod.id]: { ...prev[mod.id], validityDays: parseInt(e.target.value) || 365 },
+                              }))
+                            }
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-extrabold text-slate-900 outline-none"
                           />
                         </div>
                       </div>
-
-                      <div>
-                        <label className="text-[11px] font-extrabold text-slate-600 block mb-1">वैधता (दिवस)</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.validityDays || 365}
-                          onChange={(e) =>
-                            setPricings((prev) => ({
-                              ...prev,
-                              [mod.id]: { ...prev[mod.id], validityDays: parseInt(e.target.value) || 365 },
-                            }))
-                          }
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-extrabold text-slate-900 outline-none"
-                        />
-                      </div>
-                    </div>
+                    )}
 
 
 
@@ -799,13 +1082,31 @@ function AdminModulePaymentsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-800 font-semibold">
-                    {filteredPayments.map((p, idx) => (
-                      <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-3 font-bold text-slate-400">{idx + 1}</td>
-                        <td className="p-3">
-                          <p className="font-extrabold text-slate-900">{p.teacherName || "शिक्षक"}</p>
-                          <p className="text-[11px] text-slate-500 font-mono">{p.teacherPhone || p.teacherEmail || p.teacherId}</p>
-                        </td>
+                    {filteredPayments.map((p, idx) => {
+                      const realTeacher =
+                        teacherMap.get(p.teacherId) ||
+                        (p.teacherEmail ? teacherMap.get(p.teacherEmail.toLowerCase()) : undefined);
+
+                      const isRawUid = (str?: string) =>
+                        !str || str === "शिक्षक" || str.length > 20 || str.startsWith("Iun2h") || str.startsWith("J4P4") || str.startsWith("aFm9");
+
+                      const displayTeacherName =
+                        realTeacher?.teacherName && !isRawUid(realTeacher.teacherName)
+                          ? realTeacher.teacherName
+                          : p.teacherName && !isRawUid(p.teacherName)
+                          ? p.teacherName
+                          : realTeacher?.teacherEmail || p.teacherEmail || (p.teacherPhone ? `फोन: ${p.teacherPhone}` : "नोंदणीकृत शिक्षक");
+
+                      const displaySubText =
+                        p.teacherEmail || realTeacher?.teacherEmail || p.teacherPhone || realTeacher?.teacherPhone || p.teacherId;
+
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-3 font-bold text-slate-400">{idx + 1}</td>
+                          <td className="p-3">
+                            <p className="font-extrabold text-slate-900">{displayTeacherName}</p>
+                            <p className="text-[11px] text-slate-500 font-mono">{displaySubText}</p>
+                          </td>
                         <td className="p-3 font-bold text-blue-900">{p.moduleTitle || p.moduleId}</td>
                         <td className="p-3 font-black text-emerald-700">₹{p.amount}</td>
                         <td className="p-3">
@@ -827,7 +1128,8 @@ function AdminModulePaymentsPage() {
                           </span>
                         </td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               </div>

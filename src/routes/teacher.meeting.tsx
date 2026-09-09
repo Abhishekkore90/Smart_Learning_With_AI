@@ -155,8 +155,10 @@ const SAKHI_SAVITRI_DESIGNATIONS = [
   "शाळा व्यवस्थापन समिती (SMC) अध्यक्ष",
   "ग्रामपंचायतीच्या महिला प्रतिनिधी / सरपंच ",
   "महिला शिक्षक प्रतिनिधी",
+  "शिक्षक प्रतिनिधी",
   "अंगणवाडी सेविका",
   "आरोग्य सेविका ",
+  "आशा सेविका",
   "पोलीस पाटील ",
   "समुपदेशक ",
   "पालक प्रतिनिधी माता ",
@@ -231,6 +233,13 @@ const WOMEN_COMPLAINT_DESIGNATIONS = [
   "सामाजिक कार्यकर्त्या",
   "महिला वकील",
   "महिला हक्क क्षेत्रातील अनुभवी व्यक्ती",
+  "स्था. स्व. संस्था म. प्रतिनिधी",
+  "महिला प्रतिनिधी",
+  "महिला शिक्षिका",
+  "अंगणवाडी सेविका",
+  "आशा सेविका",
+  "पोलिस पाटील",
+  "मुख्याध्यापक",
 ];
 
 const COMMITTEE_ROLES = [
@@ -1553,7 +1562,7 @@ function TeacherMeetingPage() {
 
       {/* Main Container */}
       <main className="lg:pl-0 pt-16 min-h-screen">
-        <ModulePaywall moduleId="meeting-register" defaultTitle="माता-पालक व शिक्षक सभा नोंदवही (Meeting Register)">
+        <ModulePaywall moduleId="meeting-register" defaultTitle="माता-पालक व शिक्षक सभा नोंदवही (Meeting Register)" selectedMonth={selectedMonth}>
           <PinGate sectionKey="meeting">
             <div className="p-4 md:p-8 space-y-8 max-w-full mx-auto print:p-0 print:pl-0">
               {/* Header section (Hidden on print) */}

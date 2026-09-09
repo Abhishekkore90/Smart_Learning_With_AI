@@ -122,7 +122,7 @@ function LandingPage() {
     },
     {
       title: t.c2_title || "Teacher Section",
-      desc: t.c2_desc || "Manage homework, review submissions and track class telemetry.",
+      desc: t.c2_desc || `👩‍🏫 शिक्षकांसाठी सर्वसमावेशक डिजिटल सुविधा! वेळापत्रक, दैनिक परिपाठ, आकर्षक टेम्पलेट, वार्षिक व मासिक नियोजन, प्रश्नपेढी, टाचणवही, CCE निकाल, HPC Card, मासिक सभा - शाळा स्तरावरील सर्व समित्यांचे मासिक अहवाल व इतिवृत्त निमंत्रण पत्रासह उपलब्ध आणि Mid Day Meal (MDM) यांसारखी शाळेच्या दैनंदिन कामासाठी आवश्यक साधने एकाच ठिकाणी उपलब्ध.\n📊 SQAAF Evaluation द्वारे स्वयंमूल्यांकन व बाह्य मूल्यांकन अहवालासह एकत्रित गुणांकन ताक्त्यासह श्रेणी , तर शिक्षक संचिका व विद्यार्थी संचयिका यामुळे आवश्यक माहिती व्यवस्थित तयार, एडिट आणि प्रिंट करता येते.\n✨ माहिती एकदा भरल्यानंतर अनेक ठिकाणी तिचा उपयोग होऊन वेळ, श्रम आणि कागदपत्रांची पुनरावृत्ती कमी होते.\n🚀 SGK BRAINOVA – शिक्षकांचे काम अधिक सोपे, जलद, स्मार्ट आणि डिजिटल बनवणारे एक विश्वासार्ह व्यासपीठ!`,
       icon: School,
       color: "green",
       softBg: "bg-feature-green/90",
@@ -261,7 +261,7 @@ function LandingPage() {
                         <h3 className="text-base sm:text-lg font-black text-white tracking-tight transition-colors duration-300">
                           {card.title}
                         </h3>
-                        <p className="text-white/80 text-[11px] sm:text-xs font-medium leading-snug tracking-wide group-hover:text-white transition-colors duration-300 line-clamp-2 mt-0.5">
+                        <p className="text-white/80 text-[11px] sm:text-xs font-medium leading-relaxed tracking-wide group-hover:text-white transition-all duration-300 line-clamp-2 group-hover:line-clamp-none mt-0.5 whitespace-pre-line">
                           {card.desc}
                         </p>
                       </div>
@@ -339,51 +339,61 @@ function LandingPage() {
                   },
                 }}
                 whileHover={{
-                  y: -8,
-                  scale: 1.01,
-                  transition: { type: "spring", stiffness: 400, damping: 15 },
+                  y: -12,
+                  scale: 1.03,
+                  transition: { type: "spring", stiffness: 400, damping: 18 },
                 }}
                 onClick={() => {
                   if (card.to && card.to !== "#") {
                     navigate({ to: card.to as any, search: (card as any).search });
                   }
                 }}
-                className={`relative text-left group transition-all duration-500 flex flex-col justify-between h-full min-h-[210px] rounded-none border border-border bg-white dark:bg-slate-900 shadow-[0_10px_35px_rgba(108,78,246,0.05)] hover:shadow-2xl overflow-hidden cursor-pointer ${customStyles.glowBg} ${customStyles.glowBorder}`}
+                className={`relative text-left group transition-all duration-500 flex flex-col justify-between h-full min-h-[220px] rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] overflow-hidden cursor-pointer ${customStyles.glowBg} ${customStyles.glowBorder}`}
               >
-                {/* Diagonal Gloss Shine Overlay */}
-                <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out z-10 pointer-events-none" />
+                {/* Moving Shimmer / Gloss Light Beam across card */}
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-transparent via-white/40 dark:via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out z-10 pointer-events-none" />
 
-                {/* Neon Glow on Hover */}
-                <div className={`absolute -inset-px rounded-none bg-gradient-to-r ${customStyles.gradient} opacity-0 group-hover:opacity-15 transition-opacity duration-500 blur z-0`} />
+                {/* Glowing Neon Outline Border Effect */}
+                <div className={`absolute -inset-px rounded-3xl bg-gradient-to-r ${customStyles.gradient} opacity-0 group-hover:opacity-40 transition-opacity duration-500 blur-sm z-0`} />
 
-                {/* Hover Soft Background */}
-                <div className={`absolute inset-0 ${card.softBg} opacity-0 group-hover:opacity-100 transition-opacity duration-700 z-0`} />
+                {/* Soft Background Fill on Hover */}
+                <div className={`absolute inset-0 ${card.softBg} opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0`} />
 
                 {/* Content */}
-                <div className="relative z-20 p-6 flex flex-col h-full justify-between w-full">
+                <div className="relative z-20 p-7 flex flex-col justify-between h-full w-full">
                   <div>
-                    {/* Soft Icon Container */}
-                    <div
-                      className={`size-11 rounded-2xl ${card.softBg} ${card.iconColor} flex items-center justify-center mb-4 shadow-sm border border-white/40 transition-all duration-500 group-hover:bg-white group-hover:shadow-md group-hover:scale-105`}
-                    >
-                      <Icon size={22} className="transition-transform duration-500" strokeWidth={2} />
+                    {/* Icon Badge with Bounce & Rotate Animation */}
+                    <div className="flex items-center justify-between mb-5">
+                      <div
+                        className={`size-12 rounded-2xl ${card.softBg} ${card.iconColor} flex items-center justify-center shadow-md border border-white/50 transition-all duration-500 group-hover:bg-white group-hover:shadow-lg group-hover:scale-110 group-hover:rotate-6`}
+                      >
+                        <Icon size={24} className="transition-transform duration-500" strokeWidth={2.2} />
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                        <span>सविस्तर माहिती</span>
+                        <ChevronDown className="size-3 animate-bounce" />
+                      </span>
                     </div>
 
-                    <h3 className="text-2xl font-black text-heading dark:text-white tracking-tight mb-2 transition-colors duration-300 group-hover:text-slate-950 dark:group-hover:text-white">
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-3 transition-colors duration-300 group-hover:text-slate-950 dark:group-hover:text-white">
                       {card.title}
                     </h3>
-                    <p className="text-text dark:text-slate-300 text-base font-semibold leading-relaxed tracking-wide group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors duration-300 line-clamp-3">
-                      {card.desc}
-                    </p>
+
+                    {/* Description text container with smooth accordion height transition */}
+                    <div className="transition-all duration-500 ease-in-out">
+                      <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-[13px] font-medium leading-relaxed tracking-wide group-hover:text-slate-900 dark:group-hover:text-slate-100 transition-all duration-500 line-clamp-3 group-hover:line-clamp-none whitespace-pre-line">
+                        {card.desc}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Bottom Action Section */}
-                  <div className="pt-4 mt-4 flex items-center justify-between gap-2 border-t border-border group-hover:border-border transition-colors duration-300">
-                    <span className={`text-[13px] font-black uppercase tracking-[0.15em] text-light-text group-hover:${card.iconColor} transition-colors duration-300`}>
+                  {/* Bottom Action Footer with Sliding Arrow */}
+                  <div className="pt-5 mt-6 flex items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800/80 group-hover:border-slate-300 dark:group-hover:border-slate-700 transition-colors duration-300">
+                    <span className={`text-[12px] font-black uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400 group-hover:text-slate-950 dark:group-hover:text-white transition-colors duration-300`}>
                       {card.actionText}
                     </span>
-                    <div className={`size-8 shrink-0 rounded-full bg-slate-50 border border-border flex items-center justify-center transition-all duration-500 group-hover:scale-105 shadow-sm text-light-text ${card.btnHover}`}>
-                      <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform duration-300" />
+                    <div className={`size-9 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all duration-300 group-hover:scale-115 shadow-sm text-slate-700 dark:text-slate-200 group-hover:bg-slate-900 group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-slate-950`}>
+                      <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform duration-300" strokeWidth={2.5} />
                     </div>
                   </div>
                 </div>

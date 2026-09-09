@@ -516,7 +516,7 @@ export function CCESettings({
             onChange={upd("udiseCode")}
             required
             icon={Hash}
-            placeholder="27350800701"
+            placeholder="उदा. 2735..."
           />
           <FloatSelect
             label="मुख्य माध्यम (Default Medium)"

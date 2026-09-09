@@ -9,8 +9,9 @@ import {
   setDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { processRazorpayPayment } from "@/lib/razorpayService";
 
 import { useAuth } from "@/hooks/use-auth";
 // @ts-ignore
@@ -175,7 +176,168 @@ export function CCEStudentList({
     return () => unsub();
   }, [selectedClass, selectedMedium, teacherId]);
 
-  const openAdd = () => {
+  // Quota & Payment Control States
+  const [paymentRecord, setPaymentRecord] = useState<any>(null);
+  const [perStudentPrice, setPerStudentPrice] = useState<number>(5);
+  const [totalTeacherStudents, setTotalTeacherStudents] = useState<number>(0);
+  const [isAdminGranted, setIsAdminGranted] = useState<boolean>(false);
+  const [upgradingQuota, setUpgradingQuota] = useState<boolean>(false);
+  const [showQuotaModal, setShowQuotaModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!teacherId) return;
+
+    let unsubPayment: (() => void) | undefined;
+    let unsubPricing: (() => void) | undefined;
+    let unsubAccess: (() => void) | undefined;
+    let unsubUsers: (() => void) | undefined;
+    let unsubStudents: (() => void) | undefined;
+
+    const userKeys = Array.from(
+      new Set(
+        [
+          teacherId,
+          user?.uid,
+          user?.email,
+          profile?.id,
+          profile?.email,
+          localStorage.getItem("teacher_email"),
+          localStorage.getItem("user_email"),
+        ].filter((k): k is string => Boolean(k))
+      )
+    );
+
+    try {
+      // 1. Listen to teacher payment record for cce-result
+      unsubPayment = onSnapshot(doc(db, "teacher_module_payments", `${teacherId}_cce-result`), (snap) => {
+        if (snap.exists()) {
+          setPaymentRecord(snap.data());
+        } else {
+          setPaymentRecord(null);
+        }
+      });
+
+      // 2. Listen to pricing for perStudentPrice
+      unsubPricing = onSnapshot(doc(db, "cce_module_pricing", "cce-result"), (snap) => {
+        if (snap.exists() && snap.data().perStudentPrice) {
+          setPerStudentPrice(snap.data().perStudentPrice);
+        }
+      });
+
+      // 3. Listen to access granted by admin
+      unsubAccess = onSnapshot(collection(db, "teacher_module_access"), (snap) => {
+        const isGranted = snap.docs.some((docSnap) => {
+          const data = docSnap.data();
+          const matchesUser = data && userKeys.some((k) => k === data.teacherId || k === data.teacherEmail);
+          const matchesMod = data.moduleId === "cce-result" || data.moduleId === "ALL";
+          return matchesUser && matchesMod && data.status === "GRANTED";
+        });
+        const isSuperAdmin = (user as any)?.role === "admin" || localStorage.getItem("is_super_admin") === "true";
+        setIsAdminGranted(isGranted || isSuperAdmin);
+      });
+
+      // 4. Count total teacher students across ALL classes & mediums
+      const qUsers = query(collection(db, "users"), where("role", "==", "student"));
+      unsubUsers = onSnapshot(qUsers, (snapUsers) => {
+        const userStudentIds = new Set<string>();
+        snapUsers.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          const sTeacher = data.teacherId || data.createdById || data.userId;
+          if (sTeacher && userKeys.includes(sTeacher)) {
+            userStudentIds.add(docSnap.id);
+          }
+        });
+
+        const qStudents = query(collection(db, "students"));
+        unsubStudents = onSnapshot(qStudents, (snapStudents) => {
+          const studentDocsIds = new Set<string>();
+          snapStudents.docs.forEach((docSnap) => {
+            const data = docSnap.data();
+            const sTeacher = data.teacherId || data.createdById || data.userId;
+            if (sTeacher && userKeys.includes(sTeacher)) {
+              studentDocsIds.add(docSnap.id);
+            }
+          });
+
+          const combinedCount = new Set([...Array.from(userStudentIds), ...Array.from(studentDocsIds)]).size;
+          setTotalTeacherStudents(combinedCount);
+        });
+      });
+    } catch (e) {
+      console.warn("Quota listener error:", e);
+    }
+
+    return () => {
+      if (unsubPayment) unsubPayment();
+      if (unsubPricing) unsubPricing();
+      if (unsubAccess) unsubAccess();
+      if (unsubUsers) unsubUsers();
+      if (unsubStudents) unsubStudents();
+    };
+  }, [teacherId, user, profile]);
+
+  const isPaidUser = paymentRecord && paymentRecord.status === "SUCCESS";
+  const paidQuota = isPaidUser
+    ? (paymentRecord.paidQuota || paymentRecord.studentsCount || Math.floor((paymentRecord.amount || 0) / perStudentPrice) || 0)
+    : 0;
+
+  const isQuotaExceeded = isPaidUser && !isAdminGranted && totalTeacherStudents >= paidQuota;
+
+  const handleUpgradeQuota = async () => {
+    setUpgradingQuota(true);
+    try {
+      const teacherName = localStorage.getItem("teacher_name") || localStorage.getItem("user_name") || "शिक्षक";
+      const teacherEmail = localStorage.getItem("teacher_email") || "";
+      const teacherPhone = localStorage.getItem("teacher_phone") || "";
+
+      await processRazorpayPayment({
+        amount: perStudentPrice,
+        moduleId: "cce-result",
+        moduleTitle: "अतिरिक्त विद्यार्थी कोटा (+1 Student)",
+        teacherName,
+        teacherEmail,
+        teacherPhone,
+        onSuccess: async (paymentId) => {
+          try {
+            const paymentDocKey = `${teacherId}_cce-result`;
+            const currentQuota = paidQuota > 0 ? paidQuota : totalTeacherStudents;
+            const newQuota = currentQuota + 1;
+            const currentAmount = paymentRecord?.amount || 0;
+            const newAmount = currentAmount + perStudentPrice;
+
+            await setDoc(
+              doc(db, "teacher_module_payments", paymentDocKey),
+              {
+                paidQuota: newQuota,
+                studentsCount: newQuota,
+                amount: newAmount,
+                lastUpgradeAt: new Date().toISOString(),
+                status: "SUCCESS",
+              },
+              { merge: true }
+            );
+
+            toast.success(`अभिनंदन! १ अतिरिक्त विद्यार्थी कोटा वाढवला आहे (नवीन कोटा: ${newQuota} विद्यार्थी)!`);
+            setShowQuotaModal(false);
+            setUpgradingQuota(false);
+            openAddInternal();
+          } catch (e: any) {
+            toast.error("कोटा अपडेट करताना त्रुटी आली: " + e.message);
+            setUpgradingQuota(false);
+          }
+        },
+        onError: (err) => {
+          setUpgradingQuota(false);
+          toast.error(typeof err === "string" ? err : "पेमेंट प्रक्रिया रद्द किंवा अयशस्वी झाली.");
+        },
+      });
+    } catch (err: any) {
+      setUpgradingQuota(false);
+      toast.error(err.message || "पेमेंट प्रक्रिया सुरू होऊ शकली नाही.");
+    }
+  };
+
+  const openAddInternal = () => {
     const nextRoll =
       students.length > 0
         ? (Math.max(...students.map((s) => parseInt(s.rollNo || "0") || 0)) + 1).toString()
@@ -186,6 +348,14 @@ export function CCEStudentList({
     setPhotoUrl("");
     setCurrentId(null);
     setEditingStudent("new");
+  };
+
+  const openAdd = () => {
+    if (isQuotaExceeded) {
+      setShowQuotaModal(true);
+      return;
+    }
+    openAddInternal();
   };
 
   const openEdit = (s: Student) => {
@@ -202,6 +372,10 @@ export function CCEStudentList({
   };
 
   const handleSave = async () => {
+    if (!currentId && isQuotaExceeded) {
+      setShowQuotaModal(true);
+      return;
+    }
     if (!name.trim()) {
       toast.error("कृपया विद्यार्थ्याचे नाव टाका");
       return;
@@ -279,7 +453,7 @@ export function CCEStudentList({
             value={name}
             onChange={setName}
             required
-            placeholder="उदा. समृद्धी सचिन साळुंखे पाटील"
+            placeholder="उदा. विद्यार्थ्याचे पूर्ण नाव"
           />
 
           <FloatInput
@@ -428,6 +602,50 @@ export function CCEStudentList({
           </div>
         )}
       </div>
+
+      {/* QUOTA EXCEEDED UPGRADE MODAL */}
+      {showQuotaModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 select-none">
+          <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full border border-slate-200 shadow-2xl space-y-5 text-center relative overflow-hidden">
+            <div className="size-16 rounded-3xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto text-2xl font-black shadow-inner">
+              ⚠️
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-900">विद्यार्थी कोटा संपला आहे!</h3>
+              <p className="text-xs font-bold text-slate-600 leading-relaxed">
+                तुम्ही भरणा केलेला <b>{paidQuota}</b> विद्यार्थ्यांचा कोटा पूर्ण झाला आहे ({totalTeacherStudents}/{paidQuota} विद्यार्थी जोडले आहेत). 
+                नवीन विद्यार्थी जोडण्यासाठी ₹{perStudentPrice} भरून अतिरिक्त १ विद्यार्थी कोटा वाढवा.
+              </p>
+            </div>
+
+            <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 text-emerald-900 flex items-center justify-between text-xs font-black">
+              <span>अतिरिक्त १ विद्यार्थी शुल्क</span>
+              <span className="text-xl font-black text-emerald-600">₹{perStudentPrice}</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowQuotaModal(false)}
+                className="flex-1 py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-xl cursor-pointer"
+              >
+                रद्द करा
+              </button>
+
+              <button
+                type="button"
+                onClick={handleUpgradeQuota}
+                disabled={upgradingQuota}
+                className="flex-1 py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {upgradingQuota ? <Loader2 className="size-4 animate-spin" /> : null}
+                <span>₹{perStudentPrice} देऊन कोटा वाढवा</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

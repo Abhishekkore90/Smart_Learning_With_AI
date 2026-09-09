@@ -355,7 +355,7 @@ export function MonthlyParipathRegister() {
   const printRef = useRef<HTMLDivElement>(null);
   const now = new Date();
 
-  const [schoolName, setSchoolName] = useState("जि. प. प्राथमिक शाळा");
+  const [schoolName, setSchoolName] = useState("");
   const [academicYear, setAcademicYear] = useState(getCurrentAcademicYearStr());
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -368,6 +368,12 @@ export function MonthlyParipathRegister() {
   });
   const [headmasterName, setHeadmasterName] = useState("");
   const [teacherName, setTeacherName] = useState("");
+
+  const saveSchoolInfoLocal = (updatedData: any) => {
+    try {
+      localStorage.setItem("paripathSchoolInfo", JSON.stringify(updatedData));
+    } catch (e) {}
+  };
 
   useEffect(() => {
     try {
@@ -402,7 +408,7 @@ export function MonthlyParipathRegister() {
         } catch (e) {}
       }
 
-      const finalSchoolName = infoObj.schoolName || localStorage.getItem("teacher_school_name") || "जि. प. प्राथमिक शाळा";
+      const finalSchoolName = infoObj.schoolName || localStorage.getItem("teacher_school_name") || "";
       const finalUdise = infoObj.udise || localStorage.getItem("teacher_udise") || localStorage.getItem("udiseNumber") || "";
 
       setSchoolInfo({
@@ -413,7 +419,7 @@ export function MonthlyParipathRegister() {
         jilha: infoObj.jilha || "",
       });
 
-      if (finalSchoolName) setSchoolName(finalSchoolName);
+      setSchoolName(finalSchoolName);
       if (infoObj.headmasterName) setHeadmasterName(infoObj.headmasterName);
       if (infoObj.teacherName) setTeacherName(infoObj.teacherName);
       if (infoObj.academicYear) setAcademicYear(infoObj.academicYear);
@@ -1112,9 +1118,14 @@ export function MonthlyParipathRegister() {
             <input
               type="text"
               value={schoolName}
-              onChange={(e) => setSchoolName(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSchoolName(val);
+                setSchoolInfo(prev => ({ ...prev, schoolName: val }));
+                saveSchoolInfoLocal({ ...schoolInfo, schoolName: val, headmasterName, teacherName, academicYear });
+              }}
               className="w-full px-4 py-2.5 rounded-xl bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 text-white outline-none font-bold transition-all shadow-inner"
-              placeholder="शाळेचे नाव टाका"
+              placeholder="तुमच्या शाळेचे नाव टाका"
             />
           </div>
 
@@ -1125,9 +1136,13 @@ export function MonthlyParipathRegister() {
             <input
               type="text"
               value={academicYear}
-              onChange={(e) => setAcademicYear(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setAcademicYear(val);
+                saveSchoolInfoLocal({ ...schoolInfo, schoolName, headmasterName, teacherName, academicYear: val });
+              }}
               className="w-full px-4 py-2.5 rounded-xl bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 text-white outline-none font-bold transition-all shadow-inner"
-              placeholder="२०२५-२०२६"
+              placeholder="२०२६-२०२७"
             />
           </div>
 
@@ -1173,9 +1188,13 @@ export function MonthlyParipathRegister() {
             <input
               type="text"
               value={schoolInfo.taluka || ""}
-              onChange={(e) => setSchoolInfo(prev => ({ ...prev, taluka: e.target.value }))}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSchoolInfo(prev => ({ ...prev, taluka: val }));
+                saveSchoolInfoLocal({ ...schoolInfo, taluka: val, schoolName, headmasterName, teacherName, academicYear });
+              }}
               className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
-              placeholder="तालुका"
+              placeholder="तालुका टाका"
             />
           </div>
           <div className="space-y-1">
@@ -1183,9 +1202,13 @@ export function MonthlyParipathRegister() {
             <input
               type="text"
               value={schoolInfo.jilha || ""}
-              onChange={(e) => setSchoolInfo(prev => ({ ...prev, jilha: e.target.value }))}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSchoolInfo(prev => ({ ...prev, jilha: val }));
+                saveSchoolInfoLocal({ ...schoolInfo, jilha: val, schoolName, headmasterName, teacherName, academicYear });
+              }}
               className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
-              placeholder="जिल्हा"
+              placeholder="जिल्हा टाका"
             />
           </div>
           <div className="space-y-1">
@@ -1193,9 +1216,13 @@ export function MonthlyParipathRegister() {
             <input
               type="text"
               value={schoolInfo.kendra || ""}
-              onChange={(e) => setSchoolInfo(prev => ({ ...prev, kendra: e.target.value }))}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSchoolInfo(prev => ({ ...prev, kendra: val }));
+                saveSchoolInfoLocal({ ...schoolInfo, kendra: val, schoolName, headmasterName, teacherName, academicYear });
+              }}
               className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
-              placeholder="केंद्र"
+              placeholder="केंद्र टाका"
             />
           </div>
           <div className="space-y-1">
@@ -1203,9 +1230,13 @@ export function MonthlyParipathRegister() {
             <input
               type="text"
               value={schoolInfo.udise || ""}
-              onChange={(e) => setSchoolInfo(prev => ({ ...prev, udise: e.target.value }))}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSchoolInfo(prev => ({ ...prev, udise: val }));
+                saveSchoolInfoLocal({ ...schoolInfo, udise: val, schoolName, headmasterName, teacherName, academicYear });
+              }}
               className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
-              placeholder="युडायस नंबर"
+              placeholder="युडायस नंबर टाका"
             />
           </div>
           <div className="space-y-1">
@@ -1213,9 +1244,13 @@ export function MonthlyParipathRegister() {
             <input
               type="text"
               value={teacherName}
-              onChange={(e) => setTeacherName(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setTeacherName(val);
+                saveSchoolInfoLocal({ ...schoolInfo, teacherName: val, schoolName, headmasterName, academicYear });
+              }}
               className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
-              placeholder="शिक्षकाचे नाव"
+              placeholder="शिक्षकाचे नाव टाका"
             />
           </div>
           <div className="space-y-1">
@@ -1223,9 +1258,13 @@ export function MonthlyParipathRegister() {
             <input
               type="text"
               value={headmasterName}
-              onChange={(e) => setHeadmasterName(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setHeadmasterName(val);
+                saveSchoolInfoLocal({ ...schoolInfo, headmasterName: val, schoolName, teacherName, academicYear });
+              }}
               className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
-              placeholder="मुख्याध्यापकाचे नाव"
+              placeholder="मुख्याध्यापकाचे नाव टाका"
             />
           </div>
         </div>
