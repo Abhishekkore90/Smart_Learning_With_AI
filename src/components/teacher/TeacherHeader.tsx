@@ -10,6 +10,7 @@ import {
   Globe,
   ChevronDown,
   ArrowLeft,
+  Home,
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
@@ -41,22 +42,33 @@ export function TeacherHeader() {
   };
 
   return (
-    <header className="bg-white/80 backdrop-blur-2xl border-b border-slate-200/60 text-slate-800 h-16 fixed top-0 left-0 right-0 z-[60] px-4 md:px-6 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all">
-      <div className="flex items-center gap-3 sm:gap-4">
+    <header className="bg-white/80 backdrop-blur-2xl border-b border-slate-200/60 text-slate-800 h-16 fixed top-0 left-0 right-0 z-[60] px-3 sm:px-4 md:px-6 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all">
+      <div className="flex items-center gap-2 sm:gap-4">
         <button
           onClick={() =>
             window.dispatchEvent(new CustomEvent("toggle-teacher-sidebar"))
           }
-          className="lg:hidden size-10 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 transition-all active:scale-95 shadow-sm"
+          className="lg:hidden size-9 sm:size-10 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 transition-all active:scale-95 shadow-sm"
         >
           <Menu className="size-5" />
         </button>
 
+        {/* Home Back Button (Navigates to main landing homepage) */}
+        <Link
+          to="/"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-slate-100 to-indigo-50 hover:from-indigo-100 hover:to-purple-100 text-slate-800 hover:text-indigo-900 border border-slate-300/80 rounded-xl text-xs font-black transition-all shadow-xs active:scale-95 cursor-pointer shrink-0"
+          title="मुख्य होमपेजवर जा (Go to Main Homepage)"
+        >
+          <ArrowLeft className="size-3.5 text-indigo-600 shrink-0" />
+          <Home className="size-3.5 text-indigo-600 shrink-0 hidden xs:inline" />
+          <span className="font-extrabold text-[11px] sm:text-xs">मुख्य पान (Home)</span>
+        </Link>
+
         {/* Brand Section */}
-        <Link to="/teacher" className="flex items-center gap-3 group">
-          <div className="size-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center border border-white/50 shadow-lg overflow-hidden group-hover:scale-105 transition-transform duration-300">
+        <Link to="/teacher" className="flex items-center gap-2.5 group">
+          <div className="size-9 sm:size-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center border border-white/50 shadow-lg overflow-hidden group-hover:scale-105 transition-transform duration-300">
             <svg
-              className="size-6 text-slate-800 drop-shadow-md"
+              className="size-5 sm:size-6 text-slate-800 drop-shadow-md"
               viewBox="0 0 100 100"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -90,16 +102,15 @@ export function TeacherHeader() {
           </div>
         </Link>
 
-        {/* Universal Back Button for sub-sections */}
+        {/* Universal Back Button for sub-sections to return to teacher dashboard */}
         {!isDashboard && (
           <Link
             to="/teacher"
-            className="flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-1.5 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer ml-1 sm:ml-2 shrink-0"
-            title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
+            className="hidden md:flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
+            title="शिक्षक डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
           >
-            <ArrowLeft className="size-3.5 sm:size-4 shrink-0" />
-            <span className="font-bold hidden min-[360px]:inline">मागे जा (Back)</span>
-            <span className="font-bold min-[360px]:hidden">मागे</span>
+            <ArrowLeft className="size-3.5 shrink-0" />
+            <span className="font-bold">डॅशबोर्ड (Dashboard)</span>
           </Link>
         )}
       </div>

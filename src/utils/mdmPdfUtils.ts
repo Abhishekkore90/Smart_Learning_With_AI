@@ -103,6 +103,7 @@ export const getReportOrientation = (reportType: string): "portrait" | "landscap
     "swayampaki_kararnama",
     "anudan_report",
     "purak_ahar_report",
+    "daily_tandul_register",
   ];
   if (portraitReports.some((p) => type.includes(p))) {
     return "portrait";

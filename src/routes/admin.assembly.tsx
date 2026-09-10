@@ -392,6 +392,22 @@ function AssemblyBookAdmin() {
           <div style="${bodyText}">${nl2br(data.personality || "-")}</div>
         </div>
         ` : ''}
+        <div style="margin-top: 14px; padding: 12px 16px; background: #1e1b4b; border: 2px solid #4338ca; border-radius: 10px; color: #ffffff; text-align: center; box-sizing: border-box; page-break-inside: avoid; font-family: 'Noto Sans Devanagari', 'Mukta', sans-serif;">
+          <div style="font-size: 13px; font-weight: 800; color: #fbbf24; margin-bottom: 6px;">
+            📞 अधिक माहिती व अपडेट्ससाठी आमच्याशी संपर्क साधा
+          </div>
+          <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; font-weight: 700;">
+            <div style="color: #ffffff;">
+              📱 <b>मोबाईल नं:</b> <a href="tel:9730784233" style="color: #38bdf8; text-decoration: none; font-weight: 800;">9730784233</a>
+            </div>
+            <div>
+              🌐 <b>वेबसाईट:</b> <a href="https://sgkbrainova.com" target="_blank" style="color: #38bdf8; text-decoration: underline; font-weight: 800;">sgkbrainova.com</a>
+            </div>
+            <div>
+              💬 <b>व्हाट्सॲप ग्रुप:</b> <a href="https://chat.whatsapp.com/EaJpKkQTIxD3DtlJSTG2wk?s=sh&p=a&mlu=4&ilr=4" target="_blank" style="color: #4ade80; text-decoration: underline; font-weight: 800;">व्हाट्सॲप ग्रुप जॉईन करा</a>
+            </div>
+          </div>
+        </div>
         ${divider}
         <div style="text-align: center; padding: 12px 0 4px; font-size: 10px; font-weight: 700; color: #9CA3AF;">
           निर्मिती: ${data.creator || "Smart Learning With AI"} | © दैनिक परिपाठ ${new Date().getFullYear()}
@@ -428,6 +444,7 @@ function AssemblyBookAdmin() {
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, windowWidth: 718, scrollY: 0, scrollX: 0 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      enableLinks: true,
     };
   
     try {

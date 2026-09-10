@@ -13,9 +13,13 @@ import {
   EyeOff,
   CloudUpload,
   Sparkles,
+  KeyRound,
+  Mail,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import {
   collection,
   query,
@@ -23,6 +27,9 @@ import {
   getDocs,
   getDoc,
   doc,
+  updateDoc,
+  setDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { showToast as toast } from "@/lib/custom-toast";
@@ -43,97 +50,52 @@ export const Route = createFileRoute("/login")({
   component: UnifiedLoginPortal,
 });
 
-type AuthRole = "teacher" | "admin" | "uploader" | "student";
+type AuthRole = "teacher" | "admin";
 
-const ROLE_CONFIGS: {
-  id: AuthRole;
-  icon: React.ElementType;
-  color: string;
-  ring: string;
-  labelKey: string;
-  badgeKey: string;
-  identifierLabelKey: string;
-  identifierPlaceholderKey: string;
-  descKey: string;
-}[] = [
-  {
-    id: "student",
-    icon: GraduationCap,
-    color: "from-sky-500 to-indigo-500",
-    ring: "ring-sky-500/40",
-    labelKey: "login_student",
-    badgeKey: "login_student_badge",
-    identifierLabelKey: "login_email_usid",
-    identifierPlaceholderKey: "login_email_usid_placeholder",
-    descKey: "login_student_desc",
-  },
-  {
-    id: "teacher",
-    icon: School,
-    color: "from-teal-500 to-emerald-500",
-    ring: "ring-teal-500/40",
-    labelKey: "login_teacher",
-    badgeKey: "login_teacher_badge",
-    identifierLabelKey: "login_email_udise",
-    identifierPlaceholderKey: "login_email_udise_placeholder",
-    descKey: "login_teacher_desc",
-  },
-  {
-    id: "admin",
-    icon: ShieldCheck,
-    color: "from-rose-500 to-pink-500",
-    ring: "ring-rose-500/40",
-    labelKey: "login_admin",
-    badgeKey: "login_admin_badge",
-    identifierLabelKey: "login_admin_email",
-    identifierPlaceholderKey: "login_email_usid_placeholder",
-    descKey: "login_admin_desc",
-  },
-  {
-    id: "uploader",
-    icon: CloudUpload,
-    color: "from-violet-500 to-purple-500",
-    ring: "ring-violet-500/40",
-    labelKey: "login_uploader",
-    badgeKey: "login_uploader_badge",
-    identifierLabelKey: "login_creator_email",
-    identifierPlaceholderKey: "login_creator_email_placeholder",
-    descKey: "login_uploader_desc",
-  },
-];
+const ROLE_CONFIG = {
+  id: "teacher" as AuthRole,
+  icon: School,
+  color: "from-teal-500 to-emerald-500",
+  ring: "ring-teal-500/40",
+  labelKey: "login_teacher",
+  badgeKey: "login_teacher_badge",
+  identifierLabelKey: "login_email_udise",
+  identifierPlaceholderKey: "login_email_udise_placeholder",
+  descKey: "login_teacher_desc",
+};
 
 function UnifiedLoginPortal() {
   const { redirect, role: urlRole } = Route.useSearch();
-  const [activeRole, setActiveRole] = useState<AuthRole>(
-    urlRole === "admin" ? "admin" : urlRole === "uploader" ? "uploader" : "teacher"
-  );
-  const roleConfigRaw = ROLE_CONFIGS.find((r) => r.id === activeRole) || ROLE_CONFIGS[1];
+  // Only admin is allowed via URL param, everything else is teacher
+  const activeRole: AuthRole = urlRole === "admin" ? "admin" : "teacher";
   const { lang } = useLanguage();
   const t = DICTIONARY[lang] as any;
   const roleConfig = {
-    ...roleConfigRaw,
-    label: t[roleConfigRaw.labelKey],
-    badge: t[roleConfigRaw.badgeKey],
-    identifierLabel: t[roleConfigRaw.identifierLabelKey],
-    identifierPlaceholder: t[roleConfigRaw.identifierPlaceholderKey],
-    desc: t[roleConfigRaw.descKey],
+    ...ROLE_CONFIG,
+    label: t[ROLE_CONFIG.labelKey],
+    badge: t[ROLE_CONFIG.badgeKey],
+    identifierLabel: t[ROLE_CONFIG.identifierLabelKey],
+    identifierPlaceholder: t[ROLE_CONFIG.identifierPlaceholderKey],
+    desc: t[ROLE_CONFIG.descKey],
   };
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotInput, setForgotInput] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [resetEmailSentTo, setResetEmailSentTo] = useState("");
+
   const navigate = useNavigate();
 
   useEffect(() => {
     clearUnlockedPinSections();
   }, []);
-
-  const handleRoleSwitch = (newRole: AuthRole) => {
-    setActiveRole(newRole);
-    setIdentifier("");
-    setPassword("");
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,7 +115,7 @@ function UnifiedLoginPortal() {
 
       let email = identifier;
 
-      if (activeRole === "teacher" && !identifier.includes("@")) {
+      if (!identifier.includes("@")) {
         const q = query(
           collection(db, "teachers"),
           where("udise", "==", identifier),
@@ -190,14 +152,29 @@ function UnifiedLoginPortal() {
         }));
       }
 
+      // Log every login to Firestore for admin tracking
+      try {
+        await setDoc(doc(db, "logged_users", user.uid), {
+          uid: user.uid,
+          email: user.email || email,
+          fullName: userData.fullName || user.displayName || "Unknown",
+          udise: userData.udise || "",
+          schoolName: userData.schoolName || "",
+          phone: userData.phone || userData.mobile || "",
+          lastLoginAt: serverTimestamp(),
+          loginCount: (userData.loginCount || 0) + 1,
+          role: "teacher",
+        }, { merge: true });
+      } catch (_e) {
+        // Non-critical: don't block login if logging fails
+      }
+
       toast.success(`Identity Verified. Welcome back!`);
 
-      if ((activeRole as string) === "admin") {
-        window.location.href = "/admin";
-      } else if (redirect) {
+      if (redirect) {
         window.location.href = redirect;
       } else {
-        window.location.href = "/courses";
+        window.location.href = "/teacher";
       }
     } catch (error: any) {
       toast.error(
@@ -206,6 +183,115 @@ function UnifiedLoginPortal() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanInput = forgotInput.trim();
+    if (!cleanInput) {
+      toast.error(
+        lang === "mr"
+          ? "कृपया नोंदणीकृत ईमेल आयडी किंवा UDISE कोड टाका."
+          : "Please enter your Email or UDISE code."
+      );
+      return;
+    }
+    setForgotLoading(true);
+    setForgotSuccess(false);
+
+    try {
+      let resolvedEmail = cleanInput;
+      let targetDocRef: any = null;
+
+      // If input is UDISE or USID (no @ symbol)
+      if (!cleanInput.includes("@")) {
+        const qTeacher = query(
+          collection(db, "teachers"),
+          where("udise", "==", cleanInput)
+        );
+        const snapTeacher = await getDocs(qTeacher);
+
+        if (!snapTeacher.empty) {
+          resolvedEmail = snapTeacher.docs[0].data().email;
+          targetDocRef = doc(db, "teachers", snapTeacher.docs[0].id);
+        } else {
+          const qUser = query(
+            collection(db, "users"),
+            where("usid", "==", cleanInput)
+          );
+          const snapUser = await getDocs(qUser);
+          if (!snapUser.empty) {
+            resolvedEmail = snapUser.docs[0].data().email;
+            targetDocRef = doc(db, "users", snapUser.docs[0].id);
+          } else {
+            throw new Error(
+              lang === "mr"
+                ? "दिलेल्या UDISE / USID कोडशी संबंधित खाते आढळले नाही."
+                : "No account record found for this identifier code."
+            );
+          }
+        }
+      } else {
+        const qTeacherEmail = query(
+          collection(db, "teachers"),
+          where("email", "==", cleanInput)
+        );
+        const snapTE = await getDocs(qTeacherEmail);
+        if (!snapTE.empty) {
+          targetDocRef = doc(db, "teachers", snapTE.docs[0].id);
+        } else {
+          const qUserEmail = query(
+            collection(db, "users"),
+            where("email", "==", cleanInput)
+          );
+          const snapUE = await getDocs(qUserEmail);
+          if (!snapUE.empty) {
+            targetDocRef = doc(db, "users", snapUE.docs[0].id);
+          }
+        }
+      }
+
+      if (!resolvedEmail || !resolvedEmail.includes("@")) {
+        throw new Error(
+          lang === "mr"
+            ? "वैध ईमेल आयडी आढळला नाही. कृपया माहिती तपासा."
+            : "No valid email address registered for this account."
+        );
+      }
+
+      // Execute Password Reset via Firebase Auth
+      await sendPasswordResetEmail(auth, resolvedEmail);
+
+      // Sync Firestore timestamp
+      if (targetDocRef) {
+        try {
+          await updateDoc(targetDocRef, {
+            passwordResetRequestedAt: new Date().toISOString(),
+            lastPasswordResetEmail: resolvedEmail,
+          });
+        } catch (docErr) {
+          console.warn("Firestore timestamp update note:", docErr);
+        }
+      }
+
+      setResetEmailSentTo(resolvedEmail);
+      setForgotSuccess(true);
+      toast.success(
+        lang === "mr"
+          ? "पासवर्ड रिसेट लिंक पाठवली आहे!"
+          : "Password reset email sent!"
+      );
+    } catch (error: any) {
+      console.error("Forgot password error:", error);
+      toast.error(
+        error.message ||
+          (lang === "mr"
+            ? "पासवर्ड रिसेट करण्यात अडचण आली. कृपया माहिती तपासा."
+            : "Failed to send reset link. Please check your info.")
+      );
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -294,9 +380,16 @@ function UnifiedLoginPortal() {
                     <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
                       {t.login_password}
                     </label>
-                    <a className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:underline cursor-pointer transition-colors">
-                      {t.login_forgot}
-                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotInput(identifier);
+                        setShowForgotModal(true);
+                      }}
+                      className="text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:text-white hover:underline cursor-pointer transition-colors"
+                    >
+                      {t.login_forgot || "Forgot?"}
+                    </button>
                   </div>
                   <div
                     className={`bg-slate-950/50 border border-slate-700/50 focus-within:border-transparent focus-within:ring-2 ${roleConfig.ring} focus-within:bg-slate-900/80 rounded-2xl flex items-center gap-4 px-5 h-14 transition-all shadow-inner relative group`}
@@ -338,34 +431,131 @@ function UnifiedLoginPortal() {
               </form>
 
               {/* Footer Links */}
-              {(activeRole === "student" || activeRole === "uploader") && (
-                <p className="mt-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">
-                  {t.login_no_account}{" "}
-                  <Link
-                    to={
-                      activeRole === "uploader" ? "/uploader/signup" : "/signup"
-                    }
-                    className="text-white/70 hover:text-white hover:underline ml-1 font-black transition-all"
-                  >
-                    {t.login_create_one}
-                  </Link>
-                </p>
-              )}
-              {activeRole === "teacher" && (
-                <p className="mt-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">
-                  {t.login_new_educator}{" "}
-                  <Link
-                    to="/teacher/signup"
-                    className="text-white/70 hover:text-white hover:underline ml-1 font-black transition-all"
-                  >
-                    {t.login_register_here}
-                  </Link>
-                </p>
-              )}
+              <p className="mt-6 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">
+                {t.login_new_educator}{" "}
+                <Link
+                  to="/teacher/signup"
+                  className="text-white/70 hover:text-white hover:underline ml-1 font-black transition-all"
+                >
+                  {t.login_register_here}
+                </Link>
+              </p>
             </motion.div>
           </AnimatePresence>
         </motion.div>
       </main>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgotModal && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="w-full max-w-md bg-slate-950/95 border border-white/20 p-6 sm:p-8 rounded-[2rem] shadow-2xl text-white relative overflow-hidden"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForgotModal(false);
+                  setForgotSuccess(false);
+                }}
+                className="absolute top-5 right-5 size-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+
+              <div className="text-center mb-6">
+                <div className="size-12 rounded-2xl bg-indigo-600/30 text-indigo-400 flex items-center justify-center mx-auto border border-indigo-500/40 mb-3 shadow-inner">
+                  <KeyRound className="size-6" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white italic">
+                  {lang === "mr" ? "पासवर्ड विसरलात?" : "Forgot Password?"}
+                </h3>
+                <p className="text-xs text-slate-400 font-medium mt-1 leading-relaxed max-w-xs mx-auto">
+                  {lang === "mr"
+                    ? "तुमचा ईमेल आयडी किंवा UDISE/USID कोड टाका. पासवर्ड रिसेट लिंक पाठवली जाईल."
+                    : "Enter your registered Email or UDISE/USID code. A password reset link will be sent to your email."}
+                </p>
+              </div>
+
+              {!forgotSuccess ? (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+                      {lang === "mr" ? "ईमेल आयडी किंवा UDISE कोड" : "Email ID or UDISE Code"}
+                    </label>
+                    <div className="bg-slate-900 border border-slate-700/80 focus-within:border-indigo-500 rounded-2xl flex items-center gap-3 px-4 h-13 transition-all">
+                      <Mail className="size-4 text-indigo-400 shrink-0" />
+                      <input
+                        type="text"
+                        required
+                        placeholder={lang === "mr" ? "उदा. email@gmail.com किंवा UDISE" : "e.g. email@gmail.com or UDISE"}
+                        className="bg-transparent outline-none w-full text-xs font-bold text-white placeholder:text-slate-500 h-full border-none"
+                        value={forgotInput}
+                        onChange={(e) => setForgotInput(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="w-full h-12 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-black rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 uppercase text-xs tracking-wider shadow-lg cursor-pointer mt-2"
+                  >
+                    {forgotLoading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span>{lang === "mr" ? "रिसेट लिंक पाठवा" : "Send Reset Link"}</span>
+                        <ArrowRight className="size-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-5 text-center space-y-3">
+                  <div className="size-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/40">
+                    <CheckCircle2 className="size-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-bold text-white">
+                      {lang === "mr" ? "ईमेल पाठवला आहे!" : "Link Sent!"}
+                    </h4>
+                    <p className="text-xs text-slate-300 font-medium leading-relaxed mt-1">
+                      {lang === "mr"
+                        ? `पासवर्ड रिसेट लिंक **${resetEmailSentTo}** वर पाठवली आहे. तुमचे ईमेल इनबॉक्स तपासा.`
+                        : `Password reset link sent to **${resetEmailSentTo}**. Please check your email inbox.`}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotModal(false);
+                      setForgotSuccess(false);
+                    }}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer mt-2"
+                  >
+                    {lang === "mr" ? "बंद करा" : "Close"}
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-5 text-center pt-4 border-t border-slate-800">
+                <Link
+                  to="/forgot-password"
+                  onClick={() => setShowForgotModal(false)}
+                  className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors inline-flex items-center gap-1"
+                >
+                  <span>{lang === "mr" ? "सविस्तर रिसेट पेजवर जा" : "Go to Standalone Reset Page"} →</span>
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <div className="absolute bottom-6 left-0 right-0 text-center z-10 pointer-events-none">
         <p className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-400/60">

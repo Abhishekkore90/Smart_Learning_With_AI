@@ -1589,14 +1589,17 @@ function TeacherMDMPage() {
       const { default: html2canvas } = await import("html2canvas-pro");
       const { jsPDF } = await import("jspdf");
 
+      const isDailyTandul = monthlyMdmReportType === "daily_tandul_register";
       const dynamicOrientation = getReportOrientation(monthlyMdmReportType);
       const pdf = new jsPDF({ orientation: dynamicOrientation, unit: "mm", format: "a4" });
       const printPages = clone.querySelectorAll('.print-page, .poshan-pdf-page, .mdm-report-page');
-      const elementsToRender = printPages.length > 0 ? Array.from(printPages) : [clone];
+      const elementsToRender = (isDailyTandul || isMasikTandul || isMasikSatha || isCertificate || monthlyMdmReportType === "masik_tandul_bill")
+        ? [clone.querySelector('.print-page, .poshan-pdf-page, .mdm-report-page') as HTMLElement || clone]
+        : (printPages.length > 0 ? Array.from(printPages) : [clone]);
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 6; // 6mm printer-safe margins around the page
+      const margin = 4; // 4mm printer-safe margins around the page
       const availWidth = pdfWidth - (margin * 2);
       const availHeight = pdfHeight - (margin * 2);
 
@@ -1612,13 +1615,18 @@ function TeacherMDMPage() {
         pageEl.style.width = `${totalRenderWidth}px`;
         pageEl.style.minWidth = `${totalRenderWidth}px`;
         pageEl.style.maxWidth = `${totalRenderWidth}px`;
+        if (isDailyTandul) {
+          pageEl.style.height = `${targetPageHeight}px`;
+          pageEl.style.minHeight = `${targetPageHeight}px`;
+          pageEl.style.maxHeight = `${targetPageHeight}px`;
+        }
         pageEl.style.display = "flex";
         pageEl.style.flexDirection = "column";
-        pageEl.style.justifyContent = "flex-start";
+        pageEl.style.justifyContent = "space-between";
         pageEl.style.boxSizing = "border-box";
         pageEl.style.backgroundColor = "#ffffff";
-        pageEl.style.padding = isPortraitReport ? "14px 20px" : "16px 24px";
-        pageEl.style.overflow = "visible";
+        pageEl.style.padding = isDailyTandul ? "10px 16px" : isPortraitReport ? "14px 20px" : "16px 24px";
+        pageEl.style.overflow = "hidden";
 
         const canvas = await html2canvas(pageEl, {
           scale: 2.5,
@@ -1627,7 +1635,7 @@ function TeacherMDMPage() {
           backgroundColor: "#ffffff",
           windowWidth: totalRenderWidth + 60,
           width: totalRenderWidth,
-          height: Math.max(pageEl.scrollHeight, targetPageHeight),
+          height: isDailyTandul ? targetPageHeight : Math.max(pageEl.scrollHeight, targetPageHeight),
           scrollY: 0,
           scrollX: 0,
           onclone: (clonedDoc: any, element: HTMLElement) => {
@@ -1670,34 +1678,34 @@ function TeacherMDMPage() {
                 background-color: #ffffff !important;
               }
               tbody tr {
-                height: 38px !important;
-                min-height: 38px !important;
+                height: ${isDailyTandul ? "32px" : "38px"} !important;
+                min-height: ${isDailyTandul ? "32px" : "38px"} !important;
               }
               th, td {
                 border: 1px solid #000000 !important;
                 color: #000000 !important;
                 font-weight: 800 !important;
                 vertical-align: middle !important;
-                font-size: 17.5px !important;
-                line-height: 1.35 !important;
-                padding: 6px 3px !important;
+                font-size: ${isDailyTandul ? "14.5px" : "17.5px"} !important;
+                line-height: 1.25 !important;
+                padding: ${isDailyTandul ? "3px 2px" : "6px 3px"} !important;
               }
               th {
                 background-color: #e2e8f0 !important;
                 font-weight: 900 !important;
-                font-size: 18.5px !important;
+                font-size: ${isDailyTandul ? "15px" : "18.5px"} !important;
               }
               h1 {
-                font-size: 26px !important;
+                font-size: ${isDailyTandul ? "22px" : "26px"} !important;
                 font-weight: 900 !important;
               }
               h2 {
-                font-size: 20px !important;
+                font-size: ${isDailyTandul ? "17px" : "20px"} !important;
                 font-weight: 800 !important;
               }
               p, h3, span, div, label {
                 color: #000000 !important;
-                font-size: 16px !important;
+                font-size: ${isDailyTandul ? "14px" : "16px"} !important;
               }
             `;
             clonedDoc.head.appendChild(pdfStyle);
@@ -1721,13 +1729,18 @@ function TeacherMDMPage() {
               p.style.width = `${totalRenderWidth}px`;
               p.style.minWidth = `${totalRenderWidth}px`;
               p.style.maxWidth = `${totalRenderWidth}px`;
+              if (isDailyTandul) {
+                p.style.height = `${targetPageHeight}px`;
+                p.style.minHeight = `${targetPageHeight}px`;
+                p.style.maxHeight = `${targetPageHeight}px`;
+              }
               p.style.display = "flex";
               p.style.flexDirection = "column";
-              p.style.justifyContent = "flex-start";
+              p.style.justifyContent = "space-between";
               p.style.boxSizing = "border-box";
               p.style.backgroundColor = "#ffffff";
-              p.style.padding = isPortraitReport ? "14px 20px" : "16px 24px";
-              p.style.overflow = "visible";
+              p.style.padding = isDailyTandul ? "10px 16px" : isPortraitReport ? "14px 20px" : "16px 24px";
+              p.style.overflow = "hidden";
             });
 
             // Expand table row vertical height and force crisp solid black borders
@@ -1742,7 +1755,7 @@ function TeacherMDMPage() {
             const isGoshwara = monthlyMdmReportType === "masik_goshwara";
             const isTandulBill = monthlyMdmReportType === "masik_tandul_bill";
             const is31DayReport = !isGoshwara && !isTandulBill && monthlyMdmReportType !== "poshan_ahar_daily_entry";
-            const targetRowHeight = isGoshwara ? "36px" : (isTandulBill || is31DayReport) ? "25px" : "36px";
+            const targetRowHeight = isGoshwara ? "36px" : isDailyTandul ? "32px" : (isTandulBill || is31DayReport) ? "23.5px" : "36px";
 
             const tableRows = clonedDoc.querySelectorAll("tbody tr");
             tableRows.forEach((tr: HTMLElement) => {
@@ -1765,11 +1778,16 @@ function TeacherMDMPage() {
               element.style.width = `${totalRenderWidth}px`;
               element.style.minWidth = `${totalRenderWidth}px`;
               element.style.maxWidth = `${totalRenderWidth}px`;
+              if (isDailyTandul) {
+                element.style.height = `${targetPageHeight}px`;
+                element.style.minHeight = `${targetPageHeight}px`;
+                element.style.maxHeight = `${targetPageHeight}px`;
+              }
               element.style.display = "flex";
               element.style.flexDirection = "column";
-              element.style.justifyContent = "flex-start";
+              element.style.justifyContent = "space-between";
               element.style.boxSizing = "border-box";
-              element.style.padding = isPortraitReport ? "14px 20px" : "16px 24px";
+              element.style.padding = isDailyTandul ? "10px 16px" : isPortraitReport ? "14px 20px" : "16px 24px";
             }
           }
         });
@@ -13367,8 +13385,8 @@ function TeacherMDMPage() {
                             : defaultDays;
 
                           return (
-                            <div className="space-y-3 font-sans text-slate-900 print-page p-4 bg-white flex flex-col justify-between min-h-[1157px] print:min-h-0">
-                              <div className="space-y-2">
+                            <div className="space-y-3 font-sans text-slate-900 print-page p-4 bg-white flex flex-col justify-between min-h-[1157px] print:min-h-0 h-full">
+                              <div className="space-y-2 flex-1 flex flex-col">
                               {/* Title Header */}
                               <div className="text-center space-y-0.5 mb-1">
                                 <h1 className="text-base md:text-xl font-black text-[#056e38] tracking-wide">
@@ -13431,10 +13449,10 @@ function TeacherMDMPage() {
                               </div>
 
                               {/* Daily Rice Consumption Table */}
-                              <div className="w-full overflow-x-auto">
-                                <table className="w-full border-collapse border border-slate-700 text-center text-[13.5px] font-black table-fixed">
+                              <div className="w-full flex-1 flex flex-col overflow-x-auto">
+                                <table className="w-full h-full min-h-[850px] border-collapse border border-slate-700 text-center text-[15px] font-black table-fixed">
                                   <thead>
-                                    <tr className="bg-slate-100 text-slate-900 font-black border-b border-slate-700 text-[13.5px]">
+                                    <tr className="bg-slate-100 text-slate-900 font-black border-b border-slate-700 text-[15px]">
                                       <th className="border-r border-slate-700 py-2 px-0.5 w-[4%] font-black">अ.नं.</th>
                                       <th className="border-r border-slate-700 py-2 px-0.5 w-[11.5%] font-black">दिनांक</th>
                                       <th className="border-r border-slate-700 py-2 px-0.5 w-[8.5%] font-black">वार</th>
@@ -13446,7 +13464,7 @@ function TeacherMDMPage() {
                                       <th className="border-r border-slate-700 py-2 px-0.5 w-[13%] font-black">शिल्लक तांदूळ<br/>(6-8) (KG)</th>
                                       <th className="border-r border-slate-700 py-2 px-0.5 w-[10%] font-black">सही</th>
                                     </tr>
-                                    <tr className="bg-slate-200/80 text-slate-800 font-black border-b border-slate-700 text-[13px]">
+                                    <tr className="bg-slate-200/80 text-slate-800 font-black border-b border-slate-700 text-[14px]">
                                       <th className="border-r border-slate-700 p-1 font-black">1</th>
                                       <th className="border-r border-slate-700 p-1 font-black">2</th>
                                       <th className="border-r border-slate-700 p-1 font-black">3</th>
@@ -13465,7 +13483,7 @@ function TeacherMDMPage() {
                                       return (
                                         <tr
                                           key={r.sr}
-                                          className={`border-b border-slate-700 text-[13.5px] font-black h-10 ${
+                                          className={`border-b border-slate-700 text-[15px] font-black h-11 ${
                                             isSundayOrHoliday
                                               ? "bg-[#fce8e6]"
                                               : r.sr % 2 === 0
@@ -13473,32 +13491,32 @@ function TeacherMDMPage() {
                                               : "bg-white"
                                           }`}
                                         >
-                                          <td className="border-r border-slate-700 py-2 px-1 font-black">{r.sr}</td>
-                                          <td className={`border-r border-slate-700 py-2 px-1 font-black ${isSundayOrHoliday ? "text-red-700" : ""}`}>
+                                          <td className="border-r border-slate-700 py-2.5 px-1 font-black">{r.sr}</td>
+                                          <td className={`border-r border-slate-700 py-2.5 px-1 font-black ${isSundayOrHoliday ? "text-red-700" : ""}`}>
                                             {r.dateFormatted}
                                           </td>
-                                          <td className={`border-r border-slate-700 py-2 px-1 font-black ${isSundayOrHoliday ? "text-red-700" : ""}`}>
+                                          <td className={`border-r border-slate-700 py-2.5 px-1 font-black ${isSundayOrHoliday ? "text-red-700" : ""}`}>
                                             {r.weekday}
                                           </td>
-                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
+                                          <td className="border-r border-slate-700 py-2.5 px-1 font-black">
                                             {r.magilShillak.toFixed(4)}
                                           </td>
-                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
+                                          <td className="border-r border-slate-700 py-2.5 px-1 font-black">
                                             {r.prapt > 0 ? r.prapt.toFixed(4) : ""}
                                           </td>
-                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
+                                          <td className="border-r border-slate-700 py-2.5 px-1 font-black">
                                             {r.ekunTandul.toFixed(4)}
                                           </td>
-                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
+                                          <td className="border-r border-slate-700 py-2.5 px-1 font-black">
                                             {r.bene > 0 ? r.bene : ""}
                                           </td>
-                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
+                                          <td className="border-r border-slate-700 py-2.5 px-1 font-black">
                                             {r.kharch > 0 ? r.kharch.toFixed(4) : ""}
                                           </td>
-                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
+                                          <td className="border-r border-slate-700 py-2.5 px-1 font-black">
                                             {r.shillakTandul.toFixed(4)}
                                           </td>
-                                          <td className="border-r border-slate-700 py-2 px-1 font-black"></td>
+                                          <td className="border-r border-slate-700 py-2.5 px-1 font-black"></td>
                                         </tr>
                                       );
                                     })}
@@ -15014,24 +15032,24 @@ function TeacherMDMPage() {
                                   const isHolidayOrSunday = isSunday || (classRec && classRec.isHoliday);
 
                                   dailyRows.push(
-                                    <tr key={d} className={`h-8.5 text-[13.5px] font-black text-slate-900 ${isHolidayOrSunday ? "bg-[#fce8e6]" : "hover:bg-slate-50"}`}>
-                                      <td className="border border-black p-0.5 py-1 font-black text-center">{d}</td>
-                                      <td className="border border-black p-0.5 py-1 font-black text-center">{dateStrFormatted}</td>
-                                      <td className="border border-black p-0.5 py-1 text-center font-black">{enrolled > 0 ? enrolled : ""}</td>
-                                      <td className="border border-black p-0.5 py-1 font-mono text-center font-black">{prev.toFixed(4)}</td>
-                                      <td className="border border-black p-0.5 py-1 font-mono text-center font-black">{incomingQty > 0 ? incomingQty.toFixed(4) : ""}</td>
-                                      <td className="border border-black p-0.5 py-1 font-mono font-black text-center">{total.toFixed(4)}</td>
-                                      <td className="border border-black p-0.5 py-1 font-black text-center">{beneficiary > 0 ? beneficiary : ""}</td>
-                                      <td className="border border-black p-0.5 py-1 font-mono text-center font-black">{used > 0 ? used.toFixed(4) : ""}</td>
-                                      <td className={`border border-black p-0.5 py-1 font-mono font-black text-center ${closing < 0 ? "text-red-600 bg-red-50 font-black" : "text-emerald-900"}`}>{closing.toFixed(4)}</td>
-                                      <td className="border border-black p-0.5 py-1"></td>
+                                    <tr key={d} className={`h-11 text-[15px] font-black text-slate-900 ${isHolidayOrSunday ? "bg-[#fce8e6]" : "hover:bg-slate-50"}`}>
+                                      <td className="border border-black p-0.5 py-2.5 font-black text-center">{d}</td>
+                                      <td className="border border-black p-0.5 py-2.5 font-black text-center">{dateStrFormatted}</td>
+                                      <td className="border border-black p-0.5 py-2.5 text-center font-black">{enrolled > 0 ? enrolled : ""}</td>
+                                      <td className="border border-black p-0.5 py-2.5 font-mono text-center font-black">{prev.toFixed(4)}</td>
+                                      <td className="border border-black p-0.5 py-2.5 font-mono text-center font-black">{incomingQty > 0 ? incomingQty.toFixed(4) : ""}</td>
+                                      <td className="border border-black p-0.5 py-2.5 font-mono font-black text-center">{total.toFixed(4)}</td>
+                                      <td className="border border-black p-0.5 py-2.5 font-black text-center">{beneficiary > 0 ? beneficiary : ""}</td>
+                                      <td className="border border-black p-0.5 py-2.5 font-mono text-center font-black">{used > 0 ? used.toFixed(4) : ""}</td>
+                                      <td className={`border border-black p-0.5 py-2.5 font-mono font-black text-center ${closing < 0 ? "text-red-600 bg-red-50 font-black" : "text-emerald-900"}`}>{closing.toFixed(4)}</td>
+                                      <td className="border border-black p-0.5 py-2.5"></td>
                                     </tr>
                                   );
                                 }
 
                                 return (
-                                  <div key={cls} className="print-page border border-slate-400 p-4 bg-white text-black font-sans relative w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0 mb-6">
-                                    <div>
+                                  <div key={cls} className="print-page border border-slate-400 p-4 bg-white text-black font-sans relative w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0 mb-6 h-full">
+                                    <div className="flex-1 flex flex-col">
                                       {/* Top Header */}
                                       <div className="text-center space-y-0.5 mb-2">
                                         <h1 className="text-xl md:text-2xl font-black text-[#047857] tracking-wide">
@@ -15043,7 +15061,7 @@ function TeacherMDMPage() {
                                       </div>
 
                                       {/* Info Grid */}
-                                      <table className="w-full border-collapse border border-black text-[13px] font-black mb-1.5">
+                                      <table className="w-full border-collapse border border-black text-[13.5px] font-black mb-1.5">
                                         <tbody>
                                           <tr className="border-b border-black">
                                             <td className="border-r border-black p-1">
@@ -15091,15 +15109,15 @@ function TeacherMDMPage() {
                                       </table>
 
                                       {/* Sub-header */}
-                                      <p className="text-[13px] font-black text-slate-900 mb-1 pl-0.5">
-                                        ० ते ३१ दिवसांची नोंद व वहीतक्ताडी
+                                      <p className="text-[13.5px] font-black text-slate-900 mb-1 pl-0.5">
+                                        ० ते ३１ दिवसांची नोंद व वहीतक्ताडी
                                       </p>
 
                                       {/* Main Table */}
-                                      <div className="w-full overflow-x-auto">
-                                        <table className="w-full border-collapse border border-black text-center text-[13.5px] font-sans font-black table-fixed">
+                                      <div className="w-full flex-1 flex flex-col overflow-x-auto">
+                                        <table className="w-full h-full min-h-[850px] border-collapse border border-black text-center text-[15px] font-sans font-black table-fixed">
                                           <thead>
-                                            <tr className="bg-slate-100 font-black text-slate-900 border-b border-black text-[13.5px]">
+                                            <tr className="bg-slate-100 font-black text-slate-900 border-b border-black text-[15px]">
                                               <th className="border border-black py-1 px-0.5 w-[4%] font-black">अ.न.</th>
                                               <th className="border border-black py-1 px-0.5 w-[11.5%] font-black">दिनांक</th>
                                               <th className="border border-black py-1 px-0.5 w-[8.5%] font-black">पट.</th>
@@ -15111,7 +15129,7 @@ function TeacherMDMPage() {
                                               <th className="border border-black py-1 px-0.5 w-[13%] font-black">शिल्लक तांदूळ<br/>(6-8) (KG)</th>
                                               <th className="border border-black py-1 px-0.5 w-[10%] font-black">सही</th>
                                             </tr>
-                                            <tr className="bg-slate-200 text-slate-900 font-black border-b border-slate-700 text-[13px]">
+                                            <tr className="bg-slate-200 text-slate-900 font-black border-b border-slate-700 text-[14px]">
                                               <th className="border border-black py-0.5 font-black">1</th>
                                               <th className="border border-black py-0.5 font-black">2</th>
                                               <th className="border border-black py-0.5 font-black">3</th>

@@ -24,6 +24,7 @@ import {
   ClipboardCheck,
   Notebook,
   ArrowRight,
+  ArrowLeft,
   Sparkles,
 } from "lucide-react";
 import {
@@ -154,6 +155,8 @@ function TeacherDashboard() {
   const { lang } = useLanguage();
   const t = DICTIONARY[lang];
 
+  const [expandedModule, setExpandedModule] = useState<number | null>(null);
+
   const handleModuleAccess = (targetPath: string) => {
     if (user) {
       navigate({ to: targetPath as any });
@@ -171,48 +174,78 @@ function TeacherDashboard() {
       <TeacherSidebar />
 
       <main className="lg:pl-0 pt-16 min-h-screen bg-slate-50/50">
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
+          {/* Top Navigation & Home Back Button */}
+          <div className="flex items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Link
+                to="/"
+                className="flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-xl text-xs sm:text-sm font-black transition-all shadow-xs active:scale-95 cursor-pointer"
+                title="मुख्य होमपेजवर जा (Go to Main Homepage)"
+              >
+                <ArrowLeft className="size-4 shrink-0" />
+                <span>← मुख्य पान (Home Page)</span>
+              </Link>
+              <span className="text-slate-300 font-bold hidden xs:inline">/</span>
+              <span className="text-xs sm:text-sm font-extrabold text-slate-700">शिक्षक विभाग डॅशबोर्ड (Teacher Suite)</span>
+            </div>
+          </div>
+
           {/* Quick Access Modules Card Grid */}
           <div className="space-y-6">
 
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8 pt-2">
               {MODULE_CARDS.map((item, idx) => {
                 const CardIcon = item.icon;
+                const isExpanded = expandedModule === idx;
                 return (
                   <motion.div
-                    whileHover={{ scale: 1.04, y: -6 }}
+                    whileHover={{ scale: 1.03, y: -4 }}
                     whileTap={{ scale: 0.98 }}
                     key={idx}
                   >
                     <div
-                      onClick={() => handleModuleAccess(item.to)}
-                      className="min-h-[17rem] h-full bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-[2.5rem] p-8 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col justify-between transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer block w-full"
+                      className="min-h-[17rem] h-full bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col justify-between transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer block w-full"
                     >
                       {/* Watermark background icon */}
                       <div className="absolute right-[-10%] bottom-[-10%] opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
                         <CardIcon className="size-48" strokeWidth={1} />
                       </div>
 
-                      {/* Small Icon Badge */}
-                      <div className="size-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
-                        <CardIcon className="size-6 text-white" />
+                      {/* Top Header with Icon & Mobile Info Toggle */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="size-11 sm:size-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                          <CardIcon className="size-5 sm:size-6 text-white" />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedModule(isExpanded ? null : idx);
+                          }}
+                          className="sm:hidden text-[10px] font-bold text-amber-200 bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-full border border-white/20 flex items-center gap-1 shrink-0"
+                        >
+                          <span>{isExpanded ? "कमी करा" : "माहिती पहा"}</span>
+                        </button>
                       </div>
 
-                      {/* Committee Name */}
-                      <div className="space-y-2 my-2">
-                        <h3 className="text-xl font-black leading-tight tracking-tight pr-4">
+                      {/* Module Title & Description */}
+                      <div className="space-y-2 my-3">
+                        <h3 className="text-lg sm:text-xl font-black leading-tight tracking-tight pr-2">
                           {t[item.labelKey as keyof typeof t] || item.fallbackLabel}
                         </h3>
-                        <p className="text-[11.5px] text-violet-100/90 font-semibold leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all duration-300">
+                        <p className={`text-[11.5px] sm:text-xs text-violet-100/95 font-semibold leading-relaxed transition-all duration-300 ${isExpanded ? "line-clamp-none text-white font-medium" : "line-clamp-3 sm:line-clamp-2 group-hover:line-clamp-none"}`}>
                           {item.description}
                         </p>
                       </div>
 
                       {/* Footer Arrow Action */}
-                      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-violet-200 mt-2">
-                        प्रवेश करा{" "}
-                        <ArrowRight className="size-3 group-hover:translate-x-1.5 transition-transform duration-300" />
+                      <div
+                        onClick={() => handleModuleAccess(item.to)}
+                        className="flex items-center justify-between text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-violet-200 mt-2 pt-2 border-t border-white/15"
+                      >
+                        <span>प्रवेश करा</span>
+                        <ArrowRight className="size-3.5 group-hover:translate-x-1.5 transition-transform duration-300" />
                       </div>
                     </div>
                   </motion.div>
