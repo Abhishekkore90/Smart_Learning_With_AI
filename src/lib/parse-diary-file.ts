@@ -63,8 +63,8 @@ export function getDefaultSuvicharForDate(dateStr?: string | null): string {
 export function isDefaultFallbackThought(thoughtStr?: string | null): boolean {
   if (!thoughtStr) return true;
   const clean = cleanThoughtText(thoughtStr);
-  if (!clean || clean.includes("प्रविष्ट करण्यासाठी") || clean.includes("उपलब्ध नाही")) return true;
-  return DEFAULT_MARATHI_SUVICHARS.some(d => d === clean || clean.includes(d));
+  if (!clean || clean.includes("प्रविष्ट करण्यासाठी") || clean.includes("उपलब्ध नाही") || clean.includes("माहिती उपलब्ध नाही") || clean.includes("सुविचार प्रविष्ट करा")) return true;
+  return false;
 }
 
 export function cleanThoughtText(str?: string | null): string {
@@ -75,6 +75,10 @@ export function cleanThoughtText(str?: string | null): string {
     cleaned = cleaned.replace(/^["'”’„«»\s]+|["'”’„«»\s]+$/g, "").trim();
     if (cleaned === prev) break;
   }
+  cleaned = cleaned
+    .replace(/\s*(?:इयत्[\u0900-\u097F\s]*|इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गश[\u200C\u200D]?शिक्षक|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
+    .replace(/^["'”’„«»\s]+|["'”’„«»\s]+$/g, "")
+    .trim();
   return cleaned;
 }
 
@@ -244,17 +248,13 @@ function parseTextToDiary(rawText: string, className: string): ParsedDiaryConten
   // ─── Extract thought (suvichar) ───
   let thought = "";
   const thoughtPatterns = [
-    /(?:आजचा\s*सुव\u200Dिचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r]+)/i,
+    /(?:आजचा\s*सुव[\u200C\u200D]?िचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r]+)/i,
     /(?:िचार|विचार)\s*[:：\-]?\s*([^\n\r]+)/i,
   ];
   for (const pattern of thoughtPatterns) {
     const match = fullText.match(pattern);
     if (match) {
-      const candidate = match[1]
-        .replace(/^[:\s\u0903\-"'”’„«»]+/, "")
-        .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
-        .replace(/^["'”’„«»]+|["'”’„«»]+$/g, "")
-        .trim();
+      const candidate = cleanThoughtText(match[1]);
       if (candidate && candidate.length > 2) {
         thought = candidate;
         break;
@@ -1012,13 +1012,9 @@ export async function parseDocxHtmlToDiaries(html: string, className: string): P
           const parsedD = parseAndStandardizeDate(dMatch[1]);
           if (parsedD) secData.date = parsedD;
         }
-        const tMatch = combinedText.match(/(?:आजचा\s*सुव\u200Dिचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r]+)/i);
+        const tMatch = combinedText.match(/(?:आजचा\s*सुव[\u200C\u200D]?िचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r]+)/i);
         if (tMatch && !secData.thought) {
-          secData.thought = tMatch[1]
-            .replace(/^[:\s\u0903\-"'”’„«»]+/, "")
-            .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
-            .replace(/^["'”’„«»]+|["'”’„«»]+$/g, "")
-            .trim();
+          secData.thought = cleanThoughtText(tMatch[1]);
         }
       }
 
@@ -1089,11 +1085,9 @@ export async function parseDocxHtmlToDiaries(html: string, className: string): P
         const start = dp.index;
         const end = i + 1 < datePairs.length ? datePairs[i + 1].index : docHtml.length;
         const chunkText = docHtml.substring(start, end).replace(/<[^>]+>/g, "\n");
-        const tMatch = chunkText.match(/(?:आजचा\s*सुव\u200Dिचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r<]+)/i);
+        const tMatch = chunkText.match(/(?:आजचा\s*सुव[\u200C\u200D]?िचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r<]+)/i);
         if (tMatch && tMatch[1]) {
-          const ct = cleanThoughtText(tMatch[1])
-            .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
-            .trim();
+          const ct = cleanThoughtText(tMatch[1]);
           if (ct && ct.length > 1 && !ct.includes("प्रविष्ट करा")) {
             dp.thought = ct;
           }

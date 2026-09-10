@@ -20,13 +20,15 @@ import {
   FileText,
   Eye,
   Trash2,
-  Save
+  Save,
+  AlertTriangle
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { DocumentLivePreview } from "@/components/DocumentLivePreview";
+import { DocumentLivePreview, formatDateToIso, getMarathiDayName } from "@/components/DocumentLivePreview";
+import { getBunnyStorageUrl } from "@/lib/bunny-auth-pdf";
 import { useAuth } from "@/hooks/use-auth";
-import { cleanThoughtText, getDefaultSuvicharForDate } from "@/lib/parse-diary-file";
+import { cleanThoughtText, getDefaultSuvicharForDate, isDefaultFallbackThought } from "@/lib/parse-diary-file";
 
 interface PeriodItem {
   period: string;
@@ -54,15 +56,29 @@ interface DailyDiary {
   uploadedAt?: number;
 }
 
-function calculateWorkingDayIndex(year: number, month: number, day: number): number {
+function toAsciiDigits(str: string | undefined | null): string {
+  if (!str) return "";
+  const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+  let res = String(str);
+  for (let i = 0; i < 10; i++) {
+    res = res.replaceAll(marathiDigits[i], String(i));
+  }
+  return res;
+}
+
+function calculateRangeWorkingDayIndex(year: number, month: number, targetDay: number, startDay: number = 1): number {
   let workingCount = 0;
-  for (let d = 1; d <= day; d++) {
+  for (let d = startDay; d <= targetDay; d++) {
     const testD = new Date(year, month - 1, d);
     if (testD.getDay() !== 0) { // Skip Sundays
       workingCount++;
     }
   }
   return Math.max(0, workingCount - 1);
+}
+
+function calculateWorkingDayIndex(year: number, month: number, day: number): number {
+  return calculateRangeWorkingDayIndex(year, month, day, 1);
 }
 
 function getWorkingDatesRange(startDateStr: string, count: number): string[] {
@@ -86,7 +102,7 @@ function getWorkingDatesRange(startDateStr: string, count: number): string[] {
   return result;
 }
 
-function findMatchingEntryForDate(entries: any[], targetIsoDate: string): any | null {
+function findMatchingEntryForDate(entries: any[], targetIsoDate: string, currentTabId?: string): any | null {
   if (!entries || !Array.isArray(entries) || entries.length === 0) return null;
 
   const targetParts = targetIsoDate.split("-");
@@ -96,10 +112,18 @@ function findMatchingEntryForDate(entries: any[], targetIsoDate: string): any | 
   const targetMonth = parseInt(targetParts[1], 10);
   const targetDay = parseInt(targetParts[2], 10);
 
-  // 1. Strict match by date string
+  // 1. Strict ISO date match using formatDateToIso and Marathi numeral conversion
   for (const entry of entries) {
-    if (!entry.date && !entry.displayDate) continue;
-    const cleanDate = String(entry.date || entry.displayDate).trim();
+    if (!entry) continue;
+    const rawDate = String(entry.date || entry.displayDate || "").trim();
+    if (!rawDate) continue;
+
+    const cleanDate = toAsciiDigits(rawDate);
+    const entryIso = formatDateToIso(cleanDate);
+
+    if (entryIso && entryIso === targetIsoDate) {
+      return entry;
+    }
 
     if (cleanDate === targetIsoDate) return entry;
 
@@ -115,25 +139,75 @@ function findMatchingEntryForDate(entries: any[], targetIsoDate: string): any | 
       }
       if (d === targetDay && mon === targetMonth) return entry;
     }
+
+    const dayOnlyMatch = cleanDate.match(/^(\d{1,2})$/);
+    if (dayOnlyMatch && parseInt(dayOnlyMatch[1], 10) === targetDay) {
+      return entry;
+    }
   }
 
   // 2. Check if entries belong to the SAME month as targetIsoDate
   const firstEntry = entries[0];
-  if (firstEntry && (firstEntry.date || firstEntry.displayDate)) {
-    const cleanFirst = String(firstEntry.date || firstEntry.displayDate).trim();
-    const parts = cleanFirst.split(/[\/\-\.]/);
-    let entryMonth = 0;
-    if (parts.length === 3) {
-      entryMonth = parts[0].length === 4 ? parseInt(parts[1], 10) : parseInt(parts[1], 10);
-    }
-    if (entryMonth && entryMonth !== targetMonth) {
-      // Month mismatch (e.g., August file viewed in June)! Return null.
-      return null;
+  if (firstEntry) {
+    const rawFirst = String(firstEntry.date || firstEntry.displayDate || "").trim();
+    if (rawFirst) {
+      const cleanFirst = toAsciiDigits(rawFirst);
+      const firstIso = formatDateToIso(cleanFirst);
+      let entryMonth = 0;
+      if (firstIso && firstIso.includes("-")) {
+        entryMonth = parseInt(firstIso.split("-")[1], 10);
+      } else {
+        const parts = cleanFirst.split(/[\/\-\.]/);
+        if (parts.length === 3) {
+          entryMonth = parts[0].length === 4 ? parseInt(parts[1], 10) : parseInt(parts[1], 10);
+        }
+      }
+      if (entryMonth && entryMonth !== targetMonth) {
+        return null;
+      }
     }
   }
 
-  // 3. Fallback match by working day index ONLY within the same month
-  const dayIdx = calculateWorkingDayIndex(targetYear, targetMonth, targetDay);
+  // 3. Fallback match by working day index relative to the range start day
+  let startDay = 1;
+
+  if (firstEntry) {
+    const rawFirst = String(firstEntry.date || firstEntry.displayDate || "").trim();
+    if (rawFirst) {
+      const cleanFirst = toAsciiDigits(rawFirst);
+      const firstIso = formatDateToIso(cleanFirst);
+      if (firstIso && firstIso.includes("-")) {
+        const parsedDay = parseInt(firstIso.split("-")[2], 10);
+        if (parsedDay >= 21) startDay = 21;
+        else if (parsedDay >= 11) startDay = 11;
+        else startDay = 1;
+      } else {
+        const m = cleanFirst.match(/^(\d{1,4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,4})$/);
+        if (m) {
+          const parsedDay = m[1].length === 4 ? parseInt(m[3], 10) : parseInt(m[1], 10);
+          if (parsedDay >= 21) startDay = 21;
+          else if (parsedDay >= 11) startDay = 11;
+          else startDay = 1;
+        }
+      }
+    }
+  }
+
+  if (startDay === 1) {
+    if (currentTabId === "21 to 31" || currentTabId === "21 to 30" || targetDay >= 21) {
+      startDay = 21;
+    } else if (currentTabId === "11 to 20" || (targetDay >= 11 && targetDay <= 20)) {
+      startDay = 11;
+    }
+  }
+
+  // 1-to-1 direct day offset matching (Day 1 -> idx 0, Day 2 -> idx 1, Day 3 -> idx 2, etc.)
+  const directIdx = targetDay - startDay;
+  if (directIdx >= 0 && directIdx < entries.length) {
+    return entries[directIdx];
+  }
+
+  const dayIdx = calculateRangeWorkingDayIndex(targetYear, targetMonth, targetDay, startDay);
   if (dayIdx >= 0 && dayIdx < entries.length) {
     return entries[dayIdx];
   }
@@ -141,7 +215,7 @@ function findMatchingEntryForDate(entries: any[], targetIsoDate: string): any | 
   return null;
 }
 
-function extractSingleDayPeriods(allPeriods: PeriodItem[], targetIsoDate: string, activeDate: Date | null): PeriodItem[] {
+function extractSingleDayPeriods(allPeriods: PeriodItem[], targetIsoDate: string, activeDate: Date | null, currentTabId?: string): PeriodItem[] {
   if (!allPeriods || !Array.isArray(allPeriods) || allPeriods.length === 0) return [];
 
   // Count how many times period number resets to "1" or "१"
@@ -153,7 +227,7 @@ function extractSingleDayPeriods(allPeriods: PeriodItem[], targetIsoDate: string
     }
   });
 
-  // If period "1" occurs at most ONCE, allPeriods belongs to a single day (e.g. 9 periods on 12/8/2026)! Return ALL periods.
+  // If period "1" occurs at most ONCE, allPeriods belongs to a single day! Return ALL periods.
   if (resetCount <= 1) {
     return allPeriods;
   }
@@ -183,14 +257,28 @@ function extractSingleDayPeriods(allPeriods: PeriodItem[], targetIsoDate: string
 
   // Determine which day chunk to display based on selected date (skipping Sundays)
   let dayIdx = 0;
+  let year = 2026, month = 8, targetDay = 1;
   if (activeDate) {
-    dayIdx = calculateWorkingDayIndex(activeDate.getFullYear(), activeDate.getMonth() + 1, activeDate.getDate());
+    year = activeDate.getFullYear();
+    month = activeDate.getMonth() + 1;
+    targetDay = activeDate.getDate();
   } else if (targetIsoDate) {
     const parts = targetIsoDate.split("-");
     if (parts.length === 3) {
-      dayIdx = calculateWorkingDayIndex(parseInt(parts[0], 10), parseInt(parts[1], 10), parseInt(parts[2], 10));
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+      targetDay = parseInt(parts[2], 10);
     }
   }
+
+  let startDay = 1;
+  if (currentTabId === "21 to 31" || currentTabId === "21 to 30" || targetDay >= 21) {
+    startDay = 21;
+  } else if (currentTabId === "11 to 20" || (targetDay >= 11 && targetDay <= 20)) {
+    startDay = 11;
+  }
+
+  dayIdx = calculateRangeWorkingDayIndex(year, month, targetDay, startDay);
 
   if (dayIdx >= dayChunks.length) {
     dayIdx = dayChunks.length - 1;
@@ -203,6 +291,8 @@ interface Props {
   selectedClass?: string;
   selectedMedium?: string;
   selectedMonth?: string | null;
+  selectedWeek?: string | null;
+  onSelectWeek?: (week: string) => void;
   onBack?: () => void;
   isStudent?: boolean;
   schoolProfile?: {
@@ -219,6 +309,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   selectedClass = "Class 1", 
   selectedMedium = "Marathi",
   selectedMonth = null,
+  selectedWeek = null,
+  onSelectWeek,
   onBack,
   isStudent = false,
   schoolProfile: propSchoolProfile
@@ -229,6 +321,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isAllDaysMode, setIsAllDaysMode] = useState<boolean>(false);
+  const [rangeMasterRecord, setRangeMasterRecord] = useState<any>(null);
   const [availableDates, setAvailableDates] = useState<{ dateStr: string; day: string }[]>([]);
   const { user, profile } = useAuth();
   const printRef = useRef<HTMLDivElement>(null);
@@ -262,16 +356,79 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     className: propSchoolProfile?.className || localProfile.className || (profile as any)?.className || (profile as any)?.class || selectedClass,
     academicYear: propSchoolProfile?.academicYear || localProfile.academicYear || (profile as any)?.academicYear || "2026-27",
   };
+
+  const activeMonthNum = selectedMonth ? parseInt(selectedMonth, 10) : (activeDate ? activeDate.getMonth() + 1 : 8);
+  const activeYearNum = activeDate ? activeDate.getFullYear() : 2026;
+
+  const currentTabId = React.useMemo(() => {
+    if (activeDate) {
+      const day = activeDate.getDate();
+      if (day <= 10) return "1 to 10";
+      if (day <= 20) return "11 to 20";
+      return "21 to 31";
+    }
+    return selectedWeek || "1 to 10";
+  }, [activeDate, selectedWeek]);
+
+  const rangeDays = React.useMemo(() => {
+    let startDay = 1;
+    let endDay = 10;
+
+    if (currentTabId === "11 to 20") {
+      startDay = 11;
+      endDay = 20;
+    } else if (currentTabId === "21 to 31") {
+      startDay = 21;
+      const maxDaysInMonth = new Date(activeYearNum, activeMonthNum, 0).getDate();
+      endDay = maxDaysInMonth;
+    }
+
+    const daysArr = [];
+    const dayShortNames = ["रवि", "सोम", "मंगळ", "बुध", "गुरु", "शुक्र", "शनि"];
+    const dayFullNames = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+
+    for (let d = startDay; d <= endDay; d++) {
+      const dObj = new Date(activeYearNum, activeMonthNum - 1, d);
+      const dateIso = format(dObj, "yyyy-MM-dd");
+      const dayOfWeek = dObj.getDay();
+
+      daysArr.push({
+        dayNum: d,
+        dateObj: dObj,
+        dateIso: dateIso,
+        displayDate: `${d}/${activeMonthNum}/${activeYearNum}`,
+        dayOfWeek: dayOfWeek,
+        dayShort: dayShortNames[dayOfWeek],
+        dayName: dayFullNames[dayOfWeek],
+      });
+    }
+
+    return daysArr;
+  }, [currentTabId, activeMonthNum, activeYearNum]);
+
+  const handleTabClick = (tabId: string) => {
+    let targetDay = 1;
+    if (tabId === "11 to 20") targetDay = 11;
+    if (tabId === "21 to 31") targetDay = 21;
+
+    const newDate = new Date(activeYearNum, activeMonthNum - 1, targetDay);
+    setActiveDate(newDate);
+    if (onSelectWeek) onSelectWeek(tabId);
+  };
+
   useEffect(() => {
     if (selectedMonth) {
       const year = activeDate ? activeDate.getFullYear() : 2026;
       const monthIdx = parseInt(selectedMonth, 10) - 1;
-      const newDateObj = new Date(year, monthIdx, 1);
+      let startDay = 1;
+      if (selectedWeek === "11 to 20") startDay = 11;
+      else if (selectedWeek === "21 to 31" || selectedWeek === "21 to 30") startDay = 21;
+      const newDateObj = new Date(year, monthIdx, startDay);
       setActiveDate(newDateObj);
     } else if (!activeDate) {
       setActiveDate(new Date());
     }
-  }, [selectedClass, selectedMedium, selectedMonth]);
+  }, [selectedClass, selectedMedium, selectedMonth, selectedWeek]);
 
   useEffect(() => {
     async function discoverAvailableDates() {
@@ -324,6 +481,164 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     discoverAvailableDates();
   }, [selectedClass, selectedMedium, selectedMonth]);
 
+  useEffect(() => {
+    async function fetchRangeMasterRecord() {
+      try {
+        const targetMonthStr = selectedMonth || (activeDate ? format(activeDate, "MM") : "08");
+        const colRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
+        const snap = await getDocs(colRef);
+
+        const masterDocs: any[] = [];
+        const dayEntriesMap = new Map<string, any>();
+
+        snap.docs.forEach((dSnap) => {
+          const data = dSnap.data();
+          const docId = dSnap.id;
+          const isMaster = docId.startsWith("file_") ||
+            docId === "master_diary" ||
+            (Array.isArray(data.structuredData) && data.structuredData.length > 0) ||
+            Boolean(data.masterPdfUrl);
+
+          if (isMaster) {
+            masterDocs.push({ id: docId, ...data });
+          }
+
+          if (Array.isArray(data.structuredData) && data.structuredData.length > 0) {
+            data.structuredData.forEach((entry: any) => {
+              const dStr = entry.date || entry.displayDate || entry.diaryDate || "";
+              if (dStr) dayEntriesMap.set(dStr, entry);
+            });
+          }
+
+          if (!docId.startsWith("file_") && docId !== "master_diary" && docId.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const dayObj = {
+              date: docId,
+              day: data.day || "",
+              thought: data.thought || (data.parsedContent ? data.parsedContent.thought : ""),
+              dinvishesh: data.dinvishesh || (data.parsedContent ? data.parsedContent.dinvishesh : ""),
+              highlights: data.highlights || (data.parsedContent ? data.parsedContent.highlights : ""),
+              periods: data.periods || (data.parsedContent ? data.parsedContent.periods : []),
+              scannedPageUrl: data.scannedPageUrl || data.pageUrl || "",
+            };
+            if (!dayEntriesMap.has(docId)) {
+              dayEntriesMap.set(docId, dayObj);
+            }
+          }
+        });
+
+        let matchedDoc: any = null;
+
+        // 1. Match master doc by week or filename
+        for (const docItem of masterDocs) {
+          const docWeek = docItem.week || docItem.selectedWeek || docItem.range || "";
+          const fName = String(docItem.fileName || "").toLowerCase();
+
+          if (docWeek === currentTabId) {
+            matchedDoc = docItem;
+            break;
+          }
+
+          if (currentTabId === "1 to 10" && (docWeek === "Week 1" || docWeek === "1 to 10" || fName.includes("1to10") || fName.includes("1_to_10") || fName.includes("1-10"))) {
+            matchedDoc = docItem;
+            break;
+          }
+          if (currentTabId === "11 to 20" && (docWeek === "Week 2" || docWeek === "Week 3" || docWeek === "11 to 20" || fName.includes("11to20") || fName.includes("11_to_20") || fName.includes("11-20"))) {
+            matchedDoc = docItem;
+            break;
+          }
+          if (currentTabId === "21 to 31" && (docWeek === "Week 4" || docWeek === "Week 5" || docWeek === "21 to 31" || docWeek === "21 to 30" || fName.includes("21to30") || fName.includes("21to31") || fName.includes("21_to_30") || fName.includes("21-30"))) {
+            matchedDoc = docItem;
+            break;
+          }
+        }
+
+        // 2. Match master doc by sample dates in structuredData
+        if (!matchedDoc) {
+          for (const docItem of masterDocs) {
+            if (docItem.structuredData && Array.isArray(docItem.structuredData) && docItem.structuredData.length > 0) {
+              const hasMatchingDate = docItem.structuredData.some((entry: any) => {
+                const dStr = entry.date || entry.displayDate || "";
+                const cleanDStr = toAsciiDigits(dStr);
+                const iso = formatDateToIso(cleanDStr);
+                let dayNum = 0;
+                if (iso && iso.includes("-")) {
+                  dayNum = parseInt(iso.split("-")[2], 10);
+                } else {
+                  const parts = cleanDStr.split(/[\/\-\.]/);
+                  if (parts.length === 3) {
+                    dayNum = parts[0].length === 4 ? parseInt(parts[2], 10) : parseInt(parts[0], 10);
+                  }
+                }
+                if (dayNum > 0) {
+                  if (currentTabId === "1 to 10" && dayNum >= 1 && dayNum <= 10) return true;
+                  if (currentTabId === "11 to 20" && dayNum >= 11 && dayNum <= 20) return true;
+                  if (currentTabId === "21 to 31" && dayNum >= 21 && dayNum <= 31) return true;
+                }
+                return false;
+              });
+
+              if (hasMatchingDate) {
+                matchedDoc = docItem;
+                break;
+              }
+            }
+          }
+        }
+
+        // 3. Fallback to first master doc if still no match
+        if (!matchedDoc && masterDocs.length > 0) {
+          matchedDoc = masterDocs[0];
+        }
+
+        // Populate structuredData from dayEntriesMap if empty
+        if (matchedDoc) {
+          if (!matchedDoc.structuredData || !Array.isArray(matchedDoc.structuredData) || matchedDoc.structuredData.length === 0) {
+            const allDays = Array.from(dayEntriesMap.values());
+            if (allDays.length > 0) {
+              matchedDoc.structuredData = allDays;
+            }
+          }
+
+          // Asynchronously parse DOCX file from Bunny Storage if structuredData is still empty
+          const fetchTarget = matchedDoc.pageUrl || matchedDoc.masterPdfUrl;
+          const isDocx = fetchTarget && (fetchTarget.toLowerCase().endsWith(".docx") || fetchTarget.toLowerCase().includes(".docx?"));
+          if (fetchTarget && isDocx && (!matchedDoc.structuredData || matchedDoc.structuredData.length === 0)) {
+            try {
+              const targetUrl = getBunnyStorageUrl(fetchTarget);
+              const headers: Record<string, string> = {
+                AccessKey: import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "",
+              };
+              const res = await fetch(targetUrl, { headers });
+              if (res.ok) {
+                const buffer = await res.arrayBuffer();
+                const mammoth = await import("mammoth");
+                const htmlResult = await mammoth.convertToHtml({ arrayBuffer: buffer });
+                if (htmlResult.value) {
+                  const { parseDocxHtmlToDiaries } = await import("@/lib/parse-diary-file");
+                  const parsedPages = await parseDocxHtmlToDiaries(htmlResult.value, selectedClass);
+                  if (parsedPages && parsedPages.length > 0) {
+                    matchedDoc.structuredData = parsedPages;
+                    // Persist to Firestore asynchronously
+                    const dRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, matchedDoc.id);
+                    setDoc(dRef, { structuredData: parsedPages }, { merge: true }).catch(() => {});
+                  }
+                }
+              }
+            } catch (err) {
+              console.error("Error auto-parsing master DOCX for range:", err);
+            }
+          }
+        }
+
+        setRangeMasterRecord(matchedDoc);
+      } catch (e) {
+        console.error("Error fetching range master record:", e);
+      }
+    }
+
+    fetchRangeMasterRecord();
+  }, [selectedClass, selectedMedium, selectedMonth, currentTabId]);
+
   const isoDate = activeDate ? format(activeDate, "yyyy-MM-dd") : "";
   const displayFormattedDate = activeDate ? format(activeDate, "eeee, dd MMMM yyyy") : "...";
   const isToday = activeDate ? format(new Date(), "yyyy-MM-dd") === isoDate : false;
@@ -334,70 +649,35 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     med: string,
     existingThought?: string
   ): Promise<string> => {
-    // 1. Check local storage for date-specific thought
+    // 1. Prioritize existingThought from the matched day page of the uploaded file
+    const cleanedExisting = cleanThoughtText(existingThought);
+    if (cleanedExisting && !cleanedExisting.includes("सुविचार उपलब्ध नाही") && !isDefaultFallbackThought(cleanedExisting)) {
+      return cleanedExisting;
+    }
+
+    // 2. Check local storage for date-specific user-edited thought
     const localThought = cleanThoughtText(
       localStorage.getItem(`suvichar_${cls}_${med}_${dateIso}`) ||
       localStorage.getItem(`suvichar_${dateIso}`)
     );
-    if (localThought && !localThought.includes("सुविचार उपलब्ध नाही")) {
+    if (localThought && !localThought.includes("सुविचार उपलब्ध नाही") && !isDefaultFallbackThought(localThought)) {
       return localThought;
     }
 
-    // 2. Check teaching_diaries doc for specific dateIso
+    // 3. Check teaching_diaries doc for specific dateIso
     try {
       const tdDocId = `${cls}_${med}_${dateIso}`;
       const tdSnap = await getDoc(doc(db, "teaching_diaries", tdDocId));
       if (tdSnap.exists()) {
         const tData = tdSnap.data();
         const tThought = cleanThoughtText(tData.thought || tData.suvichar);
-        if (tThought && !tThought.includes("सुविचार उपलब्ध नाही")) {
+        if (tThought && !tThought.includes("सुविचार उपलब्ध नाही") && !isDefaultFallbackThought(tThought)) {
           return tThought;
         }
       }
     } catch (e) {}
 
-    // 3. Check daily_paripath_archive for dateIso
-    try {
-      const paripathSnap = await getDoc(doc(db, "daily_paripath_archive", dateIso));
-      if (paripathSnap.exists()) {
-        const pData = paripathSnap.data();
-        const pThought = cleanThoughtText(pData.suvichar || pData.thought || pData.thoughtOfTheDay);
-        if (pThought && !pThought.includes("सुविचार उपलब्ध नाही")) {
-          return pThought;
-        }
-      }
-    } catch (e) {}
-
-    // 4. Check admin_daily_paripath current
-    try {
-      const currentRef = doc(db, "admin_daily_paripath", "current");
-      const cSnap = await getDoc(currentRef);
-      if (cSnap.exists()) {
-        const cData = cSnap.data();
-        if (cData.archivedDate === dateIso || cData.date === dateIso) {
-          const cThought = cleanThoughtText(cData.suvichar || cData.thought || cData.thoughtOfTheDay);
-          if (cThought && !cThought.includes("सुविचार उपलब्ध नाही")) {
-            return cThought;
-          }
-        }
-      }
-    } catch (e) {}
-
-    // 5. Check teacher_diaries doc for dateIso
-    try {
-      const altSnap = await getDoc(doc(db, "teacher_diaries", cls, med, dateIso));
-      if (altSnap.exists()) {
-        const aData = altSnap.data();
-        const aThought = cleanThoughtText(
-          aData.thought || aData.suvichar || (aData.parsedContent ? aData.parsedContent.thought || aData.parsedContent.suvichar : "")
-        );
-        if (aThought && !aThought.includes("सुविचार उपलब्ध नाही")) {
-          return aThought;
-        }
-      }
-    } catch (e) {}
-
-    // 6. Check teacher_diaries master docs with structuredData for matching date
+    // 4. Check teacher_diaries master docs with structuredData for matching date
     try {
       const colRef = collection(db, "teacher_diaries", cls, med);
       const snap = await getDocs(colRef);
@@ -407,7 +687,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           const match = findMatchingEntryForDate(dData.structuredData, dateIso);
           if (match) {
             const sThought = cleanThoughtText(match.thought || match.suvichar);
-            if (sThought && !sThought.includes("सुविचार उपलब्ध नाही")) {
+            if (sThought && !sThought.includes("सुविचार उपलब्ध नाही") && !isDefaultFallbackThought(sThought)) {
               return sThought;
             }
           }
@@ -415,12 +695,19 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       }
     } catch (e) {}
 
-    const cleanedExisting = cleanThoughtText(existingThought);
-    if (cleanedExisting && !cleanedExisting.includes("सुविचार उपलब्ध नाही")) {
-      return cleanedExisting;
-    }
+    // 5. Check daily_paripath_archive for dateIso
+    try {
+      const paripathSnap = await getDoc(doc(db, "daily_paripath_archive", dateIso));
+      if (paripathSnap.exists()) {
+        const pData = paripathSnap.data();
+        const pThought = cleanThoughtText(pData.suvichar || pData.thought || pData.thoughtOfTheDay);
+        if (pThought && !pThought.includes("सुविचार उपलब्ध नाही") && !isDefaultFallbackThought(pThought)) {
+          return pThought;
+        }
+      }
+    } catch (e) {}
 
-    return "";
+    return cleanedExisting || "";
   };
 
   useEffect(() => {
@@ -438,7 +725,59 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       try {
         const targetMonthStr = isoDate.split("-")[1]; // e.g. "08" for August, "06" for June
 
-        // 1. Check primary teaching_diaries collection
+        // 1. Check rangeMasterRecord FIRST (the master doc loaded for the current tab e.g. 1to10, 11to20, 21to30)
+        if (rangeMasterRecord) {
+          const match = (rangeMasterRecord.structuredData && Array.isArray(rangeMasterRecord.structuredData))
+            ? findMatchingEntryForDate(rangeMasterRecord.structuredData, isoDate, currentTabId)
+            : null;
+
+          let periodList: PeriodItem[] = match && match.periods && Array.isArray(match.periods) ? match.periods : [];
+          if (periodList.length === 0 && rangeMasterRecord.periods) {
+            periodList = extractSingleDayPeriods(rangeMasterRecord.periods, isoDate, activeDate, currentTabId);
+          }
+
+          // Check if user has explicitly saved custom edits for this single day in teaching_diaries
+          const userSingleDocId = `${selectedClass}_${selectedMedium}_${isoDate}`;
+          try {
+            const userSingleSnap = await getDoc(doc(db, "teaching_diaries", userSingleDocId));
+            if (userSingleSnap.exists()) {
+              const uData = userSingleSnap.data();
+              if (uData.isUserEdited && uData.periods && Array.isArray(uData.periods) && uData.periods.length > 0) {
+                periodList = uData.periods;
+              }
+            }
+          } catch (e) {}
+
+          const rawPageUrl = rangeMasterRecord.pageUrl || rangeMasterRecord.pageURL || rangeMasterRecord.masterPdfUrl || rangeMasterRecord.pdfUrl || "";
+          const resolvedThought = await resolveThoughtForDate(
+            isoDate,
+            selectedClass,
+            selectedMedium,
+            (match ? match.thought : "") || rangeMasterRecord.thought
+          );
+
+          if (rawPageUrl || periodList.length > 0 || match || rangeMasterRecord) {
+            setTodayDiary({
+              id: rangeMasterRecord.id,
+              date: isoDate,
+              displayDate: displayFormattedDate,
+              day: (match ? match.day : "") || getMarathiDayName(isoDate),
+              thought: resolvedThought,
+              dinvishesh: (match ? match.dinvishesh : "") || rangeMasterRecord.dinvishesh || "",
+              className: selectedClass,
+              medium: selectedMedium,
+              periods: periodList,
+              pageUrl: rawPageUrl,
+              fileName: rangeMasterRecord.fileName || "Teaching_Diary.pdf",
+              uploadedAt: rangeMasterRecord.uploadedAt || Date.now(),
+              structuredData: rangeMasterRecord.structuredData,
+            } as any);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // 2. Check primary teaching_diaries collection (user edited single day doc)
         const docId = `${selectedClass}_${selectedMedium}_${isoDate}`;
         const docRef = doc(db, "teaching_diaries", docId);
         const docSnap = await getDoc(docRef);
@@ -452,35 +791,19 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             data.thought || (data as any).suvichar
           );
           data.thought = resolvedThought;
-          const rawPageUrl = data.pageUrl || (data as any).pageURL || (data as any).masterPdfUrl || (data as any).pdfUrl || "";
+          const rawPageUrl = data.pageUrl || (data as any).pageURL || (data as any).masterPdfUrl || (data as any).pdfUrl || (rangeMasterRecord ? rangeMasterRecord.pageUrl : "");
           const dataMonth = data.date ? data.date.split("-")[1] : (data.displayDate ? data.displayDate.split("-")[1] : targetMonthStr);
           
           if (!dataMonth || dataMonth === targetMonthStr) {
             let activePeriods = data.periods || [];
-
-            // Check if master doc or structuredData has more periods for this date
-            try {
-              const colRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
-              const snap = await getDocs(colRef);
-              snap.docs.forEach((dSnap) => {
-                const sData = dSnap.data();
-                if (sData.structuredData && Array.isArray(sData.structuredData)) {
-                  const match = findMatchingEntryForDate(sData.structuredData, isoDate);
-                  if (match && match.periods && match.periods.length > activePeriods.length) {
-                    activePeriods = match.periods;
-                  }
-                }
-              });
-            } catch (e) {}
-
-            const singleDayPeriods = extractSingleDayPeriods(activePeriods, isoDate, activeDate);
+            const singleDayPeriods = extractSingleDayPeriods(activePeriods, isoDate, activeDate, currentTabId);
             setTodayDiary({ ...data, pageUrl: rawPageUrl || data.pageUrl, periods: singleDayPeriods });
             setLoading(false);
             return;
           }
         }
 
-        // 2. Fallback check teacher_diaries collection (teacher_diaries/{selectedClass}/{selectedMedium}/{isoDate})
+        // 3. Fallback check teacher_diaries collection (teacher_diaries/{selectedClass}/{selectedMedium}/{isoDate})
         const altRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, isoDate);
         const altSnap = await getDoc(altRef);
 
@@ -509,7 +832,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               }];
             }
 
-            const singleDayPeriods = extractSingleDayPeriods(periodList, isoDate, activeDate);
+            const singleDayPeriods = extractSingleDayPeriods(periodList, isoDate, activeDate, currentTabId);
             const resolvedThought = await resolveThoughtForDate(
               isoDate,
               selectedClass,
@@ -520,7 +843,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             setTodayDiary({
               date: isoDate,
               displayDate: displayFormattedDate,
-              day: parsed.day || altData.day || "",
+              day: parsed.day || altData.day || getMarathiDayName(isoDate),
               thought: resolvedThought,
               dinvishesh: parsed.dinvishesh || altData.dinvishesh || "",
               className: selectedClass,
@@ -536,7 +859,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           }
         }
 
-        // 3. Fallback: Search uploaded records for selectedClass & selectedMedium matching isoDate or target month
+        // 4. Fallback: Search all uploaded records in teacher_diaries for selectedClass & selectedMedium matching currentTabId
         const colRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
         const snap = await getDocs(colRef);
         
@@ -545,66 +868,50 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
         snap.docs.forEach((dSnap) => {
           const data = dSnap.data();
-          const docDate = data.diaryDate || data.date || "";
-          const docMonth = data.month || (docDate ? docDate.split("-")[1] : "");
+          const docWeek = data.week || data.selectedWeek || data.range || "";
+          const fName = String(data.fileName || "").toLowerCase();
 
-          if (docDate === isoDate || dSnap.id === isoDate) {
-            masterDoc = { id: dSnap.id, ...data };
-            if (data.structuredData && Array.isArray(data.structuredData)) {
-              matchedEntryFromList = findMatchingEntryForDate(data.structuredData, isoDate);
-            }
-          } else if (docMonth === targetMonthStr) {
-            const startDateStr = data.diaryDate || data.date || `${data.year || 2026}-${docMonth}-01`;
-            const maxDays = data.structuredData && Array.isArray(data.structuredData) && data.structuredData.length > 0
-              ? Math.max(data.structuredData.length, 31)
-              : 31;
+          const matchesTab = docWeek === currentTabId ||
+            (currentTabId === "1 to 10" && (docWeek === "Week 1" || docWeek === "1 to 10" || fName.includes("1to10") || fName.includes("1_to_10"))) ||
+            (currentTabId === "11 to 20" && (docWeek === "Week 2" || docWeek === "Week 3" || docWeek === "11 to 20" || fName.includes("11to20") || fName.includes("11_to_20"))) ||
+            (currentTabId === "21 to 31" && (docWeek === "Week 4" || docWeek === "Week 5" || docWeek === "21 to 31" || docWeek === "21 to 30" || fName.includes("21to30") || fName.includes("21to31") || fName.includes("21_to_30")));
 
-            const validDatesForFile = getWorkingDatesRange(startDateStr, maxDays);
-
-            if (validDatesForFile.includes(isoDate)) {
+          if (matchesTab && data.structuredData && Array.isArray(data.structuredData)) {
+            const entry = findMatchingEntryForDate(data.structuredData, isoDate, currentTabId);
+            if (entry) {
               masterDoc = { id: dSnap.id, ...data };
-              if (data.structuredData && Array.isArray(data.structuredData)) {
-                matchedEntryFromList = findMatchingEntryForDate(data.structuredData, isoDate);
-              }
+              matchedEntryFromList = entry;
+            }
+          } else if (!masterDoc && data.structuredData && Array.isArray(data.structuredData)) {
+            const entry = findMatchingEntryForDate(data.structuredData, isoDate, currentTabId);
+            if (entry) {
+              masterDoc = { id: dSnap.id, ...data };
+              matchedEntryFromList = entry;
             }
           }
         });
 
-        if (masterDoc) {
-          const entryToUse = matchedEntryFromList || masterDoc.parsedContent || masterDoc;
-
-          let periodList: PeriodItem[] = [];
-          if (matchedEntryFromList?.periods && Array.isArray(matchedEntryFromList.periods) && matchedEntryFromList.periods.length > 0) {
-            periodList = matchedEntryFromList.periods;
-          } else if (entryToUse?.periods && Array.isArray(entryToUse.periods) && entryToUse.periods.length > 0) {
-            periodList = entryToUse.periods;
-          } else if (masterDoc.periods && Array.isArray(masterDoc.periods) && masterDoc.periods.length > 0) {
-            periodList = masterDoc.periods;
-          }
-
-          const singleDayPeriods = (matchedEntryFromList?.periods && matchedEntryFromList.periods.length > 0)
-            ? matchedEntryFromList.periods
-            : extractSingleDayPeriods(periodList, isoDate, activeDate);
-
-          const rawPageUrl = masterDoc.pageUrl || masterDoc.pageURL || masterDoc.masterPdfUrl || masterDoc.pdfUrl || (entryToUse ? entryToUse.pageUrl || entryToUse.masterPdfUrl : "");
+        if (masterDoc && matchedEntryFromList) {
+          const periodList: PeriodItem[] = matchedEntryFromList.periods || [];
+          const rawPageUrl = masterDoc.pageUrl || masterDoc.pageURL || masterDoc.masterPdfUrl || masterDoc.pdfUrl || "";
 
           const resolvedThought = await resolveThoughtForDate(
             isoDate,
             selectedClass,
             selectedMedium,
-            entryToUse?.thought || masterDoc.thought
+            matchedEntryFromList.thought || masterDoc.thought
           );
 
           setTodayDiary({
             id: masterDoc.id,
             date: isoDate,
             displayDate: displayFormattedDate,
-            day: entryToUse?.day || masterDoc.day || "",
+            day: matchedEntryFromList.day || getMarathiDayName(isoDate),
             thought: resolvedThought,
-            dinvishesh: entryToUse?.dinvishesh || masterDoc.dinvishesh || "",
+            dinvishesh: matchedEntryFromList.dinvishesh || masterDoc.dinvishesh || "",
             className: selectedClass,
             medium: selectedMedium,
-            periods: singleDayPeriods,
+            periods: periodList,
             pageUrl: rawPageUrl,
             fileName: masterDoc.fileName || "Teaching_Diary.pdf",
             uploadedAt: masterDoc.uploadedAt || Date.now(),
@@ -614,13 +921,13 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           return;
         }
 
-        // Even if no period document exists for this date/month, resolve thought for this date
+        // 5. Fallback thought if available
         const fallbackThought = await resolveThoughtForDate(isoDate, selectedClass, selectedMedium, "");
         if (fallbackThought) {
           setTodayDiary({
             date: isoDate,
             displayDate: displayFormattedDate,
-            day: "",
+            day: getMarathiDayName(isoDate),
             thought: fallbackThought,
             dinvishesh: "",
             className: selectedClass,
@@ -645,7 +952,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     }
 
     fetchDiaryForDate();
-  }, [selectedClass, selectedMedium, isoDate]);
+  }, [selectedClass, selectedMedium, isoDate, rangeMasterRecord, currentTabId]);
 
   const handlePrevDay = () => setActiveDate((prev) => subDays(prev ?? new Date(), 1));
   const handleNextDay = () => setActiveDate((prev) => addDays(prev ?? new Date(), 1));
@@ -1043,115 +1350,232 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6" ref={printRef} suppressHydrationWarning>
-      {/* ═══ Single Clean Attractive Control Header Card ═══ */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 p-6 sm:p-7 rounded-3xl border border-slate-800 shadow-xl space-y-6 text-white relative overflow-hidden">
-        <div className="absolute -right-12 -top-12 size-40 bg-orange-500/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -left-12 -bottom-12 size-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-          {/* Left: Title & Info */}
-          <div className="flex items-center gap-3.5">
-            <div className="size-12 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white font-black shadow-lg shadow-orange-500/25 shrink-0">
-              <BookOpen className="size-6" />
+    <div className="w-full max-w-full space-y-6" ref={printRef} suppressHydrationWarning>
+      {/* ═══ 3 Date Range Tabs (1 to 10, 11 to 20, 21 to 30/31) & Quick Date Selector ═══ */}
+      <div className="bg-white/95 backdrop-blur-md border-2 border-slate-200/90 p-5 sm:p-6 rounded-[2rem] shadow-md space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+          <div className="flex items-center gap-2.5">
+            <div className="size-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-black">
+              <CalendarIcon className="size-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black tracking-tight text-white">दैनंदिन पाठ टाचण</h2>
-                <span className="px-2.5 py-0.5 bg-orange-500/20 text-orange-300 border border-orange-500/30 rounded-full text-[10px] font-black uppercase tracking-wider">
-                  {selectedClass} ({selectedMedium})
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-medium mt-0.5">Daily Teaching Plan & Record View</p>
+              <h3 className="text-sm font-black text-slate-900 tracking-tight">तारीख कालावधी निवडा (SELECT DATE RANGE TAB)</h3>
+              <p className="text-[11px] text-slate-500 font-semibold">अ‍ॅडमिन प्रमाणे ३ तारीख टॅब व दिवस-निहाय पाठ टाचण व्ह्यू</p>
             </div>
           </div>
-
-          {/* Center: Single Date Selector */}
-          <div className="flex items-center gap-2 bg-slate-950/90 p-1.5 rounded-2xl border border-slate-800 shadow-inner shrink-0">
-            <button
-              onClick={handlePrevDay}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700 cursor-pointer"
-              title="मागील दिवस (Previous Day)"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-
-            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-black cursor-pointer shadow-sm">
-                  <CalendarIcon className="w-4 h-4 text-amber-400" />
-                  <span>{displayFormattedDate}</span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-slate-900 border-slate-800" align="center">
-                <CalendarComponent
-                  mode="single"
-                  selected={activeDate ?? undefined}
-                  onSelect={(d) => {
-                    if (d) {
-                      setActiveDate(d);
-                      setIsCalendarOpen(false);
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-
-            <button
-              onClick={handleNextDay}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700 cursor-pointer"
-              title="पुढील दिवस (Next Day)"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+            {selectedMonth && (
+              <span className="text-xs font-black text-orange-700 bg-gradient-to-r from-orange-100 to-amber-100 px-4 py-1.5 rounded-full border border-orange-300/80 shadow-sm flex items-center gap-1.5">
+                <Sparkles className="size-3.5 text-orange-500" />
+                <span>{["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"][activeMonthNum - 1]} {activeYearNum}</span>
+              </span>
+            )}
             {(todayDiary as any)?.pageUrl && !isStudent && profile?.role !== "student" && (
               <button
                 type="button"
                 onClick={handleDeleteCurrentFile}
-                className="p-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg shadow-rose-500/25 cursor-pointer active:scale-95"
+                className="p-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md shadow-rose-500/25 cursor-pointer active:scale-95"
                 title="फाईल डिलीट करा (Delete Uploaded File)"
               >
                 <Trash2 className="size-4" />
               </button>
             )}
-
             {todayDiary && (
               <>
                 <button
                   type="button"
                   onClick={handleSaveChanges}
                   disabled={isSaving}
-                  className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg shadow-amber-500/25 cursor-pointer active:scale-95 disabled:opacity-50"
+                  className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/25 cursor-pointer active:scale-95 disabled:opacity-50"
                   title="केलेले सर्व बदल फिक्स सेव्ह करा"
                 >
                   {isSaving ? (
-                    <Loader2 className="size-4 animate-spin" />
+                    <Loader2 className="size-3.5 animate-spin" />
                   ) : (
-                    <Save className="size-4" />
+                    <Save className="size-3.5" />
                   )}
                   <span>{isSaving ? "सेव्ह होत आहे..." : "बदल सेव्ह करा"}</span>
                 </button>
-
                 <button
                   type="button"
                   onClick={handleDownload}
-                  className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-600/25 cursor-pointer active:scale-95"
+                  className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/25 cursor-pointer active:scale-95"
                 >
-                  <Download className="size-4" /> <span>PDF डाऊनलोड</span>
+                  <Download className="size-3.5" /> <span>PDF डाऊनलोड</span>
                 </button>
               </>
             )}
           </div>
         </div>
+
+        {/* 3 Tabs */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[
+            { id: "1 to 10", mr: "1 ते 10 तारीख", sub: "1 to 10 Date Range" },
+            { id: "11 to 20", mr: "11 ते 20 तारीख", sub: "11 to 20 Date Range" },
+            { id: "21 to 31", mr: "21 ते 30/31 तारीख", sub: "21 to 30/31 Date Range" },
+          ].map((tab) => {
+            const isActive = currentTabId === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabClick(tab.id)}
+                className={`py-4 px-4 sm:px-6 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 flex flex-col items-center justify-center gap-1 cursor-pointer relative overflow-hidden ${
+                  isActive
+                    ? "bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-xl shadow-orange-500/30 scale-[1.02] border-2 border-amber-300"
+                    : "bg-slate-50/80 hover:bg-slate-100 text-slate-700 border-2 border-slate-200/80 hover:border-orange-300"
+                }`}
+              >
+                {isActive && (
+                  <div className="absolute top-0 right-0 size-16 bg-white/20 rounded-full blur-md pointer-events-none" />
+                )}
+                <div className="flex items-center gap-2">
+                  <Sparkles className={`size-4 ${isActive ? "text-amber-200 animate-pulse" : "text-slate-400"}`} />
+                  <span className="text-sm sm:text-base font-extrabold">{tab.mr}</span>
+                </div>
+                <span className={`text-[11px] font-bold ${isActive ? "text-orange-100" : "text-slate-400"}`}>
+                  {tab.sub}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Quick Date Selector Pills */}
+        <div className="pt-2 space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-bold text-slate-600">
+            <p className="flex items-center gap-1.5 text-slate-700 font-extrabold">
+              <span>खालील तारखेवर क्लिक करून थेट त्या तारखेचे पाठ टाचण पहा:</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsAllDaysMode(true)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                  isAllDaysMode
+                    ? "bg-slate-950 text-amber-300 border border-amber-400 ring-2 ring-orange-500/40"
+                    : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
+                }`}
+              >
+                <FileText className="size-3.5" />
+                <span>१० दिवसांची फाईल पहा (All Days File)</span>
+              </button>
+              <span className="text-[11px] font-black text-rose-500 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
+                (रविवार शासकीय सुट्टी)
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-6 sm:grid-cols-11 gap-2 w-full pt-1">
+            {/* All Days Pill */}
+            <button
+              type="button"
+              onClick={() => setIsAllDaysMode(true)}
+              className={`py-2.5 px-1.5 rounded-2xl text-xs font-black transition-all flex flex-col items-center justify-center cursor-pointer shadow-sm ${
+                isAllDaysMode
+                  ? "bg-slate-950 text-amber-300 shadow-xl ring-4 ring-orange-500/40 scale-105 border-2 border-amber-400"
+                  : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white border-2 border-orange-400"
+              }`}
+              title="निवडलेल्या १० दिवसांची संपूर्ण फाईल व सर्व पाठ टाचण तक्ता पहा"
+            >
+              <span className="text-xs font-black leading-none flex items-center gap-0.5">
+                <Sparkles className="size-3 text-amber-200" /> All Days
+              </span>
+              <span className="text-[9px] font-extrabold mt-1 uppercase opacity-90">
+                (१० दिवस)
+              </span>
+            </button>
+
+            {rangeDays.map((dObj) => {
+              const isSelected = !isAllDaysMode && activeDate && format(activeDate, "yyyy-MM-dd") === dObj.dateIso;
+              const isSunday = dObj.dayOfWeek === 0;
+
+              return (
+                <button
+                  key={dObj.dateIso}
+                  type="button"
+                  onClick={() => {
+                    setIsAllDaysMode(false);
+                    setActiveDate(dObj.dateObj);
+                  }}
+                  className={`py-2.5 px-2 rounded-2xl text-xs font-black transition-all flex flex-col items-center justify-center cursor-pointer shadow-sm ${
+                    isSelected
+                      ? "bg-slate-950 text-amber-300 shadow-xl ring-4 ring-orange-500/40 scale-105 border-2 border-amber-400"
+                      : isSunday
+                      ? "bg-rose-50 text-rose-600 border-2 border-rose-200 hover:bg-rose-100"
+                      : "bg-slate-100/90 text-slate-800 hover:bg-orange-500 hover:text-white border-2 border-slate-200/80 hover:border-orange-500"
+                  }`}
+                  title={`${dObj.displayDate} (${dObj.dayName})`}
+                >
+                  <span className="text-base font-black leading-none">{dObj.dayNum}</span>
+                  <span className={`text-[10px] font-extrabold mt-1 uppercase ${isSelected ? "text-amber-300" : isSunday ? "text-rose-600" : "opacity-80"}`}>
+                    {dObj.dayShort}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Loading Skeleton */}
-      {loading ? (
+      {/* All Days Mode vs Daily View */}
+      {isAllDaysMode ? (
+        <div className="bg-white border-2 border-slate-300 rounded-3xl p-5 sm:p-7 shadow-xl space-y-5">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-200 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="size-11 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black shadow-md">
+                <FileText className="size-6" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 text-lg">
+                  संपूर्ण १० दिवसांची पाठ टाचण फाईल (All 10 Days Document View)
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold">
+                  कालावधी: {currentTabId === "1 to 10" ? "१ ते १० तारीख" : currentTabId === "11 to 20" ? "११ ते २० तारीख" : "२१ ते ३०/३१ तारीख"} • {selectedClass} ({selectedMedium})
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAllDaysMode(false)}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <RotateCcw className="size-4" />
+              <span>दिवस-निहाय व्ह्यू वर जा (Single Day View)</span>
+            </button>
+          </div>
+
+          {rangeMasterRecord || (todayDiary && (todayDiary as any).pageUrl) ? (
+            <div className="h-[750px] w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-inner">
+              <DocumentLivePreview
+                selectedFile={null}
+                savedRecord={rangeMasterRecord || {
+                  id: (todayDiary as any)?.id || isoDate,
+                  diaryDate: isoDate,
+                  fileName: (todayDiary as any)?.fileName || "Teaching_Diary.docx",
+                  pageUrl: (todayDiary as any)?.pageUrl,
+                  className: selectedClass,
+                  medium: selectedMedium,
+                  structuredData: (todayDiary as any)?.structuredData,
+                }}
+                onBack={() => setIsAllDaysMode(false)}
+              />
+            </div>
+          ) : (
+            <div className="p-12 text-center space-y-4 bg-amber-50/60 rounded-3xl border-2 border-amber-200">
+              <div className="size-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+                <AlertTriangle className="size-7" />
+              </div>
+              <h4 className="font-black text-slate-900 text-lg">
+                या {currentTabId === "1 to 10" ? "१ ते १०" : currentTabId === "11 to 20" ? "११ ते २०" : "२१ ते ३०/३१"} तारीख कालावधीची फाईल उपलब्ध नाही
+              </h4>
+              <p className="text-xs text-slate-600 font-bold max-w-md mx-auto leading-relaxed">
+                अ‍ॅडमिनद्वारे १ ते १०, ११ ते २० किंवा २१ ते ३० तारीख कालावधीची फाईल अपलोड केली असल्यास ती संपूर्ण १० दिवसांच्या टाचण तक्त्यासह येथे दिसेल.
+              </p>
+            </div>
+          )}
+        </div>
+      ) : loading ? (
         <div className="p-12 rounded-3xl bg-white border border-slate-200/80 text-slate-700 shadow-sm flex flex-col items-center justify-center min-h-[300px]">
           <Loader2 className="w-10 h-10 animate-spin text-orange-500 mb-4" />
           <p className="text-slate-500 font-bold text-sm">निवडलेल्या दिनांकाची टाचण नोंद शोधत आहे... (Fetching Diary Data)</p>
@@ -1402,7 +1826,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             </div>
           </div>
         </div>
-      ) : (todayDiary as any)?.pageUrl ? (
+      ) : (todayDiary as any)?.pageUrl || (todayDiary as any)?.structuredData || rangeMasterRecord ? (
         <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-3">
@@ -1411,31 +1835,34 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               </div>
               <div>
                 <h3 className="font-extrabold text-slate-900 text-base">
-                  अपलोड केलेले पाठ टाचण दस्तऐवज (Uploaded Document View)
+                  पाठ टाचण दस्तऐवज (Document View — {displayFormattedDate})
                 </h3>
-                <p className="text-xs text-slate-500 font-semibold">{todayDiary.fileName || "Teaching_Diary.pdf"}</p>
+                <p className="text-xs text-slate-500 font-semibold">{todayDiary?.fileName || rangeMasterRecord?.fileName || "Teaching_Diary.docx"}</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsPreviewModalOpen(true)}
-              className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-2 cursor-pointer hover:from-orange-600 hover:to-amber-600 active:scale-95 transition-all"
-            >
-              <Eye className="size-4" /> <span>फुल स्क्रीन पहा (Full Preview)</span>
-            </button>
+            {(todayDiary?.pageUrl || rangeMasterRecord?.pageUrl) && (
+              <button
+                type="button"
+                onClick={() => setIsPreviewModalOpen(true)}
+                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-2 cursor-pointer hover:from-orange-600 hover:to-amber-600 active:scale-95 transition-all"
+              >
+                <Eye className="size-4" /> <span>फुल स्क्रीन पहा (Full Preview)</span>
+              </button>
+            )}
           </div>
           <div className="h-[650px] w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
             <DocumentLivePreview
               selectedFile={null}
-              savedRecord={{
-                id: (todayDiary as any).id || isoDate,
+              savedRecord={rangeMasterRecord || {
+                id: (todayDiary as any)?.id || isoDate,
                 diaryDate: isoDate,
-                fileName: (todayDiary as any).fileName || "Teaching_Diary.docx",
-                pageUrl: (todayDiary as any).pageUrl,
+                fileName: (todayDiary as any)?.fileName || "Teaching_Diary.docx",
+                pageUrl: (todayDiary as any)?.pageUrl,
                 className: selectedClass,
                 medium: selectedMedium,
-                structuredData: (todayDiary as any).structuredData,
+                structuredData: (todayDiary as any)?.structuredData,
               }}
+              selectedDateIso={isoDate}
               onBack={() => {}}
             />
           </div>
@@ -1443,21 +1870,22 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       ) : null}
 
       {/* Document Live Preview Modal */}
-      {isPreviewModalOpen && todayDiary && (todayDiary as any).pageUrl && (
+      {isPreviewModalOpen && (todayDiary || rangeMasterRecord) && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-[96vw] border border-slate-100 flex flex-col h-[93vh]">
             <div className="flex-1 overflow-hidden bg-slate-100 p-2 sm:p-4">
               <DocumentLivePreview
                 selectedFile={null}
-                savedRecord={{
-                  id: (todayDiary as any).id || isoDate,
+                savedRecord={rangeMasterRecord || {
+                  id: (todayDiary as any)?.id || isoDate,
                   diaryDate: isoDate,
-                  fileName: (todayDiary as any).fileName || "Teaching_Diary.docx",
-                  pageUrl: (todayDiary as any).pageUrl,
+                  fileName: (todayDiary as any)?.fileName || "Teaching_Diary.docx",
+                  pageUrl: (todayDiary as any)?.pageUrl,
                   className: selectedClass,
                   medium: selectedMedium,
-                  structuredData: (todayDiary as any).structuredData,
+                  structuredData: (todayDiary as any)?.structuredData,
                 }}
+                selectedDateIso={isAllDaysMode ? undefined : isoDate}
                 onBack={() => setIsPreviewModalOpen(false)}
               />
             </div>

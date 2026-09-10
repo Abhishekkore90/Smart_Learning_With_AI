@@ -73,11 +73,9 @@ const months = [
 ];
 
 const weeks = [
-  { id: "Week 1", label: "Week 1", mr: "पहिला आठवडा" },
-  { id: "Week 2", label: "Week 2", mr: "दुसरा आठवडा" },
-  { id: "Week 3", label: "Week 3", mr: "तिसरा आठवडा" },
-  { id: "Week 4", label: "Week 4", mr: "चौथा आठवडा" },
-  { id: "Week 5", label: "Week 5", mr: "पाचवा आठवडा" },
+  { id: "1 to 10", label: "1 to 10", mr: "1 ते 10 तारीख" },
+  { id: "11 to 20", label: "11 to 20", mr: "11 ते 20 तारीख" },
+  { id: "21 to 31", label: "21 to 30/31", mr: "21 ते 30/31 तारीख" },
 ];
 
 function TeachingRecordPage() {
@@ -809,109 +807,17 @@ function TeachingRecordPage() {
       <main className="w-full pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
         <ModulePaywall moduleId="teaching-record" defaultTitle="दैनिक अध्यापन टाचणवही (Teaching Diary)" isPaidTab={false}>
           <PinGate sectionKey="teaching_record">
-          <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6 print:p-0 print:max-w-full">
-            {/* Top Navigation Bar with Back Button, Tabs & Breadcrumbs */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 shadow-sm print:hidden">
-              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-2xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
-                >
-                  <ArrowLeft className="size-4 shrink-0" />
-                  <span>मागे जा (Back)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveMainTab("diary")}
-                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === "diary"
-                      ? "bg-slate-900 text-white shadow-md"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
-                    }`}
-                >
-                  <BookOpen className="size-4" />
-                  <span>दैनिक टाचणवही</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveMainTab("school_profile")}
-                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === "school_profile"
-                      ? "bg-orange-600 text-white shadow-md shadow-orange-500/20"
-                      : "bg-orange-100 text-orange-900 hover:bg-orange-200 border border-orange-300"
-                    }`}
-                >
-                  <GraduationCap className="size-4 text-amber-500" />
-                  <span>🏫 यू-डायस व शाळा माहिती (UDISE & School Info)</span>
-                </button>
-
-                {isCurrentClassUnlocked && monthFilteredRecords.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedRecordForPreview(monthFilteredRecords[0]);
-                      setIsPreviewOpen(true);
-                    }}
-                    className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                  >
-                    <FileText className="size-4" />
-                    <span>All Days PDF</span>
-                  </button>
-                ) : selectedMonth ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedRecordForPreview(null);
-                      setIsPreviewOpen(true);
-                    }}
-                    className="px-4 py-2 bg-gradient-to-r from-slate-400 to-slate-500 hover:from-slate-500 hover:to-slate-600 text-white rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                  >
-                    <FileText className="size-4" />
-                    <span>All Days PDF</span>
-                  </button>
-                ) : null}
-              </div>
-
-              {/* Dynamic Breadcrumbs & Saved profile status badge */}
-              <div className="flex flex-wrap items-center gap-3">
-                {(schoolProfile.schoolName || schoolProfile.udiseCode) && (
-                  <div className="hidden md:flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200">
-                    {schoolProfile.udiseCode && (
-                      <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[10px] font-black">
-                        UDISE: {schoolProfile.udiseCode}
-                      </span>
-                    )}
-                    {schoolProfile.schoolName && <span className="text-orange-600 font-extrabold">{schoolProfile.schoolName}</span>}
-                    <span>•</span>
-                    <span>इयत्ता: <strong className="text-slate-900">{schoolProfile.className}</strong></span>
-                    <span>•</span>
-                    <span>सन: <strong className="text-emerald-600 font-black">{schoolProfile.academicYear || "2026-27"}</strong></span>
-                  </div>
-                )}
-                {selectedMedium && (
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-slate-600">
-                    <span className="text-orange-600 font-extrabold">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span>
-                    {selectedClass && (
-                      <>
-                        <ChevronRight className="size-3 text-slate-400" />
-                        <span className="text-orange-600 font-extrabold">{selectedClass}</span>
-                      </>
-                    )}
-                    {selectedMonth && (
-                      <>
-                        <ChevronRight className="size-3 text-slate-400" />
-                        <span className="text-pink-600 font-extrabold">{months.find(m => m.id === selectedMonth)?.mr}</span>
-                      </>
-                    )}
-                    {selectedWeek && (
-                      <>
-                        <ChevronRight className="size-3 text-slate-400" />
-                        <span className="text-indigo-600 font-extrabold">{weeks.find(w => w.id === selectedWeek)?.mr}</span>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+          <div className="p-3 sm:p-5 md:p-6 w-full max-w-[98%] xl:max-w-[96%] mx-auto space-y-6 print:p-0 print:max-w-full">
+            {/* Top Navigation Bar with ONLY Back Button */}
+            <div className="flex items-center justify-between gap-4 print:hidden">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-2xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                <ArrowLeft className="size-4 shrink-0" />
+                <span>मागे जा (Back)</span>
+              </button>
             </div>
 
             <AnimatePresence mode="wait">
@@ -1281,7 +1187,7 @@ function TeachingRecordPage() {
                                   whileTap={{ scale: 0.97 }}
                                   onClick={() => {
                                     setSelectedMonth(m.id);
-                                    setSelectedWeek("Week 1");
+                                    setSelectedWeek("1 to 10");
                                     const updatedDate = new Date(selectedDate);
                                     updatedDate.setFullYear(selectedYear);
                                     updatedDate.setMonth(parseInt(m.id, 10) - 1);
@@ -1318,12 +1224,14 @@ function TeachingRecordPage() {
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="max-w-5xl mx-auto w-full space-y-6"
+                            className="w-full max-w-full space-y-6"
                           >
                             <TeacherTodayDiary
                               selectedClass={selectedClass}
                               selectedMedium={selectedMedium}
                               selectedMonth={selectedMonth}
+                              selectedWeek={selectedWeek}
+                              onSelectWeek={(w) => setSelectedWeek(w)}
                               onBack={handleBack}
                               schoolProfile={schoolProfile}
                             />
