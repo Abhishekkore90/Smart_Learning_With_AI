@@ -37,6 +37,8 @@ import {
   Settings,
   Check,
   AlertCircle,
+  LogIn,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -102,7 +104,11 @@ const DEFAULT_MODULES: { id: string; title: string; defaultPrice: number }[] = [
 
 function AdminModulePaymentsPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"pricing" | "history" | "access">("access");
+  const [activeTab, setActiveTab] = useState<"pricing" | "history" | "access" | "logged_users">("access");
+
+  // Logged users state
+  const [loggedUsers, setLoggedUsers] = useState<any[]>([]);
+  const [loggedUsersSearch, setLoggedUsersSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -177,11 +183,24 @@ function AdminModulePaymentsPage() {
       setUsersTeachers(list);
     });
 
+    // 5. Fetch logged_users collection (tracks every login)
+    const unsubLoggedUsers = onSnapshot(collection(db, "logged_users"), (snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // Sort by lastLoginAt descending
+      list.sort((a: any, b: any) => {
+        const aTime = a.lastLoginAt?.toMillis?.() || 0;
+        const bTime = b.lastLoginAt?.toMillis?.() || 0;
+        return bTime - aTime;
+      });
+      setLoggedUsers(list);
+    });
+
     return () => {
       unsubPricing();
       unsubPayments();
       unsubAccess();
       unsubUsers();
+      unsubLoggedUsers();
     };
   }, []);
 
@@ -550,6 +569,17 @@ function AdminModulePaymentsPage() {
           >
             <Users className="size-4" />
             <span>पेमेंट इतिहास ({filteredPayments.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("logged_users")}
+            className={`flex-1 py-3 px-4 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              activeTab === "logged_users"
+                ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <LogIn className="size-4" />
+            <span>लॉगिन केलेले युझर्स ({loggedUsers.length})</span>
           </button>
         </div>
 
@@ -1135,6 +1165,114 @@ function AdminModulePaymentsPage() {
                       </tr>
                     );
                     })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB 4: LOGGED USERS ── */}
+        {activeTab === "logged_users" && (
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base font-black text-slate-900">लॉगिन केलेले सर्व युझर्स (All Logged Users)</h3>
+                <p className="text-xs text-slate-500 font-medium">ज्या ज्या युझर्सनी लॉगिन केले आहे त्यांची यादी:</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="px-4 py-2 bg-purple-50 border border-purple-200 rounded-xl text-xs font-black text-purple-700">
+                  एकूण: {loggedUsers.length} युझर्स
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="size-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="text"
+                    placeholder="नाव, ईमेल, UDISE शोधा..."
+                    value={loggedUsersSearch}
+                    onChange={(e) => setLoggedUsersSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {loggedUsers.length === 0 ? (
+              <div className="text-center py-16 text-slate-400">
+                <LogIn className="size-12 mx-auto mb-3 opacity-40" />
+                <p className="font-bold text-sm">अजून कोणीही लॉगिन केलेले नाही</p>
+                <p className="text-xs mt-1">No logged users yet.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b-2 border-slate-100">
+                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">#</th>
+                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">नाव (Name)</th>
+                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">ईमेल (Email)</th>
+                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">UDISE</th>
+                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">शाळा (School)</th>
+                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">फोन (Phone)</th>
+                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">शेवटचे लॉगिन (Last Login)</th>
+                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">लॉगिन संख्या</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loggedUsers
+                      .filter((u: any) => {
+                        if (!loggedUsersSearch) return true;
+                        const s = loggedUsersSearch.toLowerCase();
+                        return (
+                          (u.fullName || "").toLowerCase().includes(s) ||
+                          (u.email || "").toLowerCase().includes(s) ||
+                          (u.udise || "").toLowerCase().includes(s) ||
+                          (u.schoolName || "").toLowerCase().includes(s) ||
+                          (u.phone || "").toLowerCase().includes(s)
+                        );
+                      })
+                      .map((u: any, idx: number) => {
+                        const lastLogin = u.lastLoginAt?.toDate
+                          ? u.lastLoginAt.toDate().toLocaleString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "—";
+                        return (
+                          <tr
+                            key={u.id}
+                            className="border-b border-slate-50 hover:bg-purple-50/50 transition-colors"
+                          >
+                            <td className="py-3 px-4 text-xs font-bold text-slate-400">{idx + 1}</td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="size-8 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-sm">
+                                  {(u.fullName || "?").charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-sm font-bold text-slate-900">{u.fullName || "Unknown"}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-xs font-medium text-slate-600">{u.email || "—"}</td>
+                            <td className="py-3 px-4 text-xs font-mono font-bold text-indigo-600">{u.udise || "—"}</td>
+                            <td className="py-3 px-4 text-xs font-medium text-slate-600 max-w-[180px] truncate">{u.schoolName || "—"}</td>
+                            <td className="py-3 px-4 text-xs font-medium text-slate-600">{u.phone || "—"}</td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                                <Clock className="size-3.5 text-purple-400" />
+                                {lastLogin}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-black">
+                                {u.loginCount || 1}x
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>

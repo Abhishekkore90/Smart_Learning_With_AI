@@ -18,6 +18,7 @@ import { Route as ProductsRouteImport } from './routes/products'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MentorsRouteImport } from './routes/mentors'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as Digital_schoolRouteImport } from './routes/digital_school'
 import { Route as DigitalSchoolRouteImport } from './routes/digital-school'
 import { Route as CoursesRouteImport } from './routes/courses'
@@ -148,6 +149,11 @@ const MentorsRoute = MentorsRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Digital_schoolRoute = Digital_schoolRouteImport.update({
@@ -603,6 +609,7 @@ export interface FileRoutesByFullPath {
   '/courses': typeof CoursesRouteWithChildren
   '/digital-school': typeof DigitalSchoolRoute
   '/digital_school': typeof Digital_schoolRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/mentors': typeof MentorsRoute
   '/pricing': typeof PricingRoute
@@ -699,6 +706,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/digital-school': typeof DigitalSchoolRoute
   '/digital_school': typeof Digital_schoolRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/mentors': typeof MentorsRoute
   '/pricing': typeof PricingRoute
@@ -797,6 +805,7 @@ export interface FileRoutesById {
   '/courses': typeof CoursesRouteWithChildren
   '/digital-school': typeof DigitalSchoolRoute
   '/digital_school': typeof Digital_schoolRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/mentors': typeof MentorsRoute
   '/pricing': typeof PricingRoute
@@ -896,6 +905,7 @@ export interface FileRouteTypes {
     | '/courses'
     | '/digital-school'
     | '/digital_school'
+    | '/forgot-password'
     | '/login'
     | '/mentors'
     | '/pricing'
@@ -992,6 +1002,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/digital-school'
     | '/digital_school'
+    | '/forgot-password'
     | '/login'
     | '/mentors'
     | '/pricing'
@@ -1089,6 +1100,7 @@ export interface FileRouteTypes {
     | '/courses'
     | '/digital-school'
     | '/digital_school'
+    | '/forgot-password'
     | '/login'
     | '/mentors'
     | '/pricing'
@@ -1187,6 +1199,7 @@ export interface RootRouteChildren {
   CoursesRoute: typeof CoursesRouteWithChildren
   DigitalSchoolRoute: typeof DigitalSchoolRoute
   Digital_schoolRoute: typeof Digital_schoolRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   MentorsRoute: typeof MentorsRoute
   PricingRoute: typeof PricingRoute
@@ -1322,6 +1335,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/digital_school': {
@@ -2001,6 +2021,7 @@ const rootRouteChildren: RootRouteChildren = {
   CoursesRoute: CoursesRouteWithChildren,
   DigitalSchoolRoute: DigitalSchoolRoute,
   Digital_schoolRoute: Digital_schoolRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   MentorsRoute: MentorsRoute,
   PricingRoute: PricingRoute,

@@ -126,9 +126,13 @@ export function Header() {
     <motion.header
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${scrolled ? "bg-nav-bg/[0.93] dark:bg-slate-950/[0.93] shadow-[0_4px_30px_rgba(108,78,246,0.05)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.3)] border-b border-border dark:border-white/10 backdrop-blur-md py-2 md:py-3" : "bg-transparent py-3 md:py-5"}`}
+      className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
+        scrolled
+          ? "bg-white/95 dark:bg-slate-950/[0.95] shadow-md border-b border-slate-200/80 dark:border-white/10 backdrop-blur-md py-2 md:py-3"
+          : "bg-white/95 sm:bg-transparent dark:bg-slate-950/95 sm:dark:bg-transparent border-b border-slate-200/60 sm:border-none backdrop-blur-md sm:backdrop-blur-none py-2.5 sm:py-3 md:py-5"
+      }`}
     >
-      <div className="w-full px-4 md:px-8 lg:px-12">
+      <div className="w-full px-3 xs:px-4 md:px-8 lg:px-12">
         <div className="flex items-center justify-between relative">
           {/* Logo Section */}
           <div className="flex items-center z-10">
@@ -136,27 +140,23 @@ export function Header() {
               to="/"
               className={`flex items-center gap-2 md:gap-3.5 group transition-all duration-300 ${
                 !scrolled
-                  ? "bg-white/90 dark:bg-white/90 px-4 py-1.5 rounded-full border border-slate-200/60 shadow-sm"
-                  : "bg-transparent p-0 border-none shadow-none"
+                  ? "bg-white/90 dark:bg-slate-900/90 rounded-2xl px-2.5 py-1.5 shadow-md border border-slate-200/60 dark:border-white/10 backdrop-blur-sm"
+                  : ""
               }`}
             >
-              <div className="relative">
+              <div className="relative shrink-0">
                 <img
                   src={logoImg}
                   alt="SGK Brainova Logo"
-                  className="size-8 md:size-10 rounded-[0.8rem] md:rounded-[1rem] object-cover shadow-sm group-hover:-translate-y-0.5 transition-all duration-500"
+                  className="size-8 md:size-10 rounded-xl object-cover shadow-xs group-hover:-translate-y-0.5 transition-all duration-500"
                 />
-                <div className="absolute inset-0 bg-primary-light blur-xl rounded-[1rem] opacity-0 group-hover:opacity-40 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-primary-light blur-xl rounded-xl opacity-0 group-hover:opacity-40 transition-opacity duration-500" />
               </div>
               <div className="flex flex-col justify-center">
-                <span className={`font-black text-[13px] md:text-xl tracking-tighter leading-none whitespace-nowrap py-0.5 transition-colors ${
-                  !scrolled ? "text-slate-950" : "text-nav-text dark:text-white"
-                }`}>
+                <span className="font-black text-xs xs:text-sm md:text-xl text-slate-950 dark:text-white tracking-tight leading-none whitespace-nowrap py-0.5">
                   SGK Brainova
                 </span>
-                <span className={`text-[7px] md:text-[8px] font-black tracking-[0.12em] md:tracking-[0.18em] uppercase mt-0.5 whitespace-nowrap ${
-                  !scrolled ? "text-primary font-black" : "text-primary dark:text-teal-400/80"
-                }`}>
+                <span className="text-[7px] md:text-[8px] font-black tracking-wider uppercase text-primary dark:text-teal-400 mt-0.5 whitespace-nowrap">
                   Smart Learning With AI
                 </span>
               </div>
@@ -192,15 +192,15 @@ export function Header() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 z-10">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 xs:gap-2.5 z-10">
+            <div className="flex items-center gap-1.5 xs:gap-2">
               {user ? (
-                <div className="flex items-center gap-2 md:gap-3">
+                <div className="flex items-center gap-1.5 md:gap-3">
                   <Link
                     to="/profile"
-                    className="size-10 md:size-11 rounded-full bg-white/5 border border-white/10 shadow-sm flex items-center justify-center text-slate-300 hover:border-indigo-500/30 hover:text-indigo-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group"
+                    className="size-8.5 md:size-11 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-xs flex items-center justify-center text-slate-700 dark:text-slate-300 hover:border-indigo-500/30 hover:text-indigo-600 transition-all duration-300 group"
                   >
-                    <User className="size-5 md:size-5 transition-transform group-hover:scale-110" />
+                    <User className="size-4 md:size-5 transition-transform group-hover:scale-110" />
                   </Link>
                   <button
                     onClick={handleSignOut}
@@ -212,19 +212,13 @@ export function Header() {
               ) : null}
 
               {/* Language Selector */}
-              <div className="relative ml-1 md:ml-2">
+              <div className="relative">
                 <button
                   onClick={() => setLangOpen(!langOpen)}
-                  className={`flex items-center gap-2 px-2.5 md:px-4 py-1.5 md:py-2.5 rounded-full transition-all border shadow-sm duration-300 ${
-                    !scrolled
-                      ? "bg-white/85 text-slate-900 border-slate-200/60 hover:bg-white hover:text-primary font-black"
-                      : langOpen
-                      ? "bg-indigo-55 border-indigo-500/20 text-indigo-700 dark:bg-indigo-950/80 dark:border-indigo-500/30 dark:text-indigo-300"
-                      : "bg-slate-100/60 border-slate-200/80 text-slate-700 hover:bg-slate-200/60 hover:border-indigo-500/20 hover:text-indigo-650 dark:bg-white/5 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:border-indigo-500/30 dark:hover:text-indigo-300"
-                  }`}
+                  className="flex items-center gap-1 px-2.5 md:px-4 py-1.5 md:py-2.5 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white text-xs font-extrabold shadow-xs transition-all"
                 >
-                  <Globe className="size-4" />
-                  <span className="text-xs font-black uppercase tracking-widest hidden md:inline">
+                  <Globe className="size-3.5" />
+                  <span className="text-[10px] font-black uppercase tracking-wider hidden md:inline">
                     {lang.toUpperCase()}
                   </span>
                   <ChevronDown
@@ -272,7 +266,7 @@ export function Header() {
               {/* Mobile Toggle */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden size-8 md:size-11 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-white shadow-md active:scale-95 transition-all ml-1 duration-300"
+                className="lg:hidden size-8.5 md:size-11 rounded-full flex items-center justify-center bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-white shadow-xs active:scale-95 transition-all ml-0.5 duration-300"
               >
                 {isMobileMenuOpen ? (
                   <X className="size-4 md:size-5" />
