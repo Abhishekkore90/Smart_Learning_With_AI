@@ -49,6 +49,7 @@ import {
   ArrowLeft,
   ChevronUp,
   ChevronDown,
+  RotateCcw,
 } from "lucide-react";
 
 export const Route = createFileRoute("/teacher/meeting")({
@@ -1011,7 +1012,126 @@ function TeacherMeetingPage() {
     setFormResolutions(updated);
   };
 
-  const handleRemoveFormResolutionRow = (index: number) => {
+  // Calculate dynamic start resolution number based on preceding months' active custom templates (or admin fallback)
+  const getCalculatedStartResolutionNo = (
+    commId: string,
+    monthStr: string,
+    customMap = cachedCustomTemplates,
+    adminMap = cachedAdminTemplates
+  ): number => {
+    const monthsList =
+      commId === "alumni"
+        ? ["sem1", "sem2"]
+        : ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"];
+    const targetIdx = monthsList.indexOf(monthStr);
+    if (targetIdx <= 0) return 1;
+
+    const preceding = monthsList.slice(0, targetIdx);
+    const totalPreceding = preceding.reduce((sum, m) => {
+      // 1. If teacher has a custom template (e.g. deleted/edited subjects) for month m, use its active count
+      if (customMap[m]?.subjects && Array.isArray(customMap[m].subjects)) {
+        return sum + customMap[m].subjects.length;
+      }
+      // 2. Fallback to admin template subjects count
+      const adminSubs = adminMap[m]?.subjects || [];
+      return sum + adminSubs.length;
+    }, 0);
+
+    return 1 + totalPreceding;
+  };
+
+  // Persist teacher's custom template for a specific month to Firestore and in-memory cache
+  const persistCustomTemplateForMonth = async (
+    commId: string,
+    monthStr: string,
+    subjectsList: any[],
+    customOutro?: string
+  ) => {
+    if (!commId || !monthStr) return;
+    try {
+      const q = query(
+        collection(db, "teacher_custom_templates"),
+        where("udise", "==", udise),
+        where("committeeId", "==", commId),
+        where("month", "==", monthStr)
+      );
+      const snapshot = await getDocs(q);
+
+      const templateData: any = {
+        udise,
+        committeeId: commId,
+        month: monthStr,
+        academicYear: academicYear || getCurrentAcademicYear(),
+        subjects: subjectsList.map((r: any, idx: number) => ({
+          subjectNo: r.subjectNo || idx + 1,
+          resolutionNo: r.resolutionNo,
+          subject: r.subject || "",
+          discussion: r.discussion || "",
+          resolution: r.resolution || "",
+          remark: r.remark || "",
+          proposer: r.proposer || "",
+          seconder: r.seconder || "",
+          statusText: r.statusText || "ठराव सर्वानुमते मंजूर करण्यात आला.",
+        })),
+        outroText: customOutro || formOutroText,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (snapshot.docs.length > 0) {
+        await updateDoc(doc(db, "teacher_custom_templates", snapshot.docs[0].id), templateData);
+        setCachedCustomTemplates((prev) => ({
+          ...prev,
+          [monthStr]: { id: snapshot.docs[0].id, ...templateData },
+        }));
+      } else {
+        const newDocRef = await addDoc(collection(db, "teacher_custom_templates"), {
+          ...templateData,
+          createdAt: new Date().toISOString(),
+        });
+        setCachedCustomTemplates((prev) => ({
+          ...prev,
+          [monthStr]: { id: newDocRef.id, ...templateData, createdAt: new Date().toISOString() },
+        }));
+      }
+    } catch (err: any) {
+      console.error("Error persisting custom template for month:", err);
+    }
+  };
+
+  // Restore default admin template for current month
+  const handleRestoreAdminTemplate = async () => {
+    if (!selectedCommittee || !selectedMonth) return;
+    if (!window.confirm("तुम्हाला या महिन्याचे मूळ ॲडमिन विषय व ठराव रिस्टोअर करायचे आहेत का?")) {
+      return;
+    }
+    try {
+      const q = query(
+        collection(db, "teacher_custom_templates"),
+        where("udise", "==", udise),
+        where("committeeId", "==", selectedCommittee.id),
+        where("month", "==", selectedMonth)
+      );
+      const snapshot = await getDocs(q);
+      for (const d of snapshot.docs) {
+        await deleteDoc(doc(db, "teacher_custom_templates", d.id));
+      }
+
+      setCachedCustomTemplates((prev) => {
+        const copy = { ...prev };
+        delete copy[selectedMonth];
+        return copy;
+      });
+
+      // Reload admin template for this month with fresh calculations
+      loadMeetingTemplate(selectedCommittee.id, selectedMonth, true);
+      toast.success("मूळ ॲडमिन विषय यशस्वीरीत्या रिस्टोअर केले गेले!");
+    } catch (err: any) {
+      console.error("Error restoring admin template:", err);
+      toast.error("मूळ विषय रिस्टोअर करताना त्रुटी आली!");
+    }
+  };
+
+  const handleRemoveFormResolutionRow = async (index: number) => {
     const updated = formResolutions
       .filter((_, i) => i !== index)
       .map((res, i) => ({
@@ -1020,6 +1140,12 @@ function TeacherMeetingPage() {
         resolutionNo: startResolutionNo + i,
       }));
     setFormResolutions(updated);
+
+    // Auto-save this updated template for this teacher and academic year
+    if (selectedCommittee && selectedMonth) {
+      await persistCustomTemplateForMonth(selectedCommittee.id, selectedMonth, updated);
+      toast.success("विषय व ठराव काढून जतन केला. पुढील महिन्यांचे क्रमांक आपोआप ॲडजस्ट झाले आहेत.");
+    }
   };
 
   const moveFormMember = (index: number, direction: "up" | "down") => {
@@ -1058,6 +1184,9 @@ function TeacherMeetingPage() {
       });
 
       setFormResolutions(updated);
+      if (selectedCommittee && selectedMonth) {
+        persistCustomTemplateForMonth(selectedCommittee.id, selectedMonth, updated);
+      }
     }
   };
 
@@ -1086,19 +1215,37 @@ function TeacherMeetingPage() {
     if (!commId || !monthStr) return;
     setLoadingTemplate(true);
     try {
-      // Calculate cumulative start resolution from admin templates cache
-      const monthsList = commId === "alumni" ? ["sem1", "sem2"] : ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"];
-      const targetIdx = monthsList.indexOf(monthStr);
-      let calculatedStartNo = 1;
-      if (targetIdx > 0) {
-        const preceding = monthsList.slice(0, targetIdx);
-        const totalPreceding = preceding.reduce((sum, m) => {
-          const subjects = cachedAdminTemplates[m]?.subjects || [];
-          return sum + subjects.length;
-        }, 0);
-        calculatedStartNo = 1 + totalPreceding;
-      }
+      // Calculate cumulative start resolution from custom/admin templates cache
+      const calculatedStartNo = getCalculatedStartResolutionNo(commId, monthStr);
       setStartResolutionNo(calculatedStartNo);
+
+      // Check if custom template exists for this month first
+      const customDoc = cachedCustomTemplates[monthStr];
+      if (customDoc && customDoc.subjects && customDoc.subjects.length > 0) {
+        const dynamicOutro =
+          customDoc.outroText ||
+          cachedAdminTemplates[monthStr]?.outroText ||
+          "ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले.";
+        setFormOutroText(dynamicOutro);
+        setFormResolutions(
+          customDoc.subjects.map((item: any, idx: number) => ({
+            subjectNo: idx + 1,
+            resolutionNo: calculatedStartNo + idx,
+            subject: item.subject || "",
+            discussion: item.discussion || "",
+            resolution: item.resolution || "",
+            remark: item.remark || "",
+            proposer: item.proposer || "",
+            seconder: item.seconder || "",
+            statusText: item.statusText || "ठराव सर्वानुमते मंजूर करण्यात आला.",
+          }))
+        );
+        if (force) {
+          toast.success("या महिन्याचे विषय व ठराव यशस्वीरित्या लोड केले गेले!");
+        }
+        setLoadingTemplate(false);
+        return;
+      }
 
       // Find the specific template document in the cache
       const matchedDoc = cachedAdminTemplates[monthStr];
@@ -1156,50 +1303,7 @@ function TeacherMeetingPage() {
     if (!selectedCommittee || !selectedMonth) return;
     setSavingCustomTemplate(true);
     try {
-      const q = query(
-        collection(db, "teacher_custom_templates"),
-        where("udise", "==", udise),
-        where("committeeId", "==", selectedCommittee.id),
-        where("month", "==", selectedMonth)
-      );
-      const snapshot = await getDocs(q);
-
-      const templateData: any = {
-        udise,
-        committeeId: selectedCommittee.id,
-        month: selectedMonth,
-        subjects: formResolutions.map((r: any) => ({
-          subjectNo: r.subjectNo,
-          resolutionNo: r.resolutionNo,
-          subject: r.subject,
-          discussion: r.discussion || "",
-          resolution: r.resolution || "",
-          remark: r.remark || "",
-          proposer: r.proposer || "",
-          seconder: r.seconder || "",
-          statusText: r.statusText || "ठराव सर्वानुमते मंजूर करण्यात आला.",
-        })),
-        outroText: formOutroText,
-        updatedAt: new Date().toISOString(),
-      };
-
-      if (snapshot.docs.length > 0) {
-        await updateDoc(doc(db, "teacher_custom_templates", snapshot.docs[0].id), templateData);
-        setCachedCustomTemplates(prev => ({
-          ...prev,
-          [selectedMonth]: { id: snapshot.docs[0].id, ...templateData }
-        }));
-      } else {
-        const newDocRef = await addDoc(collection(db, "teacher_custom_templates"), {
-          ...templateData,
-          createdAt: new Date().toISOString(),
-        });
-        setCachedCustomTemplates(prev => ({
-          ...prev,
-          [selectedMonth]: { id: newDocRef.id, ...templateData, createdAt: new Date().toISOString() }
-        }));
-      }
-
+      await persistCustomTemplateForMonth(selectedCommittee.id, selectedMonth, formResolutions);
       toast.success("तुमचे विषय आणि ठराव यशस्वीरीत्या जतन केले गेले!");
     } catch (err: any) {
       console.error("Error saving custom template:", err);
@@ -1213,18 +1317,8 @@ function TeacherMeetingPage() {
   const loadTeacherCustomTemplate = (commId: string, monthStr: string): boolean => {
     setFormStep(2);
     try {
-      // First, calculate cumulative start resolution number from cached admin templates
-      const monthsList = commId === "alumni" ? ["sem1", "sem2"] : ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"];
-      const targetIdx = monthsList.indexOf(monthStr);
-      let calculatedStartNo = 1;
-      if (targetIdx > 0) {
-        const preceding = monthsList.slice(0, targetIdx);
-        const totalPreceding = preceding.reduce((sum, m) => {
-          const subjects = cachedAdminTemplates[m]?.subjects || [];
-          return sum + subjects.length;
-        }, 0);
-        calculatedStartNo = 1 + totalPreceding;
-      }
+      // First, calculate cumulative start resolution number dynamically from active templates
+      const calculatedStartNo = getCalculatedStartResolutionNo(commId, monthStr);
       setStartResolutionNo(calculatedStartNo);
 
       // Fetch the outroText from cached admin templates
@@ -1244,7 +1338,7 @@ function TeacherMeetingPage() {
         if (subjects.length > 0) {
           setFormResolutions(subjects.map((item: any, idx: number) => ({
             subjectNo: item.subjectNo || idx + 1,
-            resolutionNo: item.resolutionNo || (calculatedStartNo + idx),
+            resolutionNo: calculatedStartNo + idx, // Dynamically re-aligned!
             subject: item.subject || "",
             discussion: item.discussion || "",
             resolution: item.resolution || "",
@@ -3421,17 +3515,7 @@ function TeacherMeetingPage() {
                                           onClick={() => {
                                             // Calculate cumulative start resolution number from admin templates cache
                                             if (selectedCommittee && selectedMonth) {
-                                              const monthsList = ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"];
-                                              const targetIdx = monthsList.indexOf(selectedMonth);
-                                              let calcStartNo = 1;
-                                              if (targetIdx > 0) {
-                                                const preceding = monthsList.slice(0, targetIdx);
-                                                const totalPreceding = preceding.reduce((sum, m) => {
-                                                  const subjects = cachedAdminTemplates[m]?.subjects || [];
-                                                  return sum + subjects.length;
-                                                }, 0);
-                                                calcStartNo = 1 + totalPreceding;
-                                              }
+                                              const calcStartNo = getCalculatedStartResolutionNo(selectedCommittee.id, selectedMonth);
                                               setStartResolutionNo(calcStartNo);
                                               // Directly create first resolution with correct number
                                               if (formResolutions.length === 0) {
@@ -3476,6 +3560,17 @@ function TeacherMeetingPage() {
                                             >
                                               <Plus className="size-4" /> विषय व ठराव जोडा
                                             </button>
+                                            {cachedCustomTemplates[selectedMonth] && (
+                                              <button
+                                                type="button"
+                                                onClick={handleRestoreAdminTemplate}
+                                                className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border-2 border-amber-300 rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                                                title="या महिन्याचे मूळ ॲडमिन विषय व ठराव रिस्टोअर करा"
+                                              >
+                                                <RotateCcw className="size-4 text-amber-600" />
+                                                <span>मूळ विषय रिस्टोअर करा</span>
+                                              </button>
+                                            )}
                                             <button
                                               type="button"
                                               onClick={saveTeacherCustomTemplate}
@@ -3696,13 +3791,26 @@ function TeacherMeetingPage() {
                                       <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">
                                         ३. विषय आणि ठराव तपशील
                                       </h3>
-                                      <button
-                                        type="button"
-                                        onClick={handleAddFormResolutionRow}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md"
-                                      >
-                                        <Plus className="size-4" /> विषय व ठराव जोडा
-                                      </button>
+                                      <div className="flex items-center gap-3">
+                                        {cachedCustomTemplates[selectedMonth] && (
+                                          <button
+                                            type="button"
+                                            onClick={handleRestoreAdminTemplate}
+                                            className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border-2 border-amber-300 rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                                            title="या महिन्याचे मूळ ॲडमिन विषय व ठराव रिस्टोअर करा"
+                                          >
+                                            <RotateCcw className="size-4 text-amber-600" />
+                                            <span>मूळ विषय रिस्टोअर करा</span>
+                                          </button>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={handleAddFormResolutionRow}
+                                          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md cursor-pointer"
+                                        >
+                                          <Plus className="size-4" /> विषय व ठराव जोडा
+                                        </button>
+                                      </div>
                                     </div>
 
                                     <div className="space-y-6">
