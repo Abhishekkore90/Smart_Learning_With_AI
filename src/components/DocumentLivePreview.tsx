@@ -46,8 +46,36 @@ export const formatCleanDate = (raw: string | undefined | null) => {
 
 export const formatDateToIso = (raw: string | undefined | null): string => {
   if (!raw) return "";
-  const cleaned = raw.trim();
-  
+  let cleaned = raw.trim();
+
+  // Convert Marathi digits to ASCII digits
+  const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+  for (let i = 0; i < 10; i++) {
+    cleaned = cleaned.replaceAll(marathiDigits[i], String(i));
+  }
+
+  // Convert Marathi month names to numbers
+  const marathiMonths: Record<string, string> = {
+    "जानेवारी": "01",
+    "फेब्रुवारी": "02",
+    "मार्च": "03",
+    "एप्रिल": "04",
+    "मे": "05",
+    "जून": "06",
+    "जुलै": "07",
+    "ऑगस्ट": "08",
+    "सप्टेंबर": "09",
+    "ऑक्टोबर": "10",
+    "नोव्हेंबर": "11",
+    "डिसेंबर": "12",
+  };
+  for (const [mName, mNum] of Object.entries(marathiMonths)) {
+    if (cleaned.includes(mName)) {
+      cleaned = cleaned.replace(mName, mNum);
+      break;
+    }
+  }
+
   // 1. Direct YYYY-MM-DD pattern
   let m = cleaned.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
   if (m) {
@@ -57,9 +85,9 @@ export const formatDateToIso = (raw: string | undefined | null): string => {
     const day = m[3].padStart(2, "0");
     return `${year}-${month}-${day}`;
   }
-  
-  // 2. Direct DD/MM/YYYY pattern
-  m = cleaned.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+
+  // 2. Direct DD/MM/YYYY or DD MM YYYY pattern
+  m = cleaned.match(/(\d{1,2})[\/\-\.\s]+(\d{1,2})[\/\-\.\s]+(\d{2,4})/);
   if (m) {
     const day = m[1].padStart(2, "0");
     const month = m[2].padStart(2, "0");
@@ -202,17 +230,34 @@ export function getMarathiDayFromDate(dateStr: string): string {
   return "";
 }
 
+function normalizeExtractedDateStr(rawStr: string): string {
+  const clean = rawStr.trim().replace(/[०-९]/g, d => "०१२३४५६७८९".indexOf(d).toString()).replace(/\s+/g, "");
+  const parts = clean.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    let d = parseInt(parts[0], 10);
+    let m = parseInt(parts[1], 10);
+    let y = parseInt(parts[2], 10);
+    if (parts[0].length === 4) {
+      y = parseInt(parts[0], 10);
+      d = parseInt(parts[2], 10);
+    }
+    if (y < 100) y += 2000;
+    if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+      return `${d}/${m}/${y}`;
+    }
+  }
+  return clean;
+}
+
 export function extractDateFromText(text: string): string {
   if (!text) return "";
-  // Match dates like "दिनांक: 01/08/2026" or "दिनांक 01-08-2026" or "Date: 2026-08-01"
-  const matchWithKeyword = text.match(/(?:दिनांक|तारीख|Date)\s*[:：\-]?\s*(\d{1,4}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{1,4})/i);
+  const matchWithKeyword = text.match(/(?:दिनांक|तारीख|Date)\s*[:：\-]?\s*([\d०-९]{1,4}\s*[\/\-\.]\s*[\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{1,4})/i);
   if (matchWithKeyword) {
-    return matchWithKeyword[1].replace(/\s+/g, "");
+    return normalizeExtractedDateStr(matchWithKeyword[1]);
   }
-  // Standalone date pattern: DD/MM/YYYY or YYYY-MM-DD
-  const standaloneMatch = text.match(/\b(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})\b/);
+  const standaloneMatch = text.match(/\b([\d०-९]{1,4}\s*[\/\-\.]\s*[\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{1,4})\b/);
   if (standaloneMatch) {
-    return standaloneMatch[1].replace(/\s+/g, "");
+    return normalizeExtractedDateStr(standaloneMatch[1]);
   }
   return "";
 }
@@ -234,23 +279,11 @@ export function isSunday(dayStr?: string, dateStr?: string): boolean {
     }
   }
   if (dateStr) {
-    const cleaned = dateStr.trim();
-    const parts = cleaned.split(/[\/\-\.]/);
-    if (parts.length === 3) {
-      let d = parseInt(parts[0], 10);
-      let m = parseInt(parts[1], 10) - 1;
-      let y = parseInt(parts[2], 10);
-
-      // Handle YYYY-MM-DD format vs DD-MM-YYYY
-      if (parts[0].length === 4) {
-        y = parseInt(parts[0], 10);
-        d = parseInt(parts[2], 10);
-      }
-
-      const dateObj = new Date(y < 100 ? y + 2000 : y, m, d);
-      if (!isNaN(dateObj.getTime()) && dateObj.getDay() === 0) {
-        return true;
-      }
+    const iso = formatDateToIso(dateStr);
+    if (iso && iso.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const parts = iso.split("-");
+      const dt = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      if (!isNaN(dt.getTime()) && dt.getDay() === 0) return true;
     }
   }
   return false;
@@ -499,14 +532,10 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
 
     let thought = "";
     const thoughtMatch = sectionText.match(
-      /(?:आजचा\s*सुव\u200Dिचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Thought)\s*[:：\-]?\s*([^\n\r]+)/i
+      /(?:आजचा\s*सुव[\u200C\u200D]?िचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r]+)/i
     );
     if (thoughtMatch) {
-      thought = thoughtMatch[1]
-        .replace(/^[:\s\u0903\-"'”’„«»]+/, "")
-        .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
-        .replace(/^["'”’„«»]+|["'”’„«»]+$/g, "")
-        .trim();
+      thought = cleanThoughtText(thoughtMatch[1]);
     }
 
     return { date, day, std, year, teacher, school, thought };
@@ -823,21 +852,50 @@ export function groupStructuredPagesByDay(pages: StructuredDayPage[], defaultBas
   const currentDateCursor = new Date(startYear, startMonth, startDay);
 
   partitionedPages.forEach((p, idx) => {
-    if (idx > 0) {
-      currentDateCursor.setDate(currentDateCursor.getDate() + 1);
-    }
-    while (currentDateCursor.getDay() === 0) { // Skip Sundays
-      currentDateCursor.setDate(currentDateCursor.getDate() + 1);
+    let assignedDate = "";
+
+    if (p.date) {
+      const cleaned = p.date.trim().replace(/\s+/g, "");
+      const parts = cleaned.split(/[\/\-\.]/);
+      if (parts.length === 3) {
+        let d = parseInt(parts[0], 10);
+        let m = parseInt(parts[1], 10) - 1;
+        let y = parseInt(parts[2], 10);
+        if (parts[0].length === 4) {
+          y = parseInt(parts[0], 10);
+          d = parseInt(parts[2], 10);
+        }
+        if (y < 100) y += 2000;
+        if (y < startYear && startYear - y === 1) {
+          y = startYear;
+        }
+        if (startDay === 21 && idx === 0 && d < 21) {
+          d = 21;
+        }
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+          const pageDateObj = new Date(y, m, d);
+          currentDateCursor.setTime(pageDateObj.getTime());
+          assignedDate = `${d}/${m + 1}/${y}`;
+        }
+      }
     }
 
-    const assignedDate = `${currentDateCursor.getDate()}/${currentDateCursor.getMonth() + 1}/${currentDateCursor.getFullYear()}`;
+    if (!assignedDate) {
+      if (idx > 0 || !p.date) {
+        currentDateCursor.setDate(currentDateCursor.getDate() + 1);
+      }
+      while (currentDateCursor.getDay() === 0) { // Skip Sundays
+        currentDateCursor.setDate(currentDateCursor.getDate() + 1);
+      }
+      assignedDate = `${currentDateCursor.getDate()}/${currentDateCursor.getMonth() + 1}/${currentDateCursor.getFullYear()}`;
+    }
+
     const isoDateStr = formatDateToIso(assignedDate);
     const localThought = (isoDateStr && (localStorage.getItem(`suvichar_${p.std || ""}_${p.school || ""}_${isoDateStr}`) || localStorage.getItem(`suvichar_${isoDateStr}`))) || "";
 
-    // If this is a split multi-day page (idx > 0) and p.thought is identical to page 0's thought, use local date-wise thought or clear duplicate thought so it resolves date-wise
     let dayThought = p.thought || "";
-    if (isDefaultFallbackThought(dayThought)) {
-      dayThought = (localThought && !isDefaultFallbackThought(localThought)) ? localThought : "";
+    if (!dayThought) {
+      dayThought = localThought || "";
     }
 
     list.push({
@@ -1173,6 +1231,7 @@ export interface DocumentLivePreviewProps {
   selectedFile?: File | null;
   savedRecord?: any;
   selectedMonth?: string | null;
+  selectedDateIso?: string | null;
   authenticatedPdfUrl?: string | null;
   loadingPdf?: boolean;
   onBack?: () => void;
@@ -1187,6 +1246,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   selectedFile,
   savedRecord,
   selectedMonth = null,
+  selectedDateIso = null,
   authenticatedPdfUrl,
   loadingPdf = false,
   onBack,
@@ -1737,12 +1797,9 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           const next = prevPages.map((p) => {
             const iso = formatDateToIso(p.date);
             const match = results.find((r) => (r.isoDate && r.isoDate === iso) || (r.date && r.date === p.date));
-            if (match && match.thought && !isDefaultFallbackThought(match.thought) && match.thought !== p.thought && (isDefaultFallbackThought(p.thought) || !p.thought)) {
+            if (match && match.thought && match.thought !== p.thought && (!p.thought || p.thought.trim() === "")) {
               hasUpdate = true;
               return { ...p, thought: match.thought };
-            } else if (isDefaultFallbackThought(p.thought)) {
-              hasUpdate = true;
-              return { ...p, thought: "" };
             }
             return p;
           });
@@ -1759,54 +1816,123 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     };
   }, [savedRecord?.id]);
 
+  const calculateRangeWorkingDayIndex = (year: number, month: number, targetDay: number, startDay: number = 1): number => {
+    let workingCount = 0;
+    for (let d = startDay; d <= targetDay; d++) {
+      const testD = new Date(year, month - 1, d);
+      if (testD.getDay() !== 0) { // Skip Sundays
+        workingCount++;
+      }
+    }
+    return Math.max(0, workingCount - 1);
+  };
+
   const getDayOfMonthNumber = (dateStr?: string): number => {
     if (!dateStr) return 0;
-    const cleaned = dateStr.trim();
+    let cleaned = dateStr.trim();
+    const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+    for (let i = 0; i < 10; i++) {
+      cleaned = cleaned.replaceAll(marathiDigits[i], String(i));
+    }
     let m = cleaned.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
     if (m) return parseInt(m[3], 10);
     m = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+    if (m) return parseInt(m[1], 10);
+    m = cleaned.match(/^(\d{1,2})[\/\-\.\s]+/);
     if (m) return parseInt(m[1], 10);
     return 0;
   };
 
   const pagesToDisplay = useMemo(() => {
-    if (!structuredPages || structuredPages.length === 0) return [];
+    const sourcePages = (structuredPages && structuredPages.length > 0)
+      ? structuredPages
+      : (savedRecord?.structuredData && Array.isArray(savedRecord.structuredData) && savedRecord.structuredData.length > 0)
+        ? savedRecord.structuredData
+        : [];
 
-    let filtered = structuredPages;
+    if (!sourcePages || sourcePages.length === 0) return [];
+
+    let filtered = sourcePages;
 
     // Filter by week range if savedRecord specifies a week/range (e.g. 1 to 10, 11 to 20)
     const weekStr = savedRecord?.week || savedRecord?.selectedWeek || "";
     if (weekStr) {
       if (weekStr.includes("1 to 10") || weekStr === "Week 1") {
-        filtered = filtered.filter((p) => {
-          const dayNum = getDayOfMonthNumber(p.date);
+        filtered = filtered.filter((p: any) => {
+          const dayNum = getDayOfMonthNumber(p.date || p.displayDate);
           return dayNum === 0 || (dayNum >= 1 && dayNum <= 10);
         });
       } else if (weekStr.includes("11 to 20") || weekStr === "Week 2") {
-        filtered = filtered.filter((p) => {
-          const dayNum = getDayOfMonthNumber(p.date);
+        filtered = filtered.filter((p: any) => {
+          const dayNum = getDayOfMonthNumber(p.date || p.displayDate);
           return dayNum === 0 || (dayNum >= 11 && dayNum <= 20);
         });
       } else if (weekStr.includes("21 to 31") || weekStr.includes("21 to 30") || weekStr === "Week 3" || weekStr === "Week 4" || weekStr === "Week 5") {
-        filtered = filtered.filter((p) => {
-          const dayNum = getDayOfMonthNumber(p.date);
+        filtered = filtered.filter((p: any) => {
+          const dayNum = getDayOfMonthNumber(p.date || p.displayDate);
           return dayNum === 0 || dayNum >= 21;
         });
       }
     }
 
-    if (!selectedMonth) return filtered;
-    return filtered.filter((p) => {
-      const d = p.date || (p as any).displayDate || "";
-      if (!d) return true;
-      const clean = String(d).trim();
-      let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
-      if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
-      m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-      if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
-      return true;
-    });
-  }, [structuredPages, selectedMonth, savedRecord?.week, savedRecord?.selectedWeek]);
+    if (selectedMonth) {
+      filtered = filtered.filter((p: any) => {
+        const d = p.date || (p as any).displayDate || "";
+        if (!d) return true;
+        const clean = String(d).trim();
+        let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
+        m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
+        return true;
+      });
+    }
+
+    // Filter down to single date if selectedDateIso is provided
+    if (selectedDateIso) {
+      const targetDayNum = getDayOfMonthNumber(selectedDateIso);
+
+      // 1. Exact ISO match
+      const exactMatch = filtered.filter((p: any) => {
+        const pIso = formatDateToIso(p.date || p.displayDate);
+        return pIso && pIso === selectedDateIso;
+      });
+      if (exactMatch.length > 0) return exactMatch;
+
+      // 2. Day number match
+      if (targetDayNum > 0) {
+        const dayMatch = filtered.filter((p: any) => {
+          const pDayNum = getDayOfMonthNumber(p.date || p.displayDate);
+          return pDayNum === targetDayNum;
+        });
+        if (dayMatch.length > 0) return dayMatch;
+      }
+
+      // 3. Fallback match by index in filtered range
+      const parts = selectedDateIso.split("-");
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const d = parseInt(parts[2], 10);
+        let startDay = 1;
+        if (d >= 21) startDay = 21;
+        else if (d >= 11) startDay = 11;
+
+        // Direct 1-to-1 day offset index matching (Day 1 -> idx 0, Day 2 -> idx 1, Day 3 -> idx 2, etc.)
+        const directIdx = d - startDay;
+        if (directIdx >= 0 && directIdx < filtered.length) {
+          return [filtered[directIdx]];
+        }
+
+        const idx = calculateRangeWorkingDayIndex(y, m, d, startDay);
+        if (idx >= 0 && idx < filtered.length) {
+          return [filtered[idx]];
+        }
+      }
+    }
+
+    return filtered;
+  }, [structuredPages, savedRecord?.structuredData, selectedMonth, savedRecord?.week, savedRecord?.selectedWeek, selectedDateIso]);
 
   const hasStructuredView = pagesToDisplay && pagesToDisplay.length > 0;
   const downloadUrl = savedRecord?.pageUrl || (selectedFile ? localPdfBlobUrl : null);
@@ -2021,17 +2147,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       }
 
       const isSundayDate = (dayName: string, dateStr: string) => {
-        if (dayName) {
-          const d = String(dayName).toLowerCase().trim();
-          if (d.includes("रविवार") || d.includes("sunday")) return true;
-        }
-        if (dateStr) {
-          try {
-            const dt = new Date(dateStr);
-            if (!isNaN(dt.getTime()) && dt.getDay() === 0) return true;
-          } catch {}
-        }
-        return false;
+        return isSunday(dayName, dateStr);
       };
 
       const defaultHeaders = ["तासिका", "विषय", "अध्यापन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती", "अध्ययन अनुभव", "साधन तंत्रे", "शैक्षणिक साहित्य"];
