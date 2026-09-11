@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 // @ts-ignore
@@ -48,6 +48,40 @@ const SUBJECTS_LIST = [
   { key: "karyanubhav", label: "कार्यानुभव / कार्यशिक्षण" },
   { key: "sharirik", label: "शारीरिक शिक्षण व आरोग्य" },
 ];
+
+// The 3 special subjects shown in the image that must always be included for every class
+const ALWAYS_INCLUDED_SPECIAL_SUBJECTS = ["kala", "karyanubhav", "sharirik"];
+
+// Standard academic subjects per class (excluding the 3 special subjects which are added automatically)
+const CLASS_ACADEMIC_SUBJECTS_MAP: Record<string, string[]> = {
+  "1st": ["marathi", "math", "english"],
+  "2nd": ["marathi", "math", "english"],
+  "3rd": ["marathi", "math", "english", "evs1", "evs2"],
+  "4th": ["marathi", "math", "english", "evs1", "evs2"],
+  "5th": ["marathi", "hindi", "math", "english", "evs1", "evs2"],
+  "6th": ["marathi", "hindi", "math", "english", "science", "history", "geography"],
+  "7th": ["marathi", "hindi", "math", "english", "science", "history", "geography"],
+  "8th": ["marathi", "hindi", "math", "english", "science", "history", "geography"],
+};
+
+const mapSubjectNameToKey = (name: string): string | null => {
+  const n = String(name || "").toLowerCase();
+  if (n.includes("मराठी") || n.includes("marathi")) return "marathi";
+  if (n.includes("हिंदी") || n.includes("hindi")) return "hindi";
+  if (n.includes("इंग्रजी") || n.includes("english")) return "english";
+  if (n.includes("गणित") || n.includes("math")) return "math";
+  if (n.includes("परिसर अभ्यास १") || n.includes("evs 1") || n.includes("evs1")) return "evs1";
+  if (n.includes("परिसर अभ्यास २") || n.includes("evs 2") || n.includes("evs2")) return "evs2";
+  if (n.includes("परिसर अभ्यास") || n.includes("evs")) return "evs1";
+  if (n.includes("विज्ञान") || n.includes("science")) return "science";
+  if (n.includes("इतिहास") || n.includes("history")) return "history";
+  if (n.includes("भूगोल") || n.includes("geography")) return "geography";
+  if (n.includes("सामाजिक") || n.includes("social")) return "history";
+  if (n.includes("कला") || n.includes("art")) return "kala";
+  if (n.includes("कार्यानुभव") || n.includes("work")) return "karyanubhav";
+  if (n.includes("शारीरिक") || n.includes("health") || n.includes("pe")) return "sharirik";
+  return null;
+};
 
 // Circular progress indicator component
 function OutcomeProgressCircle({
@@ -144,6 +178,44 @@ export function CCESubjectWise({
     code: string;
     text: string;
   } | null>(null);
+
+  // Compute visible subjects for activeClass (class subjects + 3 special subjects: kala, karyanubhav, sharirik)
+  const visibleSubjects = useMemo(() => {
+    const norm = String(activeClass || "1st").trim().toLowerCase();
+    const num = norm.replace(/[^0-9]/g, "");
+    const classKey = num === "1" ? "1st" : num === "2" ? "2nd" : num === "3" ? "3rd" : num ? `${num}th` : "1st";
+
+    let configuredKeys: string[] | null = null;
+    try {
+      const med = localStorage.getItem("cce_selected_medium") || "marathi";
+      const year = academicYear || "2025-26";
+      const rawStored =
+        localStorage.getItem(`cce_subjects_${activeClass}_${year}_${med}`) ||
+        localStorage.getItem(`cce_subjects_${activeClass}_${year}`);
+      if (rawStored) {
+        const parsed = JSON.parse(rawStored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const mapped = parsed.map(mapSubjectNameToKey).filter(Boolean) as string[];
+          if (mapped.length > 0) {
+            configuredKeys = Array.from(new Set([...mapped, ...ALWAYS_INCLUDED_SPECIAL_SUBJECTS]));
+          }
+        }
+      }
+    } catch (e) {}
+
+    const academicKeys =
+      configuredKeys || CLASS_ACADEMIC_SUBJECTS_MAP[classKey] || CLASS_ACADEMIC_SUBJECTS_MAP["1st"];
+    const allowedKeys = Array.from(new Set([...academicKeys, ...ALWAYS_INCLUDED_SPECIAL_SUBJECTS]));
+
+    return SUBJECTS_LIST.filter((s) => allowedKeys.includes(s.key));
+  }, [activeClass, academicYear]);
+
+  // Adjust expandedSubject if activeClass changes and expandedSubject is not in visible list
+  useEffect(() => {
+    if (expandedSubject && !visibleSubjects.some((s) => s.key === expandedSubject)) {
+      setExpandedSubject(visibleSubjects[0]?.key || null);
+    }
+  }, [visibleSubjects, expandedSubject]);
 
   // 1. Fetch student roster for activeClass
   useEffect(() => {
@@ -278,6 +350,10 @@ export function CCESubjectWise({
     }
     if ((activeClass === "8th" || activeClass === "8") && CLASS_8_OUTCOMES[subKey]) {
       return CLASS_8_OUTCOMES[subKey];
+    }
+    // Fallback for the 3 special subjects across all classes if not defined in that class file
+    if ((subKey === "kala" || subKey === "karyanubhav" || subKey === "sharirik") && CLASS_1_OUTCOMES[subKey]) {
+      return CLASS_1_OUTCOMES[subKey];
     }
     return [];
   };
@@ -578,7 +654,7 @@ export function CCESubjectWise({
             <span className="text-xs font-bold text-slate-400">माहिती लोड होत आहे...</span>
           </div>
         ) : (
-          SUBJECTS_LIST.map((subject) => {
+          visibleSubjects.map((subject) => {
             const isOpen = expandedSubject === subject.key;
             const outcomesList = getOutcomesForSubject(subject.key);
 

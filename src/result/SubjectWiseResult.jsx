@@ -46,6 +46,11 @@ const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
     if (outcomeBank[subjectKey]) return outcomeBank[subjectKey];
   }
 
+  // Fallback for the 3 special subjects across all classes if not defined in that class file
+  if (["kala", "karyanubhav", "sharirik"].includes(normKey) && CLASS_1_OUTCOMES[normKey]) {
+    return CLASS_1_OUTCOMES[normKey];
+  }
+
   return [];
 };
 

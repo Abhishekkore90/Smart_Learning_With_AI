@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Ensure Googlebot and Googlebot-Image can fetch favicons and logo assets
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
