@@ -45,6 +45,7 @@ import {
   Edit2,
   Save,
   Download,
+  Loader2,
   UserPlus,
   ArrowLeft,
   ChevronUp,
@@ -324,6 +325,28 @@ const formatDateToDDMMYYYY = (dateStr?: string | null, separator: string = "/"):
   return cleaned;
 };
 
+// Helper to resolve Marathi month name from past meeting record, selectedMonth or meeting date
+const getResolvedMonthName = (meeting?: any, monthKey?: string, dateVal?: string): string => {
+  const mId = monthKey || meeting?.month;
+  if (mId) {
+    const foundAcademic = ACADEMIC_MONTHS.find(m => m.id === mId);
+    if (foundAcademic) return foundAcademic.name;
+    const foundAlumni = ALUMNI_MEETINGS.find(m => m.id === mId);
+    if (foundAlumni) return foundAlumni.name;
+  }
+  const dateStr = dateVal || meeting?.date;
+  if (dateStr) {
+    const cleaned = String(dateStr).trim();
+    if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(cleaned)) {
+      const parts = cleaned.split(/[-/]/);
+      const mm = parts[1].padStart(2, "0");
+      const found = ACADEMIC_MONTHS.find(m => m.id === mm);
+      if (found) return found.name;
+    }
+  }
+  return "";
+};
+
 function TeacherMeetingPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const { lang } = useLanguage();
@@ -537,6 +560,8 @@ function TeacherMeetingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [hasSavedProfile, setHasSavedProfile] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingInvitationPdf, setIsGeneratingInvitationPdf] = useState(false);
 
   // Month, template loading, and cumulative resolution states
   const [selectedMonth, setSelectedMonth] = useState<string>("");
@@ -1546,46 +1571,359 @@ function TeacherMeetingPage() {
     }
   };
 
-  // PDF download handler
+  // Helper to trigger direct download across Desktop, Mobile browsers, and Android WebViews into storage
+  const triggerDeviceDownload = (cdnUrl: string, filename: string, pdfBlob?: Blob) => {
+    try {
+      const win = window as any;
+
+      // 1. Check for native Android / WebView JavaScript bridge interfaces
+      if (typeof win.Android?.downloadFile === "function") {
+        win.Android.downloadFile(cdnUrl, filename);
+        return;
+      }
+      if (typeof win.AndroidBridge?.downloadFile === "function") {
+        win.AndroidBridge.downloadFile(cdnUrl, filename);
+        return;
+      }
+      if (typeof win.flutter_inappwebview?.callHandler === "function") {
+        win.flutter_inappwebview.callHandler("downloadFile", cdnUrl, filename);
+        return;
+      }
+      if (typeof win.webkit?.messageHandlers?.downloadFile?.postMessage === "function") {
+        win.webkit.messageHandlers.downloadFile.postMessage({ url: cdnUrl, filename });
+        return;
+      }
+
+      const isMobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent || navigator.vendor || ""
+        ) || (typeof window !== "undefined" && window.innerWidth <= 768);
+
+      // 2. On Mobile / Android WebViews:
+      if (isMobile) {
+        // Create an anchor pointing to the genuine HTTPS CDN URL
+        const link = document.createElement("a");
+        link.href = cdnUrl;
+        link.setAttribute("download", filename);
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (document.body.contains(link)) document.body.removeChild(link);
+        }, 1500);
+
+        // For Android WebViews with DownloadListener: navigating to HTTPS URL of the PDF
+        // allows Android DownloadManager to intercept and save directly into /storage/emulated/0/Download
+        setTimeout(() => {
+          try {
+            window.location.href = cdnUrl;
+          } catch (navErr) {
+            console.warn("Direct location navigation:", navErr);
+          }
+        }, 300);
+        return;
+      }
+
+      // 3. On Desktop: trigger standard browser download
+      if (pdfBlob) {
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = filename;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (document.body.contains(link)) document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 3000);
+      } else {
+        const link = document.createElement("a");
+        link.href = cdnUrl;
+        link.download = filename;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (document.body.contains(link)) document.body.removeChild(link);
+        }, 1500);
+      }
+    } catch (err) {
+      console.error("Error in triggerDeviceDownload:", err);
+      window.open(cdnUrl, "_blank");
+    }
+  };
+
+  // PDF download handler (Enforces Desktop A4 layout and smart zero-cut multi-page pagination)
   const handlePrint = async () => {
+    let tempContainer: HTMLElement | null = null;
     try {
       const element = document.getElementById("meeting-pdf-content");
       if (!element) return;
 
+      setIsGeneratingPdf(true);
       toast.info("PDF तयार होत आहे, कृपया प्रतीक्षा करा...");
 
-      const html2pdf = (await import("html2pdf.js")).default;
+      // Ensure all custom fonts (e.g. Kalam, Inter) are fully loaded before capturing
+      if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
 
-      const opt = {
-        margin: [10, 0, 10, 0], // top, left, bottom, right (0 for sides to use container's own padding)
-        filename: `meeting_report.pdf`,
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          windowWidth: 800 // Force consistent width for A4 aspect ratio
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'] }
-      };
+      // Clone element to apply full desktop A4 styling identically across web and mobile/webview
+      const clone = element.cloneNode(true) as HTMLElement;
 
-      const worker = html2pdf().from(element).set(opt);
-      await worker.save();
-      toast.success("PDF यशस्वीरित्या डाउनलोड झाली!");
+      // 1. Remove mobile-specific helper UI (e.g., swipe table hint)
+      clone.querySelectorAll(".sm\\:hidden").forEach((el) => el.remove());
 
+      // 2. Remove all interactive action buttons (edit/delete/reorder)
+      clone.querySelectorAll("button").forEach((btn) => btn.remove());
+
+      // 3. Remove horizontal scroll wrappers so the table expands to 100% full desktop width
+      clone.querySelectorAll(".overflow-x-auto").forEach((wrapper: any) => {
+        wrapper.classList.remove("overflow-x-auto", "-mx-1", "no-scrollbar");
+        wrapper.style.overflow = "visible";
+        wrapper.style.width = "100%";
+      });
+
+      // 4. If any input/textarea exists (e.g. edit mode), convert to clean text
+      clone.querySelectorAll("input").forEach((inp: any) => {
+        const span = document.createElement("span");
+        span.textContent = inp.value || " ";
+        span.style.fontFamily = "inherit";
+        span.style.fontWeight = "bold";
+        span.style.color = "#0f172a";
+        if (inp.type === "number") {
+          span.style.display = "inline-block";
+          span.style.textAlign = "center";
+          span.style.width = "1.5rem";
+        }
+        inp.parentNode?.replaceChild(span, inp);
+      });
+
+      clone.querySelectorAll("textarea").forEach((txt: any) => {
+        const p = document.createElement("p");
+        p.textContent = txt.value || " ";
+        p.style.fontFamily = "inherit";
+        p.style.fontWeight = "bold";
+        p.style.color = "#0f172a";
+        p.style.lineHeight = "inherit";
+        p.style.whiteSpace = "pre-wrap";
+        txt.parentNode?.replaceChild(p, txt);
+      });
+
+      clone.querySelectorAll("select").forEach((sel: any) => {
+        const span = document.createElement("span");
+        span.textContent = sel.options[sel.selectedIndex]?.text || sel.value || " ";
+        span.style.fontWeight = "bold";
+        span.style.color = "#0f172a";
+        sel.parentNode?.replaceChild(span, sel);
+      });
+
+      // 5. Apply the desktop rendering class and explicit dimensions
+      clone.classList.add("pdf-desktop-render");
+      clone.id = "meeting-pdf-content-clone";
+
+      // 6. Mount into an off-screen container with fixed 800px desktop width
+      const desktopWidth = 800;
+      tempContainer = document.createElement("div");
+      tempContainer.style.position = "absolute";
+      tempContainer.style.left = "-9999px";
+      tempContainer.style.top = "0";
+      tempContainer.style.width = `${desktopWidth}px`;
+      tempContainer.style.maxWidth = `${desktopWidth}px`;
+      tempContainer.style.zIndex = "-9999";
+      tempContainer.style.background = "#fdfcf7";
+      tempContainer.appendChild(clone);
+      document.body.appendChild(tempContainer);
+
+      // Give browser time to lay out clone and resolve web fonts
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // 7. Identify all elements that must NEVER be sliced in half across pages
+      const cloneRect = clone.getBoundingClientRect();
+      const candidateSelectors = [
+        ".register-res-item",
+        ".register-outro-block",
+        ".register-signature-area",
+        ".register-table tbody tr",
+      ];
+
+      interface ElementBound {
+        el: HTMLElement;
+        top: number;
+        bottom: number;
+        isOutro: boolean;
+        isSignature: boolean;
+      }
+
+      const rawBounds: ElementBound[] = [];
+      candidateSelectors.forEach((sel) => {
+        clone.querySelectorAll<HTMLElement>(sel).forEach((el) => {
+          const rect = el.getBoundingClientRect();
+          const top = rect.top - cloneRect.top;
+          const bottom = rect.bottom - cloneRect.top;
+          if (bottom > top) {
+            rawBounds.push({
+              el,
+              top,
+              bottom,
+              isOutro: el.classList.contains("register-outro-block"),
+              isSignature: el.classList.contains("register-signature-area"),
+            });
+          }
+        });
+      });
+
+      // 8. Capture high-resolution raster image of the desktop-rendered register
+      const { default: html2canvas } = await import("html2canvas-pro");
+      const { jsPDF } = await import("jspdf");
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#fdfcf7",
+        windowWidth: desktopWidth,
+        width: desktopWidth,
+        scrollX: 0,
+        scrollY: 0,
+        onclone: (clonedDoc) => {
+          try {
+            const styleTags = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"));
+            styleTags.forEach((st) => {
+              clonedDoc.head.appendChild(st.cloneNode(true));
+            });
+          } catch (e) {}
+        }
+      });
+
+      // 9. Map element positions accurately to canvas pixel coordinates
+      const canvasRatioY = canvas.height / (cloneRect.height || 1);
+      const bounds: ElementBound[] = rawBounds.map((b) => ({
+        ...b,
+        top: b.top * canvasRatioY,
+        bottom: b.bottom * canvasRatioY,
+      }));
+      bounds.sort((a, b) => a.top - b.top);
+
+      // 10. Smart Anti-Cut Multi-Page Slicing:
+      // A4 portrait printable area (210mm x 277mm with 10mm top/bottom margin):
+      // Ratio: 277 / 210 = 1.3190476
+      const maxPageCanvasHeight = Math.floor(canvas.width * (277 / 210));
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+      let currentTop = 0;
+      let pageIndex = 0;
+
+      while (currentTop < canvas.height - 2) {
+        let candidateBottom = currentTop + maxPageCanvasHeight;
+
+        if (candidateBottom >= canvas.height) {
+          // Reached end of document
+          candidateBottom = canvas.height;
+        } else {
+          // Detect if candidateBottom slices through any element
+          const cutElement = bounds.find(
+            (b) => b.top < candidateBottom && b.bottom > candidateBottom
+          );
+
+          if (cutElement) {
+            // Push cut element completely to the next page
+            let safeCut = Math.floor(cutElement.top);
+
+            // If cutElement is the signatures area and outro block is right above it,
+            // push both outro and signatures together to the next page
+            if (cutElement.isSignature) {
+              const outro = bounds.find((b) => b.isOutro);
+              if (outro && outro.top > currentTop + 80 && (cutElement.top - outro.top) < 300) {
+                safeCut = Math.floor(outro.top);
+              }
+            }
+
+            if (safeCut > currentTop + 100) {
+              candidateBottom = safeCut;
+            }
+          }
+        }
+
+        const sliceHeight = candidateBottom - currentTop;
+        if (sliceHeight <= 0) break;
+
+        // Render uniform A4 page slice onto page canvas
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = maxPageCanvasHeight;
+        const pageCtx = pageCanvas.getContext("2d");
+
+        if (pageCtx) {
+          // Uniform warm ledger background
+          pageCtx.fillStyle = "#fdfcf7";
+          pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          // Draw content slice at natural 1:1 scale
+          pageCtx.drawImage(
+            canvas,
+            0, currentTop, canvas.width, sliceHeight,
+            0, 0, canvas.width, sliceHeight
+          );
+        }
+
+        const imgData = pageCanvas.toDataURL("image/jpeg", 0.98);
+
+        if (pageIndex > 0) {
+          pdf.addPage("a4", "portrait");
+        }
+
+        // Draw page image: 210mm wide x 277mm high at (x: 0, y: 10mm margin)
+        pdf.addImage(imgData, "JPEG", 0, 10, 210, 277, undefined, "FAST");
+
+        pageIndex++;
+        currentTop = candidateBottom;
+      }
+
+      const pdfCommName = selectedPastMeeting?.committeeName || selectedCommittee?.name || "समिती";
+      const pdfMonthName = getResolvedMonthName(selectedPastMeeting, selectedMonth, selectedPastMeeting?.date);
+      const safeCommName = pdfCommName.replace(/[/\\?%*:|"<>]/g, "_");
+      const filename = `${safeCommName}_इतिवृत्त_${pdfMonthName ? `माहे_${pdfMonthName}` : "नोंदवही"}.pdf`;
+
+      const pdfBlob = pdf.output("blob");
+
+      // Upload to Bunny Storage to obtain authentic HTTPS CDN URL
+      let cdnUrl = "";
       try {
-        const pdfBlob = (await worker.output("blob")) as Blob;
         const folderPath = `meetings/reports/${udise || "default"}`;
-        const fileName = `${selectedCommittee?.id || "meeting"}_report_${selectedMonth}_${Date.now()}.pdf`;
-        const cdnUrl = await uploadBlobToBunny(`${folderPath}/${fileName}`, pdfBlob);
+        const reportFileName = `${selectedCommittee?.id || "meeting"}_report_${selectedMonth}_${Date.now()}.pdf`;
+        cdnUrl = await uploadBlobToBunny(`${folderPath}/${reportFileName}`, pdfBlob);
         console.log("Uploaded Meeting Report to Bunny Storage:", cdnUrl);
-        toast.success("सभा अहवाल बन्नी स्टोरेजवर जतन झाला!");
       } catch (uploadErr: any) {
         console.warn("Could not upload Meeting Report to Bunny Storage:", uploadErr);
       }
+
+      // Download directly to device storage (supports Android WebViews & Desktop)
+      if (cdnUrl) {
+        triggerDeviceDownload(cdnUrl, filename, pdfBlob);
+      } else {
+        pdf.save(filename);
+      }
+
+      toast.success("PDF डाऊनलोड झाली! फाईल मोबाईल स्टोरेजमध्ये सेव्ह झाली.");
     } catch (error) {
       console.error("Error generating PDF", error);
       toast.error("PDF तयार करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.");
+    } finally {
+      setIsGeneratingPdf(false);
+      if (tempContainer && document.body.contains(tempContainer)) {
+        document.body.removeChild(tempContainer);
+      }
     }
   };
 
@@ -1595,13 +1933,15 @@ function TeacherMeetingPage() {
       const element = document.getElementById("invitation-pdf-content");
       if (!element) return;
 
+      setIsGeneratingInvitationPdf(true);
       toast.info("सभेचे निमंत्रण पत्र PDF तयार होत आहे, कृपया प्रतीक्षा करा...");
 
       const html2pdf = (await import("html2pdf.js")).default;
+      const filename = `${currentCommName}_सभा_निमंत्रण.pdf`;
 
       const opt = {
         margin: [0, 0, 0, 0],
-        filename: `${currentCommName}_सभा_निमंत्रण.pdf`,
+        filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
           scale: 2,
@@ -1616,24 +1956,32 @@ function TeacherMeetingPage() {
       };
 
       const worker = html2pdf().from(element).set(opt);
-      await worker.save();
-      toast.success("निमंत्रण पत्र PDF यशस्वीरित्या डाउनलोड झाली!");
+      const pdfBlob = (await worker.output("blob")) as Blob;
 
-      // Convert to blob and upload to Bunny Storage in background
+      // Upload to Bunny Storage to obtain authentic HTTPS CDN URL
+      let cdnUrl = "";
       try {
-        const pdfBlob = (await worker.output("blob")) as Blob;
         const folderPath = `meetings/invitations/${udise || "default"}`;
         const fileName = `${selectedCommittee?.id || "meeting"}_invitation_${Date.now()}.pdf`;
-        const cdnUrl = await uploadBlobToBunny(`${folderPath}/${fileName}`, pdfBlob);
+        cdnUrl = await uploadBlobToBunny(`${folderPath}/${fileName}`, pdfBlob);
         console.log("Uploaded PDF to Bunny Storage:", cdnUrl);
-        toast.success("निमंत्रण पत्र बन्नी स्टोरेजवर सुरक्षितरित्या जतन झाले!");
       } catch (uploadErr: any) {
         console.warn("Could not upload PDF to Bunny Storage:", uploadErr);
-        toast.error("बन्नी स्टोरेजवर पीडीएफ जतन करू शकलो नाही.");
       }
+
+      // Download directly to device storage (supports Android WebViews & Desktop)
+      if (cdnUrl) {
+        triggerDeviceDownload(cdnUrl, filename, pdfBlob);
+      } else {
+        await worker.save();
+      }
+
+      toast.success("निमंत्रण पत्र PDF डाऊनलोड झाली! मोबाईल स्टोरेजमध्ये सेव्ह झाली.");
     } catch (error) {
       console.error("Error generating invitation PDF", error);
       toast.error("PDF तयार करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.");
+    } finally {
+      setIsGeneratingInvitationPdf(false);
     }
   };
 
@@ -1846,12 +2194,12 @@ function TeacherMeetingPage() {
 
                     {/* Tab Content - View 1: History & Details View */}
                     {activeTab === "history" && (
-                      <div className="p-6 md:p-10">
+                      <div className="p-3 sm:p-6 md:p-10">
                         {selectedPastMeeting ? (
                           // Detail Report View / Print View
-                          <div className="space-y-8 register-print-area">
+                          <div className="space-y-6 sm:space-y-8 register-print-area">
                             {/* Action Bar (Hidden on print) */}
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-6 print:hidden">
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 print:hidden">
                               <button
                                 onClick={() => {
                                   if (isEditing) {
@@ -1870,17 +2218,17 @@ function TeacherMeetingPage() {
                                     });
                                   }
                                 }}
-                                className="flex items-center gap-2 px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition-colors"
+                                className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition-colors whitespace-nowrap shrink-0 shadow-sm"
                               >
                                 <X className="size-4" /> मागे जा
                               </button>
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full py-1">
                                 {isEditing ? (
                                   <>
                                     <button
                                       onClick={handleUpdateMeetingRecord}
                                       disabled={isSubmitting}
-                                      className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md disabled:opacity-50"
+                                      className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black rounded-xl text-xs tracking-wider transition-all shadow-md disabled:opacity-50 whitespace-nowrap shrink-0 cursor-pointer"
                                     >
                                       <Save className="size-4" /> बदल जतन करा
                                     </button>
@@ -1893,7 +2241,7 @@ function TeacherMeetingPage() {
                                           }),
                                         });
                                       }}
-                                      className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition-colors"
+                                      className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                                     >
                                       रद्द करा
                                     </button>
@@ -1909,21 +2257,30 @@ function TeacherMeetingPage() {
                                           }),
                                         });
                                       }}
-                                      className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md cursor-pointer"
+                                      className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black rounded-xl text-xs tracking-wider transition-all shadow-md whitespace-nowrap shrink-0 cursor-pointer"
                                     >
                                       <Edit2 className="size-4" /> संपादन करा
                                     </button>
                                     <button
                                       onClick={handlePrint}
-                                      className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md cursor-pointer"
+                                      disabled={isGeneratingPdf}
+                                      className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 active:scale-95 text-white font-black rounded-xl text-xs tracking-wider transition-all shadow-md whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                                     >
-                                      <Download className="size-4" /> PDF डाउनलोड करा
+                                      {isGeneratingPdf ? (
+                                        <>
+                                          <Loader2 className="size-4 animate-spin" /> PDF डाऊनलोड होत आहे...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Download className="size-4" /> PDF डाउनलोड करा
+                                        </>
+                                      )}
                                     </button>
                                     <button
                                       onClick={() =>
                                         handleDeleteMeeting(selectedPastMeeting.id)
                                       }
-                                      className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md cursor-pointer"
+                                      className="flex items-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black rounded-xl text-xs tracking-wider transition-all shadow-md whitespace-nowrap shrink-0 cursor-pointer"
                                     >
                                       <Trash2 className="size-4" /> डिलीट करा
                                     </button>
@@ -2045,6 +2402,90 @@ function TeacherMeetingPage() {
                             page-break-inside: avoid;
                             break-inside: avoid;
                           }
+
+                          .pdf-desktop-render {
+                            width: 800px !important;
+                            max-width: 800px !important;
+                            min-width: 800px !important;
+                            padding: 2.5rem 2rem 2.5rem 5rem !important;
+                            box-shadow: none !important;
+                            border: none !important;
+                            border-radius: 0 !important;
+                            background-color: #fdfcf7 !important;
+                            color: #0f172a !important;
+                            box-sizing: border-box !important;
+                            overflow: visible !important;
+                          }
+
+                          .pdf-desktop-render::before {
+                            left: 3.5rem !important;
+                            width: 3px !important;
+                            border-left: 1px solid #ef4444 !important;
+                            border-right: 1px solid #ef4444 !important;
+                            height: 100% !important;
+                            display: block !important;
+                            pointer-events: none !important;
+                          }
+
+                          .pdf-desktop-render.register-page-bg,
+                          .pdf-desktop-render .register-page-bg {
+                            background-size: 100% 2.4rem !important;
+                            line-height: 2.4rem !important;
+                          }
+
+                          .pdf-desktop-render .register-header-text {
+                            font-size: 1.15rem !important;
+                            line-height: 2.4rem !important;
+                            text-indent: 3rem !important;
+                            margin-bottom: 2rem !important;
+                            text-align: justify !important;
+                            word-break: break-word !important;
+                          }
+
+                          .pdf-desktop-render .register-table {
+                            width: 100% !important;
+                            min-width: 100% !important;
+                            font-size: 0.95rem !important;
+                            margin-bottom: 2rem !important;
+                            border-collapse: collapse !important;
+                          }
+
+                          .pdf-desktop-render .register-table th, 
+                          .pdf-desktop-render .register-table td {
+                            padding: 0.4rem 0.5rem !important;
+                            border: 1px solid #475569 !important;
+                            font-size: 0.95rem !important;
+                          }
+
+                          .pdf-desktop-render .register-res-section {
+                            margin-top: 3rem !important;
+                            padding-top: 2rem !important;
+                            border-top: 1px dashed #94a3b8 !important;
+                          }
+
+                          .pdf-desktop-render .register-res-item {
+                            font-size: 1.25rem !important;
+                            line-height: 2.6rem !important;
+                            margin-bottom: 3rem !important;
+                            padding-bottom: 1.5rem !important;
+                            border-bottom: 1px dotted #cbd5e1 !important;
+                            page-break-inside: avoid !important;
+                            break-inside: avoid !important;
+                          }
+
+                          .pdf-desktop-render .register-outro-block {
+                            margin-top: 2.5rem !important;
+                            padding-top: 1.5rem !important;
+                            page-break-inside: avoid !important;
+                            break-inside: avoid !important;
+                          }
+
+                          .pdf-desktop-render .register-signature-area {
+                            margin-top: 3rem !important;
+                            padding-top: 2rem !important;
+                            page-break-inside: avoid !important;
+                            break-inside: avoid !important;
+                          }
                           
                           .ledger-input {
                             background: transparent;
@@ -2068,6 +2509,49 @@ function TeacherMeetingPage() {
                             color: #94a3b8;
                             font-weight: 400;
                             font-style: italic;
+                          }
+
+                          @media (max-width: 640px) {
+                            .register-container {
+                              padding: 1.25rem 0.5rem 1.25rem 1.6rem !important;
+                              border-radius: 0.75rem !important;
+                            }
+                            .register-container::before {
+                              left: 1.1rem !important;
+                            }
+                            .register-header-text {
+                              text-indent: 1rem !important;
+                              font-size: 0.95rem !important;
+                              line-height: 2rem !important;
+                              text-align: left !important;
+                            }
+                            .register-res-title {
+                              min-width: auto !important;
+                              display: inline-block !important;
+                              margin-right: 0.5rem !important;
+                              font-size: 1.05rem !important;
+                            }
+                            .register-res-item {
+                              font-size: 1.05rem !important;
+                              line-height: 2.1rem !important;
+                              margin-bottom: 2rem !important;
+                              padding-bottom: 1rem !important;
+                            }
+                            .register-res-item .text-justify,
+                            .register-res-section .text-justify,
+                            .register-outro-block .text-justify {
+                              text-align: left !important;
+                              word-spacing: normal !important;
+                            }
+                            .register-page-bg {
+                              background-size: 100% 2.1rem !important;
+                              line-height: 2.1rem !important;
+                            }
+                            .register-signature-area {
+                              margin-top: 3rem !important;
+                              font-size: 0.95rem !important;
+                              gap: 1rem !important;
+                            }
                           }
 
                           @media print {
@@ -2110,16 +2594,24 @@ function TeacherMeetingPage() {
                                 // --- EDITING MODE IN-PLACE LEDGER VIEW ---
                                 <div className="space-y-8 select-text">
                                   {/* Meeting Ledger Letterhead */}
-                                  <div className="text-center pb-4 pt-2">
-                                    <h1 className="text-3xl font-black text-slate-900 border-b-2 border-slate-800 pb-2 tracking-wide inline-block px-8">
-                                      मासिक सभा इतिवृत्त नोंदवही
-                                    </h1>
+                                  <div className="text-center pb-3 pt-1 space-y-1">
+                                    <div className="text-base sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-snug break-words px-1">
+                                      {editCommitteeName || selectedPastMeeting?.committeeName || currentCommName || selectedCommittee?.name || "शाळा व्यवस्थापन समिती (SMC)"}
+                                    </div>
+                                    <div className="flex justify-center">
+                                      <h1 className="text-sm sm:text-lg md:text-2xl font-black text-slate-900 border-b-2 border-slate-800 pb-1 tracking-wide inline-block px-2 sm:px-6 break-words">
+                                        मासिक सभा इतिवृत्त नोंदवही {(() => {
+                                          const mName = getResolvedMonthName(selectedPastMeeting, selectedMonth, editMeetingDate);
+                                          return mName ? `– माहे : ${mName}` : "";
+                                        })()}
+                                      </h1>
+                                    </div>
                                   </div>
 
                                   {/* Meeting Metadata Header (Editable) */}
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b-2 border-slate-300 pb-4 mb-4 text-sm md:text-base font-bold text-slate-800 tracking-tight font-sans">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 border-b-2 border-slate-300 pb-4 mb-4 text-xs sm:text-sm md:text-base font-bold text-slate-800 tracking-tight font-sans">
                                     <div className="flex items-center gap-1.5">
-                                      <span className="text-slate-900 font-black text-sm md:text-base shrink-0">
+                                      <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
                                         शैक्षणिक वर्ष:
                                       </span>
                                       <input
@@ -2128,11 +2620,11 @@ function TeacherMeetingPage() {
                                         onChange={(e) =>
                                           setEditAcademicYear(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-sm md:text-base w-full"
+                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
                                       />
                                     </div>
                                     <div className="flex items-center gap-1.5">
-                                      <span className="text-slate-900 font-black text-sm md:text-base shrink-0">
+                                      <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
                                         सभा क्रमांक:
                                       </span>
                                       <input
@@ -2141,11 +2633,11 @@ function TeacherMeetingPage() {
                                         onChange={(e) =>
                                           setEditMeetingNumber(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-sm md:text-base w-full"
+                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
                                       />
                                     </div>
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-slate-900 font-black text-sm md:text-base shrink-0">
+                                    <div className="flex items-center gap-1.5 col-span-1 sm:col-span-2 md:col-span-2">
+                                      <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
                                         सचिव/मुख्याध्यापक:
                                       </span>
                                       <input
@@ -2154,7 +2646,7 @@ function TeacherMeetingPage() {
                                         onChange={(e) =>
                                           setEditHeadmasterName(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-sm md:text-base w-full"
+                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
                                       />
                                     </div>
                                     <div className="flex items-center gap-1.5">
@@ -2400,9 +2892,9 @@ function TeacherMeetingPage() {
                                             </button>
                                           </div>
 
-                                          <div className="flex gap-4 items-start">
-                                            <div className="flex items-center register-res-title shrink-0 whitespace-nowrap">
-                                              विषय -
+                                          <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 items-baseline sm:items-start">
+                                             <div className="flex items-center register-res-title shrink-0 whitespace-nowrap font-bold text-slate-900">
+                                               विषय -
                                               <input
                                                 type="number"
                                                 value={res.subjectNo}
@@ -2433,9 +2925,9 @@ function TeacherMeetingPage() {
 
 
 
-                                          <div className="flex gap-4 items-start mt-2">
-                                            <div className="flex items-center register-res-title shrink-0 whitespace-nowrap">
-                                              ठराव -
+                                          <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 items-baseline sm:items-start mt-2">
+                                             <div className="flex items-center register-res-title shrink-0 whitespace-nowrap font-bold text-slate-900">
+                                               ठराव -
                                               <input
                                                 type="number"
                                                 value={res.resolutionNo}
@@ -2460,11 +2952,11 @@ function TeacherMeetingPage() {
                                                 )
                                               }
                                               placeholder="ठरावाचा सविस्तर तपशील प्रविष्ट करा..."
-                                              className="bg-transparent border-none outline-none text-slate-700 text-justify w-full resize-y min-h-[6rem]"
+                                              className="bg-transparent border-none outline-none text-slate-700 text-left sm:text-justify w-full resize-y min-h-[6rem] leading-relaxed"
                                             />
                                           </div>
 
-                                          <div className="pl-[6.5rem] mt-3 space-y-2 font-bold text-slate-700">
+                                          <div className="pl-1 sm:pl-[6.5rem] mt-3 space-y-2 font-bold text-slate-700">
                                             <div className="flex items-center gap-2">
                                               <span>• सूचक :</span>
                                               <select
@@ -2539,7 +3031,7 @@ function TeacherMeetingPage() {
                                     )}
 
                                     {/* ऐन वेळेचे आभार प्रदर्शन व सभा सांगता परिच्छेद (Editable) */}
-                                    <div className="mt-8 pt-4 border-t border-dashed border-slate-350">
+                                    <div className="mt-8 pt-4 border-t border-dashed border-slate-350 register-outro-block">
                                       <textarea
                                         value={editOutroText}
                                         onChange={(e) => setEditOutroText(e.target.value)}
@@ -2554,35 +3046,43 @@ function TeacherMeetingPage() {
                                 // --- READ / PRINT REGISTER NOTEBOOK VIEW ---
                                 <div className="space-y-8 select-text">
                                   {/* Meeting Ledger Letterhead */}
-                                  <div className="text-center pb-4 pt-2">
-                                    <h1 className="text-3xl font-black text-slate-900 border-b-2 border-slate-800 pb-2 tracking-wide inline-block px-8">
-                                      मासिक सभा इतिवृत्त नोंदवही
-                                    </h1>
+                                  <div className="text-center pb-3 pt-1 space-y-1">
+                                    <div className="text-base sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-snug break-words px-1">
+                                      {selectedPastMeeting?.committeeName || currentCommName || selectedCommittee?.name || "शाळा व्यवस्थापन समिती (SMC)"}
+                                    </div>
+                                    <div className="flex justify-center">
+                                      <h1 className="text-sm sm:text-lg md:text-2xl font-black text-slate-900 border-b-2 border-slate-800 pb-1 tracking-wide inline-block px-2 sm:px-6 break-words">
+                                        मासिक सभा इतिवृत्त नोंदवही {(() => {
+                                          const mName = getResolvedMonthName(selectedPastMeeting, selectedMonth, selectedPastMeeting?.date);
+                                          return mName ? `– माहे : ${mName}` : "";
+                                        })()}
+                                      </h1>
+                                    </div>
                                   </div>
 
                                   {/* Meeting Metadata Header (Read/Print View) */}
-                                  <div className="flex flex-wrap items-center justify-between gap-4 border-b-2 border-slate-300 pb-4 mb-4 text-sm md:text-base font-bold text-slate-800 tracking-tight font-sans">
+                                  <div className="flex flex-wrap items-center justify-between gap-y-2.5 gap-x-4 border-b-2 border-slate-300 pb-4 mb-4 text-xs sm:text-sm md:text-base font-bold text-slate-800 tracking-tight font-sans">
                                     <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                      <span className="text-slate-900 font-black text-sm md:text-base shrink-0">
+                                      <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
                                         शैक्षणिक वर्ष:
                                       </span>
-                                      <span className="underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-sm md:text-base">
+                                      <span className="underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base">
                                         {selectedPastMeeting.academicYear || "________"}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                      <span className="text-slate-900 font-black text-sm md:text-base shrink-0">
+                                      <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
                                         सभा क्रमांक:
                                       </span>
-                                      <span className="underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-sm md:text-base">
+                                      <span className="underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base">
                                         {selectedPastMeeting.meetingNumber || "________"}
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                      <span className="text-slate-900 font-black text-sm md:text-base shrink-0">
+                                    <div className="flex items-baseline gap-1.5 max-w-full flex-wrap sm:flex-nowrap">
+                                      <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
                                         सचिव/मुख्याध्यापक:
                                       </span>
-                                      <span className="underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-sm md:text-base">
+                                      <span className="underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base break-words">
                                         {selectedPastMeeting.headmasterName || "________"}
                                       </span>
                                     </div>
@@ -2598,17 +3098,20 @@ function TeacherMeetingPage() {
                                   {selectedPastMeeting.members &&
                                     selectedPastMeeting.members.length > 0 && (
                                       <div className="space-y-4">
-                                        <div className="w-full">
-                                          <table className="register-table w-full table-fixed">
+                                        <div className="text-[11px] text-slate-400 font-sans sm:hidden mb-1 flex items-center gap-1">
+                                          <span>👉</span> तक्ता पूर्ण पाहण्यासाठी डावीकडे सरकवा
+                                        </div>
+                                        <div className="w-full overflow-x-auto no-scrollbar pb-1">
+                                          <table className="register-table min-w-[500px] w-full">
                                             <thead>
                                               <tr className="bg-slate-100">
-                                                <th style={{ width: '5%', whiteSpace: 'nowrap' }} className="text-center px-1 py-2 whitespace-nowrap">
+                                                <th style={{ width: '10%' }} className="text-center px-2 py-2 whitespace-nowrap">
                                                   अ.क्र.
                                                 </th>
                                                 <th style={{ width: '38%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
-                                                <th style={{ width: '27%' }} className="text-left px-2 py-2">पदनाम</th>
-                                                <th style={{ width: '10%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap role-cell">पद</th>
-                                                <th style={{ width: '20%', whiteSpace: 'nowrap' }} className="text-center px-2 py-2 whitespace-nowrap">
+                                                <th style={{ width: '26%' }} className="text-left px-2 py-2">पदनाम</th>
+                                                <th style={{ width: '12%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap role-cell">पद</th>
+                                                <th style={{ width: '14%', whiteSpace: 'nowrap' }} className="text-center px-2 py-2 whitespace-nowrap">
                                                   स्वाक्षरी
                                                 </th>
                                               </tr>
@@ -2652,7 +3155,7 @@ function TeacherMeetingPage() {
                                               key={index}
                                               className="register-res-item"
                                             >
-                                              <div className="flex gap-4 items-start">
+                                              <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 items-baseline sm:items-start">
                                                 <span className="register-res-title shrink-0">
                                                   विषय - {res.subjectNo} :
                                                 </span>
@@ -2660,15 +3163,15 @@ function TeacherMeetingPage() {
                                                   {res.subject}
                                                 </span>
                                               </div>
-                                              <div className="flex gap-4 items-start mt-2">
-                                                <span className="register-res-title shrink-0">
-                                                  ठराव - {res.resolutionNo} :
-                                                </span>
-                                                <span className="text-slate-700 text-justify">
-                                                  {res.resolution}
-                                                </span>
-                                              </div>
-                                              <div className="pl-[6.5rem] mt-3 space-y-1 font-bold text-slate-700">
+                                              <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 items-baseline sm:items-start mt-2">
+                                                 <span className="register-res-title shrink-0 font-bold text-slate-900">
+                                                   ठराव - {res.resolutionNo} :
+                                                 </span>
+                                                 <span className="text-slate-700 text-left sm:text-justify leading-relaxed break-words">
+                                                   {res.resolution}
+                                                 </span>
+                                               </div>
+                                              <div className="pl-1 sm:pl-[6.5rem] mt-3 space-y-1 font-bold text-slate-700 text-sm sm:text-base">
                                                 <p>
                                                   • सूचक :{" "}
                                                   <span className="text-slate-900">
@@ -2688,8 +3191,8 @@ function TeacherMeetingPage() {
                                         )}
 
                                         {/* ऐन वेळेचे आभार प्रदर्शन व सभा सांगता परिच्छेद */}
-                                        <div className="mt-8 pt-4 border-t border-dashed border-slate-350">
-                                          <p className="text-slate-900 font-bold text-justify leading-relaxed text-[16px] sm:text-lg pl-4">
+                                        <div className="mt-8 pt-4 border-t border-dashed border-slate-350 register-outro-block">
+                                          <p className="text-slate-900 font-bold text-left sm:text-justify leading-relaxed text-[15px] sm:text-lg pl-1 sm:pl-4 break-words">
                                             {selectedPastMeeting.outroText || "ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले."}
                                           </p>
                                         </div>
@@ -3698,7 +4201,20 @@ function TeacherMeetingPage() {
                                                     )
                                                   }
                                                   placeholder="ठरावाचा सविस्तर तपशील लिहा..."
-                                                  className="w-full h-40 px-5 py-4 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg placeholder-slate-400 resize-y leading-relaxed"
+                                                  rows={4}
+                                                   data-min-height="120"
+                                                   ref={(el) => {
+                                                     if (el) {
+                                                       el.style.height = "auto";
+                                                       el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
+                                                     }
+                                                   }}
+                                                   onInput={(e) => {
+                                                     const target = e.currentTarget;
+                                                     target.style.height = "auto";
+                                                     target.style.height = `${Math.max(target.scrollHeight, 120)}px`;
+                                                   }}
+                                                   className="auto-expand-input w-full min-h-[120px] px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base sm:text-lg placeholder-slate-400 overflow-hidden resize-none leading-relaxed [field-sizing:content]"
                                                 />
                                               </div>
 
@@ -3922,7 +4438,20 @@ function TeacherMeetingPage() {
                                                 )
                                               }
                                               placeholder="ठरावाचा सविस्तर तपशील लिहा..."
-                                              className="w-full h-40 px-5 py-4 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg placeholder-slate-400 resize-y leading-relaxed"
+                                              rows={4}
+                                                   data-min-height="120"
+                                                   ref={(el) => {
+                                                     if (el) {
+                                                       el.style.height = "auto";
+                                                       el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
+                                                     }
+                                                   }}
+                                                   onInput={(e) => {
+                                                     const target = e.currentTarget;
+                                                     target.style.height = "auto";
+                                                     target.style.height = `${Math.max(target.scrollHeight, 120)}px`;
+                                                   }}
+                                                   className="auto-expand-input w-full min-h-[120px] px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base sm:text-lg placeholder-slate-400 overflow-hidden resize-none leading-relaxed [field-sizing:content]"
                                             />
                                           </div>
 
@@ -4395,9 +4924,18 @@ function TeacherMeetingPage() {
                           <button
                             type="button"
                             onClick={handleDownloadInvitationPdf}
-                            className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-2xl px-12 py-4 shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all text-base font-black uppercase tracking-wider flex items-center gap-3 cursor-pointer"
+                            disabled={isGeneratingInvitationPdf}
+                            className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-2xl px-12 py-4 shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all text-base font-black uppercase tracking-wider flex items-center gap-3 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                           >
-                            <Download size={22} /> निमंत्रण पत्र PDF डाउनलोड करा
+                            {isGeneratingInvitationPdf ? (
+                              <>
+                                <Loader2 size={22} className="animate-spin" /> निमंत्रण पत्र डाऊनलोड होत आहे...
+                              </>
+                            ) : (
+                              <>
+                                <Download size={22} /> निमंत्रण पत्र PDF डाउनलोड करा
+                              </>
+                            )}
                           </button>
                         </div>
 

@@ -417,14 +417,25 @@ function AdminMeetingTemplates() {
                         <label className="text-sm font-black text-slate-700 tracking-wide block">
                           विषय (Subject Title)
                         </label>
-                        <input
-                          type="text"
+                        <textarea
+                          rows={2}
                           value={res.subject}
+                          ref={(el) => {
+                            if (el) {
+                              el.style.height = "auto";
+                              el.style.height = `${Math.max(el.scrollHeight, 48)}px`;
+                            }
+                          }}
+                          onInput={(e) => {
+                            const target = e.currentTarget;
+                            target.style.height = "auto";
+                            target.style.height = `${Math.max(target.scrollHeight, 48)}px`;
+                          }}
                           onChange={(e) =>
                             handleUpdateField(index, "subject", e.target.value)
                           }
                           placeholder="उदा. मागील सभेचे इतिवृत्त वाचून मंजूर करणेबाबत."
-                          className="w-full px-5 py-3 border border-slate-300 rounded-xl outline-none focus:border-violet-600 font-bold text-stone-900 bg-white text-base placeholder-slate-400"
+                          className="w-full min-h-[48px] px-5 py-3 border border-slate-300 rounded-xl outline-none focus:border-violet-600 font-bold text-stone-900 bg-white text-base placeholder-slate-400 overflow-hidden resize-none leading-relaxed [field-sizing:content]"
                         />
                       </div>
 
@@ -433,12 +444,24 @@ function AdminMeetingTemplates() {
                           ठराव (Resolution Details)
                         </label>
                         <textarea
+                          rows={4}
                           value={res.resolution || ""}
+                          ref={(el) => {
+                            if (el) {
+                              el.style.height = "auto";
+                              el.style.height = `${Math.max(el.scrollHeight, 100)}px`;
+                            }
+                          }}
+                          onInput={(e) => {
+                            const target = e.currentTarget;
+                            target.style.height = "auto";
+                            target.style.height = `${Math.max(target.scrollHeight, 100)}px`;
+                          }}
                           onChange={(e) =>
                             handleUpdateField(index, "resolution", e.target.value)
                           }
                           placeholder="उदा. सविस्तर विचारविनिमय करून मागील सभेचे इतिवृत्त सर्वानुमते मंजूर करण्यात आले..."
-                          className="w-full h-32 px-5 py-3 border border-slate-300 rounded-xl outline-none focus:border-violet-600 font-bold text-stone-900 bg-white text-base placeholder-slate-400 resize-y leading-relaxed"
+                          className="w-full min-h-[100px] px-5 py-3 border border-slate-300 rounded-xl outline-none focus:border-violet-600 font-bold text-stone-900 bg-white text-base placeholder-slate-400 overflow-hidden resize-none leading-relaxed [field-sizing:content]"
                         />
                       </div>
                     </div>
