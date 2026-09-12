@@ -13140,15 +13140,15 @@ function TeacherMDMPage() {
 
                     {/* Top Control Card matching Screenshot 2 */}
                     <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                      <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
                           <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
                             मासिक अहवाल प्रकार निवडा
                           </label>
                           <select
                             value={monthlyMdmReportType}
                             onChange={(e) => setMonthlyMdmReportType(e.target.value)}
-                            className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 outline-none"
+                            className="w-full sm:w-auto max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 outline-none truncate"
                           >
                             <option value="daily_tandul_register">दैनंदिन तांदूळ खर्च नोंदवही (भाग १)</option>
                             <option value="poshan_ahar_daily_entry">पोषण आहार दैनंदिन नोंदी</option>
@@ -13159,14 +13159,14 @@ function TeacherMDMPage() {
                         </div>
 
                         {/* Class Section Selection (1 to 5 / 6 to 8) */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
                           <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
                             इयत्ता गट
                           </label>
                           <select
                             value={monthlyReportClass}
                             onChange={(e) => setMonthlyReportClass(e.target.value as "1 To 5" | "6 To 8")}
-                            className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer"
+                            className="w-full sm:w-auto max-w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer truncate"
                           >
                             <option value="1 To 5">इयत्ता १ ली ते ५ वी (प्राथमिक)</option>
                             <option value="6 To 8">इयत्ता ६ वी ते ८ वी (उच्च प्राथमिक)</option>
@@ -13241,21 +13241,23 @@ function TeacherMDMPage() {
                           />
                         </div>
 
-                        <button
-                          onClick={() => {
-                            toast.success("अहवाल अद्ययावत केला!");
-                          }}
-                          className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all cursor-pointer"
-                        >
-                          View report
-                        </button>
+                        <div className="flex items-center gap-2 w-full sm:w-auto pt-1 sm:pt-0">
+                          <button
+                            onClick={() => {
+                              toast.success("अहवाल अद्ययावत केला!");
+                            }}
+                            className="flex-1 sm:flex-initial px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all cursor-pointer text-center"
+                          >
+                            View report
+                          </button>
 
-                        <button
-                          onClick={handleMonthlyMdmPdfDownload}
-                          className="px-5 py-2 bg-slate-700 hover:bg-slate-800 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all cursor-pointer"
-                        >
-                          Download PDF
-                        </button>
+                          <button
+                            onClick={handleMonthlyMdmPdfDownload}
+                            className="flex-1 sm:flex-initial px-5 py-2 bg-slate-700 hover:bg-slate-800 text-white font-extrabold text-xs rounded-lg shadow-sm transition-all cursor-pointer text-center"
+                          >
+                            Download PDF
+                          </button>
+                        </div>
                       </div>
 
                     </div>
@@ -13450,7 +13452,7 @@ function TeacherMDMPage() {
 
                               {/* Daily Rice Consumption Table */}
                               <div className="w-full flex-1 flex flex-col overflow-x-auto">
-                                <table className="w-full h-full min-h-[850px] border-collapse border border-slate-700 text-center text-[15px] font-black table-fixed">
+                                <table className="w-full min-w-[750px] sm:min-w-[850px] h-full min-h-[850px] border-collapse border border-slate-700 text-center text-[14px] md:text-[15px] font-black table-fixed">
                                   <thead>
                                     <tr className="bg-slate-100 text-slate-900 font-black border-b border-slate-700 text-[15px]">
                                       <th className="border-r border-slate-700 py-2 px-0.5 w-[4%] font-black">अ.नं.</th>
@@ -13874,8 +13876,8 @@ function TeacherMDMPage() {
                                 </div>
                               </div>
 
-                              <div className="w-full">
-                                <table className="w-full border-collapse border border-slate-700 text-center text-xs font-medium" style={{ tableLayout: 'fixed', width: '100%' }}>
+                              <div className="w-full overflow-x-auto">
+                                <table className="w-full min-w-[1100px] border-collapse border border-slate-700 text-center text-xs font-medium" style={{ tableLayout: 'fixed' }}>
                                   <colgroup>
                                     <col style={{ width: "3.5%" }} />
                                     <col style={{ width: "14%" }} />
@@ -14105,7 +14107,7 @@ function TeacherMDMPage() {
                               </div>
 
                               <div className="w-full overflow-x-auto">
-                                <table className="w-full border-collapse border border-black text-center text-xs font-bold table-fixed text-black">
+                                <table className="w-full min-w-[850px] border-collapse border border-black text-center text-xs font-bold table-fixed text-black">
                                   <colgroup>
                                     <col style={{ width: '4%' }} />
                                     <col style={{ width: '20%' }} />
@@ -14804,7 +14806,7 @@ function TeacherMDMPage() {
                                       </div>
 
                                       {/* 18-Column Main Table matching Image 2 with explicit colgroup */}
-                                      <div className="w-full">
+                                      <div className="w-full overflow-x-auto">
                                         <table className="w-full min-w-[1100px] border-collapse border border-black text-center text-xs font-sans table-fixed">
                                           <colgroup>
                                             <col style={{ width: "3.2%" }} />
@@ -15115,7 +15117,7 @@ function TeacherMDMPage() {
 
                                       {/* Main Table */}
                                       <div className="w-full flex-1 flex flex-col overflow-x-auto">
-                                        <table className="w-full h-full min-h-[850px] border-collapse border border-black text-center text-[15px] font-sans font-black table-fixed">
+                                        <table className="w-full min-w-[750px] sm:min-w-[850px] h-full min-h-[850px] border-collapse border border-black text-center text-[14px] md:text-[15px] font-sans font-black table-fixed">
                                           <thead>
                                             <tr className="bg-slate-100 font-black text-slate-900 border-b border-black text-[15px]">
                                               <th className="border border-black py-1 px-0.5 w-[4%] font-black">अ.न.</th>
@@ -15300,7 +15302,7 @@ function TeacherMDMPage() {
                                       <span className="text-[10px] text-slate-500 font-normal">MDM Utilization Register</span>
                                     </div>
                                               <div className="w-full overflow-x-auto">
-                                                <table className="w-full border-collapse border border-black text-center text-[9.5px] font-sans">
+                                                <table className="w-full min-w-[950px] border-collapse border border-black text-center text-[9.5px] font-sans">
                                                   <thead>
                                                     <tr className="bg-slate-100 font-extrabold text-slate-900 border-b border-black">
                                                       <th className="border border-black p-1 min-w-[30px]" rowSpan={2}>अ.न.</th>

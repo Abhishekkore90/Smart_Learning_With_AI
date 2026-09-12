@@ -1594,16 +1594,27 @@ function TeacherMeetingPage() {
         return;
       }
 
-      const isMobile =
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent || navigator.vendor || ""
-        ) || (typeof window !== "undefined" && window.innerWidth <= 768);
+      // 2. Direct Blob Download (Works on Mobile Safari, Android Chrome, and Desktop without page navigation)
+      if (pdfBlob) {
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = filename;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (document.body.contains(link)) document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 3000);
+        return;
+      }
 
-      // 2. On Mobile / Android WebViews:
-      if (isMobile) {
-        // Create an anchor pointing to the genuine HTTPS CDN URL
+      // 3. Fallback for external CDN URL (only if valid HTTP/HTTPS URL)
+      if (cdnUrl && (cdnUrl.startsWith("http://") || cdnUrl.startsWith("https://"))) {
         const link = document.createElement("a");
         link.href = cdnUrl;
+        link.download = filename;
         link.setAttribute("download", filename);
         link.target = "_blank";
         link.rel = "noopener noreferrer";
@@ -1612,46 +1623,16 @@ function TeacherMeetingPage() {
         setTimeout(() => {
           if (document.body.contains(link)) document.body.removeChild(link);
         }, 1500);
-
-        // For Android WebViews with DownloadListener: navigating to HTTPS URL of the PDF
-        // allows Android DownloadManager to intercept and save directly into /storage/emulated/0/Download
-        setTimeout(() => {
-          try {
-            window.location.href = cdnUrl;
-          } catch (navErr) {
-            console.warn("Direct location navigation:", navErr);
-          }
-        }, 300);
-        return;
       }
-
-      // 3. On Desktop: trigger standard browser download
+    } catch (err) {
+      console.error("Error in triggerDeviceDownload:", err);
       if (pdfBlob) {
         const blobUrl = URL.createObjectURL(pdfBlob);
         const link = document.createElement("a");
         link.href = blobUrl;
         link.download = filename;
-        link.target = "_blank";
-        document.body.appendChild(link);
         link.click();
-        setTimeout(() => {
-          if (document.body.contains(link)) document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
-        }, 3000);
-      } else {
-        const link = document.createElement("a");
-        link.href = cdnUrl;
-        link.download = filename;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => {
-          if (document.body.contains(link)) document.body.removeChild(link);
-        }, 1500);
       }
-    } catch (err) {
-      console.error("Error in triggerDeviceDownload:", err);
-      window.open(cdnUrl, "_blank");
     }
   };
 
@@ -3105,11 +3086,11 @@ function TeacherMeetingPage() {
                                           <table className="register-table min-w-[500px] w-full">
                                             <thead>
                                               <tr className="bg-slate-100">
-                                                <th style={{ width: '10%' }} className="text-center px-2 py-2 whitespace-nowrap">
+                                                <th style={{ width: '5%' }} className="text-center px-2 py-2 whitespace-nowrap">
                                                   अ.क्र.
                                                 </th>
-                                                <th style={{ width: '38%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
-                                                <th style={{ width: '26%' }} className="text-left px-2 py-2">पदनाम</th>
+                                                <th style={{ width: '36%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
+                                                <th style={{ width: '33%' }} className="text-left px-2 py-2">पदनाम</th>
                                                 <th style={{ width: '12%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap role-cell">पद</th>
                                                 <th style={{ width: '14%', whiteSpace: 'nowrap' }} className="text-center px-2 py-2 whitespace-nowrap">
                                                   स्वाक्षरी
@@ -3810,7 +3791,19 @@ function TeacherMeetingPage() {
                                           setIsIntroEdited(true);
                                         }}
                                         placeholder="प्रास्ताविक मजकूर प्रविष्ट करा..."
-                                        className="w-full h-28 px-5 py-4 border-2 border-slate-300 rounded-xl bg-white font-extrabold text-slate-950 text-base leading-relaxed outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 resize-y shadow-inner"
+                                        rows={3}
+                                        ref={(el) => {
+                                          if (el) {
+                                            el.style.height = "auto";
+                                            el.style.height = `${Math.max(el.scrollHeight, 100)}px`;
+                                          }
+                                        }}
+                                        onInput={(e) => {
+                                          const target = e.currentTarget;
+                                          target.style.height = "auto";
+                                          target.style.height = `${Math.max(target.scrollHeight, 100)}px`;
+                                        }}
+                                        className="auto-expand-input w-full min-h-[100px] px-4 sm:px-5 py-3.5 border-2 border-slate-300 rounded-xl bg-white font-extrabold text-slate-950 text-base sm:text-lg leading-relaxed outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 overflow-hidden resize-none [field-sizing:content]"
                                       />
                                     </div>
                                   </div>
@@ -4172,9 +4165,8 @@ function TeacherMeetingPage() {
                                                 <label className="text-base font-black text-slate-800 tracking-wider block">
                                                   विषय (Subject Title)
                                                 </label>
-                                                <input
-                                                  type="text"
-                                                  value={res.subject}
+                                                <textarea
+                                                  value={res.subject || ""}
                                                   onChange={(e) =>
                                                     handleUpdateFormResolutionField(
                                                       index,
@@ -4183,7 +4175,19 @@ function TeacherMeetingPage() {
                                                     )
                                                   }
                                                   placeholder="उदा. मागील सभेचे इतिवृत्त वाचून मंजूर करणेबाबत."
-                                                  className="w-full px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg placeholder-slate-400"
+                                                  rows={2}
+                                                  ref={(el) => {
+                                                    if (el) {
+                                                      el.style.height = "auto";
+                                                      el.style.height = `${Math.max(el.scrollHeight, 56)}px`;
+                                                    }
+                                                  }}
+                                                  onInput={(e) => {
+                                                    const target = e.currentTarget;
+                                                    target.style.height = "auto";
+                                                    target.style.height = `${Math.max(target.scrollHeight, 56)}px`;
+                                                  }}
+                                                  className="auto-expand-input w-full min-h-[56px] px-4 sm:px-5 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base sm:text-lg placeholder-slate-400 overflow-hidden resize-none leading-snug [field-sizing:content]"
                                                 />
                                               </div>
 
@@ -4407,9 +4411,8 @@ function TeacherMeetingPage() {
                                             <label className="text-base font-black text-slate-800 tracking-wider block">
                                               विषय (Subject Title)
                                             </label>
-                                            <input
-                                              type="text"
-                                              value={res.subject}
+                                            <textarea
+                                              value={res.subject || ""}
                                               onChange={(e) =>
                                                 handleUpdateFormResolutionField(
                                                   index,
@@ -4418,7 +4421,19 @@ function TeacherMeetingPage() {
                                                 )
                                               }
                                               placeholder="उदा. मागील सभेचे इतिवृत्त वाचून मंजूर करणेबाबत."
-                                              className="w-full px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg placeholder-slate-400"
+                                              rows={2}
+                                              ref={(el) => {
+                                                if (el) {
+                                                  el.style.height = "auto";
+                                                  el.style.height = `${Math.max(el.scrollHeight, 56)}px`;
+                                                }
+                                              }}
+                                              onInput={(e) => {
+                                                const target = e.currentTarget;
+                                                target.style.height = "auto";
+                                                target.style.height = `${Math.max(target.scrollHeight, 56)}px`;
+                                              }}
+                                              className="auto-expand-input w-full min-h-[56px] px-4 sm:px-5 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base sm:text-lg placeholder-slate-400 overflow-hidden resize-none leading-snug [field-sizing:content]"
                                             />
                                           </div>
 
@@ -4534,7 +4549,19 @@ function TeacherMeetingPage() {
                                         value={formOutroText}
                                         onChange={(e) => setFormOutroText(e.target.value)}
                                         placeholder="उदा. ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून..."
-                                        className="w-full h-32 px-5 py-4 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg placeholder-slate-400 resize-y leading-relaxed"
+                                        rows={3}
+                                        ref={(el) => {
+                                          if (el) {
+                                            el.style.height = "auto";
+                                            el.style.height = `${Math.max(el.scrollHeight, 110)}px`;
+                                          }
+                                        }}
+                                        onInput={(e) => {
+                                          const target = e.currentTarget;
+                                          target.style.height = "auto";
+                                          target.style.height = `${Math.max(target.scrollHeight, 110)}px`;
+                                        }}
+                                        className="auto-expand-input w-full min-h-[110px] px-4 sm:px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base sm:text-lg placeholder-slate-400 overflow-hidden resize-none leading-relaxed [field-sizing:content]"
                                       />
                                     </div>
                                   </div>
@@ -5044,3 +5071,5 @@ function TeacherMeetingPage() {
     </div>
   );
 }
+
+
