@@ -1791,13 +1791,13 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           </div>
 
           {/* Yellow Suvichar Card */}
-          <div className="text-xs text-amber-950 bg-amber-50/95 p-3 rounded-xl border border-amber-300 text-center shadow-sm">
-            <strong className="text-amber-900 font-black text-xs uppercase tracking-wider">आजचा सुविचार : </strong>
+          <div className="text-xs text-amber-950 bg-amber-50/95 p-2.5 sm:p-3 rounded-2xl border border-amber-300 text-center shadow-xs flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
+            <strong className="text-amber-900 font-black text-xs uppercase tracking-wider shrink-0">आजचा सुविचार : </strong>
             <span 
               contentEditable
               suppressContentEditableWarning
               onBlur={(e) => handleThoughtChange(e.currentTarget.innerText.trim())}
-              className="font-extrabold text-sm text-amber-900 not-italic hover:bg-amber-100/80 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text inline-block min-w-[200px]"
+              className="font-extrabold text-xs sm:text-sm text-amber-900 not-italic hover:bg-amber-100/80 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text max-w-full break-words"
               title="सुविचार बदलण्यासाठी येथे क्लिक करा"
             >
               {cleanThoughtText(todayDiary.thought)
@@ -1806,27 +1806,35 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             </span>
           </div>
 
+          {/* Mobile Scroll Indicator */}
+          <div className="flex items-center justify-between text-[11px] text-amber-900 bg-amber-50/90 px-3 py-1.5 rounded-xl border border-amber-200 sm:hidden mt-2 font-bold shadow-2xs">
+            <span className="flex items-center gap-1.5">
+              👈 संपूर्ण तक्ता पाहण्यासाठी डावीकडे/उजवीकडे स्क्रोल करा
+            </span>
+            <span className="text-amber-700 font-black text-xs">↔</span>
+          </div>
+
           {/* 7 Columns Table matching Image 2 */}
-          <div className="overflow-x-auto no-scrollbar rounded-xl border-2 border-slate-900 shadow-sm mt-4">
-            <table className="w-full text-sm border-collapse table-fixed border-2 border-slate-900">
+          <div className="overflow-x-auto touch-pan-x rounded-xl border-2 border-slate-900 shadow-sm mt-2 sm:mt-4 max-w-full">
+            <table className="min-w-[720px] w-full text-sm border-collapse border-2 border-slate-900">
               <colgroup>
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "17%" }} />
-                <col style={{ width: "25%" }} />
-                <col style={{ width: "26%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "8%" }} />
+                <col style={{ width: "50px" }} />
+                <col style={{ width: "75px" }} />
+                <col style={{ width: "135px" }} />
+                <col style={{ width: "210px" }} />
+                <col style={{ width: "185px" }} />
+                <col style={{ width: "80px" }} />
+                <col style={{ width: "80px" }} />
               </colgroup>
               <thead className="bg-slate-200 text-slate-950 font-black text-xs md:text-sm border-b-2 border-slate-900">
                 <tr>
-                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">तासिका</th>
-                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">विषय</th>
-                  <th className="py-3 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">अध्यापन मुद्दा / पाठ्यघटक</th>
-                  <th className="py-3 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">अध्ययन निष्पत्ती</th>
-                  <th className="py-3 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">अध्ययन अनुभव</th>
-                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">साधन तंत्रे</th>
-                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black">शैक्षणिक साहित्य</th>
+                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">तासिका</th>
+                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">विषय</th>
+                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">अध्यापन मुद्दा / पाठ्यघटक</th>
+                  <th className="py-2.5 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">अध्ययन निष्पत्ती</th>
+                  <th className="py-2.5 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">अध्ययन अनुभव</th>
+                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">साधन तंत्रे</th>
+                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black break-words">शैक्षणिक साहित्य</th>
                 </tr>
               </thead>
               <tbody className="divide-y-2 divide-slate-400 font-medium text-slate-900 bg-white text-xs md:text-sm">

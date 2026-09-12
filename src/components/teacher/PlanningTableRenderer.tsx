@@ -556,7 +556,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
     // --- ANNUAL PLANNING (वार्षिक नियोजन) MATRIX BUILDER ---
     if (!isMonthlyPlan) {
-      let activeMonthName = "";
+      // Step 1: Divide rows into Month blocks based on column 0 month names
+      const monthBlocks: { startR: number; endR: number; monthName: string }[] = [];
+      let currentMonth = "";
+      let blockStart = 0;
 
       for (let r = 0; r < numRows; r++) {
         let cell0 = String(rows[r]?.[0] || "").trim();
@@ -564,37 +567,116 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
         let isNewMonth = false;
         if (cell0 && isMarathiMonth(cell0)) {
-          if (normalizeForCompare(cell0) !== normalizeForCompare(activeMonthName)) {
-            activeMonthName = cell0;
+          if (normalizeForCompare(cell0) !== normalizeForCompare(currentMonth)) {
+            currentMonth = cell0;
             isNewMonth = true;
           }
         } else if (cell0) {
-          activeMonthName = cell0;
+          currentMonth = cell0;
           isNewMonth = true;
         }
 
-        // Column 0: Month cell (display month name on start of new month/first row)
-        matrix[r][0] = {
-          rowSpan: 1,
-          skip: false,
-          displayValue: isNewMonth ? activeMonthName : (r === 0 && activeMonthName ? activeMonthName : ""),
-          isMonthHeader: isNewMonth || (r === 0 && !!activeMonthName),
-        };
-
-        // Columns 1 to numCols - 1: Individual row cells for complete borders & 100% data preservation
-        for (let cIdx = 1; cIdx < numCols; cIdx++) {
-          const rawVal = String(rows[r]?.[cIdx] || "").trim();
-          const val = (rawVal === "null" || rawVal === "undefined") ? "" : rawVal;
-          const isExam = isExamOrAssessmentText(val);
-
-          matrix[r][cIdx] = {
-            rowSpan: 1,
-            skip: false,
-            displayValue: val || "-",
-            isExam,
-          };
+        if (isNewMonth && r > 0) {
+          monthBlocks.push({
+            startR: blockStart,
+            endR: r,
+            monthName: rows[blockStart]?.[0] || currentMonth,
+          });
+          blockStart = r;
         }
       }
+      if (numRows > 0) {
+        monthBlocks.push({
+          startR: blockStart,
+          endR: numRows,
+          monthName: rows[blockStart]?.[0] || currentMonth,
+        });
+      }
+
+      // Step 2: Populate matrix with rowSpans for Columns 0, 1, 2, 3 per Month block
+      monthBlocks.forEach(({ startR, endR, monthName }) => {
+        const monthSpan = endR - startR;
+
+        // Col 0: Month name (rowSpan across monthSpan)
+        matrix[startR][0] = {
+          rowSpan: monthSpan,
+          skip: false,
+          displayValue: monthName || "-",
+          isMonthHeader: true,
+        };
+        for (let k = startR + 1; k < endR; k++) {
+          matrix[k][0] = { rowSpan: 1, skip: true, displayValue: "" };
+        }
+
+        // Cols 1, 2, 3 (Weeks, Working Days, Periods) - group identical values into rowSpans
+        for (let cIdx = 1; cIdx <= 3 && cIdx < numCols; cIdx++) {
+          const firstVal = String(rows[startR]?.[cIdx] || "").trim();
+          let allSame = true;
+
+          for (let k = startR + 1; k < endR; k++) {
+            const valK = String(rows[k]?.[cIdx] || "").trim();
+            if (valK && valK !== "-" && normalizeForCompare(valK) !== normalizeForCompare(firstVal)) {
+              allSame = false;
+              break;
+            }
+          }
+
+          if (allSame) {
+            const displayV = (firstVal === "null" || firstVal === "undefined" || !firstVal) ? "-" : firstVal;
+            matrix[startR][cIdx] = {
+              rowSpan: monthSpan,
+              skip: false,
+              displayValue: displayV,
+            };
+            for (let k = startR + 1; k < endR; k++) {
+              matrix[k][cIdx] = { rowSpan: 1, skip: true, displayValue: "" };
+            }
+          } else {
+            // Consecutive matching sub-spans
+            let subR = startR;
+            while (subR < endR) {
+              const subVal = String(rows[subR]?.[cIdx] || "").trim();
+              let subSpan = 1;
+              while (
+                subR + subSpan < endR &&
+                normalizeForCompare(rows[subR + subSpan]?.[cIdx]) === normalizeForCompare(subVal)
+              ) {
+                subSpan++;
+              }
+
+              const displayV = (subVal === "null" || subVal === "undefined" || !subVal) ? "-" : subVal;
+              matrix[subR][cIdx] = {
+                rowSpan: subSpan,
+                skip: false,
+                displayValue: displayV,
+              };
+              for (let k = 1; k < subSpan; k++) {
+                matrix[subR + k][cIdx] = { rowSpan: 1, skip: true, displayValue: "" };
+              }
+              subR += subSpan;
+            }
+          }
+        }
+
+        // Cols 4 and above (Topics, Learning Outcomes, Exam Banners, etc.)
+        for (let r = startR; r < endR; r++) {
+          for (let cIdx = 4; cIdx < numCols; cIdx++) {
+            if (!matrix[r][cIdx].skip) {
+              const rawVal = String(rows[r]?.[cIdx] || "").trim();
+              const val = (rawVal === "null" || rawVal === "undefined") ? "" : rawVal;
+              const isExam = isExamOrAssessmentText(val);
+
+              matrix[r][cIdx] = {
+                rowSpan: 1,
+                skip: false,
+                displayValue: val || "-",
+                isExam,
+              };
+            }
+          }
+        }
+      });
+
       return matrix;
     }
 
@@ -663,37 +745,35 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         const dVal = String(rows[r]?.[0] || "").trim();
         matrix[r][0] = { rowSpan: 1, skip: false, displayValue: dVal || "-" };
 
-        // Col 1: Main Topic cell - span consecutive sub-rows belonging to same main topic
-        if (!matrix[r][1].skip) {
-          const topicVal = String(rows[r]?.[1] || "").trim();
-          if (isEmptyValue(topicVal)) {
-            matrix[r][1] = { rowSpan: 1, skip: false, displayValue: "-" };
-          } else {
-            let span = 1;
-            while (
-              r + span < numRows &&
-              !isExamOrAssessmentRow(rows[r + span]) &&
-              isEmptyValue(rows[r + span]?.[1])
-            ) {
-              span++;
-            }
-            matrix[r][1] = { rowSpan: span, skip: false, displayValue: topicVal };
-            for (let k = 1; k < span; k++) {
-              matrix[r + k][1] = { rowSpan: 1, skip: true, displayValue: "" };
-            }
-          }
-        }
-
-        // Columns 2 to numCols - 1: Individual cells (rowSpan: 1) to guarantee continuous horizontal & vertical border lines
-        for (let cIdx = 2; cIdx < numCols; cIdx++) {
+        // Columns 1 to numCols - 1: span consecutive sub-rows if sub-row has empty cell in this column
+        for (let cIdx = 1; cIdx < numCols; cIdx++) {
           if (!matrix[r][cIdx].skip) {
             const rawVal = String(rows[r]?.[cIdx] || "").trim();
             const val = (rawVal === "null" || rawVal === "undefined") ? "" : rawVal;
-            matrix[r][cIdx] = {
-              rowSpan: 1,
-              skip: false,
-              displayValue: val || "-",
-            };
+
+            if (isEmptyValue(val)) {
+              matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: "-" };
+            } else {
+              let span = 1;
+              while (
+                r + span < numRows &&
+                !isExamOrAssessmentRow(rows[r + span]) &&
+                isEmptyValue(rows[r + span]?.[cIdx]) &&
+                (cIdx === 1 || isEmptyValue(rows[r + span]?.[1]))
+              ) {
+                span++;
+              }
+
+              matrix[r][cIdx] = {
+                rowSpan: span,
+                skip: false,
+                displayValue: val,
+              };
+
+              for (let k = 1; k < span; k++) {
+                matrix[r + k][cIdx] = { rowSpan: 1, skip: true, displayValue: "" };
+              }
+            }
           }
         }
 
@@ -1161,6 +1241,19 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         const tbodyTrs = Array.from(secClone.querySelectorAll("tbody tr")) as HTMLElement[];
         const trBottomsDom = tbodyTrs.map((tr) => tr.getBoundingClientRect().bottom - secRect.top);
 
+        // Identify Month Block Boundaries so month blocks are never sliced in half across pages
+        const monthBlockBottomsDom: number[] = [];
+        tbodyTrs.forEach((tr, index) => {
+          if (tr.getAttribute("data-month-start") === "true" && index > 0) {
+            const prevRowBottom = tbodyTrs[index - 1].getBoundingClientRect().bottom - secRect.top;
+            monthBlockBottomsDom.push(prevRowBottom);
+          }
+        });
+        if (tbodyTrs.length > 0) {
+          const lastRowBottom = tbodyTrs[tbodyTrs.length - 1].getBoundingClientRect().bottom - secRect.top;
+          monthBlockBottomsDom.push(lastRowBottom);
+        }
+
         const secCanvas = await html2canvas(secClone, {
           scale: 2,
           useCORS: true,
@@ -1173,9 +1266,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
         const scaleY = secCanvas.height / (secRect.height || 1);
         const trBottomsCanvas = trBottomsDom.map((y) => y * scaleY);
-        const theadTopCanvas = theadTop * scaleY;
-        const theadBottomCanvas = theadBottom * scaleY;
-        const theadHeightCanvas = theadHeightDom * scaleY;
+        const monthBlockBottomsCanvas = monthBlockBottomsDom.map((y) => y * scaleY);
 
         if (!isFirstPdfPage) {
           pdf.addPage();
@@ -1198,29 +1289,47 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           const secImgData = secCanvas.toDataURL("image/jpeg", 0.98);
           pdf.addImage(secImgData, "JPEG", 10, currentY, pdfWidth, totalSecHeightMm);
         } else {
-          // Break section cleanly into row-aligned slices across pages
+          // Break section cleanly into Month-aligned or Row-aligned slices across pages
           let canvasY = 0;
 
           while (canvasY < secCanvas.height - 2) {
+            // If continuing section on a NEW page, add new page cleanly without extra header banners
+            if (canvasY > 0) {
+              pdf.addPage();
+              currentY = 10;
+            }
+
             const maxAllowedMm = pdfPageHeight - currentY + 10;
             const maxCanvasPx = (maxAllowedMm * secCanvas.width) / pdfWidth;
 
             let sliceHeightPx = 0;
 
             if (canvasY + maxCanvasPx >= secCanvas.height - 2) {
-              // Remaining fits on this page
+              // Remaining subject content fits on this page
               sliceHeightPx = secCanvas.height - canvasY;
             } else {
-              // Find the largest trBottomCanvas that fits within maxCanvasPx
               const targetCanvasY = canvasY + maxCanvasPx;
               let bestSplit = 0;
 
-              for (let k = 0; k < trBottomsCanvas.length; k++) {
-                const b = trBottomsCanvas[k];
-                if (b <= targetCanvasY && b > canvasY + 15 * scaleY) {
-                  bestSplit = b;
-                } else if (b > targetCanvasY) {
+              // Priority 1: Month Block Boundaries (never cut a month in half)
+              for (let k = 0; k < monthBlockBottomsCanvas.length; k++) {
+                const mb = monthBlockBottomsCanvas[k];
+                if (mb <= targetCanvasY && mb > canvasY + 25 * scaleY) {
+                  bestSplit = mb;
+                } else if (mb > targetCanvasY) {
                   break;
+                }
+              }
+
+              // Priority 2: Individual Row Boundaries (fallback if month block is too large)
+              if (bestSplit <= canvasY) {
+                for (let k = 0; k < trBottomsCanvas.length; k++) {
+                  const b = trBottomsCanvas[k];
+                  if (b <= targetCanvasY && b > canvasY + 15 * scaleY) {
+                    bestSplit = b;
+                  } else if (b > targetCanvasY) {
+                    break;
+                  }
                 }
               }
 
@@ -1234,7 +1343,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             // Crop sliceCanvas
             const sliceCanvas = document.createElement("canvas");
             sliceCanvas.width = secCanvas.width;
-            sliceCanvas.height = sliceHeightPx;
+            sliceCanvas.height = Math.ceil(sliceHeightPx);
             const ctx = sliceCanvas.getContext("2d");
             if (ctx) {
               ctx.fillStyle = "#ffffff";
@@ -1250,6 +1359,28 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                 secCanvas.width,
                 sliceHeightPx
               );
+
+              const borderWidth = Math.max(3, Math.round(3 * (secCanvas.width / 1000)));
+
+              // Draw solid closing bottom line across all columns at page break cut boundary
+              if (canvasY + sliceHeightPx < secCanvas.height - 2) {
+                ctx.strokeStyle = "#1e293b";
+                ctx.lineWidth = borderWidth;
+                ctx.beginPath();
+                ctx.moveTo(0, sliceCanvas.height - borderWidth / 2);
+                ctx.lineTo(sliceCanvas.width, sliceCanvas.height - borderWidth / 2);
+                ctx.stroke();
+              }
+
+              // Draw solid top line across all columns at the start of continuation page
+              if (canvasY > 0) {
+                ctx.strokeStyle = "#1e293b";
+                ctx.lineWidth = borderWidth;
+                ctx.beginPath();
+                ctx.moveTo(0, borderWidth / 2);
+                ctx.lineTo(sliceCanvas.width, borderWidth / 2);
+                ctx.stroke();
+              }
             }
 
             const sliceImgData = sliceCanvas.toDataURL("image/jpeg", 0.98);
@@ -1258,11 +1389,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             pdf.addImage(sliceImgData, "JPEG", 10, currentY, pdfWidth, sliceHeightMm);
 
             canvasY += sliceHeightPx;
-
-            if (canvasY < secCanvas.height - 2) {
-              pdf.addPage();
-              currentY = 10;
-            }
+            currentY += sliceHeightMm;
           }
         }
 
@@ -1574,38 +1701,72 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     box-sizing: border-box !important;
                   }
                   .pdf-export-active table {
-                    border-collapse: separate !important;
+                    border-collapse: collapse !important;
                     border-spacing: 0 !important;
-                    border-top: 1.5px solid #0f172a !important;
-                    border-left: 1.5px solid #0f172a !important;
                     width: 100% !important;
+                    border: 1.5px solid #0f172a !important;
+                    background-color: #ffffff !important;
                   }
                   .pdf-export-active tr {
+                    background-color: transparent !important;
+                    background: transparent !important;
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
                   }
                   .pdf-export-active td, .pdf-export-active th {
-                    border-top: none !important;
-                    border-left: none !important;
-                    border-right: 1.5px solid #334155 !important;
-                    border-bottom: 1.5px solid #334155 !important;
+                    border: 1.5px solid #1e293b !important;
+                    background-color: #ffffff !important;
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
                     box-sizing: border-box !important;
                     color: #0f172a !important;
-                    font-size: 13.5px !important;
-                    font-weight: 600 !important;
-                    line-height: 1.5 !important;
-                    padding: 5px 7px !important;
-                    vertical-align: top !important;
+                    font-size: 16.5px !important;
+                    font-weight: 700 !important;
+                    line-height: 1.65 !important;
+                    padding: 10px 10px !important;
                     -webkit-print-color-adjust: exact !important;
                     print-color-adjust: exact !important;
                   }
                   .pdf-export-active th {
                     background-color: #f1f5f9 !important;
                     color: #0f172a !important;
-                    font-size: 14.5px !important;
+                    font-size: 17.5px !important;
                     font-weight: 900 !important;
+                    text-align: center !important;
+                    vertical-align: middle !important;
+                    padding: 12px 10px !important;
+                  }
+                  .pdf-export-active td.text-center,
+                  .pdf-export-active td.align-middle {
+                    vertical-align: middle !important;
+                    text-align: center !important;
+                    font-size: 17px !important;
+                  }
+                  .pdf-export-active td.text-left,
+                  .pdf-export-active td.align-top {
+                    vertical-align: top !important;
+                    text-align: left !important;
+                  }
+                  .pdf-export-active td.bg-amber-50\/40,
+                  .pdf-export-active td.bg-amber-50 {
+                    background-color: #fffbe6 !important;
+                  }
+                  .pdf-export-active .pdf-signature-bar {
+                    padding-top: 24px !important;
+                    margin-top: 20px !important;
+                    border-top: 2px solid #0f172a !important;
+                  }
+                  .pdf-export-active .pdf-sig-title {
+                    font-size: 17px !important;
+                    font-weight: 900 !important;
+                    color: #0f172a !important;
+                    line-height: 1.4 !important;
+                  }
+                  .pdf-export-active .pdf-sig-name {
+                    font-size: 15px !important;
+                    font-weight: 700 !important;
+                    color: #334155 !important;
+                    margin-top: 6px !important;
                   }
                 `}</style>
                 {/* Header Title & School Info Card at START of Document (First Page Only) */}
@@ -1742,12 +1903,19 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                             </thead>
                             <tbody>
                               {filteredRows.length > 0 ? (
-                                filteredRows.map((r, rIdx) => (
-                                  <tr
-                                    key={rIdx}
-                                    className="bg-white hover:bg-slate-50 transition-colors"
-                                    style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
-                                  >
+                                filteredRows.map((r, rIdx) => {
+                                  const isMonthStartRow =
+                                    !isInlineEditing &&
+                                    (isMonthly
+                                      ? (sectionRowMatrix[rIdx]?.[1]?.skip === false || sectionRowMatrix[rIdx]?.[2]?.skip === false) && rIdx > 0
+                                      : sectionRowMatrix[rIdx]?.[0]?.skip === false && (sectionRowMatrix[rIdx]?.[0]?.rowSpan ?? 1) > 1);
+                                  return (
+                                    <tr
+                                      key={rIdx}
+                                      data-month-start={isMonthStartRow ? "true" : undefined}
+                                      className="bg-white hover:bg-slate-50 transition-colors"
+                                      style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
+                                    >
                                     {isInlineEditing ? (
                                       isMonthly ? (
                                         <>
@@ -1910,7 +2078,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                        })
                                     )}
                                   </tr>
-                                ))
+                                );
+                              })
                               ) : (
                                 <tr>
                                   <td colSpan={isInlineEditing ? 7 : 6} className="p-6 text-center text-slate-400 font-bold text-xs">
@@ -1922,14 +2091,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           </table>
                         </div>
                         {/* Signature Bar on EVERY Subject Page */}
-                        <div className="pdf-signature-bar pt-4 border-t border-slate-300 grid grid-cols-2 text-center text-xs font-black text-slate-900">
+                        <div className="pdf-signature-bar pt-6 border-t-2 border-slate-400 grid grid-cols-2 text-center text-sm sm:text-base font-black text-slate-950">
                           <div>
-                            <div>वर्ग शिक्षक स्वाक्षरी</div>
-                            <div className="text-[11px] text-slate-600 font-bold mt-1">({schoolProfile.teacherName || "शिक्षकाचे नाव"})</div>
+                            <div className="pdf-sig-title text-sm sm:text-base font-black text-slate-950">वर्ग शिक्षक स्वाक्षरी</div>
+                            <div className="pdf-sig-name text-xs sm:text-sm text-slate-700 font-bold mt-1.5">({schoolProfile.teacherName || "शिक्षकाचे नाव"})</div>
                           </div>
                           <div>
-                            <div>मुख्याध्यापक स्वाक्षरी व शिक्का</div>
-                            <div className="text-[11px] text-slate-600 font-bold mt-1">({schoolProfile.headMasterName || "मुख्याध्यापक नाव"})</div>
+                            <div className="pdf-sig-title text-sm sm:text-base font-black text-slate-950">मुख्याध्यापक स्वाक्षरी व शिक्का</div>
+                            <div className="pdf-sig-name text-xs sm:text-sm text-slate-700 font-bold mt-1.5">({schoolProfile.headMasterName || "मुख्याध्यापक नाव"})</div>
                           </div>
                         </div>
                       </div>
