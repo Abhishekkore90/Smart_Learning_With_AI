@@ -28,7 +28,7 @@ import { PinGate } from "@/components/teacher/PinGate";
 import { useAuth } from "@/hooks/use-auth";
 import { useDiaryProcessing } from "@/contexts/DiaryProcessingContext";
 import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
-import { TeacherTodayDiary } from "@/components/teacher/TeacherTodayDiary";
+import { TeacherTodayDiary, isDocMatchingMonth } from "@/components/teacher/TeacherTodayDiary";
 import { DocumentLivePreview } from "@/components/DocumentLivePreview";
 import { uploadFileWithProgress } from "@/lib/upload";
 import { processRazorpayPayment } from "@/lib/razorpayService";
@@ -668,29 +668,7 @@ function TeachingRecordPage() {
 
   const monthFilteredRecords = React.useMemo(() => {
     if (!selectedMonth) return diaryRecords;
-    return diaryRecords.filter((rec) => {
-      if (rec.diaryDate === "master_diary") return true;
-      if (rec.month && String(rec.month).padStart(2, "0") === selectedMonth) return true;
-      if (rec.selectedMonth && String(rec.selectedMonth).padStart(2, "0") === selectedMonth) return true;
-      if (rec.diaryDate && typeof rec.diaryDate === "string") {
-        const parts = rec.diaryDate.split("-");
-        if (parts.length === 3 && parts[1] === selectedMonth) return true;
-      }
-      if (rec.structuredData && Array.isArray(rec.structuredData)) {
-        const hasMatchingMonth = rec.structuredData.some((entry: any) => {
-          const d = entry.date || entry.displayDate || "";
-          if (!d) return false;
-          const clean = String(d).trim();
-          let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
-          if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
-          m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-          if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
-          return false;
-        });
-        if (hasMatchingMonth) return true;
-      }
-      return false;
-    });
+    return diaryRecords.filter((rec) => isDocMatchingMonth(rec, selectedMonth));
   }, [diaryRecords, selectedMonth]);
 
   const isWordDoc = (filename?: string | null) => {

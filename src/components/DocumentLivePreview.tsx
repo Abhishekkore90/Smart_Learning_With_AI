@@ -1683,7 +1683,6 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
   const isRecordMatchingMonth = useMemo(() => {
     if (!selectedMonth || !savedRecord) return true;
-    if (savedRecord.diaryDate === "master_diary") return true;
     if (savedRecord.month && String(savedRecord.month).padStart(2, "0") === selectedMonth) return true;
     if (savedRecord.selectedMonth && String(savedRecord.selectedMonth).padStart(2, "0") === selectedMonth) return true;
     if (savedRecord.diaryDate && typeof savedRecord.diaryDate === "string") {
