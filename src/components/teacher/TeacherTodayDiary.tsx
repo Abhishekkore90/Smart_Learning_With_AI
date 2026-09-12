@@ -102,6 +102,86 @@ function getWorkingDatesRange(startDateStr: string, count: number): string[] {
   return result;
 }
 
+
+export function isDocMatchingMonth(docItem: any, monthStr: string | null): boolean {
+  if (!monthStr) return true;
+  const targetMonth = String(monthStr).padStart(2, "0");
+
+  const docMonth = docItem.month || docItem.selectedMonth;
+  if (docMonth !== undefined && docMonth !== null && String(docMonth).padStart(2, "0") === targetMonth) {
+    return true;
+  }
+
+  const dStr = docItem.diaryDate || docItem.date || docItem.displayDate;
+  if (dStr && typeof dStr === "string" && dStr !== "master_diary") {
+    const clean = dStr.trim();
+    let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+    if (m) {
+      if (String(m[2]).padStart(2, "0") === targetMonth) return true;
+    }
+    m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+    if (m) {
+      if (String(m[2]).padStart(2, "0") === targetMonth) return true;
+    }
+  }
+
+  if (docItem.structuredData && Array.isArray(docItem.structuredData) && docItem.structuredData.length > 0) {
+    return docItem.structuredData.some((entry: any) => {
+      const ed = entry.date || entry.displayDate || entry.diaryDate || "";
+      if (!ed) return false;
+      const clean = String(ed).trim();
+      let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+      if (m) return String(m[2]).padStart(2, "0") === targetMonth;
+      m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+      if (m) return String(m[2]).padStart(2, "0") === targetMonth;
+      return false;
+    });
+  }
+
+  return false;
+}
+
+export function getTabCategory(weekStr?: string | null, rec?: any): string {
+  const w = (rec?.week || weekStr || "").trim();
+  if (w === "1 to 10" || w === "Week 1" || w.includes("1to10") || w.includes("1_to_10") || w.includes("1-10")) return "1 to 10";
+  if (w === "11 to 20" || w === "Week 2" || w === "Week 3" || w.includes("11to20") || w.includes("11_to_20") || w.includes("11-20")) return "11 to 20";
+  if (w === "21 to 31" || w === "21 to 30" || w === "21 to 30/31" || w === "Week 4" || w === "Week 5" || w.includes("21to30") || w.includes("21to31") || w.includes("21_to_30") || w.includes("21-30")) return "21 to 31";
+
+  const dStr = rec?.diaryDate || rec?.date || "";
+  if (dStr && typeof dStr === "string" && dStr.includes("-")) {
+    const parts = dStr.split("-");
+    if (parts.length >= 3) {
+      const day = parseInt(parts[2], 10);
+      if (!isNaN(day)) {
+        if (day <= 10) return "1 to 10";
+        if (day <= 20) return "11 to 20";
+        return "21 to 31";
+      }
+    }
+  }
+
+  if (rec?.structuredData && Array.isArray(rec.structuredData) && rec.structuredData.length > 0) {
+    const firstD = rec.structuredData[0]?.date || rec.structuredData[0]?.displayDate || "";
+    if (firstD && typeof firstD === "string") {
+      const clean = String(firstD).trim();
+      let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+      let day = 0;
+      if (m) day = parseInt(m[3], 10);
+      else {
+        m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (m) day = parseInt(m[1], 10);
+      }
+      if (day > 0) {
+        if (day <= 10) return "1 to 10";
+        if (day <= 20) return "11 to 20";
+        return "21 to 31";
+      }
+    }
+  }
+
+  return "1 to 10";
+}
+
 function findMatchingEntryForDate(entries: any[], targetIsoDate: string, currentTabId?: string): any | null {
   if (!entries || !Array.isArray(entries) || entries.length === 0) return null;
 
@@ -171,7 +251,14 @@ function findMatchingEntryForDate(entries: any[], targetIsoDate: string, current
   // 3. Fallback match by working day index relative to the range start day
   let startDay = 1;
 
-  if (firstEntry) {
+  const tabCat = currentTabId ? getTabCategory(currentTabId) : null;
+  if (tabCat === "11 to 20") {
+    startDay = 11;
+  } else if (tabCat === "21 to 31") {
+    startDay = 21;
+  } else if (tabCat === "1 to 10") {
+    startDay = 1;
+  } else if (firstEntry) {
     const rawFirst = String(firstEntry.date || firstEntry.displayDate || "").trim();
     if (rawFirst) {
       const cleanFirst = toAsciiDigits(rawFirst);
@@ -193,12 +280,17 @@ function findMatchingEntryForDate(entries: any[], targetIsoDate: string, current
     }
   }
 
-  if (startDay === 1) {
-    if (currentTabId === "21 to 31" || currentTabId === "21 to 30" || targetDay >= 21) {
-      startDay = 21;
-    } else if (currentTabId === "11 to 20" || (targetDay >= 11 && targetDay <= 20)) {
-      startDay = 11;
-    }
+  // Section boundary & tab category validation
+  if (startDay === 1 && targetDay > 10) return null;
+  if (startDay === 11 && (targetDay < 11 || targetDay > 20)) return null;
+  if (startDay === 21 && targetDay < 21) return null;
+
+  if (currentTabId) {
+    let startCat = "1 to 10";
+    if (startDay === 11) startCat = "11 to 20";
+    else if (startDay === 21) startCat = "21 to 31";
+
+    if (startCat !== tabCat) return null;
   }
 
   // 1-to-1 direct day offset matching (Day 1 -> idx 0, Day 2 -> idx 1, Day 3 -> idx 2, etc.)
@@ -499,7 +591,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             (Array.isArray(data.structuredData) && data.structuredData.length > 0) ||
             Boolean(data.masterPdfUrl);
 
-          if (isMaster) {
+          if (isMaster && isDocMatchingMonth(data, targetMonthStr)) {
             masterDocs.push({ id: docId, ...data });
           }
 
@@ -527,26 +619,12 @@ export const TeacherTodayDiary: React.FC<Props> = ({
         });
 
         let matchedDoc: any = null;
+        const targetCategory = getTabCategory(currentTabId);
 
-        // 1. Match master doc by week or filename
+        // 1. Match master doc by section category
         for (const docItem of masterDocs) {
-          const docWeek = docItem.week || docItem.selectedWeek || docItem.range || "";
-          const fName = String(docItem.fileName || "").toLowerCase();
-
-          if (docWeek === currentTabId) {
-            matchedDoc = docItem;
-            break;
-          }
-
-          if (currentTabId === "1 to 10" && (docWeek === "Week 1" || docWeek === "1 to 10" || fName.includes("1to10") || fName.includes("1_to_10") || fName.includes("1-10"))) {
-            matchedDoc = docItem;
-            break;
-          }
-          if (currentTabId === "11 to 20" && (docWeek === "Week 2" || docWeek === "Week 3" || docWeek === "11 to 20" || fName.includes("11to20") || fName.includes("11_to_20") || fName.includes("11-20"))) {
-            matchedDoc = docItem;
-            break;
-          }
-          if (currentTabId === "21 to 31" && (docWeek === "Week 4" || docWeek === "Week 5" || docWeek === "21 to 31" || docWeek === "21 to 30" || fName.includes("21to30") || fName.includes("21to31") || fName.includes("21_to_30") || fName.includes("21-30"))) {
+          const docCategory = getTabCategory(docItem.week || docItem.selectedWeek || docItem.range || "", docItem);
+          if (docCategory === targetCategory) {
             matchedDoc = docItem;
             break;
           }
@@ -570,9 +648,9 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                   }
                 }
                 if (dayNum > 0) {
-                  if (currentTabId === "1 to 10" && dayNum >= 1 && dayNum <= 10) return true;
-                  if (currentTabId === "11 to 20" && dayNum >= 11 && dayNum <= 20) return true;
-                  if (currentTabId === "21 to 31" && dayNum >= 21 && dayNum <= 31) return true;
+                  if (targetCategory === "1 to 10" && dayNum >= 1 && dayNum <= 10) return true;
+                  if (targetCategory === "11 to 20" && dayNum >= 11 && dayNum <= 20) return true;
+                  if (targetCategory === "21 to 31" && dayNum >= 21 && dayNum <= 31) return true;
                 }
                 return false;
               });
@@ -583,11 +661,6 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               }
             }
           }
-        }
-
-        // 3. Fallback to first master doc if still no match
-        if (!matchedDoc && masterDocs.length > 0) {
-          matchedDoc = masterDocs[0];
         }
 
         // Populate structuredData from dayEntriesMap if empty
@@ -643,6 +716,30 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   const displayFormattedDate = activeDate ? format(activeDate, "eeee, dd MMMM yyyy") : "...";
   const isToday = activeDate ? format(new Date(), "yyyy-MM-dd") === isoDate : false;
 
+  const activeTabMasterRecord = React.useMemo(() => {
+    const targetCategory = getTabCategory(currentTabId);
+    if (rangeMasterRecord && getTabCategory(rangeMasterRecord.week || rangeMasterRecord.selectedWeek || rangeMasterRecord.range || "", rangeMasterRecord) === targetCategory) {
+      return rangeMasterRecord;
+    }
+    if (todayDiary && (todayDiary as any).pageUrl) {
+      const todayCat = getTabCategory((todayDiary as any).week || (todayDiary as any).selectedWeek || (todayDiary as any).range || "", todayDiary);
+      if (todayCat === targetCategory) {
+        return {
+          id: (todayDiary as any)?.id || isoDate,
+          diaryDate: isoDate,
+          fileName: (todayDiary as any)?.fileName || "Teaching_Diary.docx",
+          pageUrl: (todayDiary as any)?.pageUrl,
+          className: selectedClass,
+          medium: selectedMedium,
+          structuredData: (todayDiary as any)?.structuredData,
+          week: (todayDiary as any)?.week,
+          month: (todayDiary as any)?.month,
+        };
+      }
+    }
+    return null;
+  }, [rangeMasterRecord, todayDiary, currentTabId, isoDate, selectedClass, selectedMedium]);
+
   const resolveThoughtForDate = async (
     dateIso: string,
     cls: string,
@@ -681,10 +778,16 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     try {
       const colRef = collection(db, "teacher_diaries", cls, med);
       const snap = await getDocs(colRef);
+      const targetMonthStr = dateIso.split("-")[1];
+      const targetCat = getTabCategory(currentTabId);
       for (const dSnap of snap.docs) {
         const dData = dSnap.data();
+        if (!isDocMatchingMonth(dData, targetMonthStr)) continue;
+        const dCat = getTabCategory(dData.week || dData.selectedWeek || dData.range || "", dData);
+        if (dCat !== targetCat) continue;
+
         if (dData.structuredData && Array.isArray(dData.structuredData)) {
-          const match = findMatchingEntryForDate(dData.structuredData, dateIso);
+          const match = findMatchingEntryForDate(dData.structuredData, dateIso, currentTabId);
           if (match) {
             const sThought = cleanThoughtText(match.thought || match.suvichar);
             if (sThought && !sThought.includes("सुविचार उपलब्ध नाही") && !isDefaultFallbackThought(sThought)) {
@@ -725,8 +828,10 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       try {
         const targetMonthStr = isoDate.split("-")[1]; // e.g. "08" for August, "06" for June
 
+        const targetCategory = getTabCategory(currentTabId);
+
         // 1. Check rangeMasterRecord FIRST (the master doc loaded for the current tab e.g. 1to10, 11to20, 21to30)
-        if (rangeMasterRecord) {
+        if (rangeMasterRecord && getTabCategory(rangeMasterRecord.week, rangeMasterRecord) === targetCategory) {
           const match = (rangeMasterRecord.structuredData && Array.isArray(rangeMasterRecord.structuredData))
             ? findMatchingEntryForDate(rangeMasterRecord.structuredData, isoDate, currentTabId)
             : null;
@@ -756,7 +861,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             (match ? match.thought : "") || rangeMasterRecord.thought
           );
 
-          if (rawPageUrl || periodList.length > 0 || match || rangeMasterRecord) {
+          if (rawPageUrl || periodList.length > 0 || match) {
             setTodayDiary({
               id: rangeMasterRecord.id,
               date: isoDate,
@@ -784,17 +889,18 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
         if (docSnap.exists()) {
           const data = docSnap.data() as DailyDiary;
-          const resolvedThought = await resolveThoughtForDate(
-            isoDate,
-            selectedClass,
-            selectedMedium,
-            data.thought || (data as any).suvichar
-          );
-          data.thought = resolvedThought;
-          const rawPageUrl = data.pageUrl || (data as any).pageURL || (data as any).masterPdfUrl || (data as any).pdfUrl || (rangeMasterRecord ? rangeMasterRecord.pageUrl : "");
+          const dataCategory = getTabCategory((data as any).week, data);
           const dataMonth = data.date ? data.date.split("-")[1] : (data.displayDate ? data.displayDate.split("-")[1] : targetMonthStr);
           
-          if (!dataMonth || dataMonth === targetMonthStr) {
+          if ((!dataMonth || dataMonth === targetMonthStr) && dataCategory === targetCategory) {
+            const resolvedThought = await resolveThoughtForDate(
+              isoDate,
+              selectedClass,
+              selectedMedium,
+              data.thought || (data as any).suvichar
+            );
+            data.thought = resolvedThought;
+            const rawPageUrl = data.pageUrl || (data as any).pageURL || (data as any).masterPdfUrl || (data as any).pdfUrl || "";
             let activePeriods = data.periods || [];
             const singleDayPeriods = extractSingleDayPeriods(activePeriods, isoDate, activeDate, currentTabId);
             setTodayDiary({ ...data, pageUrl: rawPageUrl || data.pageUrl, periods: singleDayPeriods });
@@ -809,11 +915,12 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
         if (altSnap.exists()) {
           const altData = altSnap.data();
-          const rawPageUrl = altData.pageUrl || altData.pageURL || altData.masterPdfUrl || altData.pdfUrl || (altData.parsedContent ? altData.parsedContent.pageUrl || altData.parsedContent.masterPdfUrl : "");
           const altDate = altData.diaryDate || altData.date || isoDate;
           const altMonth = altData.month || (altDate ? altDate.split("-")[1] : targetMonthStr);
+          const altCategory = getTabCategory(altData.week, altData);
 
-          if (!altMonth || altMonth === targetMonthStr) {
+          if ((!altMonth || altMonth === targetMonthStr) && altCategory === targetCategory) {
+            const rawPageUrl = altData.pageUrl || altData.pageURL || altData.masterPdfUrl || altData.pdfUrl || (altData.parsedContent ? altData.parsedContent.pageUrl || altData.parsedContent.masterPdfUrl : "");
             const parsed = altData.parsedContent || altData;
             
             let periodList: PeriodItem[] = [];
@@ -868,21 +975,12 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
         snap.docs.forEach((dSnap) => {
           const data = dSnap.data();
-          const docWeek = data.week || data.selectedWeek || data.range || "";
-          const fName = String(data.fileName || "").toLowerCase();
-
-          const matchesTab = docWeek === currentTabId ||
-            (currentTabId === "1 to 10" && (docWeek === "Week 1" || docWeek === "1 to 10" || fName.includes("1to10") || fName.includes("1_to_10"))) ||
-            (currentTabId === "11 to 20" && (docWeek === "Week 2" || docWeek === "Week 3" || docWeek === "11 to 20" || fName.includes("11to20") || fName.includes("11_to_20"))) ||
-            (currentTabId === "21 to 31" && (docWeek === "Week 4" || docWeek === "Week 5" || docWeek === "21 to 31" || docWeek === "21 to 30" || fName.includes("21to30") || fName.includes("21to31") || fName.includes("21_to_30")));
+          if (!isDocMatchingMonth(data, targetMonthStr)) return;
+          const docCategory = getTabCategory(data.week || data.selectedWeek || data.range || "", data);
+          const targetCategory = getTabCategory(currentTabId);
+          const matchesTab = docCategory === targetCategory;
 
           if (matchesTab && data.structuredData && Array.isArray(data.structuredData)) {
-            const entry = findMatchingEntryForDate(data.structuredData, isoDate, currentTabId);
-            if (entry) {
-              masterDoc = { id: dSnap.id, ...data };
-              matchedEntryFromList = entry;
-            }
-          } else if (!masterDoc && data.structuredData && Array.isArray(data.structuredData)) {
             const entry = findMatchingEntryForDate(data.structuredData, isoDate, currentTabId);
             if (entry) {
               masterDoc = { id: dSnap.id, ...data };
@@ -1545,19 +1643,11 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             </button>
           </div>
 
-          {rangeMasterRecord || (todayDiary && (todayDiary as any).pageUrl) ? (
+          {activeTabMasterRecord ? (
             <div className="h-[750px] w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-inner">
               <DocumentLivePreview
                 selectedFile={null}
-                savedRecord={rangeMasterRecord || {
-                  id: (todayDiary as any)?.id || isoDate,
-                  diaryDate: isoDate,
-                  fileName: (todayDiary as any)?.fileName || "Teaching_Diary.docx",
-                  pageUrl: (todayDiary as any)?.pageUrl,
-                  className: selectedClass,
-                  medium: selectedMedium,
-                  structuredData: (todayDiary as any)?.structuredData,
-                }}
+                savedRecord={activeTabMasterRecord}
                 onBack={() => setIsAllDaysMode(false)}
               />
             </div>
@@ -1701,13 +1791,13 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           </div>
 
           {/* Yellow Suvichar Card */}
-          <div className="text-xs text-amber-950 bg-amber-50/95 p-3 rounded-xl border border-amber-300 text-center shadow-sm">
-            <strong className="text-amber-900 font-black text-xs uppercase tracking-wider">आजचा सुविचार : </strong>
+          <div className="text-xs text-amber-950 bg-amber-50/95 p-2.5 sm:p-3 rounded-2xl border border-amber-300 text-center shadow-xs flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
+            <strong className="text-amber-900 font-black text-xs uppercase tracking-wider shrink-0">आजचा सुविचार : </strong>
             <span 
               contentEditable
               suppressContentEditableWarning
               onBlur={(e) => handleThoughtChange(e.currentTarget.innerText.trim())}
-              className="font-extrabold text-sm text-amber-900 not-italic hover:bg-amber-100/80 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text inline-block min-w-[200px]"
+              className="font-extrabold text-xs sm:text-sm text-amber-900 not-italic hover:bg-amber-100/80 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text max-w-full break-words"
               title="सुविचार बदलण्यासाठी येथे क्लिक करा"
             >
               {cleanThoughtText(todayDiary.thought)
@@ -1716,27 +1806,35 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             </span>
           </div>
 
+          {/* Mobile Scroll Indicator */}
+          <div className="flex items-center justify-between text-[11px] text-amber-900 bg-amber-50/90 px-3 py-1.5 rounded-xl border border-amber-200 sm:hidden mt-2 font-bold shadow-2xs">
+            <span className="flex items-center gap-1.5">
+              👈 संपूर्ण तक्ता पाहण्यासाठी डावीकडे/उजवीकडे स्क्रोल करा
+            </span>
+            <span className="text-amber-700 font-black text-xs">↔</span>
+          </div>
+
           {/* 7 Columns Table matching Image 2 */}
-          <div className="overflow-x-auto no-scrollbar rounded-xl border-2 border-slate-900 shadow-sm mt-4">
-            <table className="w-full text-sm border-collapse table-fixed border-2 border-slate-900">
+          <div className="overflow-x-auto touch-pan-x rounded-xl border-2 border-slate-900 shadow-sm mt-2 sm:mt-4 max-w-full">
+            <table className="min-w-[720px] w-full text-sm border-collapse border-2 border-slate-900">
               <colgroup>
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "17%" }} />
-                <col style={{ width: "25%" }} />
-                <col style={{ width: "26%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "8%" }} />
+                <col style={{ width: "50px" }} />
+                <col style={{ width: "75px" }} />
+                <col style={{ width: "135px" }} />
+                <col style={{ width: "210px" }} />
+                <col style={{ width: "185px" }} />
+                <col style={{ width: "80px" }} />
+                <col style={{ width: "80px" }} />
               </colgroup>
               <thead className="bg-slate-200 text-slate-950 font-black text-xs md:text-sm border-b-2 border-slate-900">
                 <tr>
-                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">तासिका</th>
-                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">विषय</th>
-                  <th className="py-3 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">अध्यापन मुद्दा / पाठ्यघटक</th>
-                  <th className="py-3 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">अध्ययन निष्पत्ती</th>
-                  <th className="py-3 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">अध्ययन अनुभव</th>
-                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">साधन तंत्रे</th>
-                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black">शैक्षणिक साहित्य</th>
+                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">तासिका</th>
+                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">विषय</th>
+                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">अध्यापन मुद्दा / पाठ्यघटक</th>
+                  <th className="py-2.5 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">अध्ययन निष्पत्ती</th>
+                  <th className="py-2.5 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">अध्ययन अनुभव</th>
+                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">साधन तंत्रे</th>
+                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black break-words">शैक्षणिक साहित्य</th>
                 </tr>
               </thead>
               <tbody className="divide-y-2 divide-slate-400 font-medium text-slate-900 bg-white text-xs md:text-sm">
@@ -1826,7 +1924,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             </div>
           </div>
         </div>
-      ) : (todayDiary as any)?.pageUrl || (todayDiary as any)?.structuredData || rangeMasterRecord ? (
+      ) : activeTabMasterRecord ? (
         <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-3">
@@ -1837,10 +1935,10 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 <h3 className="font-extrabold text-slate-900 text-base">
                   पाठ टाचण दस्तऐवज (Document View — {displayFormattedDate})
                 </h3>
-                <p className="text-xs text-slate-500 font-semibold">{todayDiary?.fileName || rangeMasterRecord?.fileName || "Teaching_Diary.docx"}</p>
+                <p className="text-xs text-slate-500 font-semibold">{activeTabMasterRecord.fileName || "Teaching_Diary.docx"}</p>
               </div>
             </div>
-            {(todayDiary?.pageUrl || rangeMasterRecord?.pageUrl) && (
+            {activeTabMasterRecord.pageUrl && (
               <button
                 type="button"
                 onClick={() => setIsPreviewModalOpen(true)}
@@ -1853,15 +1951,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           <div className="h-[650px] w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
             <DocumentLivePreview
               selectedFile={null}
-              savedRecord={rangeMasterRecord || {
-                id: (todayDiary as any)?.id || isoDate,
-                diaryDate: isoDate,
-                fileName: (todayDiary as any)?.fileName || "Teaching_Diary.docx",
-                pageUrl: (todayDiary as any)?.pageUrl,
-                className: selectedClass,
-                medium: selectedMedium,
-                structuredData: (todayDiary as any)?.structuredData,
-              }}
+              savedRecord={activeTabMasterRecord}
               selectedDateIso={isoDate}
               onBack={() => {}}
             />
@@ -1870,21 +1960,13 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       ) : null}
 
       {/* Document Live Preview Modal */}
-      {isPreviewModalOpen && (todayDiary || rangeMasterRecord) && (
+      {isPreviewModalOpen && activeTabMasterRecord && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-[96vw] border border-slate-100 flex flex-col h-[93vh]">
             <div className="flex-1 overflow-hidden bg-slate-100 p-2 sm:p-4">
               <DocumentLivePreview
                 selectedFile={null}
-                savedRecord={rangeMasterRecord || {
-                  id: (todayDiary as any)?.id || isoDate,
-                  diaryDate: isoDate,
-                  fileName: (todayDiary as any)?.fileName || "Teaching_Diary.docx",
-                  pageUrl: (todayDiary as any)?.pageUrl,
-                  className: selectedClass,
-                  medium: selectedMedium,
-                  structuredData: (todayDiary as any)?.structuredData,
-                }}
+                savedRecord={activeTabMasterRecord}
                 selectedDateIso={isAllDaysMode ? undefined : isoDate}
                 onBack={() => setIsPreviewModalOpen(false)}
               />

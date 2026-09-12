@@ -1561,10 +1561,10 @@ export async function saveParsedEntriesToFirestore({
   const daysOfWeek = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
 
   let baseDay = 1;
-  if (selectedWeek === "Week 2") baseDay = 8;
-  else if (selectedWeek === "Week 3") baseDay = 15;
-  else if (selectedWeek === "Week 4") baseDay = 22;
-  else if (selectedWeek === "Week 5") baseDay = 29;
+  const wStr = String(selectedWeek || "").trim();
+  if (wStr.includes("11 to 20") || wStr === "Week 2") baseDay = 11;
+  else if (wStr.includes("21 to 31") || wStr.includes("21 to 30") || wStr === "Week 3" || wStr === "Week 4" || wStr === "Week 5") baseDay = 21;
+  else baseDay = 1;
 
   const validEntries = entries && entries.length > 0 ? entries : [];
   const dateCursor = new Date(parseInt(selectedYear, 10), parseInt(monthStr, 10) - 1, baseDay);

@@ -226,6 +226,65 @@ function StudentTeachingRecordPage() {
     return lower.endsWith(".doc") || lower.endsWith(".docx") || lower.includes(".doc?") || lower.includes(".docx?");
   };
 
+  const getTabCategory = (weekStr?: string | null, rec?: any): string => {
+    const w = (rec?.week || weekStr || "").trim();
+    if (w === "1 to 10" || w === "Week 1") return "1 to 10";
+    if (w === "11 to 20" || w === "Week 2") return "11 to 20";
+    if (w === "21 to 31" || w === "21 to 30" || w === "21 to 30/31" || w === "Week 3" || w === "Week 4" || w === "Week 5") return "21 to 31";
+
+    const dStr = rec?.diaryDate || rec?.date || "";
+    if (dStr && typeof dStr === "string" && dStr.includes("-")) {
+      const parts = dStr.split("-");
+      if (parts.length >= 3) {
+        const day = parseInt(parts[2], 10);
+        if (!isNaN(day)) {
+          if (day <= 10) return "1 to 10";
+          if (day <= 20) return "11 to 20";
+          return "21 to 31";
+        }
+      }
+    }
+    return "1 to 10";
+  };
+
+  const isDocMatchingMonth = (docItem: any, monthStr: string | null): boolean => {
+    if (!monthStr) return true;
+    const targetMonth = String(monthStr).padStart(2, "0");
+
+    const docMonth = docItem.month || docItem.selectedMonth;
+    if (docMonth !== undefined && docMonth !== null && String(docMonth).padStart(2, "0") === targetMonth) {
+      return true;
+    }
+
+    const dStr = docItem.diaryDate || docItem.date || docItem.displayDate;
+    if (dStr && typeof dStr === "string" && dStr !== "master_diary") {
+      const clean = dStr.trim();
+      let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+      if (m) {
+        if (String(m[2]).padStart(2, "0") === targetMonth) return true;
+      }
+      m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+      if (m) {
+        if (String(m[2]).padStart(2, "0") === targetMonth) return true;
+      }
+    }
+
+    if (docItem.structuredData && Array.isArray(docItem.structuredData) && docItem.structuredData.length > 0) {
+      return docItem.structuredData.some((entry: any) => {
+        const ed = entry.date || entry.displayDate || entry.diaryDate || "";
+        if (!ed) return false;
+        const clean = String(ed).trim();
+        let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (m) return String(m[2]).padStart(2, "0") === targetMonth;
+        m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (m) return String(m[2]).padStart(2, "0") === targetMonth;
+        return false;
+      });
+    }
+
+    return false;
+  };
+
   if (!mounted) return null;
 
   return (
@@ -332,7 +391,7 @@ function StudentTeachingRecordPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {weeks.map((wk) => {
-                    const record = diaryRecords.find(rec => rec.diaryDate === "master_diary" || (rec.diaryDate.split("-")[1] === selectedMonth && getRecordWeek(rec) === wk.id));
+                    const record = diaryRecords.find(rec => isDocMatchingMonth(rec, selectedMonth) && getTabCategory(wk.id) === getTabCategory(rec.week, rec));
                     const isWord = isWordDoc(record?.fileName || record?.pageUrl);
                     
                     return (

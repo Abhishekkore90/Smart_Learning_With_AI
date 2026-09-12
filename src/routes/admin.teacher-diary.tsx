@@ -458,8 +458,6 @@ function TeacherDiaryAdmin() {
         }
         return false;
       });
-    } else if (rec.diaryDate === "master_diary") {
-      monthMatch = true;
     }
 
     if (!monthMatch) return false;
