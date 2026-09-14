@@ -104,7 +104,7 @@ const DEFAULT_MODULES: { id: string; title: string; defaultPrice: number }[] = [
 
 function AdminModulePaymentsPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"pricing" | "history" | "access" | "logged_users">("access");
+  const [activeTab, setActiveTab] = useState<"pricing" | "history" | "access">("access");
 
   // Logged users state
   const [loggedUsers, setLoggedUsers] = useState<any[]>([]);
@@ -570,17 +570,6 @@ function AdminModulePaymentsPage() {
             <Users className="size-4" />
             <span>पेमेंट इतिहास ({filteredPayments.length})</span>
           </button>
-          <button
-            onClick={() => setActiveTab("logged_users")}
-            className={`flex-1 py-3 px-4 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              activeTab === "logged_users"
-                ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
-                : "text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            <LogIn className="size-4" />
-            <span>लॉगिन केलेले युझर्स ({loggedUsers.length})</span>
-          </button>
         </div>
 
         {/* ── TAB 1: TEACHER ACCESS MANAGEMENT (ON/OFF TOGGLES UI) ── */}
@@ -610,37 +599,6 @@ function AdminModulePaymentsPage() {
                   />
                 </div>
               </div>
-
-              {/* Add Custom Teacher Box */}
-              <form
-                onSubmit={handleAddNewTeacher}
-                className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-200/80 flex flex-col sm:flex-row items-center gap-3"
-              >
-                <div className="flex items-center gap-2 text-emerald-800 text-xs font-black shrink-0">
-                  <Plus className="size-4 text-emerald-600" />
-                  <span>नवीन शिक्षक जोडा:</span>
-                </div>
-                <input
-                  type="text"
-                  placeholder="शिक्षक ई-मेल / आयडी (उदा. sanika@gmail.com)*"
-                  value={newTeacherId}
-                  onChange={(e) => setNewTeacherId(e.target.value)}
-                  className="flex-1 px-3.5 py-2 bg-white border border-emerald-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 w-full"
-                />
-                <input
-                  type="text"
-                  placeholder="शिक्षकाचे नाव (उदा. सानिका पाटील)"
-                  value={newTeacherName}
-                  onChange={(e) => setNewTeacherName(e.target.value)}
-                  className="flex-1 px-3.5 py-2 bg-white border border-emerald-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 w-full"
-                />
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer shrink-0 w-full sm:w-auto"
-                >
-                  जोडा व ॲक्सेस द्या
-                </button>
-              </form>
             </div>
 
             {/* Teachers Cards List (UNIQUE 1 CARD PER TEACHER) */}
@@ -649,7 +607,7 @@ function AdminModulePaymentsPage() {
                 <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
                   <User className="size-12 text-slate-300 mx-auto mb-2" />
                   <p className="text-sm font-bold text-slate-600">कोणताही शिक्षक आढळला नाही</p>
-                  <p className="text-xs text-slate-400 mt-1">वर दिलेल्या फॉर्ममधून नवीन शिक्षक आयडी जोडा.</p>
+                  <p className="text-xs text-slate-400 mt-1">कृपया शोध संज्ञा तपासा.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1165,114 +1123,6 @@ function AdminModulePaymentsPage() {
                       </tr>
                     );
                     })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── TAB 4: LOGGED USERS ── */}
-        {activeTab === "logged_users" && (
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div>
-                <h3 className="text-base font-black text-slate-900">लॉगिन केलेले सर्व युझर्स (All Logged Users)</h3>
-                <p className="text-xs text-slate-500 font-medium">ज्या ज्या युझर्सनी लॉगिन केले आहे त्यांची यादी:</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="px-4 py-2 bg-purple-50 border border-purple-200 rounded-xl text-xs font-black text-purple-700">
-                  एकूण: {loggedUsers.length} युझर्स
-                </div>
-                <div className="relative w-full sm:w-64">
-                  <Search className="size-4 text-slate-400 absolute left-3.5 top-3" />
-                  <input
-                    type="text"
-                    placeholder="नाव, ईमेल, UDISE शोधा..."
-                    value={loggedUsersSearch}
-                    onChange={(e) => setLoggedUsersSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400 transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {loggedUsers.length === 0 ? (
-              <div className="text-center py-16 text-slate-400">
-                <LogIn className="size-12 mx-auto mb-3 opacity-40" />
-                <p className="font-bold text-sm">अजून कोणीही लॉगिन केलेले नाही</p>
-                <p className="text-xs mt-1">No logged users yet.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b-2 border-slate-100">
-                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">#</th>
-                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">नाव (Name)</th>
-                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">ईमेल (Email)</th>
-                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">UDISE</th>
-                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">शाळा (School)</th>
-                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">फोन (Phone)</th>
-                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">शेवटचे लॉगिन (Last Login)</th>
-                      <th className="py-3 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500">लॉगिन संख्या</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loggedUsers
-                      .filter((u: any) => {
-                        if (!loggedUsersSearch) return true;
-                        const s = loggedUsersSearch.toLowerCase();
-                        return (
-                          (u.fullName || "").toLowerCase().includes(s) ||
-                          (u.email || "").toLowerCase().includes(s) ||
-                          (u.udise || "").toLowerCase().includes(s) ||
-                          (u.schoolName || "").toLowerCase().includes(s) ||
-                          (u.phone || "").toLowerCase().includes(s)
-                        );
-                      })
-                      .map((u: any, idx: number) => {
-                        const lastLogin = u.lastLoginAt?.toDate
-                          ? u.lastLoginAt.toDate().toLocaleString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : "—";
-                        return (
-                          <tr
-                            key={u.id}
-                            className="border-b border-slate-50 hover:bg-purple-50/50 transition-colors"
-                          >
-                            <td className="py-3 px-4 text-xs font-bold text-slate-400">{idx + 1}</td>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center gap-2.5">
-                                <div className="size-8 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-black text-xs shadow-sm">
-                                  {(u.fullName || "?").charAt(0).toUpperCase()}
-                                </div>
-                                <span className="text-sm font-bold text-slate-900">{u.fullName || "Unknown"}</span>
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 text-xs font-medium text-slate-600">{u.email || "—"}</td>
-                            <td className="py-3 px-4 text-xs font-mono font-bold text-indigo-600">{u.udise || "—"}</td>
-                            <td className="py-3 px-4 text-xs font-medium text-slate-600 max-w-[180px] truncate">{u.schoolName || "—"}</td>
-                            <td className="py-3 px-4 text-xs font-medium text-slate-600">{u.phone || "—"}</td>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                                <Clock className="size-3.5 text-purple-400" />
-                                {lastLogin}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-black">
-                                {u.loginCount || 1}x
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
                   </tbody>
                 </table>
               </div>
