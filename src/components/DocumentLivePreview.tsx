@@ -1122,15 +1122,15 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                 <span>👈 संपूर्ण तक्ता पाहण्यासाठी डावीकडे/उजवीकडे स्क्रोल करा</span>
                 <span className="text-amber-700 font-black">↔</span>
               </div>
-              <table className="min-w-[720px] w-full text-center text-sm border-collapse border-2 border-slate-400">
+              <table className="min-w-[920px] w-full text-center text-sm border-collapse border-2 border-slate-400">
                 <colgroup>
-                  <col style={{ width: "50px" }} />
-                  <col style={{ width: "75px" }} />
-                  <col style={{ width: "135px" }} />
-                  <col style={{ width: "210px" }} />
-                  <col style={{ width: "185px" }} />
-                  <col style={{ width: "80px" }} />
-                  <col style={{ width: "80px" }} />
+                  <col style={{ width: "55px" }} />
+                  <col style={{ width: "95px" }} />
+                  <col style={{ width: "150px" }} />
+                  <col style={{ width: "230px" }} />
+                  <col style={{ width: "200px" }} />
+                  <col style={{ width: "95px" }} />
+                  <col style={{ width: "95px" }} />
                 </colgroup>
                 <thead className="bg-slate-100 text-slate-900 font-extrabold text-xs md:text-sm border-b-2 border-slate-400">
                   <tr>
@@ -1138,12 +1138,12 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                       ? p.columnHeaders
                       : ["तासिका", "विषय", "अध्ययन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती / अध्ययन दर्शक", "अध्ययनाचे स्वरूप (अनुभव / कृती)", "साधन तंत्रे", "शैक्षणिक साहित्य"]
                     ).map((header: string, hIdx: number) => {
-                      const colWidths = ["50px", "75px", "135px", "210px", "185px", "80px", "80px"];
+                      const colWidths = ["55px", "95px", "150px", "230px", "200px", "95px", "95px"];
                       return (
                         <th
                           key={hIdx}
                           style={{ width: colWidths[hIdx], color: "#000000" }}
-                          className={`py-2.5 px-1.5 bg-slate-200 text-black font-black break-words leading-tight text-center ${hIdx === 0 ? "bg-slate-300" : ""} border-r-2 border-slate-400`}
+                          className={`py-2.5 px-1.5 bg-slate-200 text-black font-black break-words leading-snug text-center ${hIdx === 0 ? "bg-slate-300" : ""} border-r-2 border-slate-400`}
                         >
                           {header}
                         </th>

@@ -916,46 +916,46 @@ export function CCEStudentInfo({
         style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
       >
         {/* Banner Top */}
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white px-6 py-5 shadow-lg flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white px-4 sm:px-6 py-4 sm:py-5 shadow-lg flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setSelectedStudent(null)}
-              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center backdrop-blur-md border border-white/10"
+              className="p-2 sm:p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center backdrop-blur-md border border-white/10 shrink-0"
             >
               <ArrowLeft className="size-5" />
             </button>
-            <div>
-              <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
-                <span>{selectedStudent.name}</span>
-                <span className="text-xs px-2.5 py-0.5 bg-white/20 rounded-full font-bold">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base sm:text-xl font-black tracking-tight text-white flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="truncate">{selectedStudent.name}</span>
+                <span className="text-[10px] sm:text-xs px-2 py-0.5 bg-white/20 rounded-full font-bold shrink-0">
                   {selectedStudent.gender === "Male" ? "👦 मुलगा" : "👧 मुलगी"}
                 </span>
               </h2>
-              <p className="text-xs text-blue-200 font-medium">इयत्ता {selectedClass} • सविस्तर विद्यार्थी नोंद माहिती पत्रक</p>
+              <p className="text-[11px] sm:text-xs text-blue-200 font-medium truncate">इयत्ता {selectedClass} • सविस्तर विद्यार्थी नोंद माहिती पत्रक</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-white/15 backdrop-blur-md p-1 rounded-2xl border border-white/20">
+          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+            <div className="flex items-center bg-white/15 backdrop-blur-md p-1 rounded-2xl border border-white/20 flex-1 sm:flex-initial justify-center">
               <button
                 onClick={() => setStudentPageTab("view")}
-                className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-1.5 rounded-xl font-extrabold text-[11px] sm:text-xs transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap ${
                   studentPageTab === "view" ? "bg-white text-blue-900 shadow-md" : "text-blue-100 hover:text-white"
                 }`}
               >
-                <Eye className="size-3.5" /> सविस्तर पत्रक
+                <Eye className="size-3.5" /> <span className="truncate">सविस्तर पत्रक</span>
               </button>
               <button
                 onClick={() => setStudentPageTab("edit")}
-                className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`flex-1 sm:flex-initial px-2.5 sm:px-3.5 py-1.5 rounded-xl font-extrabold text-[11px] sm:text-xs transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap ${
                   studentPageTab === "edit" ? "bg-white text-blue-900 shadow-md" : "text-blue-100 hover:text-white"
                 }`}
               >
-                <Edit2 className="size-3.5" /> माहिती संपादन
+                <Edit2 className="size-3.5" /> <span className="truncate">माहिती संपादन</span>
               </button>
             </div>
             <button
               onClick={handlePrintProfile}
-              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center border border-white/10"
+              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center border border-white/10 shrink-0"
               title="माहिती पत्रक प्रिंट करा"
             >
               <Printer className="size-5" />

@@ -91,7 +91,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
     teacherName: "",
     headmasterName: "",
     address: "",
-    slogan: "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦",
+    slogan: "मुलांचा सर्वांगीण विकास — हाच आमचा ध्यास!",
   });
 
   const [subjects, setSubjects] = useState(DEFAULT_SUBJECTS);
@@ -186,7 +186,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           let teacherName = "";
           let headmasterName = "";
           let address = "";
-          let slogan = "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦";
+          let slogan = "मुलांचा सर्वांगीण विकास — हाच आमचा ध्यास!";
           const uid = currentTeacherId;
           const medKey = currentMedium.toLowerCase().includes("semi") ? "semi" : "marathi";
 

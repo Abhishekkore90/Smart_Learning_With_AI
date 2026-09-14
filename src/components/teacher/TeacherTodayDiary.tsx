@@ -1816,25 +1816,25 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
           {/* 7 Columns Table matching Image 2 */}
           <div className="overflow-x-auto touch-pan-x rounded-xl border-2 border-slate-900 shadow-sm mt-2 sm:mt-4 max-w-full">
-            <table className="min-w-[720px] w-full text-sm border-collapse border-2 border-slate-900">
+            <table className="min-w-[920px] w-full text-sm border-collapse border-2 border-slate-900">
               <colgroup>
-                <col style={{ width: "50px" }} />
-                <col style={{ width: "75px" }} />
-                <col style={{ width: "135px" }} />
-                <col style={{ width: "210px" }} />
-                <col style={{ width: "185px" }} />
-                <col style={{ width: "80px" }} />
-                <col style={{ width: "80px" }} />
+                <col style={{ width: "55px" }} />
+                <col style={{ width: "95px" }} />
+                <col style={{ width: "150px" }} />
+                <col style={{ width: "230px" }} />
+                <col style={{ width: "200px" }} />
+                <col style={{ width: "95px" }} />
+                <col style={{ width: "95px" }} />
               </colgroup>
               <thead className="bg-slate-200 text-slate-950 font-black text-xs md:text-sm border-b-2 border-slate-900">
                 <tr>
-                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">तासिका</th>
-                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">विषय</th>
-                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">अध्यापन मुद्दा / पाठ्यघटक</th>
-                  <th className="py-2.5 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">अध्ययन निष्पत्ती</th>
-                  <th className="py-2.5 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">अध्ययन अनुभव</th>
-                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words">साधन तंत्रे</th>
-                  <th className="py-2.5 px-1 text-center bg-slate-200 text-slate-950 font-black break-words">शैक्षणिक साहित्य</th>
+                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight whitespace-nowrap">तासिका</th>
+                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight whitespace-nowrap">विषय</th>
+                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-snug">अध्यापन मुद्दा / पाठ्यघटक</th>
+                  <th className="py-2.5 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-snug">अध्ययन निष्पत्ती</th>
+                  <th className="py-2.5 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-snug">अध्ययन अनुभव</th>
+                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-snug">साधन तंत्रे</th>
+                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black break-words leading-snug">शैक्षणिक साहित्य</th>
                 </tr>
               </thead>
               <tbody className="divide-y-2 divide-slate-400 font-medium text-slate-900 bg-white text-xs md:text-sm">

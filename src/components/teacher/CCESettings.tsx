@@ -549,7 +549,7 @@ export function CCESettings({
             value={settings.slogan}
             onChange={upd("slogan")}
             icon={Sparkles}
-            placeholder="ज्ञान, संस्कार..."
+            placeholder="उदा. मुलांचा सर्वांगीण विकास — हाच आमचा ध्यास!"
           />
         </div>
 

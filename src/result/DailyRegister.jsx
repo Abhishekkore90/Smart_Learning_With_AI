@@ -657,7 +657,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
             <p class="cover-details"><strong>इयत्ता (Class):</strong> ${classValue}</p>
             <p class="cover-details"><strong>वर्ग शिक्षक (Class Teacher):</strong> ${teacherNameFallback}</p>
           </div>
-          <div style="margin-top: 45px; font-size: 14px; font-weight: bold; color: #1b4d3e;">✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦</div>
+          <div style="margin-top: 45px; font-size: 14px; font-weight: bold; color: #1b4d3e;">${(cceSettings && cceSettings.slogan) ? cceSettings.slogan : "मुलांचा सर्वांगीण विकास — हाच आमचा ध्यास!"}</div>
           <div class="cover-footer">
             <div>वर्गशिक्षक</div>
             <div>मुख्याध्यापक</div>

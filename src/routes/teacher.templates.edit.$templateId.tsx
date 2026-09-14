@@ -948,20 +948,7 @@ function TemplateEditorPage() {
                   </div>
                 </div>
 
-                <div className="pt-6 space-y-4">
-                  <button
-                    onClick={handleShareToStudent}
-                    disabled={isSaving}
-                    className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl"
-                  >
-                    {isSaving ? (
-                      <Loader2 className="size-5 animate-spin" />
-                    ) : (
-                      <Send className="size-5" />
-                    )}{" "}
-                    {lang === "mr" ? "डॅशबोर्डवर शेअर करा" : lang === "hi" ? "डैशबोर्ड पर साझा करें" : "Share to Dashboard"}
-                  </button>
-                  
+                <div className="pt-6">
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       onClick={handleDownloadTemplate}

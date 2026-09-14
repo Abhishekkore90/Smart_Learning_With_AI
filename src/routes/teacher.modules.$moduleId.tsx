@@ -2045,7 +2045,7 @@ function DailyAssemblyContent() {
         `<div style="background: #2e7d32; color: #fff; text-align: center; font-size: 14px; font-weight: 800; padding: 6px 14px; border-radius: 6px; margin: 0 0 8px 0; letter-spacing: 0.5px; font-family: 'Noto Sans Devanagari', sans-serif; box-sizing: border-box;">${title}</div>`;
 
       const sectionBox = (borderColor: string = "#e2e8f0") =>
-        `border: 1.5px solid ${borderColor}; border-radius: 10px; padding: 12px 20px; margin-bottom: 14px; background: #fff; page-break-inside: avoid; box-sizing: border-box;`;
+        `border: 1.5px solid ${borderColor}; border-radius: 10px; padding: 12px 20px; margin-top: 10px; margin-bottom: 12px; background: #fff; page-break-inside: avoid !important; break-inside: avoid !important; break-inside: avoid-page !important; display: block; position: relative; overflow: hidden; box-sizing: border-box;`;
 
       const contentText = `font-size: 13px; font-weight: 600; line-height: 1.65; color: #1F2937; margin: 0; text-align: center; font-family: 'Noto Sans Devanagari', sans-serif; white-space: pre-line; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box; padding: 0 10px;`;
 
@@ -2061,7 +2061,7 @@ function DailyAssemblyContent() {
       const formattedDate = formatDateToDDMMYYYY(dateStr);
 
       const pageHeader = `
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #2e7d32; padding-bottom: 6px; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #2e7d32; padding-bottom: 6px; margin-bottom: 14px;">
           <div style="font-size: 14px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">📖 दैनिक परिपाठ</div>
           <div style="font-size: 13px; font-weight: 700; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">दिनांक: ${formattedDate}</div>
         </div>
@@ -2069,7 +2069,7 @@ function DailyAssemblyContent() {
 
       // School Info Header
       const schoolHeader = (schoolInfo.schoolName || schoolInfo.udise || schoolInfo.kendra) ? `
-        <div style="border: 2px solid #2e7d32; border-radius: 10px; padding: 12px 18px; margin-bottom: 14px; background: #f0fdf4; text-align: center; page-break-inside: avoid;">
+        <div class="pdf-section-box" style="border: 2px solid #2e7d32; border-radius: 10px; padding: 12px 18px; margin-top: 8px; margin-bottom: 14px; background: #f0fdf4; text-align: center; page-break-inside: avoid !important; break-inside: avoid !important; position: relative; overflow: hidden;">
           ${schoolInfo.schoolName ? `<div style="font-size: 18px; font-weight: 900; color: #166534; margin-bottom: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">शाळेचे नाव: ${schoolInfo.schoolName}</div>` : ''}
           <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #166534; border-top: 1px dashed #86efac; padding-top: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">
             <span>केंद्र: ${schoolInfo.kendra || '-'} | युडायस (UDISE): ${schoolInfo.udise || '-'}</span>
@@ -2146,7 +2146,7 @@ function DailyAssemblyContent() {
         .map((sec) => {
           const numTitle = `${secCounter++}. ${sec.title.replace(/^[०-९0-9]+\.\s*/, "")}${sec.storyTitle ? ': ' + sec.storyTitle : ''}`;
           return `
-            <div style="${sectionBox(sec.bg)}">
+            <div class="pdf-section-box" style="${sectionBox(sec.bg)}">
               ${greenBar(numTitle)}
               ${sec.extra ? `<div style="font-size: 11px; font-weight: 700; color: #1e40af; text-align: center; margin-bottom: 4px;">${sec.extra}</div>` : ''}
               <div style="${contentText} ${sec.alignLeft ? 'text-align: left;' : ''} ${sec.isItalic ? 'font-style: italic;' : ''}">${nl2br(sec.content)}</div>
@@ -2158,7 +2158,7 @@ function DailyAssemblyContent() {
         .join("\n");
 
       const signatureSectionHtml = `
-        <div style="${sectionBox('#e2e8f0')}">
+        <div class="pdf-section-box" style="${sectionBox('#e2e8f0')}">
           ${greenBar(`${secCounter}. वर्गशिक्षकांची स्वाक्षरी`)}
           <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: #1e293b; padding: 25px 20px 5px 20px;">
             <span>वर्गशिक्षक स्वाक्षरी</span>
@@ -2168,7 +2168,7 @@ function DailyAssemblyContent() {
       `;
 
       const contactFooterHtml = `
-        <div style="margin-top: 14px; padding: 12px 16px; background: #1e1b4b; border: 2px solid #4338ca; border-radius: 10px; color: #ffffff; text-align: center; box-sizing: border-box; page-break-inside: avoid; font-family: 'Noto Sans Devanagari', 'Mukta', sans-serif;">
+        <div class="pdf-section-box" style="margin-top: 14px; margin-bottom: 10px; padding: 12px 16px; background: #1e1b4b; border: 2px solid #4338ca; border-radius: 10px; color: #ffffff; text-align: center; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid !important; position: relative; overflow: hidden; font-family: 'Noto Sans Devanagari', 'Mukta', sans-serif;">
           <div style="font-size: 13px; font-weight: 800; color: #fbbf24; margin-bottom: 6px;">
             📞 अधिक माहिती व अपडेट्ससाठी आमच्याशी संपर्क साधा
           </div>
@@ -2199,8 +2199,16 @@ function DailyAssemblyContent() {
             print-color-adjust: exact !important;
             color-adjust: exact !important;
           }
+          .pdf-section-box {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            break-inside: avoid-page !important;
+            display: block !important;
+            margin-top: 10px !important;
+            margin-bottom: 12px !important;
+          }
         </style>
-        <div style="padding: 14px 22px; width: 100%; box-sizing: border-box;">
+        <div style="padding: 16px 22px 14px 22px; width: 100%; box-sizing: border-box;">
           ${pageHeader}
           ${schoolHeader}
           ${pdfSectionsHtml}
@@ -2218,11 +2226,12 @@ function DailyAssemblyContent() {
       document.body.appendChild(tempDiv);
 
       const opt = {
-        margin: [6, 8, 6, 8],
+        margin: [12, 8, 10, 8],
         filename: `Paripath_${dateStr}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, windowWidth: 733, scrollY: 0, scrollX: 0 },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
         enableLinks: true,
       };
 

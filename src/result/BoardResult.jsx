@@ -242,7 +242,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
     udise: "",
     teacherName: "",
     headmasterName: "",
-    slogan: "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦",
+    slogan: "मुलांचा सर्वांगीण विकास — हाच आमचा ध्यास!",
     schoolLogo: "",
     teacherSignature: "",
     headmasterSignature: "",
@@ -279,7 +279,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         let teacherName = "";
         let headmasterName = "";
         let address = "";
-        let slogan = "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦";
+        let slogan = "मुलांचा सर्वांगीण विकास — हाच आमचा ध्यास!";
         let schoolLogo = "";
         let teacherSignature = "";
         let headmasterSignature = "";
@@ -416,7 +416,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           udise: udise || "",
           teacherName: teacherName || "",
           headmasterName: headmasterName || "",
-          slogan: slogan || "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦",
+          slogan: slogan || "मुलांचा सर्वांगीण विकास — हाच आमचा ध्यास!",
           schoolLogo: schoolLogo || "",
           teacherSignature: teacherSignature || "",
           headmasterSignature: headmasterSignature || "",
@@ -1226,7 +1226,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               </p>
             </div>
             <p className="text-xs font-extrabold text-slate-500 tracking-widest uppercase">
-              {schoolData.slogan || "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦"}
+              {schoolData.slogan || "मुलांचा सर्वांगीण विकास — हाच आमचा ध्यास!"}
             </p>
           </div>
         </div>

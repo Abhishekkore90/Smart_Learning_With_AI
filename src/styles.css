@@ -316,7 +316,8 @@
       system-ui,
       -apple-system,
       sans-serif;
-    font-feature-settings: "liga" 1, "dlig" 1;
+    font-feature-settings: "liga" 1, "dlig" 0;
+    font-variant-ligatures: no-discretionary-ligatures;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
