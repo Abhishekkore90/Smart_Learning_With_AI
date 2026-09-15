@@ -59,11 +59,64 @@ export function useCCEPdfData(currentClass: string, academicYear: string, medium
         );
         setStudentDetails(detailsMap);
 
-        // 2. Fetch CCE Settings
-        const settingsSnap = await getDoc(doc(db, "cce_settings", `${currentClass}_${academicYear}`));
-        if (settingsSnap.exists()) {
-          setCceSettings(settingsSnap.data());
+        // 2. Fetch CCE Settings (Teacher-Isolated FIRST)
+        let settingsData: any = null;
+
+        // Try user's unified school profile first
+        try {
+          const { getUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
+          const uni = getUnifiedSchoolProfile();
+          if (uni && (uni.schoolName || uni.headmaster)) {
+            settingsData = {
+              schoolName: uni.schoolName,
+              headmasterName: uni.headmaster,
+              principalName: uni.headmaster,
+              teacherName: uni.teacherName,
+              udiseCode: uni.udise,
+              address: uni.address,
+            };
+          }
+        } catch (e) {}
+
+        // Try local cache for logged in teacher
+        try {
+          const cachedGen = localStorage.getItem(`cce_general_school_settings_${teacherId}`);
+          if (cachedGen) {
+            settingsData = { ...settingsData, ...JSON.parse(cachedGen) };
+          }
+        } catch (e) {}
+
+        // Try Firestore teacher-isolated docs
+        const settingsDocIds = [
+          teacherId ? `${teacherId}_${currentClass}_${medium}_${academicYear}` : null,
+          teacherId ? `${teacherId}_${currentClass}_${academicYear}` : null,
+        ].filter(Boolean) as string[];
+
+        for (const sId of settingsDocIds) {
+          try {
+            const sSnap = await getDoc(doc(db, "cce_settings", sId));
+            if (sSnap.exists()) {
+              settingsData = { ...settingsData, ...sSnap.data() };
+              break;
+            }
+          } catch (e) {}
         }
+
+        if (teacherId) {
+          try {
+            const schoolSnap = await getDoc(doc(db, "school_settings", `${teacherId}_general`));
+            if (schoolSnap.exists()) {
+              settingsData = { ...settingsData, ...schoolSnap.data() };
+            } else {
+              const tSnap = await getDoc(doc(db, "school_settings", teacherId));
+              if (tSnap.exists()) {
+                settingsData = { ...settingsData, ...tSnap.data() };
+              }
+            }
+          } catch (e) {}
+        }
+
+        setCceSettings(settingsData || {});
 
         // 3. Fetch CCE Weightages
         const weightageDocIds = [

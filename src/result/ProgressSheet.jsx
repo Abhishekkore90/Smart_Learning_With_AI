@@ -195,11 +195,15 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             const cceDocIds = [
               uid ? `${uid}_${selectedClass}_${medKey}_${academicYear}` : null,
               uid ? `${uid}_${selectedClass}_${academicYear}` : null,
-              `${selectedClass}_${currentMedium}_${academicYear}`,
-              `${selectedClass}_${medKey}_${academicYear}`,
-              docId,
-              "global",
             ].filter(Boolean);
+
+            if (cceDocIds.length === 0) {
+              cceDocIds.push(
+                `${selectedClass}_${currentMedium}_${academicYear}`,
+                `${selectedClass}_${medKey}_${academicYear}`,
+                docId
+              );
+            }
 
             for (const cId of cceDocIds) {
               const cRef = doc(db, "cce_settings", cId);
@@ -223,10 +227,11 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             const settingsDocIds = [
               uid ? `${uid}_general` : null,
               uid ? uid : null,
-              "general",
-              "school_info",
-              "school_settings",
             ].filter(Boolean);
+
+            if (settingsDocIds.length === 0) {
+              settingsDocIds.push("general", "school_info", "school_settings");
+            }
 
             for (const dId of settingsDocIds) {
               const sRef = doc(db, "school_settings", dId);
@@ -244,6 +249,19 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
               }
             }
           } catch (e) { }
+
+          // 2b. Unified local profile fallback (Guarantees logged in user's own headmaster and school info)
+          try {
+            const { getUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
+            const uni = getUnifiedSchoolProfile();
+            if (uni) {
+              if (!schoolName && uni.schoolName) schoolName = uni.schoolName;
+              if (!headmasterName && uni.headmaster) headmasterName = uni.headmaster;
+              if (!teacherName && uni.teacherName) teacherName = uni.teacherName;
+              if (!udise && uni.udise) udise = uni.udise;
+              if (!address && uni.address) address = uni.address;
+            }
+          } catch (e) {}
 
           // 3. Check LocalStorage (cce_general_school_settings & CCESettings caches)
           const cacheKeys = [

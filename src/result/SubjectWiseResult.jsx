@@ -219,49 +219,41 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       try {
         let globalSettings = null;
 
-        // Try local storage cache (teacher-specific first, then generic)
-        try {
-          const cachedTeacher = localStorage.getItem(`cce_general_school_settings_${currentTeacherId}`);
-          const cachedGen = localStorage.getItem("cce_general_school_settings");
-          const cached = cachedTeacher || cachedGen;
-          if (cached) globalSettings = JSON.parse(cached);
-        } catch (e) { }
+        if (currentTeacherId) {
+          try {
+            const cachedTeacher = localStorage.getItem(`cce_general_school_settings_${currentTeacherId}`);
+            if (cachedTeacher) globalSettings = JSON.parse(cachedTeacher);
+          } catch (e) {}
 
-        if (!globalSettings) {
-          try {
-            const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-            globalSettings = await fetchJsonFromBunny("cce_results/general_school_settings.json");
-          } catch (e) { }
+          if (!globalSettings) {
+            try {
+              const teacherGenSnap = await getDoc(doc(db, "school_settings", `${currentTeacherId}_general`));
+              if (teacherGenSnap.exists()) globalSettings = teacherGenSnap.data();
+            } catch (e) {}
+          }
         }
 
-        // Try Firestore teacher-specific documents first, then global
-        if (!globalSettings) {
-          try {
-            const teacherGenSnap = await getDoc(doc(db, "school_settings", `${currentTeacherId}_general`));
-            if (teacherGenSnap.exists()) globalSettings = teacherGenSnap.data();
-          } catch (e) { }
-        }
-        if (!globalSettings) {
-          try {
-            const teacherSnap = await getDoc(doc(db, "school_settings", currentTeacherId));
-            if (teacherSnap.exists()) globalSettings = teacherSnap.data();
-          } catch (e) { }
-        }
-        if (!globalSettings) {
+        if (!globalSettings && !currentTeacherId) {
           try {
             const generalSnap = await getDoc(doc(db, "school_settings", "general"));
             if (generalSnap.exists()) globalSettings = generalSnap.data();
           } catch (e) { }
         }
 
-        // Try teacher-isolated class-specific settings first
+        // 2. Try teacher-isolated class-specific settings first
         let classSettings = {};
         const classDocIdsToTry = [
-          `${currentTeacherId}_${selectedClass}_${academicYear}`,
-          `${currentTeacherId}_${selectedClass}_${localStorage.getItem("cce_selected_medium") || "marathi"}_${academicYear}`,
-          `${selectedClass}_${localStorage.getItem("cce_selected_medium") || "marathi"}_${academicYear}`,
-          docId,
-        ];
+          currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}` : null,
+          currentTeacherId ? `${currentTeacherId}_${selectedClass}_${localStorage.getItem("cce_selected_medium") || "marathi"}_${academicYear}` : null,
+        ].filter(Boolean);
+
+        if (classDocIdsToTry.length === 0) {
+          classDocIdsToTry.push(
+            `${selectedClass}_${localStorage.getItem("cce_selected_medium") || "marathi"}_${academicYear}`,
+            docId
+          );
+        }
+
         for (const cDocId of classDocIdsToTry) {
           try {
             const settingsSnap = await getDoc(doc(db, "cce_settings", cDocId));
@@ -273,11 +265,24 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         }
         const mergedSettings = { ...(globalSettings || {}), ...classSettings };
 
+        // 3. Unified local profile fallback (Guarantees logged in user's headmaster and school info)
+        try {
+          const { getUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
+          const uni = getUnifiedSchoolProfile();
+          if (uni) {
+            if (!mergedSettings.schoolName && uni.schoolName) mergedSettings.schoolName = uni.schoolName;
+            if (!mergedSettings.principalName && uni.headmaster) mergedSettings.principalName = uni.headmaster;
+            if (!mergedSettings.teacherName && uni.teacherName) mergedSettings.teacherName = uni.teacherName;
+            if (!mergedSettings.udiseCode && uni.udise) mergedSettings.udiseCode = uni.udise;
+            if (!mergedSettings.address && uni.address) mergedSettings.address = uni.address;
+          }
+        } catch (e) {}
+
         const loadedDiv = mergedSettings.division || mergedSettings.section || mergedSettings.tukdi ||
           localStorage.getItem("cce_selected_division") || localStorage.getItem("teacher_division") || localStorage.getItem("division") || "";
         setDivision(loadedDiv);
 
-        if (mergedSettings.schoolName || mergedSettings.udiseCode || mergedSettings.teacherName) {
+        if (mergedSettings.schoolName || mergedSettings.udiseCode || mergedSettings.teacherName || mergedSettings.principalName) {
           setSchoolData({
             schoolName: mergedSettings.schoolName ? `${mergedSettings.schoolName}${mergedSettings.address ? ` (${mergedSettings.address})` : ""}` : "",
             udise: mergedSettings.udiseCode || mergedSettings.udise || "",

@@ -17,6 +17,7 @@ import {
   Newspaper,
   Sparkles,
   Globe,
+  SunMedium,
 } from "lucide-react";
 import { collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -504,6 +505,24 @@ function AssemblyBookAdmin() {
       // 4. Archive under selected date
       await setDoc(doc(db, "daily_paripath_archive", selectedDate), payload);
 
+      // 5. Sync declared holiday status
+      try {
+        await setDoc(
+          doc(db, "school_holidays", "declared"),
+          {
+            [selectedDate]: {
+              isHoliday: !!updatedParipathData.isHoliday,
+              reason: updatedParipathData.isHoliday 
+                ? (updatedParipathData.holidayReason || updatedParipathData.events || "शाळेस सुट्टी") 
+                : "",
+            },
+          },
+          { merge: true }
+        );
+      } catch (hErr) {
+        console.warn("Could not sync declared holiday status:", hErr);
+      }
+
       setIsSavedForDate(true);
       setParipathData(updatedParipathData);
       
@@ -928,6 +947,11 @@ function AssemblyBookAdmin() {
                   }`}>
                     {isSavedForDate ? "✓ डेटा सेव्ह आहे" : "✨ नवीन तारीख एंट्री"}
                   </span>
+                  {paripathData?.isHoliday && (
+                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 relative z-20">
+                      🌴 सुट्टी घोषित (Holiday Marked)
+                    </span>
+                  )}
                   {(() => {
                     if (!selectedDate) return null;
                     const parts = selectedDate.split("-").map(Number);
@@ -979,6 +1003,69 @@ function AssemblyBookAdmin() {
               </div>
             ) : (
               <div className="flex flex-col space-y-12 max-w-4xl mx-auto w-full">
+
+                {/* Holiday Toggle Card */}
+                <div className={`p-6 md:p-8 rounded-[2.5rem] border-2 transition-all shadow-lg ${
+                  paripathData?.isHoliday
+                    ? "bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-amber-400 shadow-amber-500/10"
+                    : "bg-white border-slate-200 shadow-slate-900/5"
+                }`}>
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-3 rounded-2xl ${paripathData?.isHoliday ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-600"}`}>
+                        <SunMedium className="size-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-base md:text-lg font-black text-slate-900 flex items-center gap-2">
+                          <span>🌴 आज सुट्टी घोषित करा</span>
+                          <span className="text-xs font-bold text-slate-500">(Mark Today as Holiday)</span>
+                        </h4>
+                        <p className="text-xs text-slate-600 font-medium">
+                          हा पर्याय सिलेक्ट करून सेव्ह केल्यास युजर्सना परिपाठाऐवजी आज सुट्टी असल्याचा मेसेज दिसेल.
+                        </p>
+                      </div>
+                    </div>
+
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0 self-start md:self-center">
+                      <input
+                        type="checkbox"
+                        checked={!!paripathData?.isHoliday}
+                        onChange={(e) => setParipathData((prev: any) => ({
+                          ...prev,
+                          isHoliday: e.target.checked,
+                          events: e.target.checked ? (prev?.events || prev?.holidayReason || "शाळेस सुट्टी") : (prev?.events === "शाळेस सुट्टी" ? "" : prev?.events)
+                        }))}
+                        className="sr-only peer"
+                      />
+                      <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-amber-500"></div>
+                      <span className="ml-3 text-sm font-black text-slate-800">
+                        {paripathData?.isHoliday ? "सुट्टी आहे (Holiday Marked)" : "नियमित दिवस (Working Day)"}
+                      </span>
+                    </label>
+                  </div>
+
+                  {paripathData?.isHoliday && (
+                    <div className="mt-6 pt-6 border-t border-amber-200/80 space-y-3">
+                      <label className="block text-xs font-black uppercase tracking-wider text-amber-900">
+                        📝 सुट्टीचे कारण किंवा संदेश (Holiday Reason / Message):
+                      </label>
+                      <input
+                        type="text"
+                        value={paripathData?.holidayReason || paripathData?.events || ""}
+                        onChange={(e) => setParipathData((prev: any) => ({
+                          ...prev,
+                          holidayReason: e.target.value,
+                          events: e.target.value,
+                        }))}
+                        placeholder="उदा. गौरी-गणपती सुट्टी / सार्वजनिक सुट्टी / आज शाळेस सुट्टी आहे"
+                        className="w-full px-5 py-3.5 bg-white border border-amber-300 rounded-2xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                      />
+                      <p className="text-[11px] font-bold text-amber-800 flex items-center gap-1.5">
+                        <span>⚠️ सेव्ह केल्यानंतर हा दिवस सुट्टी म्हणून मार्क होईल व युजरला सुट्टीचा मेसेज दिसेल.</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
 
               {/* Assembly Start Section */}
               <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-green-50/80 to-emerald-100/50 border border-green-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(34,197,94,0.12)] relative overflow-hidden">

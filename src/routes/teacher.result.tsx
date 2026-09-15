@@ -329,11 +329,12 @@ function TeacherResultsPage() {
     };
   }, [teacherId]);
 
-  // Load cce_settings for the current class+year with instant cache and parallel fallback
+  // Load cce_settings for the current class+year with instant teacher-isolated cache and parallel fallback
   useEffect(() => {
-    // 1. Instant Cache Hydration
+    // 1. Instant Cache Hydration (teacher-isolated)
     try {
-      const cached = localStorage.getItem(`cce_info_${selectedClass}_${academicYear}`) || localStorage.getItem("cce_info_cache");
+      const cached = localStorage.getItem(`cce_info_${teacherId}_${selectedClass}_${academicYear}`) ||
+        localStorage.getItem(`cce_general_school_settings_${teacherId}`);
       if (cached) {
         setCceInfo(JSON.parse(cached));
       }
@@ -342,42 +343,53 @@ function TeacherResultsPage() {
     const loadCceInfo = async () => {
       try {
         const { getDoc, doc } = await import("firebase/firestore");
-        
-        // 2. Try selected class and year first
-        let docRef = doc(db, "cce_settings", `${selectedClass}_${academicYear}`);
-        let snap = await getDoc(docRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          setCceInfo(data);
-          localStorage.setItem(`cce_info_${selectedClass}_${academicYear}`, JSON.stringify(data));
-          localStorage.setItem("cce_info_cache", JSON.stringify(data));
-          return;
+        const { getUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
+
+        let data: any = {};
+        const uni = getUnifiedSchoolProfile();
+        if (uni && (uni.schoolName || uni.headmaster)) {
+          data = {
+            schoolName: uni.schoolName,
+            headmasterName: uni.headmaster,
+            principalName: uni.headmaster,
+            teacherName: uni.teacherName,
+            udiseCode: uni.udise,
+            address: uni.address,
+          };
         }
-
-        // 3. Parallel fetch instead of 32 sequential queries in nested loops
-        const classes = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
-        const years = ["2025-2026", "2024-25", "2025-26", "2026-27"];
-        const docPromises: Promise<any>[] = [];
-
-        for (const cls of classes) {
-          for (const yr of years) {
-            if (cls === selectedClass && yr === academicYear) continue;
-            docPromises.push(
-              getDoc(doc(db, "cce_settings", `${cls}_${yr}`)).then(s => (s.exists() ? s.data() : null))
-            );
+        
+        // 2. Try teacher-isolated docs first
+        if (teacherId) {
+          const docIds = [
+            `${teacherId}_${selectedClass}_${selectedMedium}_${academicYear}`,
+            `${teacherId}_${selectedClass}_${academicYear}`,
+          ];
+          for (const dId of docIds) {
+            const snap = await getDoc(doc(db, "cce_settings", dId));
+            if (snap.exists()) {
+              data = { ...data, ...snap.data() };
+              break;
+            }
+          }
+          const schoolSnap = await getDoc(doc(db, "school_settings", `${teacherId}_general`));
+          if (schoolSnap.exists()) {
+            data = { ...data, ...schoolSnap.data() };
+          }
+        } else {
+          let docRef = doc(db, "cce_settings", `${selectedClass}_${academicYear}`);
+          let snap = await getDoc(docRef);
+          if (snap.exists()) {
+            data = { ...data, ...snap.data() };
           }
         }
 
-        const results = await Promise.all(docPromises);
-        const found = results.find(data => data !== null);
-        if (found) {
-          setCceInfo(found);
-          localStorage.setItem(`cce_info_${selectedClass}_${academicYear}`, JSON.stringify(found));
-          localStorage.setItem("cce_info_cache", JSON.stringify(found));
+        if (data.schoolName || data.headmasterName || data.principalName) {
+          setCceInfo(data);
+          localStorage.setItem(`cce_info_${teacherId}_${selectedClass}_${academicYear}`, JSON.stringify(data));
           return;
         }
 
-        // 4. Fallback to RTDB schoolData
+        // 3. Fallback to RTDB schoolData if still empty
         const udise = localStorage.getItem("udiseNumber");
         if (udise) {
           const dbUrl = 
@@ -387,18 +399,17 @@ function TeacherResultsPage() {
           if (dbUrl) {
             const res = await fetch(`${dbUrl}/schoolRegister/${udise}/schoolData.json`);
             if (res.ok) {
-              const data = await res.json();
-              if (data) {
+              const rtdbData = await res.json();
+              if (rtdbData) {
                 const info = {
-                  schoolName: data.schoolName || "",
-                  headmasterName: data.headmasterName || data.hmName || "",
-                  principalName: data.headmasterName || data.hmName || "",
-                  schoolLogo: data.schoolLogo || "",
+                  schoolName: rtdbData.schoolName || "",
+                  headmasterName: rtdbData.headmasterName || rtdbData.hmName || "",
+                  principalName: rtdbData.headmasterName || rtdbData.hmName || "",
+                  schoolLogo: rtdbData.schoolLogo || "",
                   udiseCode: udise,
                 };
                 setCceInfo(info);
-                localStorage.setItem(`cce_info_${selectedClass}_${academicYear}`, JSON.stringify(info));
-                localStorage.setItem("cce_info_cache", JSON.stringify(info));
+                localStorage.setItem(`cce_info_${teacherId}_${selectedClass}_${academicYear}`, JSON.stringify(info));
                 return;
               }
             }
@@ -409,7 +420,7 @@ function TeacherResultsPage() {
       }
     };
     loadCceInfo();
-  }, [selectedClass, academicYear]);
+  }, [selectedClass, academicYear, teacherId, selectedMedium]);
 
   // Real-time custom upload list sync
   useEffect(() => {

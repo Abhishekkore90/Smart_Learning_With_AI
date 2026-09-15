@@ -182,28 +182,32 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
           let sName = "";
           try {
             const cachedTeacher = localStorage.getItem(`cce_general_school_settings_${currentTeacherId}`);
-            const cachedGen = localStorage.getItem("cce_general_school_settings");
-            const cached = cachedTeacher || cachedGen;
-            if (cached) {
-              const parsed = JSON.parse(cached);
+            if (cachedTeacher) {
+              const parsed = JSON.parse(cachedTeacher);
               if (parsed.schoolName) sName = parsed.schoolName;
             }
           } catch (e) { }
 
           if (!sName) {
-            sName = localStorage.getItem("schoolName") || localStorage.getItem("teacher_school_name") || "";
+            try {
+              const { getUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
+              const uni = getUnifiedSchoolProfile();
+              if (uni && uni.schoolName) sName = uni.schoolName;
+            } catch (e) {}
+          }
+
+          if (!sName && currentTeacherId) {
+            try {
+              const tSnap = await getDoc(doc(db, "school_settings", `${currentTeacherId}_general`));
+              if (tSnap.exists() && tSnap.data().schoolName) {
+                sName = tSnap.data().schoolName;
+              }
+            } catch (e) {}
           }
 
           if (!sName) {
-            try {
-              const settingsSnap = await getDoc(doc(db, "cce_settings", docId));
-              if (settingsSnap.exists() && settingsSnap.data().schoolName) {
-                sName = settingsSnap.data().schoolName;
-              }
-            } catch (e) { }
+            sName = localStorage.getItem("schoolName") || localStorage.getItem("teacher_school_name") || "";
           }
-
-          if (!sName) sName = "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली";
 
           const classSubjects = getDefaultSubjectsForClass(selectedClass, selectedMedium) || [
             "मराठी",

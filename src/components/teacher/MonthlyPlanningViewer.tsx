@@ -544,13 +544,24 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
       const html2pdfModule = await import("html2pdf.js");
       const html2pdf = html2pdfModule.default || html2pdfModule;
 
-      const exportFileName = `${(fileName || `मासिक_नियोजन_${subjectName}`).replace(/\.[^/.]+$/, "")}_PDF.pdf`;
+      const toDevanagariDigits = (str: string | number): string => {
+        const devanagariDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+        return String(str).replace(/[0-9]/g, (w) => devanagariDigits[parseInt(w, 10)]);
+      };
+      const devYear = toDevanagariDigits("2026-27");
+
+      let exportFileName = fileName || "";
+      if (!exportFileName || !exportFileName.startsWith("इयत्ता_")) {
+        exportFileName = `इयत्ता_1st_संपूर्ण_मासिक_नियोजन_${devYear}.pdf`;
+      } else {
+        exportFileName = exportFileName.endsWith(".pdf") ? exportFileName : `${exportFileName}.pdf`;
+      }
 
       const opt = {
         margin: [6, 6, 6, 6],
         filename: exportFileName,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 1300, letterRendering: true },
         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
         pagebreak: {
           mode: ["css"],

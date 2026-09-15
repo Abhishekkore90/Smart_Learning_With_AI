@@ -42,14 +42,45 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
       try {
         const { db } = await import("@/lib/firebase");
         const { doc, getDoc } = await import("firebase/firestore");
-        const docRef = doc(db, "cce_settings", `${classValue}_${academicYear}`);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setCceSettings(data);
-          if (data.schoolName) setSchoolName(data.schoolName);
-          if (data.schoolLogo) setSchoolLogo(data.schoolLogo);
+        const { getTeacherId } = await import("@/lib/teacherIsolationHelper");
+        const { getUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
+        
+        const tid = getTeacherId();
+        const uni = getUnifiedSchoolProfile();
+        
+        let data = {};
+        if (uni && (uni.schoolName || uni.headmaster)) {
+          data = {
+            schoolName: uni.schoolName,
+            headmasterName: uni.headmaster,
+            principalName: uni.headmaster,
+            teacherName: uni.teacherName,
+            udiseCode: uni.udise,
+          };
         }
+
+        if (tid) {
+          const cRef = doc(db, "cce_settings", `${tid}_${classValue}_${academicYear}`);
+          const cSnap = await getDoc(cRef);
+          if (cSnap.exists()) {
+            data = { ...data, ...cSnap.data() };
+          }
+          const sRef = doc(db, "school_settings", `${tid}_general`);
+          const sSnap = await getDoc(sRef);
+          if (sSnap.exists()) {
+            data = { ...data, ...sSnap.data() };
+          }
+        } else {
+          const docRef = doc(db, "cce_settings", `${classValue}_${academicYear}`);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            data = { ...data, ...docSnap.data() };
+          }
+        }
+
+        setCceSettings(data);
+        if (data.schoolName) setSchoolName(data.schoolName);
+        if (data.schoolLogo) setSchoolLogo(data.schoolLogo);
       } catch (error) {
         console.error("Error fetching CCE settings from Firestore:", error);
       }

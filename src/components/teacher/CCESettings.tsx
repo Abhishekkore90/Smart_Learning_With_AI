@@ -397,12 +397,23 @@ export function CCESettings({
         updatedAt: new Date().toISOString(),
       };
 
-      // Save global & teacher-isolated school settings
+      // Save teacher-isolated school settings
       await setDoc(doc(db, "school_settings", `${teacherId}_general`), globalUpdated, { merge: true });
       await setDoc(doc(db, "school_settings", teacherId), globalUpdated, { merge: true });
-      await setDoc(doc(db, "school_settings", "general"), globalUpdated, { merge: true });
 
-      // Save class + medium specific teacher data for all edited/loaded keys
+      // Sync to unified school profile locally for instant accurate user PDF generation
+      try {
+        const { saveUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
+        saveUnifiedSchoolProfile({
+          schoolName: settings.schoolName,
+          udise: settings.udiseCode,
+          address: settings.address,
+          headmaster: settings.principalName,
+          teacherName: classTeachersMap[currentKey]?.teacherName || "",
+        });
+      } catch (e) {}
+
+      // Save class + medium specific teacher data for all edited/loaded keys (teacher-isolated)
       for (const [key, teacherData] of Object.entries(classTeachersMap)) {
         const parts = key.split("_");
         const cls = parts[0];
@@ -422,10 +433,6 @@ export function CCESettings({
         // 1. Save teacher-isolated class doc
         await setDoc(doc(db, "cce_settings", `${teacherId}_${cls}_${academicYear}`), classUpdated, { merge: true });
         await setDoc(doc(db, "cce_settings", `${teacherId}_${cls}_${med}_${academicYear}`), classUpdated, { merge: true });
-
-        // 2. Also save to main class docs for compatibility
-        await setDoc(doc(db, "cce_settings", `${cls}_${med}_${academicYear}`), classUpdated, { merge: true });
-        await setDoc(doc(db, "cce_settings", `${cls}_${academicYear}`), classUpdated, { merge: true });
 
         try {
           const { saveJsonToBunny } = await import("@/lib/bunnyStorage");

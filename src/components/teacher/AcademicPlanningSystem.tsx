@@ -1183,27 +1183,14 @@ export function AcademicPlanningSystem({
       const html2pdfModule = await import("html2pdf.js");
       const html2pdf = html2pdfModule.default || html2pdfModule;
 
-      const subjectName = selectedSubject || "मराठी";
-      const classNameStr =
-        selectedClass === "1st"
-          ? "1ली"
-          : selectedClass === "2nd"
-            ? "2री"
-            : selectedClass === "3rd"
-              ? "3री"
-              : selectedClass === "4th"
-                ? "4थी"
-                : selectedClass === "5th"
-                  ? "5वी"
-                  : selectedClass === "6th"
-                    ? "6वी"
-                    : selectedClass === "7th"
-                      ? "7वी"
-                      : selectedClass === "8th"
-                        ? "8वी"
-                        : selectedClass;
+      const toDevanagariDigits = (str: string | number): string => {
+        const devanagariDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+        return String(str).replace(/[0-9]/g, (w) => devanagariDigits[parseInt(w, 10)]);
+      };
 
-      const fileNameStr = `इयत्ता_${classNameStr}_${selectedPlanningType === "annual" ? "संपूर्ण_वार्षिक_नियोजन" : subjectName}_2026-27.pdf`;
+      const devYear = toDevanagariDigits("2026-27");
+      const planTypeStr = selectedPlanningType === "monthly" ? "संपूर्ण_मासिक_नियोजन" : "संपूर्ण_वार्षिक_नियोजन";
+      const fileNameStr = `इयत्ता_${selectedClass}_${planTypeStr}_${devYear}.pdf`;
 
       const opt = {
         margin: [6, 6, 6, 6],
@@ -1878,7 +1865,15 @@ export function AcademicPlanningSystem({
       return;
     }
 
-    const pdfName = (rec.fileName || `${rec.planningType}_planning`).replace(/\.[^/.]+$/, "") + ".pdf";
+    const toDevanagariDigits = (str: string | number): string => {
+      const devanagariDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+      return String(str).replace(/[0-9]/g, (w) => devanagariDigits[parseInt(w, 10)]);
+    };
+
+    const devYear = toDevanagariDigits("2026-27");
+    const isMonthly = rec.planningType === "monthly" || (rec.fileName || "").includes("मासिक") || (rec.id || "").includes("monthly");
+    const planTypeStr = isMonthly ? "संपूर्ण_मासिक_नियोजन" : "संपूर्ण_वार्षिक_नियोजन";
+    const pdfName = `इयत्ता_${selectedClass}_${planTypeStr}_${devYear}.pdf`;
 
     const a = document.createElement("a");
     a.href = targetUrl;

@@ -205,6 +205,7 @@ function TeacherDashboard() {
                     key={idx}
                   >
                     <div
+                      onClick={() => handleModuleAccess(item.to)}
                       className="min-h-[17rem] h-full bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col justify-between transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer block w-full"
                     >
                       {/* Watermark background icon */}
@@ -241,7 +242,6 @@ function TeacherDashboard() {
 
                       {/* Footer Arrow Action */}
                       <div
-                        onClick={() => handleModuleAccess(item.to)}
                         className="flex items-center justify-between text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-violet-200 mt-2 pt-2 border-t border-white/15"
                       >
                         <span>प्रवेश करा</span>

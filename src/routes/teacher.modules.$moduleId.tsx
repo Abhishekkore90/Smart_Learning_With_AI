@@ -1810,12 +1810,12 @@ function DailyAssemblyContent() {
         return;
       }
     }
-    if (holidayNotice?.isHoliday) {
+    if (holidayNotice?.isHoliday || dbFormData?.isHoliday) {
       setActiveAssemblyTab("sutti");
     } else {
       setActiveAssemblyTab("content");
     }
-  }, [selectedDate, holidayNotice]);
+  }, [selectedDate, holidayNotice, dbFormData?.isHoliday]);
 
   // Load unified school info from global storage & listen for changes
   useEffect(() => {
@@ -2559,65 +2559,25 @@ function DailyAssemblyContent() {
             </div>
           </div>
 
-          {/* Sunday / Holiday Tab Bar Switcher if Sunday or Holiday */}
-          {((() => {
-            if (!selectedDate) return false;
-            const parts = selectedDate.split("-").map(Number);
-            if (parts.length === 3) {
-              const d = new Date(parts[0], parts[1] - 1, parts[2]);
-              if (d.getDay() === 0) return true;
-            }
-            return !!holidayNotice?.isHoliday;
-          })()) && (
-            <div className="flex bg-amber-50/90 backdrop-blur-md p-1.5 rounded-2xl border border-amber-300 shadow-md w-fit mx-auto my-2 pdf-hide gap-1.5">
-              <button
-                type="button"
-                onClick={() => setActiveAssemblyTab("sutti")}
-                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-                  activeAssemblyTab === "sutti"
-                    ? "bg-amber-500 text-white shadow-lg scale-[1.02]"
-                    : "text-amber-900 hover:bg-amber-200/60"
-                }`}
-              >
-                <SunMedium className="size-4" />
-                <span>🏖️ सुट्टीचा टॅब (Sunday Off)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveAssemblyTab("content")}
-                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-                  activeAssemblyTab === "content"
-                    ? "bg-[#6C63FF] text-white shadow-lg scale-[1.02]"
-                    : "text-slate-700 hover:bg-slate-200/60"
-                }`}
-              >
-                <BookOpen className="size-4" />
-                <span>📖 परिपाठ घटक (Assembly Items)</span>
-              </button>
-            </div>
-          )}
-
-          {activeAssemblyTab === "sutti" && (holidayNotice?.isHoliday || (() => {
+          {/* If Sunday or declared/marked Holiday, show ONLY the Holiday Notice card and hide all paripath content */}
+          {(holidayNotice?.isHoliday || dbFormData?.isHoliday || (() => {
             if (!selectedDate) return false;
             const parts = selectedDate.split("-").map(Number);
             return parts.length === 3 && new Date(parts[0], parts[1] - 1, parts[2]).getDay() === 0;
           })()) ? (
             <div className="p-10 md:p-14 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-2 border-amber-400 rounded-[3rem] text-center space-y-6 shadow-sm my-6">
-              <div className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-amber-500 text-white text-sm font-black rounded-full uppercase tracking-wider shadow-md">
-                🎉 आज रविवार सुट्टी आहे (SUNDAY OFF)
-              </div>
-              <h3 className="text-2xl md:text-4xl font-black text-amber-950 tracking-tight leading-snug pt-2">
-                आज शाळेस रविवारची सुट्टी आहे!
+              <h3 className="text-2xl md:text-4xl font-black text-amber-950 tracking-tight leading-snug">
+                आज शाळेस सुट्टी आहे!
               </h3>
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveAssemblyTab("content")}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#6C63FF] hover:bg-indigo-600 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/25 active:scale-95"
-                >
-                  <BookOpen className="size-4" />
-                  <span>📖 परिपाठ घटक पहा (View Assembly Items)</span>
-                </button>
+
+              {/* Explicit Holiday Reason Box */}
+              <div className="max-w-xl mx-auto bg-amber-100/90 border-2 border-amber-300 rounded-2xl p-5 shadow-sm text-amber-950 space-y-1.5">
+                <span className="text-xs font-black uppercase tracking-wider text-amber-800 block">
+                  📢 सुट्टीचे कारण (Reason for Holiday):
+                </span>
+                <p className="text-lg md:text-xl font-extrabold text-amber-950">
+                  {dbFormData?.holidayReason || dbFormData?.events || holidayNotice?.reason || "शाळेस सुट्टी घोषित करण्यात आली आहे."}
+                </p>
               </div>
             </div>
           ) : (
