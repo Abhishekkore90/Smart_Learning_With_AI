@@ -47,7 +47,7 @@ const DEFAULT_ANNUAL_PLANNING_HEADERS = [
   "कामाचे दिवस",
   "प्राप्त तासिका",
   "विषय",
-  "अध्ययन निष्पत्ती क्रमांक",
+  "शिक्षक स्वाक्षरी",
 ];
 
 /**
@@ -809,16 +809,22 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
 
         {/* Grid View */}
         {(activeTab === "grid" || isEditMode) && currentDisplayGrid.length > 0 && (
-          <table className="w-full table-fixed text-left border-collapse text-slate-900 text-sm font-sans">
-            <colgroup>
-              {role === "admin" && isEditMode && <col className="w-[4%]" />}
-              <col className="w-[9%]" />   {/* महिना */}
-              <col className="w-[7%]" />   {/* आठवडा */}
-              <col className="w-[10%]" />  {/* कामाचे दिवस */}
-              <col className="w-[10%]" />  {/* प्राप्त तासिका */}
-              <col className="w-[36%]" />  {/* विषय */}
-              <col className="w-[28%]" />  {/* अध्ययन निष्पत्ती */}
-            </colgroup>
+          <>
+            {/* Mobile Scroll Indicator */}
+            <div className="flex items-center justify-between text-[11px] font-extrabold text-indigo-700 bg-indigo-50/80 px-3 py-1.5 rounded-lg border border-indigo-100 sm:hidden mb-2">
+              <span className="flex items-center gap-1">👈👉 संपूर्ण तक्ता पाहण्यासाठी डावीकडे/उजवीकडे सरकवा (Scroll horizontally)</span>
+            </div>
+            <div className="overflow-x-auto border border-slate-300 rounded-lg mb-4 pb-1">
+              <table className="w-full min-w-[860px] table-fixed text-left border-collapse text-slate-900 text-sm font-sans">
+                <colgroup>
+                  {role === "admin" && isEditMode && <col style={{ width: "50px" }} />}
+                  <col style={{ width: "95px" }} />
+                  <col style={{ width: "75px" }} />
+                  <col style={{ width: "95px" }} />
+                  <col style={{ width: "95px" }} />
+                  <col style={{ width: "320px" }} />
+                  <col style={{ width: "220px" }} />
+                </colgroup>
             <tbody className="divide-y divide-slate-300">
               {(() => {
                 const processed = processMonthGroups(currentDisplayGrid);
@@ -1046,7 +1052,9 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
               })()}
             </tbody>
           </table>
-        )}
+        </div>
+      </>
+    )}
 
         {/* Readonly Clean HTML View */}
         {activeTab === "html" && !isEditMode && propHtmlContent && (

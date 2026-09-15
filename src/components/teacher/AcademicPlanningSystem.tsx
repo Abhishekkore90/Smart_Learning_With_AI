@@ -3241,145 +3241,151 @@ export function AcademicPlanningSystem({
 
           {/* Printable table: use raw Excel structure / htmlContent when available */}
           {editingFileRecord?.htmlContent || viewModalFile?.htmlContent ? (
-            <div
-              dangerouslySetInnerHTML={{
-                __html: editingFileRecord?.htmlContent || viewModalFile?.htmlContent || "",
-              }}
-            />
+            <div className="overflow-x-auto min-w-full">
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: editingFileRecord?.htmlContent || viewModalFile?.htmlContent || "",
+                }}
+              />
+            </div>
           ) : rawEditorHeaders.length > 0 && !rawEditorHeaders.some((h) => isPdfNoiseLine(h)) && rawEditorRows.some((r) => !isPdfNoiseLine(r)) ? (
-            <table className="w-full border-collapse border border-slate-800 text-xs table-fixed">
-              <thead>
-                <tr className="bg-slate-200 text-slate-950 font-black border-b-2 border-slate-900" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  {rawEditorHeaders.map((h, hi) => {
-                    const style = getRawColumnWidthStyle(h, hi, rawEditorHeaders.length);
-                    return (
-                      <th key={hi} className="border border-slate-800 bg-slate-200 text-slate-950 font-black p-2 text-center text-xs" style={style}>
-                        {getCleanHeaderName(h)}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {rawEditorRows.filter((r) => !isPdfNoiseLine(r)).map((row, ri) => {
-                  const numCols = rawEditorHeaders.length;
-                  const rowType = detectRowType(row);
+            <div className="overflow-x-auto border border-slate-800 rounded-xl mb-4 pb-1">
+              <table className="w-full min-w-[850px] border-collapse border border-slate-800 text-xs table-fixed">
+                <thead>
+                  <tr className="bg-slate-200 text-slate-950 font-black border-b-2 border-slate-900" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    {rawEditorHeaders.map((h, hi) => {
+                      const style = getRawColumnWidthStyle(h, hi, rawEditorHeaders.length);
+                      return (
+                        <th key={hi} className="border border-slate-800 bg-slate-200 text-slate-950 font-black p-2 text-center text-xs" style={style}>
+                          {getCleanHeaderName(h)}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rawEditorRows.filter((r) => !isPdfNoiseLine(r)).map((row, ri) => {
+                    const numCols = rawEditorHeaders.length;
+                    const rowType = detectRowType(row);
 
-                  if (rowType === "signature") {
-                    const leftTxt = row.find((c) => c && (c.includes("शिक्षक") || c.includes("वर्ग"))) || "विषय / वर्ग शिक्षक";
-                    const rightTxt = row.find((c) => c && c.includes("मुख्याध्यापक")) || "मुख्याध्यापक";
-                    const halfCols = Math.ceil(numCols / 2);
-                    const remCols = numCols - halfCols;
-                    return (
-                      <tr key={ri} className="bg-slate-100 font-black border-t-2 border-b-2 border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-                        <td colSpan={halfCols} className="border border-slate-800 p-3 text-left font-black text-xs text-slate-950">
-                          {leftTxt}
-                        </td>
-                        <td colSpan={remCols} className="border border-slate-800 p-3 text-right font-black text-xs text-slate-950">
-                          {rightTxt}
-                        </td>
-                      </tr>
-                    );
-                  }
+                    if (rowType === "signature") {
+                      const leftTxt = row.find((c) => c && (c.includes("शिक्षक") || c.includes("वर्ग"))) || "विषय / वर्ग शिक्षक";
+                      const rightTxt = row.find((c) => c && c.includes("मुख्याध्यापक")) || "मुख्याध्यापक";
+                      const halfCols = Math.ceil(numCols / 2);
+                      const remCols = numCols - halfCols;
+                      return (
+                        <tr key={ri} className="bg-slate-100 font-black border-t-2 border-b-2 border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                          <td colSpan={halfCols} className="border border-slate-800 p-3 text-left font-black text-xs text-slate-950">
+                            {leftTxt}
+                          </td>
+                          <td colSpan={remCols} className="border border-slate-800 p-3 text-right font-black text-xs text-slate-950">
+                            {rightTxt}
+                          </td>
+                        </tr>
+                      );
+                    }
 
-                  if (rowType === "title") {
-                    const titleTxt = row.find((c) => c && c.trim() !== "") || "अभ्यासक्रमाचे मासिक व घटक नियोजन";
-                    return (
-                      <tr key={ri} className="bg-slate-200 font-black border-t-2 border-b-2 border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-                        <td colSpan={numCols} className="border border-slate-800 p-2.5 text-center font-black text-xs text-slate-950 uppercase tracking-wide">
-                          {titleTxt}
-                        </td>
-                      </tr>
-                    );
-                  }
+                    if (rowType === "title") {
+                      const titleTxt = row.find((c) => c && c.trim() !== "") || "अभ्यासक्रमाचे मासिक व घटक नियोजन";
+                      return (
+                        <tr key={ri} className="bg-slate-200 font-black border-t-2 border-b-2 border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                          <td colSpan={numCols} className="border border-slate-800 p-2.5 text-center font-black text-xs text-slate-950 uppercase tracking-wide">
+                            {titleTxt}
+                          </td>
+                        </tr>
+                      );
+                    }
 
-                  if (rowType === "meta") {
-                    const nonEmpties = row.filter((c) => c && c.trim() !== "");
-                    const leftTxt = nonEmpties[0] || "";
-                    const rightTxt = nonEmpties[1] || "";
-                    const halfCols = Math.ceil(numCols / 2);
-                    const remCols = numCols - halfCols;
-                    return (
-                      <tr key={ri} className="bg-slate-50 font-bold border-b border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-                        <td colSpan={halfCols} className="border border-slate-800 p-2 text-left font-bold text-xs text-slate-950">
-                          {leftTxt}
-                        </td>
-                        <td colSpan={remCols} className="border border-slate-800 p-2 text-right font-bold text-xs text-slate-950">
-                          {rightTxt}
-                        </td>
-                      </tr>
-                    );
-                  }
+                    if (rowType === "meta") {
+                      const nonEmpties = row.filter((c) => c && c.trim() !== "");
+                      const leftTxt = nonEmpties[0] || "";
+                      const rightTxt = nonEmpties[1] || "";
+                      const halfCols = Math.ceil(numCols / 2);
+                      const remCols = numCols - halfCols;
+                      return (
+                        <tr key={ri} className="bg-slate-50 font-bold border-b border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                          <td colSpan={halfCols} className="border border-slate-800 p-2 text-left font-bold text-xs text-slate-950">
+                            {leftTxt}
+                          </td>
+                          <td colSpan={remCols} className="border border-slate-800 p-2 text-right font-bold text-xs text-slate-950">
+                            {rightTxt}
+                          </td>
+                        </tr>
+                      );
+                    }
 
-                  if (rowType === "header_repeat") {
+                    if (rowType === "header_repeat") {
+                      return (
+                        <tr key={ri} className="bg-slate-200 font-black border-b-2 border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                          {rawEditorHeaders.map((h, ci) => {
+                            const style = getRawColumnWidthStyle(h, ci, numCols);
+                            return (
+                              <th key={ci} className="border border-slate-800 p-2 text-center text-xs font-black text-slate-950 bg-slate-200" style={style}>
+                                {getCleanHeaderName(h)}
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      );
+                    }
+
                     return (
-                      <tr key={ri} className="bg-slate-200 font-black border-b-2 border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                      <tr
+                        key={ri}
+                        className="border-b border-slate-800"
+                        style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
+                      >
                         {rawEditorHeaders.map((h, ci) => {
                           const style = getRawColumnWidthStyle(h, ci, numCols);
                           return (
-                            <th key={ci} className="border border-slate-800 p-2 text-center text-xs font-black text-slate-950 bg-slate-200" style={style}>
-                              {getCleanHeaderName(h)}
-                            </th>
+                            <td
+                              key={ci}
+                              className="border border-slate-800 p-1.5 whitespace-pre-line break-words align-top text-slate-950 text-xs font-normal"
+                              style={style}
+                            >
+                              {cleanCellContent(row[ci] ?? "")}
+                            </td>
                           );
                         })}
                       </tr>
                     );
-                  }
-
-                  return (
-                    <tr
-                      key={ri}
-                      className="border-b border-slate-800"
-                      style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
-                    >
-                      {rawEditorHeaders.map((h, ci) => {
-                        const style = getRawColumnWidthStyle(h, ci, numCols);
-                        return (
-                          <td
-                            key={ci}
-                            className="border border-slate-800 p-1.5 whitespace-pre-line break-words align-top text-slate-950 text-xs font-normal"
-                            style={style}
-                          >
-                            {cleanCellContent(row[ci] ?? "")}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  })}
+                </tbody>
+              </table>
+            </div>
           ) : (
-            <table className="w-full border-collapse border border-slate-800 text-xs table-fixed">
-              <thead>
-                <tr className="bg-slate-200 text-slate-950 font-black border-b-2 border-slate-900 text-center" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "7%" : "8%" }}>महिना</th>
-                  {(selectedPlanningType === "annual" || selectedSubject === "सर्व विषय" || selectedSubject === "all") && (
-                    <th className="border border-slate-800 p-1.5 text-center" style={{ width: "10%" }}>विषय</th>
-                  )}
-                  <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "5%" : "6%" }}>आठवडा</th>
-                  <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>कामाचे दिवस</th>
-                  <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>प्राप्त तासिका</th>
-                  <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "42%" : "46%" }}>विषय / घटक विवरण</th>
-                  <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "24%" : "26%" }}>अध्ययन निष्पत्ती</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tableRows.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-                    <td className="border border-slate-800 p-1.5 text-center font-bold break-words">{r.month}</td>
+            <div className="overflow-x-auto border border-slate-800 rounded-xl mb-4 pb-1">
+              <table className="w-full min-w-[850px] border-collapse border border-slate-800 text-xs table-fixed">
+                <thead>
+                  <tr className="bg-slate-200 text-slate-950 font-black border-b-2 border-slate-900 text-center" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "7%" : "8%" }}>महिना</th>
                     {(selectedPlanningType === "annual" || selectedSubject === "सर्व विषय" || selectedSubject === "all") && (
-                      <td className="border border-slate-800 p-1.5 text-center font-black text-slate-950 bg-slate-50 break-words">{r.subject || "सर्व विषय"}</td>
+                      <th className="border border-slate-800 p-1.5 text-center" style={{ width: "10%" }}>विषय</th>
                     )}
-                    <td className="border border-slate-800 p-1.5 text-center break-words">{r.weeks}</td>
-                    <td className="border border-slate-800 p-1.5 text-center break-words">{r.workingDays}</td>
-                    <td className="border border-slate-800 p-1.5 text-center break-words">{r.periods}</td>
-                    <td className="border border-slate-800 p-1.5 whitespace-pre-line break-words font-medium text-left">{r.topics}</td>
-                    <td className="border border-slate-800 p-1.5 whitespace-pre-line break-words text-left">{cleanCellContent(r.outcomes)}</td>
+                    <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "5%" : "6%" }}>आठवडा</th>
+                    <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>कामाचे दिवस</th>
+                    <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>प्राप्त तासिका</th>
+                    <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "42%" : "46%" }}>विषय / घटक विवरण</th>
+                    <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "24%" : "26%" }}>अध्ययन निष्पत्ती</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {tableRows.map((r) => (
+                    <tr key={r.id} className="border-b border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                      <td className="border border-slate-800 p-1.5 text-center font-bold break-words">{r.month}</td>
+                      {(selectedPlanningType === "annual" || selectedSubject === "सर्व विषय" || selectedSubject === "all") && (
+                        <td className="border border-slate-800 p-1.5 text-center font-black text-slate-950 bg-slate-50 break-words">{r.subject || "सर्व विषय"}</td>
+                      )}
+                      <td className="border border-slate-800 p-1.5 text-center break-words">{r.weeks}</td>
+                      <td className="border border-slate-800 p-1.5 text-center break-words">{r.workingDays}</td>
+                      <td className="border border-slate-800 p-1.5 text-center break-words">{r.periods}</td>
+                      <td className="border border-slate-800 p-1.5 whitespace-pre-line break-words font-medium text-left">{r.topics}</td>
+                      <td className="border border-slate-800 p-1.5 whitespace-pre-line break-words text-left">{cleanCellContent(r.outcomes)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           <div className="flex justify-between items-center pt-6 mt-4 text-xs font-bold text-slate-900 border-t border-slate-300" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>

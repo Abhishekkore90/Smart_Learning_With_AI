@@ -43,7 +43,7 @@ export const DEFAULT_HEADERS: Record<PlanningCategory, string[]> = {
     "कामाचे दिवस",
     "प्राप्त तासिका",
     "विषय / घटक विवरण",
-    "अध्ययन निष्पत्ती",
+    "शिक्षक स्वाक्षरी",
   ],
   masik_niyojan: [
     "दिनांक",

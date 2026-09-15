@@ -82,7 +82,7 @@ const getMarathiClassName = (clsStr) => {
   if (!clsStr) return "पहिली";
   const num = String(clsStr).match(/\d+/);
   const n = num ? parseInt(num[0], 10) : 1;
-  const names = ["", "पहिली", "दुसरी", "तिसरी", "चौथी", "पांचवी", "सहावी", "सातवी", "आठवी", "नववी", "दहावी"];
+  const names = ["", "पहिली", "दुसरी", "तिसरी", "चौथी", "पाचवी", "सहावी", "सातवी", "आठवी", "नववी", "दहावी"];
   return names[n] || `${n} वी`;
 };
 
@@ -1010,7 +1010,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             height: 297mm !important;
             max-height: 297mm !important;
             box-sizing: border-box !important;
-            padding: 8mm 6mm !important;
+            padding: 10mm !important;
             page-break-after: always !important;
             break-after: page !important;
             overflow: visible !important;
@@ -1019,7 +1019,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             width: 297mm !important;
             height: 210mm !important;
             max-height: 210mm !important;
-            padding: 6mm 6mm !important;
+            padding: 10mm !important;
             overflow: visible !important;
           }
         }
@@ -1199,115 +1199,132 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         `}</style>
         
         {/* -------------------- PAGE 1: COVER PAGE -------------------- */}
-        <div className="pdf-page bg-white p-8 border border-slate-200 rounded-3xl relative overflow-hidden text-center flex flex-col justify-between h-[285mm] shadow-sm mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
-          {/* Background Orbs */}
-          <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-bl from-amber-100/70 via-amber-50/40 to-transparent rounded-bl-full pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-72 h-72 bg-gradient-to-tr from-emerald-100/70 via-emerald-50/40 to-transparent rounded-tr-full pointer-events-none" />
+        <div
+          className="pdf-page bg-white border-none relative overflow-hidden text-center flex flex-col justify-between h-[287mm] shadow-sm mb-4"
+          style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
+        >
+          {/* Main Border Box with Equal Spacing on All Sides */}
+          <div className="border-2 border-slate-700 rounded-none p-6 sm:p-10 h-full w-full flex flex-col justify-between items-center text-center relative z-10" style={{ boxSizing: "border-box" }}>
 
-          {/* Top School Header Box (User's School Name) */}
-          <div className="relative z-10 my-8">
-            <div className="inline-block bg-slate-50/90 border border-slate-200/90 rounded-2xl px-8 py-5 shadow-xs max-w-2xl">
-              <h2 className="text-xl font-black text-slate-900 leading-snug">
-                {schoolData.schoolName || "शाळेची माहिती (शाळेचे नाव टाका)"}
+            {/* Top School Header Section */}
+            <div className="space-y-1.5 w-full">
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight leading-snug">
+                {schoolData.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
               </h2>
-              {schoolData.udise && (
-                <p className="text-xs font-bold text-slate-600 mt-1 font-mono">UDISE: {schoolData.udise}</p>
-              )}
-            </div>
-          </div>
+              <p className="text-xs font-semibold text-slate-500 font-mono tracking-widest uppercase mt-1">
+                UDISE : {schoolData.udise || "s1"}
+              </p>
 
-          {/* Main Title Box */}
-          <div className="relative z-10 my-10">
-            <div className="inline-block bg-white/95 border border-slate-200 shadow-md rounded-2xl px-10 py-6">
-              <h1 className="text-3xl font-black text-red-900 tracking-tight">सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही</h1>
+              {/* Horizontal Line with Diamond Node */}
+              <div className="flex items-center justify-center gap-3 my-5 max-w-xs mx-auto">
+                <div className="h-[1.5px] bg-slate-300 w-24" />
+                <div className="size-1.5 bg-slate-400 rotate-45 shrink-0" />
+                <div className="h-[1.5px] bg-slate-300 w-24" />
+              </div>
             </div>
-          </div>
 
-          {/* Year & Class Boxes */}
-          <div className="relative z-10 space-y-6 my-6">
-            <div className="inline-block bg-white border border-slate-200 rounded-2xl px-8 py-3 shadow-xs">
-              <h3 className="text-lg font-black text-slate-800">सन {academicYear}</h3>
-            </div>
-            <br />
-            <div className="inline-block bg-white border border-slate-200 rounded-2xl px-10 py-4 shadow-xs">
-              <h3 className="text-xl font-black text-slate-900">
-                इयत्ता : {getMarathiClassName(selectedClass)} ({selectedClass}) {formatDivision(division) ? `(तुकडी : ${formatDivision(division)})` : ""}
-              </h3>
-            </div>
-          </div>
-
-          {/* Class Teacher & Tagline */}
-          <div className="relative z-10 my-8 space-y-6">
-            <div className="inline-block bg-slate-50 border border-slate-200 rounded-2xl px-8 py-3 shadow-xs">
-              <p className="text-base font-extrabold text-slate-800">
-                वर्गशिक्षक : {schoolData.teacherName || "शिक्षकांचे नाव"}
+            {/* Main Title & Academic Year Section */}
+            <div className="space-y-2.5 my-auto w-full">
+              <h1 className="text-3xl sm:text-4xl font-black text-[#881337] tracking-tight">
+                सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही
+              </h1>
+              <p className="text-lg sm:text-xl font-bold text-[#1e3a8a]">
+                सन {academicYear}
               </p>
             </div>
-            <p className="text-xs font-extrabold text-slate-500 tracking-widest uppercase">
-              {schoolData.slogan || "मुलांचा सर्वांगीण विकास — हाच आमचा ध्यास!"}
-            </p>
+
+            {/* Class & Division Box */}
+            <div className="my-auto w-full">
+              <div className="inline-block bg-[#e0f2fe] border border-[#93c5fd] rounded-lg px-8 py-3.5 shadow-xs">
+                <h3 className="text-lg sm:text-xl font-black text-[#0f172a] tracking-wide">
+                  इयत्ता : {getMarathiClassName(selectedClass)} {formatDivision(division) ? `  तुकडी : ${formatDivision(division)}` : "  तुकडी : अ"}
+                </h3>
+              </div>
+            </div>
+
+            {/* Teacher Section */}
+            <div className="space-y-1 w-full">
+              <p className="text-xs font-semibold text-slate-500">वर्गशिक्षक</p>
+              <p className="text-lg sm:text-xl font-bold text-slate-800">
+                {schoolData.teacherName ? (schoolData.teacherName.startsWith("श्री") || schoolData.teacherName.startsWith("श्रीमती") ? schoolData.teacherName : `श्री. ${schoolData.teacherName}`) : "श्री. शिवकुमार"}
+              </p>
+            </div>
+
+            {/* Bottom Slogan & Footer Line */}
+            <div className="space-y-3 w-full">
+              <div className="w-28 h-[1px] bg-slate-300 mx-auto" />
+              <p className="text-xs font-medium text-slate-600 tracking-wider">
+                {schoolData.slogan || "ज्ञान, संस्कार आणि प्रगतीसाठी"}
+              </p>
+            </div>
+
           </div>
         </div>
 
         {/* -------------------- PAGE 2: INDEX (अनुक्रमणिका) -------------------- */}
-        <div className="pdf-page bg-white p-8 border border-slate-200 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm mb-4 flex flex-col justify-between" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
-          <div>
-            <h2 className="text-2xl font-black text-slate-900 mb-6 tracking-tight border-b-2 border-slate-800 pb-2">अनुक्रमणिका</h2>
-            <table className="w-full border-collapse border border-amber-900/60 text-sm font-medium">
-              <thead>
-                <tr className="bg-amber-50/80 text-amber-950 font-bold border-b border-amber-900/60">
-                  <th className="p-3 text-left border-r border-amber-900/60 w-3/4">विद्यार्थ्याचे नाव / तपशील</th>
-                  <th className="p-3 text-center w-1/4">पान क्रमांक</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.length === 0 ? (
-                  <tr>
-                    <td colSpan={2} className="p-4 text-center text-slate-400 font-bold">कोणतेही विद्यार्थी जोडलेले नाहीत.</td>
+        <div
+          className="pdf-page bg-white border-none relative overflow-hidden flex flex-col justify-between h-[287mm] shadow-sm mb-4"
+          style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
+        >
+          <div className="border-2 border-slate-700 rounded-none p-6 md:p-8 h-full w-full flex flex-col justify-between relative z-10" style={{ boxSizing: "border-box" }}>
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 mb-6 tracking-tight border-b-2 border-slate-800 pb-2">अनुक्रमणिका</h2>
+              <table className="w-full border-collapse border border-amber-900/60 text-sm font-medium">
+                <thead>
+                  <tr className="bg-amber-50/80 text-amber-950 font-bold border-b border-amber-900/60">
+                    <th className="p-3 text-left border-r border-amber-900/60 w-3/4">विद्यार्थ्याचे नाव / तपशील</th>
+                    <th className="p-3 text-center w-1/4">पान क्रमांक</th>
                   </tr>
-                ) : (
-                  students.map((student, idx) => (
-                    <tr key={student.id} className="border-b border-amber-900/40 hover:bg-slate-50">
-                      <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">
-                        {idx + 1}. {student.name}
-                      </td>
-                      <td className="p-3 text-center text-slate-600 font-mono font-bold">
-                        {pageMode === "1page" ? (idx + 3) : `${idx * 2 + 3} - ${idx * 2 + 4}`}
-                      </td>
+                </thead>
+                <tbody>
+                  {students.length === 0 ? (
+                    <tr>
+                      <td colSpan={2} className="p-4 text-center text-slate-400 font-bold">कोणतेही विद्यार्थी जोडलेले नाहीत.</td>
                     </tr>
-                  ))
-                )}
-                <tr className="border-b border-amber-900/40 bg-slate-50">
-                  <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</td>
-                  <td className="p-3 text-center text-slate-600 font-mono font-bold">
-                    {pageMode === "1page" ? (students.length + 3) : (students.length * 2 + 3)}
-                  </td>
-                </tr>
-                <tr className="border-b border-amber-900/40 bg-slate-50">
-                  <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक</td>
-                  <td className="p-3 text-center text-slate-600 font-mono font-bold">
-                    {pageMode === "1page" ? (students.length + 4) : (students.length * 2 + 4)}
-                  </td>
-                </tr>
-                <tr className="bg-slate-50">
-                  <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</td>
-                  <td className="p-3 text-center text-slate-600 font-mono font-bold">
-                    {pageMode === "1page" ? (students.length + 5) : (students.length * 2 + 5)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Signatures */}
-          <div className="flex items-center justify-between pt-6 border-t border-slate-200 text-xs font-bold text-slate-800">
-            <div className="text-center">
-              <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-              <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                  ) : (
+                    students.map((student, idx) => (
+                      <tr key={student.id} className="border-b border-amber-900/40 hover:bg-slate-50">
+                        <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">
+                          {idx + 1}. {student.name}
+                        </td>
+                        <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                          {pageMode === "1page" ? (idx + 3) : `${idx * 2 + 3} - ${idx * 2 + 4}`}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                  <tr className="border-b border-amber-900/40 bg-slate-50">
+                    <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</td>
+                    <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                      {pageMode === "1page" ? (students.length + 3) : (students.length * 2 + 3)}
+                    </td>
+                  </tr>
+                  <tr className="border-b border-amber-900/40 bg-slate-50">
+                    <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक</td>
+                    <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                      {pageMode === "1page" ? (students.length + 4) : (students.length * 2 + 4)}
+                    </td>
+                  </tr>
+                  <tr className="bg-slate-50">
+                    <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</td>
+                    <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                      {pageMode === "1page" ? (students.length + 5) : (students.length * 2 + 5)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div className="text-center">
-              <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-              <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+
+            {/* Signatures */}
+            <div className="flex items-center justify-between pt-6 border-t border-slate-200 text-xs font-bold text-slate-800">
+              <div className="text-center">
+                <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+              </div>
+              <div className="text-center">
+                <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+              </div>
             </div>
           </div>
         </div>
@@ -1358,9 +1375,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             <React.Fragment key={student.id}>
               {/* Page A: Formative & Summative Evaluation Table */}
               <div
-                className={`pdf-page bg-white border border-slate-200 rounded-3xl min-h-[285mm] h-auto overflow-hidden shadow-sm flex flex-col justify-between mb-4 ${pageMode === "1page" ? "p-3" : "p-6"}`}
-                style={{ pageBreakAfter: "always", breakAfter: "page" }}
+                className="pdf-page bg-white border-none relative overflow-hidden flex flex-col justify-between h-[287mm] shadow-sm mb-4"
+                style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
               >
+                <div
+                  className={`border-2 border-slate-700 rounded-none h-full w-full flex flex-col justify-between relative z-10 ${pageMode === "1page" ? "p-3 sm:p-4" : "p-6"}`}
+                  style={{ boxSizing: "border-box" }}
+                >
                 <div>
                   <h2 className={`font-black text-[#004080] text-center tracking-tight ${pageMode === "1page" ? "text-xl mb-2" : "text-2xl mb-4"}`}>सातत्यपूर्ण सर्वंकष मूल्यांकन</h2>
 
@@ -1842,10 +1863,15 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   </div>
                 </div>
               </div>
+            </div>
 
               {/* Page B: Descriptive Remarks Table — ONLY in 2-pages mode */}
               {pageMode === "2pages" && (
-              <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+              <div
+                className="pdf-page bg-white border-none relative overflow-hidden flex flex-col justify-between h-[287mm] shadow-sm mb-4"
+                style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
+              >
+                <div className="border-2 border-slate-700 rounded-none p-6 h-full w-full flex flex-col justify-between relative z-10" style={{ boxSizing: "border-box" }}>
                 <div>
                   <h2 className="text-xl font-black text-sky-800 text-center mb-4 border-b border-sky-200 pb-2">वर्णनात्मक नोंदी</h2>
 
@@ -1952,7 +1978,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   </div>
                 </div>
               </div>
-              )}
+            </div>
+            )}
             </React.Fragment>
           );
         });
@@ -2131,7 +2158,11 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               {/* ========================================================================= */}
               {/* PAGE 1: श्रेणी निहाय संकलन तक्ता (वर्गस्तर)                                */}
               {/* ========================================================================= */}
-              <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl min-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+              <div
+                className="pdf-page bg-white border-none relative overflow-hidden flex flex-col justify-between h-[287mm] shadow-sm mb-4"
+                style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
+              >
+                <div className="border-2 border-slate-700 rounded-none p-6 h-full w-full flex flex-col justify-between relative z-10" style={{ boxSizing: "border-box" }}>
                 <div>
                   <h2 className="text-xl font-black text-slate-900 text-center mb-4 tracking-tight">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</h2>
                   <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-300 pb-2 mb-4">
@@ -2268,6 +2299,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   </div>
                 </div>
               </div>
+            </div>
 
               {/* ========================================================================= */}
               {/* PAGE 2: जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक (अनेक पानांमध्ये विभागलेले)    */}
@@ -2282,9 +2314,10 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 return subjectChunks.map((chunkSubjects, pageIdx) => (
                   <div
                     key={`caste_summary_page_${pageIdx}`}
-                    className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl min-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4"
-                    style={{ pageBreakAfter: "always", breakAfter: "page" }}
+                    className="pdf-page bg-white border-none relative overflow-hidden flex flex-col justify-between h-[287mm] shadow-sm mb-4"
+                    style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
                   >
+                    <div className="border-2 border-slate-700 rounded-none p-6 h-full w-full flex flex-col justify-between relative z-10" style={{ boxSizing: "border-box" }}>
                     <div>
                       <h2 className="text-xl font-black text-slate-900 text-center mb-4 tracking-tight">
                         जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक {subjectChunks.length > 1 ? `(भाग ${pageIdx + 1})` : ""}
@@ -2414,13 +2447,19 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                       </div>
                     </div>
                   </div>
+                </div>
                 ));
               })()}
 
               {/* ========================================================================= */}
               {/* PAGE 3: सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक (एकत्रित लँडस्केप टेबल)    */}
               {/* ========================================================================= */}
-              <div className="pdf-page pdf-page-landscape bg-white p-6 border border-slate-200 rounded-3xl min-w-[297mm] overflow-x-auto shadow-sm flex flex-col justify-between mb-4" data-orientation="landscape" style={{ pageBreakBefore: "always", breakBefore: "page" }}>
+              <div
+                className="pdf-page pdf-page-landscape bg-white border-none relative overflow-hidden flex flex-col justify-between h-[190mm] min-w-[297mm] shadow-sm mb-4"
+                data-orientation="landscape"
+                style={{ padding: "10mm", boxSizing: "border-box", pageBreakBefore: "always", breakBefore: "page" }}
+              >
+                <div className="border-2 border-slate-700 rounded-none p-6 h-full w-full flex flex-col justify-between relative z-10" style={{ boxSizing: "border-box" }}>
                 <div>
                   <h2 className="text-xl font-black text-lime-900 text-center mb-2 tracking-tight">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</h2>
                   <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-lime-300 pb-2 mb-4">
@@ -2567,7 +2606,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   </div>
                 </div>
               </div>
-            </>
+            </div>
+          </>
           );
         })()}
 

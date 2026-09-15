@@ -487,7 +487,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         (h) => h && !h.toLowerCase().includes("स्तंभ") && !h.toLowerCase().includes("column")
       );
       if (hasMeaningfulHeaders) {
-        return sec.headers;
+        const cleanedHeaders = [...sec.headers];
+        if (!isMonthlyPlan && cleanedHeaders.length >= 6) {
+          cleanedHeaders[5] = "शिक्षक स्वाक्षरी";
+        }
+        return cleanedHeaders;
       }
     }
 
@@ -513,9 +517,16 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             "Working Days",
             "Periods",
             `Subject : ${sec.subjectName}`,
-            "Learning Outcomes",
+            "Teacher Signature",
           ]
-        : DEFAULT_HEADERS.varshik_niyojan;
+        : [
+            "महिना",
+            "आठवडा",
+            "कामाचे दिवस",
+            "प्राप्त तासिका",
+            `विषय : ${sec.subjectName}`,
+            "शिक्षक स्वाक्षरी",
+          ];
     }
   };
 
@@ -658,21 +669,31 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           }
         }
 
-        // Cols 4 and above (Topics, Learning Outcomes, Exam Banners, etc.)
+        // Col 4: Topic / Unit details (1 cell per row)
         for (let r = startR; r < endR; r++) {
-          for (let cIdx = 4; cIdx < numCols; cIdx++) {
-            if (!matrix[r][cIdx].skip) {
-              const rawVal = String(rows[r]?.[cIdx] || "").trim();
-              const val = (rawVal === "null" || rawVal === "undefined") ? "" : rawVal;
-              const isExam = isExamOrAssessmentText(val);
+          if (!matrix[r][4].skip) {
+            const rawVal = String(rows[r]?.[4] || "").trim();
+            const val = (rawVal === "null" || rawVal === "undefined") ? "" : rawVal;
+            const isExam = isExamOrAssessmentText(val);
 
-              matrix[r][cIdx] = {
-                rowSpan: 1,
-                skip: false,
-                displayValue: val || "-",
-                isExam,
-              };
-            }
+            matrix[r][4] = {
+              rowSpan: 1,
+              skip: false,
+              displayValue: val || "-",
+              isExam,
+            };
+          }
+        }
+
+        // Col 5: Teacher Signature (शिक्षक स्वाक्षरी) - Merged per Month Block (rowSpan = monthSpan), BLANK
+        if (numCols >= 6) {
+          matrix[startR][5] = {
+            rowSpan: monthSpan,
+            skip: false,
+            displayValue: "",
+          };
+          for (let k = startR + 1; k < endR; k++) {
+            matrix[k][5] = { rowSpan: 1, skip: true, displayValue: "" };
           }
         }
       });
@@ -1165,7 +1186,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         orientation: "portrait",
       });
 
-      const schoolHeader = printElement.querySelector(".pdf-school-header") as HTMLElement;
       const subjectSections = Array.from(
         printElement.querySelectorAll(".pdf-subject-section")
       ) as HTMLElement[];
@@ -1176,34 +1196,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         return;
       }
 
-      // Capture school header canvas once
-      let headerCanvas: HTMLCanvasElement | null = null;
-      if (schoolHeader) {
-        const headerClone = schoolHeader.cloneNode(true) as HTMLElement;
-        headerClone.querySelectorAll(".print\\:hidden, .no-print, button, svg").forEach((el: any) => el.remove());
-
-        const tempHeader = document.createElement("div");
-        tempHeader.className = "pdf-export-active";
-        tempHeader.style.position = "absolute";
-        tempHeader.style.left = "-9999px";
-        tempHeader.style.top = "0px";
-        tempHeader.style.width = "1000px";
-        tempHeader.style.backgroundColor = "#ffffff";
-        tempHeader.appendChild(headerClone);
-        document.body.appendChild(tempHeader);
-
-        headerCanvas = await html2canvas(headerClone, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          windowWidth: 1000,
-        });
-
-        document.body.removeChild(tempHeader);
-      }
-
-      let isFirstPdfPage = true;
+      let pdfCurrentY = 10;
       const pdfWidth = 190; // A4 width 210mm - 20mm margin (10mm left, 10mm right)
       const pdfPageHeight = 277; // A4 height 297mm - 20mm margin (10mm top, 10mm bottom)
 
@@ -1233,26 +1226,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         // Measure DOM element boundaries BEFORE html2canvas rendering
         const secRect = secClone.getBoundingClientRect();
 
-        const theadEl = secClone.querySelector("thead");
-        const theadTop = theadEl ? theadEl.getBoundingClientRect().top - secRect.top : 0;
-        const theadBottom = theadEl ? theadEl.getBoundingClientRect().bottom - secRect.top : 0;
-        const theadHeightDom = theadBottom - theadTop;
-
         const tbodyTrs = Array.from(secClone.querySelectorAll("tbody tr")) as HTMLElement[];
         const trBottomsDom = tbodyTrs.map((tr) => tr.getBoundingClientRect().bottom - secRect.top);
-
-        // Identify Month Block Boundaries so month blocks are never sliced in half across pages
-        const monthBlockBottomsDom: number[] = [];
-        tbodyTrs.forEach((tr, index) => {
-          if (tr.getAttribute("data-month-start") === "true" && index > 0) {
-            const prevRowBottom = tbodyTrs[index - 1].getBoundingClientRect().bottom - secRect.top;
-            monthBlockBottomsDom.push(prevRowBottom);
-          }
-        });
-        if (tbodyTrs.length > 0) {
-          const lastRowBottom = tbodyTrs[tbodyTrs.length - 1].getBoundingClientRect().bottom - secRect.top;
-          monthBlockBottomsDom.push(lastRowBottom);
-        }
 
         const secCanvas = await html2canvas(secClone, {
           scale: 2,
@@ -1262,83 +1237,194 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           windowWidth: 1000,
         });
 
+        let theadCanvas: HTMLCanvasElement | null = null;
+        const theadEl = secClone.querySelector("thead") as HTMLElement;
+        if (theadEl) {
+          theadCanvas = await html2canvas(theadEl, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: "#ffffff",
+            windowWidth: 1000,
+          });
+        }
+
         document.body.removeChild(tempContainer);
 
         const scaleY = secCanvas.height / (secRect.height || 1);
         const trBottomsCanvas = trBottomsDom.map((y) => y * scaleY);
-        const monthBlockBottomsCanvas = monthBlockBottomsDom.map((y) => y * scaleY);
 
-        if (!isFirstPdfPage) {
-          pdf.addPage();
-        }
+        // Identify Month Start Boundaries (in Canvas Y coordinates)
+        const monthStartTopsCanvas: number[] = [];
+        tbodyTrs.forEach((tr) => {
+          if (tr.getAttribute("data-month-start") === "true") {
+            const topPx = (tr.getBoundingClientRect().top - secRect.top) * scaleY;
+            monthStartTopsCanvas.push(topPx);
+          }
+        });
 
-        let currentY = 10;
+        const findExactVisualRowCut = (
+          canvas: HTMLCanvasElement,
+          approxY: number,
+          searchRangePx: number = 50
+        ): number => {
+          try {
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return approxY;
 
-        // On Document Page 1, place School Header first
-        if (i === 0 && headerCanvas) {
-          const headerImgData = headerCanvas.toDataURL("image/jpeg", 0.98);
-          const headerHeight = (headerCanvas.height * pdfWidth) / headerCanvas.width;
-          pdf.addImage(headerImgData, "JPEG", 10, currentY, pdfWidth, headerHeight);
-          currentY += headerHeight + 4;
-        }
+            const width = canvas.width;
+            const startY = Math.max(5, Math.floor(approxY - searchRangePx));
+            const endY = Math.min(canvas.height - 5, Math.floor(approxY + 15));
+            const bandHeight = endY - startY + 1;
 
-        const totalSecHeightMm = (secCanvas.height * pdfWidth) / secCanvas.width;
+            if (bandHeight <= 0) return approxY;
 
-        // If entire subject section fits cleanly in remaining height of current page
-        if (currentY + totalSecHeightMm <= pdfPageHeight + 10) {
-          const secImgData = secCanvas.toDataURL("image/jpeg", 0.98);
-          pdf.addImage(secImgData, "JPEG", 10, currentY, pdfWidth, totalSecHeightMm);
-        } else {
-          // Break section cleanly into Month-aligned or Row-aligned slices across pages
-          let canvasY = 0;
+            const imgData = ctx.getImageData(0, startY, width, bandHeight);
+            const data = imgData.data;
 
-          while (canvasY < secCanvas.height - 2) {
-            // If continuing section on a NEW page, add new page cleanly without extra header banners
-            if (canvasY > 0) {
-              pdf.addPage();
-              currentY = 10;
-            }
+            let bestY = approxY;
+            let minDarkCount = Infinity;
 
-            const maxAllowedMm = pdfPageHeight - currentY + 10;
-            const maxCanvasPx = (maxAllowedMm * secCanvas.width) / pdfWidth;
+            // Scan columns across the central area (10% to 90% width) where text appears
+            const leftX = Math.floor(width * 0.1);
+            const rightX = Math.floor(width * 0.9);
 
-            let sliceHeightPx = 0;
+            for (let r = bandHeight - 1; r >= 0; r--) {
+              const currentAbsoluteY = startY + r;
+              let darkCount = 0;
 
-            if (canvasY + maxCanvasPx >= secCanvas.height - 2) {
-              // Remaining subject content fits on this page
-              sliceHeightPx = secCanvas.height - canvasY;
-            } else {
-              const targetCanvasY = canvasY + maxCanvasPx;
-              let bestSplit = 0;
+              for (let x = leftX; x < rightX; x += 4) {
+                const idx = (r * width + x) * 4;
+                const red = data[idx];
+                const green = data[idx + 1];
+                const blue = data[idx + 2];
 
-              // Priority 1: Month Block Boundaries (never cut a month in half)
-              for (let k = 0; k < monthBlockBottomsCanvas.length; k++) {
-                const mb = monthBlockBottomsCanvas[k];
-                if (mb <= targetCanvasY && mb > canvasY + 25 * scaleY) {
-                  bestSplit = mb;
-                } else if (mb > targetCanvasY) {
+                // Text pixel check (slate-900 / black text color RGB < 160)
+                if (red < 160 && green < 160 && blue < 160) {
+                  darkCount++;
+                }
+              }
+
+              if (darkCount < minDarkCount) {
+                minDarkCount = darkCount;
+                bestY = currentAbsoluteY;
+                if (darkCount === 0) {
+                  // Found pure white gap between text lines!
                   break;
                 }
               }
+            }
 
-              // Priority 2: Individual Row Boundaries (fallback if month block is too large)
-              if (bestSplit <= canvasY) {
-                for (let k = 0; k < trBottomsCanvas.length; k++) {
-                  const b = trBottomsCanvas[k];
-                  if (b <= targetCanvasY && b > canvasY + 15 * scaleY) {
-                    bestSplit = b;
-                  } else if (b > targetCanvasY) {
-                    break;
-                  }
-                }
+            return bestY;
+          } catch (err) {
+            return approxY;
+          }
+        };
+
+        // Each subject section starts on a fresh page (except subject 0 on page 1)
+        if (i > 0) {
+          pdf.addPage();
+          pdfCurrentY = 10;
+        }
+
+        let canvasY = 0;
+
+        while (canvasY < secCanvas.height - 2) {
+          // On continuation page, render Table Header (thead) at top of page first
+          if (canvasY > 0 && pdfCurrentY <= 15 && theadCanvas) {
+            const theadImgData = theadCanvas.toDataURL("image/jpeg", 0.98);
+            const theadHeightMm = (theadCanvas.height * pdfWidth) / theadCanvas.width;
+            pdf.addImage(theadImgData, "JPEG", 10, pdfCurrentY, pdfWidth, theadHeightMm);
+            pdfCurrentY += theadHeightMm + 2;
+          }
+
+          let maxAllowedMm = pdfPageHeight - pdfCurrentY + 10;
+          let maxCanvasPx = (maxAllowedMm * secCanvas.width) / pdfWidth;
+
+          // Check if canvasY is at or near the start of a month block
+          const currentMonthIdx = monthStartTopsCanvas.findIndex((mTop) => Math.abs(canvasY - mTop) < 25 * scaleY);
+          if (currentMonthIdx !== -1) {
+            const currentMonthStart = monthStartTopsCanvas[currentMonthIdx];
+            // Find where this month ends (start of next month or end of table)
+            const nextMonthStartAfterThis = currentMonthIdx + 1 < monthStartTopsCanvas.length ? monthStartTopsCanvas[currentMonthIdx + 1] : secCanvas.height;
+            const monthTotalHeightPx = nextMonthStartAfterThis - currentMonthStart;
+
+            // If the ENTIRE month cannot fit on the current page, and we are not at the top of a fresh page, move to next page!
+            if (monthTotalHeightPx > maxCanvasPx && pdfCurrentY > 15) {
+              pdf.addPage();
+              pdfCurrentY = 10;
+
+              // Render Table Header (thead) at top of continuation page
+              if (theadCanvas) {
+                const theadImgData = theadCanvas.toDataURL("image/jpeg", 0.98);
+                const theadHeightMm = (theadCanvas.height * pdfWidth) / theadCanvas.width;
+                pdf.addImage(theadImgData, "JPEG", 10, pdfCurrentY, pdfWidth, theadHeightMm);
+                pdfCurrentY += theadHeightMm + 2;
               }
 
-              if (bestSplit > canvasY) {
-                sliceHeightPx = bestSplit - canvasY;
-              } else {
-                sliceHeightPx = maxCanvasPx;
+              maxAllowedMm = pdfPageHeight - pdfCurrentY + 10;
+              maxCanvasPx = (maxAllowedMm * secCanvas.width) / pdfWidth;
+            }
+          }
+
+          // Find the next month start boundary (if any) strictly after canvasY
+          const nextMonthStart = monthStartTopsCanvas.find((mTop) => mTop > canvasY + 25 * scaleY);
+
+          // Cap targetCanvasY at nextMonthStart so a month block does NOT spill over into a new month on the same page
+          let targetCanvasY = canvasY + maxCanvasPx;
+          if (nextMonthStart && nextMonthStart < targetCanvasY) {
+            targetCanvasY = nextMonthStart;
+          }
+
+          let sliceHeightPx = 0;
+
+          if (canvasY + maxCanvasPx >= secCanvas.height - 2 && (!nextMonthStart || nextMonthStart >= secCanvas.height - 2)) {
+            // Remaining subject content fits on this page
+            sliceHeightPx = secCanvas.height - canvasY;
+          } else {
+            let bestSplit = 0;
+
+            // Find the largest table row boundary that fits within targetCanvasY
+            for (let k = 0; k < trBottomsCanvas.length; k++) {
+              const b = trBottomsCanvas[k];
+              if (b <= targetCanvasY && b > canvasY + 5 * scaleY) {
+                bestSplit = b;
+              } else if (b > targetCanvasY) {
+                break;
               }
             }
+
+            // If NO row boundary fits on current page (because remaining page height is too small for next row),
+            // AND we are NOT at the top of a fresh page, break to a fresh page FIRST instead of slicing mid-row!
+            if (bestSplit <= canvasY && pdfCurrentY > 15) {
+              pdf.addPage();
+              pdfCurrentY = 10;
+              const freshMaxAllowedMm = pdfPageHeight - pdfCurrentY + 10;
+              maxCanvasPx = (freshMaxAllowedMm * secCanvas.width) / pdfWidth;
+              targetCanvasY = canvasY + maxCanvasPx;
+
+              if (nextMonthStart && nextMonthStart < targetCanvasY) {
+                targetCanvasY = nextMonthStart;
+              }
+
+              for (let k = 0; k < trBottomsCanvas.length; k++) {
+                const b = trBottomsCanvas[k];
+                if (b <= targetCanvasY && b > canvasY + 5 * scaleY) {
+                  bestSplit = b;
+                } else if (b > targetCanvasY) {
+                  break;
+                }
+              }
+            }
+
+            if (bestSplit > canvasY) {
+              const visualSplit = findExactVisualRowCut(secCanvas, bestSplit, Math.round(35 * scaleY));
+              sliceHeightPx = visualSplit - canvasY;
+            } else {
+              const fallbackSplit = findExactVisualRowCut(secCanvas, canvasY + maxCanvasPx, Math.round(35 * scaleY));
+              sliceHeightPx = Math.max(10, Math.min(fallbackSplit - canvasY, secCanvas.height - canvasY));
+            }
+          }
 
             // Crop sliceCanvas
             const sliceCanvas = document.createElement("canvas");
@@ -1386,15 +1472,20 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             const sliceImgData = sliceCanvas.toDataURL("image/jpeg", 0.98);
             const sliceHeightMm = (sliceHeightPx * pdfWidth) / secCanvas.width;
 
-            pdf.addImage(sliceImgData, "JPEG", 10, currentY, pdfWidth, sliceHeightMm);
+            pdf.addImage(sliceImgData, "JPEG", 10, pdfCurrentY, pdfWidth, sliceHeightMm);
 
             canvasY += sliceHeightPx;
-            currentY += sliceHeightMm;
+            pdfCurrentY += sliceHeightMm;
+
+            // If subject section is not finished, move to next page for continuation
+            if (canvasY < secCanvas.height - 2) {
+              pdf.addPage();
+              pdfCurrentY = 10;
+            } else {
+              pdfCurrentY += 6; // Spacing after subject section finishes
+            }
           }
         }
-
-        isFirstPdfPage = false;
-      }
 
       const filename = isSingleSubject
         ? `इयत्ता_${record?.classId || "1"}_वार्षिक_नियोजन_${selectedSubjectFilter}_२०२६-२७.pdf`
@@ -1769,27 +1860,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     margin-top: 6px !important;
                   }
                 `}</style>
-                {/* Header Title & School Info Card at START of Document (First Page Only) */}
-                <div className="pdf-school-header border-2 border-slate-900 rounded-2xl p-4 sm:p-5 bg-slate-50 space-y-3 text-xs font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900">
-                  <div className="text-center space-y-1.5 border-b-2 border-slate-900 pb-3">
-                    <h2 className="text-lg sm:text-xl font-black text-indigo-950 uppercase tracking-tight print:text-slate-950">
-                      {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
-                    </h2>
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 uppercase">
-                      {cleanClassTitle}
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-bold text-slate-900 pt-1">
-                    <div><span className="text-slate-600">केंद्र:</span> {schoolProfile.kendraName || "—"}</div>
-                    <div><span className="text-slate-600">तालुका:</span> {schoolProfile.talukaName || "—"}</div>
-                    <div><span className="text-slate-600">UDISE क्र.:</span> <span className="font-mono">{schoolProfile.udiseNumber || "—"}</span></div>
-                    <div><span className="text-slate-600">वर्ग शिक्षक:</span> {schoolProfile.teacherName || "—"}</div>
-                    <div><span className="text-slate-600">मुख्याध्यापक:</span> {schoolProfile.headMasterName || "—"}</div>
-                    <div><span className="text-slate-600">माध्यम:</span> {displayMedium}</div>
-                  </div>
-                </div>
-
                 {/* EDIT MODE NOTICE BANNER (Informative only - no duplicate save button) */}
                 {isInlineEditing && (
                   <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-4 rounded-2xl shadow-md flex items-center justify-between flex-wrap gap-3">
@@ -1835,6 +1905,27 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           key={`${sec.subjectName}-${secIdx}`}
                           className={`pdf-subject-section space-y-4 my-6 ${secIdx > 0 ? "html2pdf__page-break pt-6 border-t-2 border-slate-200 print:pt-0 print:border-none" : ""}`}
                         >
+                        {/* Header Title & School Info Card for THIS Subject */}
+                        <div className="pdf-school-header border-2 border-slate-900 rounded-2xl p-5 sm:p-6 bg-slate-50 space-y-3.5 text-sm sm:text-base font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900">
+                          <div className="text-center space-y-2 border-b-2 border-slate-900 pb-4">
+                            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-indigo-950 uppercase tracking-wide print:text-slate-950">
+                              {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
+                            </h2>
+                            <h3 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900 uppercase">
+                              {cleanClassTitle}
+                            </h3>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs sm:text-sm md:text-base font-bold text-slate-900 pt-1.5">
+                            <div><span className="text-slate-600 font-semibold">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
+                            <div><span className="text-slate-600 font-semibold">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
+                            <div><span className="text-slate-600 font-semibold">UDISE क्र.:</span> <span className="font-mono font-extrabold text-slate-950">{schoolProfile.udiseNumber || "—"}</span></div>
+                            <div><span className="text-slate-600 font-semibold">वर्ग शिक्षक:</span> <span className="font-extrabold text-slate-950">{schoolProfile.teacherName || "—"}</span></div>
+                            <div><span className="text-slate-600 font-semibold">मुख्याध्यापक:</span> <span className="font-extrabold text-slate-950">{schoolProfile.headMasterName || "—"}</span></div>
+                            <div><span className="text-slate-600 font-semibold">माध्यम:</span> <span className="font-extrabold text-slate-950">{displayMedium}</span></div>
+                          </div>
+                        </div>
+
                         {/* Subject Banner Header */}
                         <div className="pdf-subject-banner bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
                           <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
@@ -1857,33 +1948,37 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           </div>
                         </div>
 
-                         {/* Table View */}
-                        <div className="overflow-x-auto">
-                          <table className="w-full table-fixed border-collapse border border-slate-900 text-xs font-sans bg-white">
-                            <colgroup>
-                              {isMonthly ? (
-                                <>
-                                  <col style={{ width: "6%" }} />
-                                  <col style={{ width: "22%" }} />
-                                  <col style={{ width: "20%" }} />
-                                  <col style={{ width: "18%" }} />
-                                  <col style={{ width: "16%" }} />
-                                  <col style={{ width: "10%" }} />
-                                  <col style={{ width: "8%" }} />
-                                  {isInlineEditing && <col style={{ width: "5%" }} />}
-                                </>
-                              ) : (
-                                <>
-                                  <col style={{ width: "8%" }} />
-                                  <col style={{ width: "6%" }} />
-                                  <col style={{ width: "8%" }} />
-                                  <col style={{ width: "8%" }} />
-                                  <col style={{ width: "45%" }} />
-                                  <col style={{ width: "25%" }} />
-                                  {isInlineEditing && <col style={{ width: "5%" }} />}
-                                </>
-                              )}
-                            </colgroup>
+                         {/* Mobile Scroll Indicator */}
+                         <div className="flex items-center justify-between text-[11px] font-extrabold text-indigo-700 bg-indigo-50/80 px-3 py-1.5 rounded-lg border border-indigo-100 sm:hidden mb-2">
+                           <span className="flex items-center gap-1">👈👉 संपूर्ण तक्ता पाहण्यासाठी डावीकडे/उजवीकडे सरकवा (Scroll horizontally)</span>
+                         </div>
+                         {/* Table View Container */}
+                         <div className="overflow-x-auto border border-slate-900 rounded-xl shadow-xs mb-4 pb-1">
+                           <table className="w-full min-w-[860px] table-fixed border-collapse border border-slate-900 text-xs font-sans bg-white">
+                             <colgroup>
+                               {isMonthly ? (
+                                 <>
+                                   <col style={{ width: "65px" }} />   {/* दिनांक */}
+                                   <col style={{ width: "175px" }} />  {/* पाठ / घटक / उपघटक */}
+                                   <col style={{ width: "165px" }} />  {/* अध्ययन निष्पत्ती */}
+                                   <col style={{ width: "160px" }} />  {/* अध्ययन मुद्दे / पाठ्यांश उद्देश */}
+                                   <col style={{ width: "145px" }} />  {/* अध्ययन अनुभवाचे स्वरूप */}
+                                   <col style={{ width: "105px" }} />  {/* साधन तंत्रे */}
+                                   <col style={{ width: "95px" }} />   {/* आवश्यक साहित्य */}
+                                   {isInlineEditing && <col style={{ width: "60px" }} />}
+                                 </>
+                               ) : (
+                                 <>
+                                   <col style={{ width: "85px" }} />
+                                   <col style={{ width: "65px" }} />
+                                   <col style={{ width: "85px" }} />
+                                   <col style={{ width: "85px" }} />
+                                   <col style={{ width: "350px" }} />
+                                   <col style={{ width: "220px" }} />
+                                   {isInlineEditing && <col style={{ width: "60px" }} />}
+                                 </>
+                               )}
+                             </colgroup>
                             <thead>
                               <tr className="bg-slate-100 text-slate-900 font-black text-center text-xs border-b border-slate-400">
                                 {categoryHeaders.map((hText: string, i: number) => (
@@ -1907,8 +2002,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                   const isMonthStartRow =
                                     !isInlineEditing &&
                                     (isMonthly
-                                      ? (sectionRowMatrix[rIdx]?.[1]?.skip === false || sectionRowMatrix[rIdx]?.[2]?.skip === false) && rIdx > 0
-                                      : sectionRowMatrix[rIdx]?.[0]?.skip === false && (sectionRowMatrix[rIdx]?.[0]?.rowSpan ?? 1) > 1);
+                                      ? rIdx > 0 && (sectionRowMatrix[rIdx]?.[1]?.skip === false || sectionRowMatrix[rIdx]?.[2]?.skip === false)
+                                      : rIdx > 0 && sectionRowMatrix[rIdx]?.[0]?.skip === false);
                                   return (
                                     <tr
                                       key={rIdx}

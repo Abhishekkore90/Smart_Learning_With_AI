@@ -524,25 +524,204 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
 
       const container = document.createElement("div");
       container.className = "pdf-export-container bg-white text-slate-900 font-sans";
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+      container.style.top = "0px";
+      container.style.width = "1150px";
+      container.style.minWidth = "1150px";
+      container.style.zIndex = "-9999";
       container.innerHTML = `
         <style>
-          @media print {
-            @page { size: A4 landscape; margin: 6mm; }
-            body { -webkit-print-color-adjust: exact; }
-          }
-          .pdf-export-container { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; background: #ffffff; padding: 2px; margin: 0; }
-          .month-card-container { page-break-inside: avoid !important; break-inside: avoid !important; margin: 0 !important; padding: 2px 0 !important; background: #ffffff; }
-          .monthly-pdf-page-break { page-break-before: always !important; break-before: page !important; }
-          .month-card-container:last-child { page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 0 !important; }
-          table.pdf-table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; margin-top: 4px; margin-bottom: 4px; }
-          table.pdf-table th, table.pdf-table td { border: 1px solid #334155 !important; padding: 3.5px 5px !important; font-size: 10px !important; word-wrap: break-word !important; overflow-wrap: break-word !important; white-space: normal !important; vertical-align: top !important; }
-          table.pdf-table th { background-color: #fef3c7 !important; color: #78350f !important; font-weight: bold !important; text-align: center !important; }
+          .pdf-export-container { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; background: #ffffff; padding: 6px; margin: 0; width: 1150px !important; min-width: 1150px !important; box-sizing: border-box !important; }
+          .month-card-container { margin: 0 !important; padding: 4px 0 !important; background: #ffffff; width: 1138px !important; min-width: 1138px !important; }
+          table.pdf-table { width: 1138px !important; min-width: 1138px !important; table-layout: fixed !important; border-collapse: collapse !important; margin-top: 6px; margin-bottom: 6px; }
+          table.pdf-table th, table.pdf-table td { border: 1.5px solid #334155 !important; padding: 5px 6px !important; font-size: 11px !important; word-wrap: break-word !important; overflow-wrap: break-word !important; white-space: normal !important; vertical-align: top !important; line-height: 1.5 !important; }
+          table.pdf-table th { background-color: #fef3c7 !important; color: #78350f !important; font-weight: bold !important; text-align: center !important; font-size: 11.5px !important; }
         </style>
         ${cleanTableMarkup}
       `;
 
-      const html2pdfModule = await import("html2pdf.js");
-      const html2pdf = html2pdfModule.default || html2pdfModule;
+      document.body.appendChild(container);
+
+      const html2canvasModule = await import("html2canvas");
+      const html2canvas = html2canvasModule.default || html2canvasModule;
+      const { jsPDF } = await import("jspdf");
+
+      const pdf = new jsPDF({
+        unit: "mm",
+        format: "a4",
+        orientation: "landscape",
+      });
+
+      const pdfWidth = 287; // A4 landscape width (297mm - 10mm margins)
+      const pdfPageHeight = 190; // A4 landscape height (210mm - 20mm margins)
+      let pdfCurrentY = 10;
+
+      const monthEls = Array.from(container.querySelectorAll(".month-card-container")) as HTMLElement[];
+
+      const findExactVisualRowCut = (
+        canvas: HTMLCanvasElement,
+        approxY: number,
+        searchRangePx: number = 40
+      ): number => {
+        try {
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return approxY;
+
+          const width = canvas.width;
+          const startY = Math.max(5, Math.floor(approxY - searchRangePx));
+          const endY = Math.min(canvas.height - 5, Math.floor(approxY + 15));
+          const bandHeight = endY - startY + 1;
+
+          if (bandHeight <= 0) return approxY;
+
+          const imgData = ctx.getImageData(0, startY, width, bandHeight);
+          const data = imgData.data;
+
+          let bestY = approxY;
+          let minDarkCount = Infinity;
+
+          const leftX = Math.floor(width * 0.05);
+          const rightX = Math.floor(width * 0.95);
+
+          for (let r = bandHeight - 1; r >= 0; r--) {
+            const currentAbsoluteY = startY + r;
+            let darkCount = 0;
+
+            for (let x = leftX; x < rightX; x += 4) {
+              const idx = (r * width + x) * 4;
+              const red = data[idx];
+              const green = data[idx + 1];
+              const blue = data[idx + 2];
+
+              if (red < 160 && green < 160 && blue < 160) {
+                darkCount++;
+              }
+            }
+
+            if (darkCount < minDarkCount) {
+              minDarkCount = darkCount;
+              bestY = currentAbsoluteY;
+              if (darkCount === 0) break;
+            }
+          }
+
+          return bestY;
+        } catch (err) {
+          return approxY;
+        }
+      };
+
+      for (let i = 0; i < monthEls.length; i++) {
+        const monthEl = monthEls[i];
+        const monthRect = monthEl.getBoundingClientRect();
+        const tbodyTrs = Array.from(monthEl.querySelectorAll("tbody tr")) as HTMLElement[];
+        const trBottomsDom = tbodyTrs.map((tr) => tr.getBoundingClientRect().bottom - monthRect.top);
+
+        const monthCanvas = await html2canvas(monthEl, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+          windowWidth: 1200,
+        });
+
+        const scaleY = monthCanvas.height / (monthRect.height || 1);
+        const trBottomsCanvas = trBottomsDom.map((y) => y * scaleY);
+
+        // Every new month MUST start on a FRESH PAGE
+        if (i > 0) {
+          pdf.addPage();
+          pdfCurrentY = 10;
+        }
+
+        let canvasY = 0;
+
+        while (canvasY < monthCanvas.height - 2) {
+          let maxAllowedMm = pdfPageHeight - pdfCurrentY + 10;
+          let maxCanvasPx = (maxAllowedMm * monthCanvas.width) / pdfWidth;
+
+          let sliceHeightPx = 0;
+
+          if (canvasY + maxCanvasPx >= monthCanvas.height - 2) {
+            sliceHeightPx = monthCanvas.height - canvasY;
+          } else {
+            let targetCanvasY = canvasY + maxCanvasPx;
+            let bestSplit = 0;
+
+            for (let k = 0; k < trBottomsCanvas.length; k++) {
+              const b = trBottomsCanvas[k];
+              if (b <= targetCanvasY && b > canvasY + 5 * scaleY) {
+                bestSplit = b;
+              } else if (b > targetCanvasY) {
+                break;
+              }
+            }
+
+            if (bestSplit <= canvasY && pdfCurrentY > 15) {
+              pdf.addPage();
+              pdfCurrentY = 10;
+              const freshMaxMm = pdfPageHeight - pdfCurrentY + 10;
+              maxCanvasPx = (freshMaxMm * monthCanvas.width) / pdfWidth;
+              targetCanvasY = canvasY + maxCanvasPx;
+
+              for (let k = 0; k < trBottomsCanvas.length; k++) {
+                const b = trBottomsCanvas[k];
+                if (b <= targetCanvasY && b > canvasY + 5 * scaleY) {
+                  bestSplit = b;
+                } else if (b > targetCanvasY) {
+                  break;
+                }
+              }
+            }
+
+            if (bestSplit > canvasY) {
+              const visualSplit = findExactVisualRowCut(monthCanvas, bestSplit, Math.round(35 * scaleY));
+              sliceHeightPx = visualSplit - canvasY;
+            } else {
+              const fallbackSplit = findExactVisualRowCut(monthCanvas, canvasY + maxCanvasPx, Math.round(35 * scaleY));
+              sliceHeightPx = Math.max(10, Math.min(fallbackSplit - canvasY, monthCanvas.height - canvasY));
+            }
+          }
+
+          const sliceCanvas = document.createElement("canvas");
+          sliceCanvas.width = monthCanvas.width;
+          sliceCanvas.height = Math.ceil(sliceHeightPx);
+          const ctx = sliceCanvas.getContext("2d");
+          if (ctx) {
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+            ctx.drawImage(
+              monthCanvas,
+              0,
+              canvasY,
+              monthCanvas.width,
+              sliceHeightPx,
+              0,
+              0,
+              monthCanvas.width,
+              sliceHeightPx
+            );
+          }
+
+          const sliceImgData = sliceCanvas.toDataURL("image/jpeg", 0.98);
+          const sliceHeightMm = (sliceHeightPx * pdfWidth) / monthCanvas.width;
+
+          pdf.addImage(sliceImgData, "JPEG", 10, pdfCurrentY, pdfWidth, sliceHeightMm);
+
+          canvasY += sliceHeightPx;
+          pdfCurrentY += sliceHeightMm;
+
+          if (canvasY < monthCanvas.height - 2) {
+            pdf.addPage();
+            pdfCurrentY = 10;
+          }
+        }
+      }
+
+      if (container.parentNode) {
+        container.parentNode.removeChild(container);
+      }
 
       const toDevanagariDigits = (str: string | number): string => {
         const devanagariDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
@@ -557,25 +736,13 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
         exportFileName = exportFileName.endsWith(".pdf") ? exportFileName : `${exportFileName}.pdf`;
       }
 
-      const opt = {
-        margin: [6, 6, 6, 6],
-        filename: exportFileName,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 1300, letterRendering: true },
-        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-        pagebreak: {
-          mode: ["css"],
-          before: ".monthly-pdf-page-break"
-        },
-      };
-
-      await html2pdf().set(opt).from(container).save();
-      setIsExportingPdf(false);
+      pdf.save(exportFileName);
       toast.success("🎉 महिनानिहाय PDF यशस्वीरित्या डाउनलोड झाली!");
     } catch (err: any) {
-      setIsExportingPdf(false);
       console.error("Monthly PDF Export error:", err);
-      window.print();
+      toast.error("PDF डाऊनलोड करताना अडचण आली.");
+    } finally {
+      setIsExportingPdf(false);
     }
   };
 
@@ -761,34 +928,39 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
       {activeTab !== "preview" && (
       <div className="w-full flex-1 bg-white rounded-xl shadow-2xl border border-slate-300 overflow-auto p-4 text-slate-900 max-h-[calc(100vh-160px)] min-h-0">
         {/* 1. Main Header Title Banner */}
-        <div className="bg-indigo-900 text-white text-center font-bold text-base md:text-lg py-2.5 px-4 rounded-t-lg shadow-sm">
+        <div className="bg-indigo-900 text-white text-center font-black text-lg md:text-xl py-3 px-5 rounded-t-xl shadow-sm tracking-wide">
           अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - {subjectName}
         </div>
 
         {/* 2. Sub-Header Metadata Box (2-Row Grid) */}
-        <div className="bg-slate-100 border-x border-b border-slate-300 px-4 py-2.5 text-xs md:text-sm font-semibold flex flex-col gap-1 rounded-b-lg mb-3">
-          <div className="flex justify-between items-center border-b border-slate-200 pb-1">
+        <div className="bg-slate-100 border-x border-b border-slate-300 px-5 py-3 text-sm md:text-base font-extrabold flex flex-col gap-1.5 rounded-b-xl mb-4 text-slate-900">
+          <div className="flex justify-between items-center border-b border-slate-200 pb-1.5">
             <span>इयत्ता : {title || "पहिली/दुसरी"}</span>
             <span>नियोजित तासिका : _________________</span>
           </div>
-          <div className="flex justify-between items-center pt-0.5">
+          <div className="flex justify-between items-center pt-1">
             <span>विषय : {subjectName}</span>
             <span>कामाचे दिवस : _________________</span>
           </div>
         </div>
 
+        {/* Mobile Scroll Indicator */}
+        <div className="flex items-center justify-between text-[11px] font-extrabold text-indigo-700 bg-indigo-50/80 px-3 py-1.5 rounded-lg border border-indigo-100 sm:hidden mb-2">
+          <span className="flex items-center gap-1">👈👉 संपूर्ण तक्ता पाहण्यासाठी डावीकडे/उजवीकडे सरकवा (Scroll horizontally)</span>
+        </div>
+
         {/* 3. Strict 7-Column Table Viewport */}
-        <div className="overflow-x-auto border border-slate-300 rounded-lg">
-          <table className="w-full table-fixed text-left border-collapse text-slate-900 text-xs font-sans">
+        <div className="overflow-x-auto border border-slate-300 rounded-lg mb-4 pb-1">
+          <table className="w-full min-w-[860px] table-fixed text-left border-collapse text-slate-900 text-xs font-sans">
             <colgroup>
-              {role === "admin" && isEditMode && <col className="w-[4%]" />}
-              <col className="w-[6%]" />   {/* दिनांक */}
-              <col className="w-[18%]" />  {/* पाठ / घटक / उपघटक */}
-              <col className="w-[18%]" />  {/* अध्ययन निष्पत्ती */}
-              <col className="w-[18%]" />  {/* अध्ययन मुद्दे / पाठ्यांश उद्देश */}
-              <col className="w-[16%]" />  {/* अध्ययन अनुभवाचे स्वरूप */}
-              <col className="w-[12%]" />  {/* साधन तंत्रे */}
-              <col className="w-[12%]" />  {/* आवश्यक साहित्य */}
+              {role === "admin" && isEditMode && <col style={{ width: "50px" }} />}
+              <col style={{ width: "65px" }} />
+              <col style={{ width: "175px" }} />
+              <col style={{ width: "165px" }} />
+              <col style={{ width: "160px" }} />
+              <col style={{ width: "145px" }} />
+              <col style={{ width: "105px" }} />
+              <col style={{ width: "95px" }} />
             </colgroup>
 
             <thead>
