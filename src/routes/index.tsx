@@ -122,6 +122,7 @@ function LandingPage() {
       btnHover: "group-hover:bg-icon-pink group-hover:text-white group-hover:border-transparent",
       actionText: "Open Digital School",
       to: "/digital-school",
+      externalUrl: "https://digitalschool.sgkbrainova.com/",
     },
     {
       title: t.c2_title || "Teacher Section",
@@ -220,7 +221,9 @@ function LandingPage() {
                   }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => {
-                    if (card.to && card.to !== "#") {
+                    if ((card as any).externalUrl) {
+                      window.location.href = (card as any).externalUrl;
+                    } else if (card.to && card.to !== "#") {
                       navigate({ to: card.to as any, search: (card as any).search });
                     }
                   }}
@@ -344,7 +347,9 @@ function LandingPage() {
                     {/* Bottom Action Section */}
                     <div
                       onClick={() => {
-                        if (card.to && card.to !== "#") {
+                        if ((card as any).externalUrl) {
+                          window.location.href = (card as any).externalUrl;
+                        } else if (card.to && card.to !== "#") {
                           navigate({ to: card.to as any, search: (card as any).search });
                         }
                       }}
@@ -474,7 +479,9 @@ function LandingPage() {
                   {/* Bottom Action Footer with Sliding Arrow */}
                   <div
                     onClick={() => {
-                      if (card.to && card.to !== "#") {
+                      if ((card as any).externalUrl) {
+                        window.location.href = (card as any).externalUrl;
+                      } else if (card.to && card.to !== "#") {
                         navigate({ to: card.to as any, search: (card as any).search });
                       }
                     }}

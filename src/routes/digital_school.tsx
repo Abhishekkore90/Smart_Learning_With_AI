@@ -6,10 +6,9 @@ export const Route = createFileRoute("/digital_school")({
 });
 
 function RedirectToDigitalSchool() {
-  const navigate = useNavigate();
   useEffect(() => {
-    navigate({ to: "/digital-school", replace: true });
-  }, [navigate]);
+    window.location.href = "https://digitalschool.sgkbrainova.com/";
+  }, []);
 
   return null;
 }

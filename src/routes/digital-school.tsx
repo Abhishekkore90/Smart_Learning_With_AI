@@ -5,6 +5,8 @@ import { Footer } from "@/components/Footer";
 import { useLanguage } from "@/hooks/use-language";
 import { showToast as toast } from "@/lib/custom-toast";
 
+import { useEffect } from "react";
+
 export const Route = createFileRoute("/digital-school")({
   head: () => ({ meta: [{ title: "Digital School Platform — SMART LEARNING" }] }),
   component: DigitalSchoolPage,
@@ -13,8 +15,13 @@ export const Route = createFileRoute("/digital-school")({
 function DigitalSchoolPage() {
   const { lang } = useLanguage();
 
+  useEffect(() => {
+    window.location.href = "https://digitalschool.sgkbrainova.com/";
+  }, []);
+
   const handlePlatformSelect = (platformName: string) => {
-    toast.info(`${platformName} निवडला आहे.`);
+    toast.info(`${platformName} उघडत आहे...`);
+    window.location.href = "https://digitalschool.sgkbrainova.com/";
   };
 
   return (
