@@ -51,7 +51,7 @@ import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorag
 import { uploadFileWithProgress } from "@/lib/upload";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
 import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
-import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord } from "@/lib/smartPlanningParser";
+import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord, formatMarathiClassName } from "@/lib/smartPlanningParser";
 import { extractSubjectSectionsFromExcel } from "@/lib/smartSubjectSplitter";
 import { PlanningTableRenderer } from "@/components/teacher/PlanningTableRenderer";
 import * as XLSX from "xlsx";
@@ -698,7 +698,7 @@ export function AcademicPlanningSystem({
   }, [user?.uid, user?.email]);
 
   // Firestore listener for dynamic planning pricing set by Admin
-  const [planningPricing, setPlanningPricing] = useState<{ price: number; classPrices?: Record<string, number> }>({ price: 299 });
+  const [planningPricing, setPlanningPricing] = useState<{ price: number; enabled?: boolean; classPrices?: Record<string, number> }>({ price: 299, enabled: true });
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "cce_module_pricing", "annual-monthly-planning"), (snap) => {
@@ -706,6 +706,7 @@ export function AcademicPlanningSystem({
         const data = snap.data();
         setPlanningPricing({
           price: typeof data.price === "number" ? data.price : 299,
+          enabled: data.enabled !== undefined ? data.enabled : true,
           classPrices: data.classPrices || {},
         });
       }
@@ -719,6 +720,9 @@ export function AcademicPlanningSystem({
   const isCurrentClassUnlocked =
     mode === "admin" ||
     isSuperAdmin ||
+    planningPricing.enabled === false ||
+    planningPricing.price === 0 ||
+    currentClassPrice === 0 ||
     unlockedClassMediums.includes(currentClassKey) ||
     unlockedClassMediums.includes(`${selectedMedium}_ALL`) ||
     unlockedClassMediums.includes(`ALL_${selectedClass}`) ||
@@ -1190,7 +1194,9 @@ export function AcademicPlanningSystem({
 
       const devYear = toDevanagariDigits("2026-27");
       const planTypeStr = selectedPlanningType === "monthly" ? "संपूर्ण_मासिक_नियोजन" : "संपूर्ण_वार्षिक_नियोजन";
-      const fileNameStr = `इयत्ता_${selectedClass}_${planTypeStr}_${devYear}.pdf`;
+      const classNameMr = formatMarathiClassName(selectedClass);
+      const fileNameStr = `इयत्ता_${classNameMr}_${planTypeStr}_${devYear}.pdf`;
+
 
       const opt = {
         margin: [6, 6, 6, 6],
@@ -1873,7 +1879,10 @@ export function AcademicPlanningSystem({
     const devYear = toDevanagariDigits("2026-27");
     const isMonthly = rec.planningType === "monthly" || (rec.fileName || "").includes("मासिक") || (rec.id || "").includes("monthly");
     const planTypeStr = isMonthly ? "संपूर्ण_मासिक_नियोजन" : "संपूर्ण_वार्षिक_नियोजन";
-    const pdfName = `इयत्ता_${selectedClass}_${planTypeStr}_${devYear}.pdf`;
+    const classNameMr = formatMarathiClassName(selectedClass || rec.classId);
+    const pdfName = `इयत्ता_${classNameMr}_${planTypeStr}_${devYear}.pdf`;
+
+
 
     const a = document.createElement("a");
     a.href = targetUrl;

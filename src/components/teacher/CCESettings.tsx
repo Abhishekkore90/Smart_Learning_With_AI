@@ -321,18 +321,31 @@ export function CCESettings({
     const loadClassData = async () => {
       if (classTeachersMap[currentKey] !== undefined) return;
       try {
-        // Try specific class + medium doc first
-        const specRef = doc(db, "cce_settings", `${activeTeacherClass}_${activeMediumKey}_${academicYear}`);
-        const specSnap = await getDoc(specRef);
-
         let classData: any = {};
-        if (specSnap.exists()) {
-          classData = specSnap.data();
-        } else {
-          // Fallback to legacy generic class doc
-          const genRef = doc(db, "cce_settings", `${activeTeacherClass}_${academicYear}`);
-          const genSnap = await getDoc(genRef);
-          if (genSnap.exists()) classData = genSnap.data();
+
+        // 1. Try teacher-isolated class + medium doc first
+        if (teacherId) {
+          const tMedRef = doc(db, "cce_settings", `${teacherId}_${activeTeacherClass}_${activeMediumKey}_${academicYear}`);
+          const tMedSnap = await getDoc(tMedRef);
+          if (tMedSnap.exists()) {
+            classData = tMedSnap.data();
+          } else {
+            const tGenRef = doc(db, "cce_settings", `${teacherId}_${activeTeacherClass}_${academicYear}`);
+            const tGenSnap = await getDoc(tGenRef);
+            if (tGenSnap.exists()) classData = tGenSnap.data();
+          }
+        }
+
+        // 2. Fallback to generic doc only if teacherId matches or missing
+        if (!classData.teacherName) {
+          const specRef = doc(db, "cce_settings", `${activeTeacherClass}_${activeMediumKey}_${academicYear}`);
+          const specSnap = await getDoc(specRef);
+          if (specSnap.exists()) {
+            const data = specSnap.data();
+            if (!data.teacherId || data.teacherId === teacherId) {
+              classData = data;
+            }
+          }
         }
 
         if (isMounted) {
@@ -353,7 +366,7 @@ export function CCESettings({
     return () => {
       isMounted = false;
     };
-  }, [activeTeacherClass, activeTeacherMedium, academicYear, currentKey, activeMediumKey]);
+  }, [activeTeacherClass, activeTeacherMedium, academicYear, currentKey, activeMediumKey, teacherId]);
 
   const currentTeacher = classTeachersMap[currentKey] || { teacherName: "", signatureUrl: "" };
 

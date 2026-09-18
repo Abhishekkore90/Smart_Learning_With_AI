@@ -179,3 +179,9 @@ export const CLASS_1_OUTCOMES: Record<string, OutcomeItem[]> = {
     { id: "sh27", code: "C-13.4.1", text: "वर्गातील नियमांबाबतच्या चर्चेत सहभागी होतो व वागतो." },
   ],
 };
+
+// Aliases for subject resolution in CCE results
+CLASS_1_OUTCOMES.prathambhasha = CLASS_1_OUTCOMES.marathi;
+CLASS_1_OUTCOMES["मराठी"] = CLASS_1_OUTCOMES.marathi;
+CLASS_1_OUTCOMES["प्रथम भाषा : मराठी"] = CLASS_1_OUTCOMES.marathi;
+CLASS_1_OUTCOMES["marathi_medium"] = CLASS_1_OUTCOMES.marathi;

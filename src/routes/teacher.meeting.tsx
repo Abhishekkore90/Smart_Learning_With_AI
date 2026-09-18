@@ -154,8 +154,8 @@ const cleanMeetingMembers = (meeting: any) => {
 
 const SAKHI_SAVITRI_DESIGNATIONS = [
   "शाळेचे मुख्याध्यापक",
-  "शाळा व्यवस्थापन समिती (SMC) अध्यक्ष",
-  "ग्रामपंचायतीच्या महिला प्रतिनिधी / सरपंच ",
+  "शाळा व्यवस्थापन समिती अध्यक्ष",
+  "ग्रामपंचायतीच्या महिला प्रतिनिधी",
   "महिला शिक्षक प्रतिनिधी",
   "शिक्षक प्रतिनिधी",
   "अंगणवाडी सेविका",
@@ -1646,11 +1646,11 @@ function TeacherMeetingPage() {
       setIsGeneratingPdf(true);
       toast.info("PDF तयार होत आहे, कृपया प्रतीक्षा करा...");
 
-      // Ensure all custom fonts (e.g. Kalam, Inter) are fully loaded before capturing
+      // Ensure all custom fonts (e.g. Kalam, Noto Sans Devanagari, Inter) are fully loaded before capturing
       if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
         try {
           await document.fonts.ready;
-        } catch (e) {}
+        } catch (e) { }
       }
 
       // Clone element to apply full desktop A4 styling identically across web and mobile/webview
@@ -1662,14 +1662,21 @@ function TeacherMeetingPage() {
       // 2. Remove all interactive action buttons (edit/delete/reorder)
       clone.querySelectorAll("button").forEach((btn) => btn.remove());
 
-      // 3. Remove horizontal scroll wrappers so the table expands to 100% full desktop width
+      // 3. Remove "कृती" column if present (e.g. edit mode action column)
+      clone.querySelectorAll("th, td").forEach((cell: any) => {
+        if (cell.textContent?.includes("कृती") || cell.classList.contains("action-cell")) {
+          cell.remove();
+        }
+      });
+
+      // 4. Remove horizontal scroll wrappers so the table expands to 100% full desktop width
       clone.querySelectorAll(".overflow-x-auto").forEach((wrapper: any) => {
         wrapper.classList.remove("overflow-x-auto", "-mx-1", "no-scrollbar");
         wrapper.style.overflow = "visible";
         wrapper.style.width = "100%";
       });
 
-      // 4. If any input/textarea exists (e.g. edit mode), convert to clean text
+      // 5. If any input/textarea exists (e.g. edit mode), convert to clean text
       clone.querySelectorAll("input").forEach((inp: any) => {
         const span = document.createElement("span");
         span.textContent = inp.value || " ";
@@ -1703,11 +1710,11 @@ function TeacherMeetingPage() {
         sel.parentNode?.replaceChild(span, sel);
       });
 
-      // 5. Apply the desktop rendering class and explicit dimensions
+      // 6. Apply the desktop rendering class and explicit dimensions
       clone.classList.add("pdf-desktop-render");
       clone.id = "meeting-pdf-content-clone";
 
-      // 6. Mount into an off-screen container with fixed 800px desktop width
+      // 7. Mount into an off-screen container with fixed 800px desktop width
       const desktopWidth = 800;
       tempContainer = document.createElement("div");
       tempContainer.style.position = "absolute";
@@ -1724,13 +1731,19 @@ function TeacherMeetingPage() {
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      // 7. Identify all elements that must NEVER be sliced in half across pages
+      // 8. Identify ONLY atomic elements that must NEVER be sliced in half across pages
       const cloneRect = clone.getBoundingClientRect();
-      const candidateSelectors = [
+      const atomicSelectors = [
+        ".register-letterhead-block",
+        ".register-header-text",
+        ".register-table thead tr",
+        ".register-table tbody tr",
         ".register-res-item",
+        ".register-res-subject-block",
+        ".register-res-body-block",
+        ".register-res-meta-block",
         ".register-outro-block",
         ".register-signature-area",
-        ".register-table tbody tr",
       ];
 
       interface ElementBound {
@@ -1739,27 +1752,29 @@ function TeacherMeetingPage() {
         bottom: number;
         isOutro: boolean;
         isSignature: boolean;
+        isResItem: boolean;
       }
 
       const rawBounds: ElementBound[] = [];
-      candidateSelectors.forEach((sel) => {
+      atomicSelectors.forEach((sel) => {
         clone.querySelectorAll<HTMLElement>(sel).forEach((el) => {
           const rect = el.getBoundingClientRect();
           const top = rect.top - cloneRect.top;
           const bottom = rect.bottom - cloneRect.top;
-          if (bottom > top) {
+          if (bottom > top + 4) {
             rawBounds.push({
               el,
               top,
               bottom,
               isOutro: el.classList.contains("register-outro-block"),
               isSignature: el.classList.contains("register-signature-area"),
+              isResItem: el.classList.contains("register-res-item"),
             });
           }
         });
       });
 
-      // 8. Capture high-resolution raster image of the desktop-rendered register
+      // 9. Capture high-resolution raster image of the desktop-rendered register
       const { default: html2canvas } = await import("html2canvas-pro");
       const { jsPDF } = await import("jspdf");
 
@@ -1778,20 +1793,20 @@ function TeacherMeetingPage() {
             styleTags.forEach((st) => {
               clonedDoc.head.appendChild(st.cloneNode(true));
             });
-          } catch (e) {}
+          } catch (e) { }
         }
       });
 
-      // 9. Map element positions accurately to canvas pixel coordinates
+      // 10. Map element positions accurately to canvas pixel coordinates
       const canvasRatioY = canvas.height / (cloneRect.height || 1);
       const bounds: ElementBound[] = rawBounds.map((b) => ({
         ...b,
-        top: b.top * canvasRatioY,
-        bottom: b.bottom * canvasRatioY,
+        top: Math.floor(b.top * canvasRatioY),
+        bottom: Math.ceil(b.bottom * canvasRatioY),
       }));
       bounds.sort((a, b) => a.top - b.top);
 
-      // 10. Smart Anti-Cut Multi-Page Slicing:
+      // 11. Smart Anti-Cut Multi-Page Slicing:
       // A4 portrait printable area (210mm x 277mm with 10mm top/bottom margin):
       // Ratio: 277 / 210 = 1.3190476
       const maxPageCanvasHeight = Math.floor(canvas.width * (277 / 210));
@@ -1804,37 +1819,46 @@ function TeacherMeetingPage() {
       });
 
       let currentTop = 0;
-      let pageIndex = 0;
+      let pageCount = 0;
 
       while (currentTop < canvas.height - 2) {
-        let candidateBottom = currentTop + maxPageCanvasHeight;
+        const naturalBottom = currentTop + maxPageCanvasHeight;
+        let candidateBottom = naturalBottom;
 
-        if (candidateBottom >= canvas.height) {
-          // Reached end of document
+        if (candidateBottom >= canvas.height - 5) {
           candidateBottom = canvas.height;
         } else {
-          // Detect if candidateBottom slices through any element
-          const cutElement = bounds.find(
-            (b) => b.top < candidateBottom && b.bottom > candidateBottom
+          // Find any atomic element that crosses candidateBottom
+          const straddling = bounds.filter(
+            (b) => b.top + 4 < candidateBottom && b.bottom - 4 > candidateBottom
           );
 
-          if (cutElement) {
-            // Push cut element completely to the next page
-            let safeCut = Math.floor(cutElement.top);
+          if (straddling.length > 0) {
+            // Cut right before the earliest straddling element
+            let bestCut = Math.min(...straddling.map((b) => b.top));
 
-            // If cutElement is the signatures area and outro block is right above it,
-            // push both outro and signatures together to the next page
-            if (cutElement.isSignature) {
-              const outro = bounds.find((b) => b.isOutro);
-              if (outro && outro.top > currentTop + 80 && (cutElement.top - outro.top) < 300) {
-                safeCut = Math.floor(outro.top);
+            // Special handling: Keep outro and signatures together whenever possible
+            const sigEl = straddling.find((b) => b.isSignature);
+            if (sigEl) {
+              const outroEl = bounds.find((b) => b.isOutro);
+              if (outroEl && outroEl.top > currentTop + 100) {
+                bestCut = Math.min(bestCut, outroEl.top);
               }
             }
 
-            if (safeCut > currentTop + 100) {
-              candidateBottom = safeCut;
+            // Ensure we make reasonable progress (at least 15% of page)
+            if (bestCut > currentTop + Math.floor(maxPageCanvasHeight * 0.15)) {
+              candidateBottom = bestCut;
+            } else {
+              // If an atomic item is extremely tall, try sub-element or cut at naturalBottom
+              candidateBottom = naturalBottom;
             }
           }
+        }
+
+        // Final safety guard: ensure progress is made
+        if (candidateBottom <= currentTop + 20) {
+          candidateBottom = Math.min(currentTop + maxPageCanvasHeight, canvas.height);
         }
 
         const sliceHeight = candidateBottom - currentTop;
@@ -1850,6 +1874,18 @@ function TeacherMeetingPage() {
           // Uniform warm ledger background
           pageCtx.fillStyle = "#fdfcf7";
           pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
+          // Draw double red margin line on the left (ledger style) across entire page
+          const marginLineX = Math.round(56 * (canvas.width / desktopWidth));
+          pageCtx.strokeStyle = "#ef4444";
+          pageCtx.lineWidth = 1.5;
+          pageCtx.beginPath();
+          pageCtx.moveTo(marginLineX, 0);
+          pageCtx.lineTo(marginLineX, pageCanvas.height);
+          pageCtx.moveTo(marginLineX + 4, 0);
+          pageCtx.lineTo(marginLineX + 4, pageCanvas.height);
+          pageCtx.stroke();
+
           // Draw content slice at natural 1:1 scale
           pageCtx.drawImage(
             canvas,
@@ -1860,14 +1896,15 @@ function TeacherMeetingPage() {
 
         const imgData = pageCanvas.toDataURL("image/jpeg", 0.98);
 
-        if (pageIndex > 0) {
+        // ONLY add a new page if pageCount > 0 (Page 1 already exists in jsPDF!)
+        if (pageCount > 0) {
           pdf.addPage("a4", "portrait");
         }
 
         // Draw page image: 210mm wide x 277mm high at (x: 0, y: 10mm margin)
         pdf.addImage(imgData, "JPEG", 0, 10, 210, 277, undefined, "FAST");
 
-        pageIndex++;
+        pageCount++;
         currentTop = candidateBottom;
       }
 
@@ -1908,8 +1945,9 @@ function TeacherMeetingPage() {
     }
   };
 
-  // Meeting Invitation PDF handler
+  // Meeting Invitation PDF handler (Uses html2canvas-pro + jsPDF for single-page perfection)
   const handleDownloadInvitationPdf = async () => {
+    let tempContainer: HTMLElement | null = null;
     try {
       const element = document.getElementById("invitation-pdf-content");
       if (!element) return;
@@ -1917,27 +1955,113 @@ function TeacherMeetingPage() {
       setIsGeneratingInvitationPdf(true);
       toast.info("सभेचे निमंत्रण पत्र PDF तयार होत आहे, कृपया प्रतीक्षा करा...");
 
-      const html2pdf = (await import("html2pdf.js")).default;
+      // Ensure all custom fonts (Devanagari, Inter) are fully loaded
+      if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) { }
+      }
+
+      const { default: html2canvas } = await import("html2canvas-pro");
+      const { jsPDF } = await import("jspdf");
+
+      // Clone element to guarantee exact desktop A4 dimensions
+      const clone = element.cloneNode(true) as HTMLElement;
+      clone.style.width = "794px";
+      clone.style.maxWidth = "794px";
+      clone.style.minWidth = "794px";
+      clone.style.boxSizing = "border-box";
+      clone.style.margin = "0";
+
+      // Mount into off-screen container
+      tempContainer = document.createElement("div");
+      tempContainer.style.position = "absolute";
+      tempContainer.style.left = "-9999px";
+      tempContainer.style.top = "0";
+      tempContainer.style.width = "794px";
+      tempContainer.style.zIndex = "-9999";
+      tempContainer.style.background = "#ffffff";
+      tempContainer.appendChild(clone);
+      document.body.appendChild(tempContainer);
+
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: 794,
+        width: 794,
+        scrollX: 0,
+        scrollY: 0,
+        onclone: (clonedDoc) => {
+          try {
+            const styleTags = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"));
+            styleTags.forEach((st) => {
+              clonedDoc.head.appendChild(st.cloneNode(true));
+            });
+          } catch (e) { }
+        }
+      });
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const a4Height = 297; // A4 height in mm
+      const canvasAspectRatio = canvas.height / canvas.width;
+      const calculatedHeight = imgWidth * canvasAspectRatio;
+
+      if (calculatedHeight <= a4Height + 5) {
+        // Fits on a single A4 page
+        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+        const finalHeight = Math.min(calculatedHeight, a4Height);
+        const yOffset = Math.max(0, (a4Height - finalHeight) / 4);
+        pdf.addImage(imgData, "JPEG", 0, yOffset, imgWidth, finalHeight, undefined, "FAST");
+      } else {
+        // In rare case of very long agenda, do clean multi-page slicing
+        const maxPageCanvasHeight = Math.floor(canvas.width * (297 / 210));
+        let currentTop = 0;
+        let pageCount = 0;
+
+        while (currentTop < canvas.height - 2) {
+          const naturalBottom = currentTop + maxPageCanvasHeight;
+          const candidateBottom = Math.min(naturalBottom, canvas.height);
+          const sliceHeight = candidateBottom - currentTop;
+          if (sliceHeight <= 0) break;
+
+          const pageCanvas = document.createElement("canvas");
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = maxPageCanvasHeight;
+          const pageCtx = pageCanvas.getContext("2d");
+          if (pageCtx) {
+            pageCtx.fillStyle = "#ffffff";
+            pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            pageCtx.drawImage(
+              canvas,
+              0, currentTop, canvas.width, sliceHeight,
+              0, 0, canvas.width, sliceHeight
+            );
+          }
+
+          const imgData = pageCanvas.toDataURL("image/jpeg", 0.98);
+          if (pageCount > 0) {
+            pdf.addPage("a4", "portrait");
+          }
+          pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+          pageCount++;
+          currentTop = candidateBottom;
+        }
+      }
+
       const filename = `${currentCommName}_सभा_निमंत्रण.pdf`;
-
-      const opt = {
-        margin: [0, 0, 0, 0],
-        filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: 794
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-      };
-
-      const worker = html2pdf().from(element).set(opt);
-      const pdfBlob = (await worker.output("blob")) as Blob;
+      const pdfBlob = pdf.output("blob");
 
       // Upload to Bunny Storage to obtain authentic HTTPS CDN URL
       let cdnUrl = "";
@@ -1954,7 +2078,7 @@ function TeacherMeetingPage() {
       if (cdnUrl) {
         triggerDeviceDownload(cdnUrl, filename, pdfBlob);
       } else {
-        await worker.save();
+        pdf.save(filename);
       }
 
       toast.success("निमंत्रण पत्र PDF डाऊनलोड झाली! मोबाईल स्टोरेजमध्ये सेव्ह झाली.");
@@ -1963,6 +2087,9 @@ function TeacherMeetingPage() {
       toast.error("PDF तयार करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.");
     } finally {
       setIsGeneratingInvitationPdf(false);
+      if (tempContainer && document.body.contains(tempContainer)) {
+        document.body.removeChild(tempContainer);
+      }
     }
   };
 
@@ -2272,12 +2399,12 @@ function TeacherMeetingPage() {
 
                             {/* Register notebook styling */}
                             <style>{`
-                          @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
+                          @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Noto+Sans+Devanagari:wght@400;500;600;700;800;900&display=swap');
                           
                           .register-container {
                             background-color: #fdfcf7; /* Ledger Cream background */
                             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
-                            font-family: 'Kalam', cursive, 'Inter', sans-serif;
+                            font-family: 'Kalam', 'Noto Sans Devanagari', 'Inter', sans-serif;
                             position: relative;
                             border-left: 2px solid #ef4444; /* double red margin */
                             padding: 3rem 2.5rem 3rem 4.5rem;
@@ -2330,8 +2457,16 @@ function TeacherMeetingPage() {
 
                           .register-table th, .register-table td {
                             border: 1px solid #475569;
-                            padding: 0.4rem 0.5rem;
+                            padding: 0.35rem 0.45rem;
                             text-align: left;
+                            white-space: nowrap !important;
+                            word-break: keep-all !important;
+                          }
+
+                          .register-table th:first-child, .register-table td:first-child {
+                            text-align: center !important;
+                            padding-left: 0.25rem !important;
+                            padding-right: 0.25rem !important;
                           }
 
                           .register-table th.role-cell, .register-table td.role-cell {
@@ -2396,6 +2531,7 @@ function TeacherMeetingPage() {
                             color: #0f172a !important;
                             box-sizing: border-box !important;
                             overflow: visible !important;
+                            position: relative !important;
                           }
 
                           .pdf-desktop-render::before {
@@ -2412,6 +2548,12 @@ function TeacherMeetingPage() {
                           .pdf-desktop-render .register-page-bg {
                             background-size: 100% 2.4rem !important;
                             line-height: 2.4rem !important;
+                          }
+
+                          .pdf-desktop-render .register-letterhead-block {
+                            margin-bottom: 1.5rem !important;
+                            page-break-inside: avoid !important;
+                            break-inside: avoid !important;
                           }
 
                           .pdf-desktop-render .register-header-text {
@@ -2433,9 +2575,18 @@ function TeacherMeetingPage() {
 
                           .pdf-desktop-render .register-table th, 
                           .pdf-desktop-render .register-table td {
-                            padding: 0.4rem 0.5rem !important;
+                            padding: 0.35rem 0.45rem !important;
                             border: 1px solid #475569 !important;
-                            font-size: 0.95rem !important;
+                            font-size: 0.9rem !important;
+                            white-space: nowrap !important;
+                            word-break: keep-all !important;
+                          }
+
+                          .pdf-desktop-render .register-table th:first-child,
+                          .pdf-desktop-render .register-table td:first-child {
+                            text-align: center !important;
+                            padding-left: 0.25rem !important;
+                            padding-right: 0.25rem !important;
                           }
 
                           .pdf-desktop-render .register-res-section {
@@ -2450,6 +2601,13 @@ function TeacherMeetingPage() {
                             margin-bottom: 3rem !important;
                             padding-bottom: 1.5rem !important;
                             border-bottom: 1px dotted #cbd5e1 !important;
+                            page-break-inside: avoid !important;
+                            break-inside: avoid !important;
+                          }
+
+                          .pdf-desktop-render .register-res-subject-block,
+                          .pdf-desktop-render .register-res-body-block,
+                          .pdf-desktop-render .register-res-meta-block {
                             page-break-inside: avoid !important;
                             break-inside: avoid !important;
                           }
@@ -2601,7 +2759,7 @@ function TeacherMeetingPage() {
                                         onChange={(e) =>
                                           setEditAcademicYear(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
+                                        className="bg-transparent border-none outline-none font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
                                       />
                                     </div>
                                     <div className="flex items-center gap-1.5">
@@ -2614,7 +2772,7 @@ function TeacherMeetingPage() {
                                         onChange={(e) =>
                                           setEditMeetingNumber(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
+                                        className="bg-transparent border-none outline-none font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
                                       />
                                     </div>
                                     <div className="flex items-center gap-1.5 col-span-1 sm:col-span-2 md:col-span-2">
@@ -2627,7 +2785,7 @@ function TeacherMeetingPage() {
                                         onChange={(e) =>
                                           setEditHeadmasterName(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
+                                        className="bg-transparent border-none outline-none  font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
                                       />
                                     </div>
                                     <div className="flex items-center gap-1.5">
@@ -2640,7 +2798,7 @@ function TeacherMeetingPage() {
                                         onChange={(e) =>
                                           setEditSchoolName(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
+                                        className="bg-transparent border-none outline-none font-extrabold text-slate-900 w-full"
                                       />
                                     </div>
                                     <div className="flex items-center gap-1.5">
@@ -2653,7 +2811,7 @@ function TeacherMeetingPage() {
                                         onChange={(e) =>
                                           setEditPresidentName(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
+                                        className="bg-transparent border-none outline-none font-extrabold text-slate-900 w-full"
                                       />
                                     </div>
                                     <div className="flex items-center gap-1.5">
@@ -2666,7 +2824,7 @@ function TeacherMeetingPage() {
                                         onChange={(e) =>
                                           setEditCommitteeName(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
+                                        className="bg-transparent border-none outline-none  font-extrabold text-slate-900 w-full"
                                       />
                                     </div>
                                     <div className="flex items-center gap-1.5">
@@ -2679,7 +2837,7 @@ function TeacherMeetingPage() {
                                         onChange={(e) =>
                                           setEditMeetingDate(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full cursor-pointer"
+                                        className="bg-transparent border-none outline-none font-extrabold text-slate-900 w-full cursor-pointer"
                                       />
                                     </div>
                                   </div>
@@ -2712,15 +2870,23 @@ function TeacherMeetingPage() {
                                     </div>
 
                                     <div className="w-full overflow-x-auto no-scrollbar">
-                                      <table className="register-table min-w-[600px] w-full">
+                                      <table className="register-table min-w-[600px] w-full" style={{ tableLayout: 'fixed' }}>
+                                        <colgroup>
+                                          <col style={{ width: '7%' }} />
+                                          <col style={{ width: '36%' }} />
+                                          <col style={{ width: '22%' }} />
+                                          <col style={{ width: '15%' }} />
+                                          <col style={{ width: '14%' }} />
+                                          <col style={{ width: '6%' }} />
+                                        </colgroup>
                                         <thead>
                                           <tr className="bg-slate-100 whitespace-nowrap">
-                                            <th className="w-16 text-center px-1 py-2">अ.क्र.</th>
-                                            <th className="text-left px-2 py-2">सदस्याचे नाव</th>
-                                            <th className="text-left px-2 py-2">पदनाम</th>
-                                            <th className="text-left px-2 py-2">पद</th>
-                                            <th className="w-24 text-center px-2 py-2">स्वाक्षरी</th>
-                                            <th className="w-10 text-center px-2 py-2">कृती</th>
+                                            <th style={{ width: '7%' }} className="text-center px-0.5 py-2 whitespace-nowrap">अ.क्र.</th>
+                                            <th style={{ width: '36%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
+                                            <th style={{ width: '22%' }} className="text-left px-2 py-2">पदनाम</th>
+                                            <th style={{ width: '15%' }} className="text-left px-2 py-2">पद</th>
+                                            <th style={{ width: '14%' }} className="text-center px-2 py-2 whitespace-nowrap">स्वाक्षरी</th>
+                                            <th style={{ width: '6%' }} className="action-cell text-center px-1 py-2">कृती</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -2730,10 +2896,10 @@ function TeacherMeetingPage() {
                                                 key={index}
                                                 className="hover:bg-slate-50/30 whitespace-nowrap"
                                               >
-                                                <td className="text-center w-16 px-1 py-2">
+                                                <td style={{ width: '7%' }} className="text-center px-0.5 py-2">
                                                   {index + 1}
                                                 </td>
-                                                <td className="px-2 py-2">
+                                                <td style={{ width: '36%' }} className="px-2 py-2">
                                                   <input
                                                     type="text"
                                                     value={member.name}
@@ -2745,10 +2911,10 @@ function TeacherMeetingPage() {
                                                       )
                                                     }
                                                     placeholder="सदस्याचे नाव..."
-                                                    className="bg-transparent border-none outline-none font-bold text-slate-900 w-full"
+                                                    className="bg-transparent border-none outline-none font-bold text-slate-900 w-full whitespace-nowrap"
                                                   />
                                                 </td>
-                                                <td className="px-2 py-2">
+                                                <td style={{ width: '22%' }} className="px-2 py-2">
                                                   <input
                                                     list={`designations-list-${selectedCommittee?.id}`}
                                                     value={member.post}
@@ -2760,10 +2926,10 @@ function TeacherMeetingPage() {
                                                       )
                                                     }
                                                     placeholder="पदनाम निवडा किंवा लिहा..."
-                                                    className="bg-transparent border-none outline-none font-bold text-slate-900 w-full"
+                                                    className="bg-transparent border-none outline-none font-bold text-slate-900 w-full whitespace-nowrap"
                                                   />
                                                 </td>
-                                                <td className="px-2 py-2">
+                                                <td style={{ width: '15%' }} className="px-2 py-2">
                                                   <input
                                                     list="roles-list"
                                                     value={member.role}
@@ -2775,13 +2941,13 @@ function TeacherMeetingPage() {
                                                       )
                                                     }
                                                     placeholder="पद निवडा किंवा लिहा..."
-                                                    className="bg-transparent border-none outline-none font-bold text-slate-900 w-full"
+                                                    className="bg-transparent border-none outline-none font-bold text-slate-900 w-full whitespace-nowrap"
                                                   />
                                                 </td>
-                                                <td className="text-center w-24 px-2 py-2">
-                                                  <div className="h-6 w-full" />
+                                                <td style={{ width: '14%' }} className="text-center px-2 py-2">
+                                                  <div className="h-8 w-full" />
                                                 </td>
-                                                <td className="text-center w-10 px-2 py-2">
+                                                <td style={{ width: '6%' }} className="action-cell text-center px-1 py-2">
                                                   <div className="flex items-center justify-center gap-1">
                                                     <button
                                                       type="button"
@@ -2874,8 +3040,8 @@ function TeacherMeetingPage() {
                                           </div>
 
                                           <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 items-baseline sm:items-start">
-                                             <div className="flex items-center register-res-title shrink-0 whitespace-nowrap font-bold text-slate-900">
-                                               विषय -
+                                            <div className="flex items-center register-res-title shrink-0 whitespace-nowrap font-bold text-slate-900">
+                                              विषय -
                                               <input
                                                 type="number"
                                                 value={res.subjectNo}
@@ -2900,15 +3066,15 @@ function TeacherMeetingPage() {
                                                 )
                                               }
                                               placeholder="विषयाचा तपशील प्रविष्ट करा..."
-                                              className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-bold text-slate-800 w-full resize-y min-h-[4rem]"
+                                              className="bg-transparent border-none outline-none font-bold text-slate-800 w-full resize-y min-h-[4rem]"
                                             />
                                           </div>
 
 
 
                                           <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 items-baseline sm:items-start mt-2">
-                                             <div className="flex items-center register-res-title shrink-0 whitespace-nowrap font-bold text-slate-900">
-                                               ठराव -
+                                            <div className="flex items-center register-res-title shrink-0 whitespace-nowrap font-bold text-slate-900">
+                                              ठराव -
                                               <input
                                                 type="number"
                                                 value={res.resolutionNo}
@@ -3027,72 +3193,97 @@ function TeacherMeetingPage() {
                                 // --- READ / PRINT REGISTER NOTEBOOK VIEW ---
                                 <div className="space-y-8 select-text">
                                   {/* Meeting Ledger Letterhead */}
-                                  <div className="text-center pb-3 pt-1 space-y-1">
-                                    <div className="text-base sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-snug break-words px-1">
+                                  <div className="register-letterhead-block text-center pb-4 pt-1 space-y-2 border-b-2 border-slate-800 mb-4">
+                                    {/* School Name */}
+                                    <div className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight uppercase">
+                                      {selectedPastMeeting?.schoolName || schoolName || "शाळेचे नाव"}
+                                    </div>
+                                    {/* Committee Name */}
+                                    <div className="text-base sm:text-lg md:text-xl font-black text-slate-800 tracking-tight leading-snug">
                                       {selectedPastMeeting?.committeeName || currentCommName || selectedCommittee?.name || "शाळा व्यवस्थापन समिती (SMC)"}
                                     </div>
-                                    <div className="flex justify-center">
-                                      <h1 className="text-sm sm:text-lg md:text-2xl font-black text-slate-900 border-b-2 border-slate-800 pb-1 tracking-wide inline-block px-2 sm:px-6 break-words">
+                                    {/* Title */}
+                                    <div className="flex justify-center pt-1">
+                                      <h1 className="text-sm sm:text-base md:text-xl font-black text-slate-900 bg-slate-100/80 border border-slate-700 rounded-lg py-1 px-4 sm:px-8 tracking-wide inline-block shadow-sm">
                                         मासिक सभा इतिवृत्त नोंदवही {(() => {
                                           const mName = getResolvedMonthName(selectedPastMeeting, selectedMonth, selectedPastMeeting?.date);
                                           return mName ? `– माहे : ${mName}` : "";
                                         })()}
                                       </h1>
                                     </div>
-                                  </div>
 
-                                  {/* Meeting Metadata Header (Read/Print View) */}
-                                  <div className="flex flex-wrap items-center justify-between gap-y-2.5 gap-x-4 border-b-2 border-slate-300 pb-4 mb-4 text-xs sm:text-sm md:text-base font-bold text-slate-800 tracking-tight font-sans">
-                                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                      <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
-                                        शैक्षणिक वर्ष:
-                                      </span>
-                                      <span className="underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base">
-                                        {selectedPastMeeting.academicYear || "________"}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                      <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
-                                        सभा क्रमांक:
-                                      </span>
-                                      <span className="underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base">
-                                        {selectedPastMeeting.meetingNumber || "________"}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-baseline gap-1.5 max-w-full flex-wrap sm:flex-nowrap">
-                                      <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
-                                        सचिव/मुख्याध्यापक:
-                                      </span>
-                                      <span className="underline decoration-dotted decoration-slate-400 font-black text-slate-900 text-xs sm:text-sm md:text-base break-words">
-                                        {selectedPastMeeting.headmasterName || "________"}
-                                      </span>
+                                    {/* Complete Metadata Bar */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 text-xs sm:text-sm font-bold text-slate-800 text-left border-t border-slate-300 mt-3">
+                                      <div className="flex items-baseline gap-1">
+                                        <span className="text-slate-900 font-black shrink-0">शैक्षणिक वर्ष:</span>
+                                        <span className="font-bold text-slate-900 ">
+                                          {selectedPastMeeting.academicYear || "२०२५-२६"}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-baseline gap-1">
+                                        <span className="text-slate-900 font-black shrink-0">सभा क्रमांक:</span>
+                                        <span className="font-bold text-slate-900">
+                                          {selectedPastMeeting.meetingNumber || "________"}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-baseline gap-1">
+                                        <span className="text-slate-900 font-black shrink-0">सभा दिनांक:</span>
+                                        <span className="font-bold text-slate-900 ">
+                                          {selectedPastMeeting.date ? formatDateToDDMMYYYY(selectedPastMeeting.date, "/") : "________"}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-baseline gap-1">
+                                        <span className="text-slate-900 font-black shrink-0">सभा वेळ:</span>
+                                        <span className="font-bold text-slate-900">
+                                          {selectedPastMeeting.time ? `${selectedPastMeeting.time} वा.` : "सकाळी ११:०० वा."}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-baseline gap-1 col-span-2">
+                                        <span className="text-slate-900 font-black shrink-0">समिती अध्यक्ष:</span>
+                                        <span className="font-bold text-slate-900 ">
+                                          {selectedPastMeeting.presidentName || "________"}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-baseline gap-1 col-span-2">
+                                        <span className="text-slate-900 font-black shrink-0">सचिव/मुख्याध्यापक:</span>
+                                        <span className="font-bold text-slate-900">
+                                          {selectedPastMeeting.headmasterName || "________"}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
 
                                   {/* Introductory Paragraph styled like handwritten ledger */}
                                   <p className="register-header-text font-normal text-slate-800">
                                     {selectedPastMeeting.introText ||
-                                      `आज दि. ${selectedPastMeeting.date ? formatDateToDDMMYYYY(selectedPastMeeting.date, "/") : "________"} रोजी ${selectedPastMeeting.schoolName || "________"} येथे ${selectedPastMeeting.committeeName || "________"} चे अध्यक्ष ${selectedPastMeeting.presidentName || "________"} यांच्या अध्यक्षतेखाली सभा घेण्यात आली. सदर सभेस खालील प्रमाणे सदस्य उपस्थित होते.`}
+                                      `आज दि. ${selectedPastMeeting.date ? formatDateToDDMMYYYY(selectedPastMeeting.date, "/") : "________"} रोजी ${selectedPastMeeting.schoolName || schoolName || "________"} येथे ${selectedPastMeeting.committeeName || currentCommName || "________"} चे अध्यक्ष ${selectedPastMeeting.presidentName || "________"} यांच्या अध्यक्षतेखाली सभा घेण्यात आली. सदर सभेस खालील प्रमाणे सदस्य उपस्थित होते.`}
                                   </p>
 
                                   {/* Committee Members Present table with blank signature column */}
                                   {selectedPastMeeting.members &&
                                     selectedPastMeeting.members.length > 0 && (
-                                      <div className="space-y-4">
+                                      <div className="space-y-4 register-table-wrapper">
                                         <div className="text-[11px] text-slate-400 font-sans sm:hidden mb-1 flex items-center gap-1">
                                           <span>👉</span> तक्ता पूर्ण पाहण्यासाठी डावीकडे सरकवा
                                         </div>
                                         <div className="w-full overflow-x-auto no-scrollbar pb-1">
-                                          <table className="register-table min-w-[500px] w-full">
+                                          <table className="register-table min-w-[500px] w-full" style={{ tableLayout: 'fixed' }}>
+                                            <colgroup>
+                                              <col style={{ width: '7%' }} />
+                                              <col style={{ width: '38%' }} />
+                                              <col style={{ width: '24%' }} />
+                                              <col style={{ width: '16%' }} />
+                                              <col style={{ width: '15%' }} />
+                                            </colgroup>
                                             <thead>
                                               <tr className="bg-slate-100">
-                                                <th style={{ width: '5%' }} className="text-center px-2 py-2 whitespace-nowrap">
+                                                <th style={{ width: '7%', whiteSpace: 'nowrap' }} className="text-center px-0.5 py-2 whitespace-nowrap">
                                                   अ.क्र.
                                                 </th>
-                                                <th style={{ width: '36%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
-                                                <th style={{ width: '33%' }} className="text-left px-2 py-2">पदनाम</th>
-                                                <th style={{ width: '12%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap role-cell">पद</th>
-                                                <th style={{ width: '14%', whiteSpace: 'nowrap' }} className="text-center px-2 py-2 whitespace-nowrap">
+                                                <th style={{ width: '38%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap">सदस्याचे नाव</th>
+                                                <th style={{ width: '24%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap">पदनाम</th>
+                                                <th style={{ width: '16%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap role-cell">पद</th>
+                                                <th style={{ width: '15%', whiteSpace: 'nowrap' }} className="text-center px-2 py-2 whitespace-nowrap">
                                                   स्वाक्षरी
                                                 </th>
                                               </tr>
@@ -3101,23 +3292,23 @@ function TeacherMeetingPage() {
                                               {selectedPastMeeting.members
                                                 .filter((member: any) => member.name?.trim() || member.post?.trim())
                                                 .map((member: any, index: number) => (
-                                                  <tr
-                                                    key={index}
-                                                    className="hover:bg-slate-50/30"
-                                                  >
-                                                    <td className="text-center px-1 py-2">
-                                                      {index + 1}
-                                                    </td>
-                                                    <td className="font-bold text-slate-900 px-2 py-2 whitespace-normal break-words">
-                                                      {member.name}
-                                                    </td>
-                                                    <td className="px-2 py-2 whitespace-normal break-words">{member.post}</td>
-                                                    <td style={{ whiteSpace: 'nowrap', wordBreak: 'keep-all' }} className="px-2 py-2 whitespace-nowrap role-cell">{member.role || "सदस्य"}</td>
-                                                    <td className="text-center px-2 py-2">
-                                                      {/* Left blank for physical signing as requested */}
-                                                      <div className="h-6 w-full" />
-                                                    </td>
-                                                  </tr>
+                                                   <tr
+                                                     key={index}
+                                                     className="hover:bg-slate-50/30 whitespace-nowrap"
+                                                   >
+                                                     <td style={{ width: '7%' }} className="text-center px-0.5 py-2 whitespace-nowrap font-bold">
+                                                       {index + 1}
+                                                     </td>
+                                                     <td style={{ width: '38%', whiteSpace: 'nowrap', wordBreak: 'keep-all', fontSize: member.name && member.name.length > 25 ? '0.78rem' : member.name && member.name.length > 18 ? '0.84rem' : '0.9rem' }} className="font-bold text-slate-900 px-2 py-2 whitespace-nowrap overflow-hidden text-ellipsis">
+                                                       {member.name}
+                                                     </td>
+                                                     <td style={{ width: '24%', whiteSpace: 'nowrap', wordBreak: 'keep-all', fontSize: member.post && member.post.length > 20 ? '0.78rem' : '0.85rem' }} className="px-2 py-2 whitespace-nowrap overflow-hidden text-ellipsis">{member.post}</td>
+                                                     <td style={{ width: '16%', whiteSpace: 'nowrap', wordBreak: 'keep-all', fontSize: (member.role || 'सदस्य').length > 12 ? '0.78rem' : '0.85rem' }} className="px-2 py-2 whitespace-nowrap role-cell font-bold overflow-hidden text-ellipsis">{member.role || "सदस्य"}</td>
+                                                     <td style={{ width: '15%', whiteSpace: 'nowrap' }} className="text-center px-2 py-2 whitespace-nowrap">
+                                                       {/* Left blank for physical signing as requested */}
+                                                       <div className="h-8 w-full" />
+                                                     </td>
+                                                   </tr>
                                                 ),
                                                 )}
                                             </tbody>
@@ -3136,36 +3327,43 @@ function TeacherMeetingPage() {
                                               key={index}
                                               className="register-res-item"
                                             >
-                                              <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 items-baseline sm:items-start">
+                                              <div className="register-res-subject-block flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 items-baseline sm:items-start">
                                                 <span className="register-res-title shrink-0">
                                                   विषय - {res.subjectNo} :
                                                 </span>
-                                                <span className="font-bold text-slate-800 underline decoration-dotted decoration-slate-400">
+                                                <span className="font-bold text-slate-900 ">
                                                   {res.subject}
                                                 </span>
                                               </div>
-                                              <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 items-baseline sm:items-start mt-2">
-                                                 <span className="register-res-title shrink-0 font-bold text-slate-900">
-                                                   ठराव - {res.resolutionNo} :
-                                                 </span>
-                                                 <span className="text-slate-700 text-left sm:text-justify leading-relaxed break-words">
-                                                   {res.resolution}
-                                                 </span>
-                                               </div>
-                                              <div className="pl-1 sm:pl-[6.5rem] mt-3 space-y-1 font-bold text-slate-700 text-sm sm:text-base">
-                                                <p>
-                                                  • सूचक :{" "}
-                                                  <span className="text-slate-900">
-                                                    {res.proposer || "________"}
+                                              <div className="register-res-body-block flex flex-wrap sm:flex-nowrap gap-2 sm:gap-4 items-baseline sm:items-start mt-2">
+                                                <span className="register-res-title shrink-0 font-bold text-slate-900">
+                                                  ठराव - {res.resolutionNo} :
+                                                </span>
+                                                <span className="text-slate-800 text-left sm:text-justify leading-relaxed break-words">
+                                                  {res.resolution}
+                                                </span>
+                                              </div>
+                                              <div className="register-res-meta-block pl-1 sm:pl-[6.5rem] mt-3 space-y-1 font-bold text-slate-800 text-sm sm:text-base">
+                                                <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+                                                  <p>
+                                                    • सूचक :{" "}
+                                                    <span className="text-slate-950 font-black">
+                                                      {res.proposer || "________"}
+                                                    </span>
+                                                  </p>
+                                                  <p>
+                                                    • अनुमोदक :{" "}
+                                                    <span className="text-slate-950 font-black">
+                                                      {res.seconder || "________"}
+                                                    </span>
+                                                  </p>
+                                                </div>
+                                                <p className="text-emerald-900 font-bold pt-1">
+                                                  • ठराव मंजुरी :{" "}
+                                                  <span className="text-slate-900 font-extrabold">
+                                                    {res.statusText || "ठराव सर्वानुमते मंजूर करण्यात आला."}
                                                   </span>
                                                 </p>
-                                                <p>
-                                                  • अनुमोदक :{" "}
-                                                  <span className="text-slate-900">
-                                                    {res.seconder || "________"}
-                                                  </span>
-                                                </p>
-
                                               </div>
                                             </div>
                                           ),
@@ -3181,14 +3379,20 @@ function TeacherMeetingPage() {
                                     )}
 
                                   {/* Bottom Signatures Block */}
-                                  <div className="register-signature-area pt-16">
-                                    <div className="space-y-12">
-                                      <p>समिती अध्यक्ष स्वाक्षरी</p>
-                                      <div className="w-32 border-b border-slate-600 mx-auto" />
+                                  <div className="register-signature-area pt-12">
+                                    <div className="space-y-4">
+                                      <div className="w-48 border-b-2 border-slate-800 mx-auto" />
+                                      <p className="font-black text-slate-900 text-sm sm:text-base">समिती अध्यक्ष स्वाक्षरी</p>
+                                      <p className="text-xs sm:text-sm font-bold text-slate-700">
+                                        ({selectedPastMeeting.presidentName || editPresidentName || "अध्यक्ष"})
+                                      </p>
                                     </div>
-                                    <div className="space-y-12">
-                                      <p>सचिव / मुख्याध्यापक स्वाक्षरी</p>
-                                      <div className="w-32 border-b border-slate-600 mx-auto" />
+                                    <div className="space-y-4">
+                                      <div className="w-48 border-b-2 border-slate-800 mx-auto" />
+                                      <p className="font-black text-slate-900 text-sm sm:text-base">सचिव / मुख्याध्यापक स्वाक्षरी</p>
+                                      <p className="text-xs sm:text-sm font-bold text-slate-700">
+                                        ({selectedPastMeeting.headmasterName || editHeadmasterName || "मुख्याध्यापक"})
+                                      </p>
                                     </div>
                                   </div>
                                 </div>
@@ -3361,13 +3565,13 @@ function TeacherMeetingPage() {
                                 <table className="w-full text-left border-collapse text-base">
                                   <thead>
                                     <tr className="bg-slate-100 text-slate-800 font-extrabold border-b-2 border-slate-300">
-                                      <th className="px-1 py-4 text-center w-10">
+                                      <th className="px-0.5 py-4 text-center w-8">
                                         अ.क्र.
                                       </th>
-                                      <th className="px-4 py-4 w-[40%] min-w-[300px]">सदस्याचे नाव</th>
-                                      <th className="px-6 py-4 min-w-[200px]">पदनाम (Designation)</th>
-                                      <th className="px-6 py-4 min-w-[180px]">पद (Post)</th>
-                                      <th className="px-6 py-4 text-center w-24">स्वाक्षरी</th>
+                                      <th className="px-4 py-4 w-[36%] min-w-[240px]">सदस्याचे नाव</th>
+                                      <th className="px-6 py-4 min-w-[160px]">पदनाम (Designation)</th>
+                                      <th className="px-6 py-4 min-w-[120px]">पद (Post)</th>
+                                      <th className="px-2 py-4 text-center w-28 min-w-[100px]">स्वाक्षरी</th>
                                       <th className="px-6 py-4 text-center w-24">
                                         कृती
                                       </th>
@@ -3482,7 +3686,7 @@ function TeacherMeetingPage() {
                                             </select>
                                           )}
                                         </td>
-                                        <td className="px-6 py-4"></td>
+                                        <td className="px-2 py-4"></td>
                                         <td className="px-6 py-4 text-center">
                                           <div className="flex items-center justify-center gap-1">
                                             <button
@@ -3669,7 +3873,7 @@ function TeacherMeetingPage() {
                                           <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 size-5 pointer-events-none" />
                                           <input
                                             type="date"
-                                            onClick={(e) => { try { e.currentTarget.showPicker(); } catch {} }}
+                                            onClick={(e) => { try { e.currentTarget.showPicker(); } catch { } }}
                                             value={meetingDate}
                                             onChange={(e) => handleDateChange(e.target.value)}
                                             className="w-full pl-12 pr-5 py-3.5 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 cursor-pointer shadow-md transition-all"
@@ -3827,11 +4031,11 @@ function TeacherMeetingPage() {
                                       <table className="w-full text-left border-collapse text-base">
                                         <thead>
                                           <tr className="bg-slate-100 text-slate-800 font-black border-b-2 border-slate-300">
-                                            <th className="px-1.5 py-3.5 text-center w-16 border-r border-slate-200">अ.क्र.</th>
-                                            <th className="px-4 py-3.5 border-r border-slate-200 w-[35%] min-w-[220px]">सदस्याचे नाव</th>
-                                            <th className="px-4 py-3.5 border-r border-slate-200 min-w-[200px]">पदनाम (Designation)</th>
-                                            <th className="px-4 py-3.5 border-r border-slate-200 min-w-[180px]">पद (Post)</th>
-                                            <th className="px-4 py-3.5 text-center w-24 border-r border-slate-200">स्वाक्षरी</th>
+                                            <th className="px-0.5 py-3.5 text-center w-8 border-r border-slate-200">अ.क्र.</th>
+                                            <th className="px-4 py-3.5 border-r border-slate-200 w-[36%] min-w-[220px]">सदस्याचे नाव</th>
+                                            <th className="px-4 py-3.5 border-r border-slate-200 min-w-[150px]">पदनाम (Designation)</th>
+                                            <th className="px-4 py-3.5 border-r border-slate-200 min-w-[110px]">पद (Post)</th>
+                                            <th className="px-2 py-3.5 text-center w-28 border-r border-slate-200 min-w-[100px]">स्वाक्षरी</th>
                                             <th className="px-4 py-3.5 text-center w-20">कृती</th>
                                           </tr>
                                         </thead>
@@ -3942,9 +4146,9 @@ function TeacherMeetingPage() {
                                                         </select>
                                                       )}
                                                     </td>
-                                                    <td className="px-4 py-3 text-center text-slate-400 font-bold italic border-r border-slate-200">
-                                                      स्वाक्षरी
-                                                    </td>
+                                                    <td className="px-2 py-3 text-center text-slate-400 font-bold italic text-xs border-r border-slate-200">
+                                                       स्वाक्षरी
+                                                     </td>
                                                     <td className="px-4 py-3 text-center">
                                                       <div className="flex items-center justify-center gap-1">
                                                         <button
@@ -4206,19 +4410,19 @@ function TeacherMeetingPage() {
                                                   }
                                                   placeholder="ठरावाचा सविस्तर तपशील लिहा..."
                                                   rows={4}
-                                                   data-min-height="120"
-                                                   ref={(el) => {
-                                                     if (el) {
-                                                       el.style.height = "auto";
-                                                       el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
-                                                     }
-                                                   }}
-                                                   onInput={(e) => {
-                                                     const target = e.currentTarget;
-                                                     target.style.height = "auto";
-                                                     target.style.height = `${Math.max(target.scrollHeight, 120)}px`;
-                                                   }}
-                                                   className="auto-expand-input w-full min-h-[120px] px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base sm:text-lg placeholder-slate-400 overflow-hidden resize-none leading-relaxed [field-sizing:content]"
+                                                  data-min-height="120"
+                                                  ref={(el) => {
+                                                    if (el) {
+                                                      el.style.height = "auto";
+                                                      el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
+                                                    }
+                                                  }}
+                                                  onInput={(e) => {
+                                                    const target = e.currentTarget;
+                                                    target.style.height = "auto";
+                                                    target.style.height = `${Math.max(target.scrollHeight, 120)}px`;
+                                                  }}
+                                                  className="auto-expand-input w-full min-h-[120px] px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base sm:text-lg placeholder-slate-400 overflow-hidden resize-none leading-relaxed [field-sizing:content]"
                                                 />
                                               </div>
 
@@ -4454,19 +4658,19 @@ function TeacherMeetingPage() {
                                               }
                                               placeholder="ठरावाचा सविस्तर तपशील लिहा..."
                                               rows={4}
-                                                   data-min-height="120"
-                                                   ref={(el) => {
-                                                     if (el) {
-                                                       el.style.height = "auto";
-                                                       el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
-                                                     }
-                                                   }}
-                                                   onInput={(e) => {
-                                                     const target = e.currentTarget;
-                                                     target.style.height = "auto";
-                                                     target.style.height = `${Math.max(target.scrollHeight, 120)}px`;
-                                                   }}
-                                                   className="auto-expand-input w-full min-h-[120px] px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base sm:text-lg placeholder-slate-400 overflow-hidden resize-none leading-relaxed [field-sizing:content]"
+                                              data-min-height="120"
+                                              ref={(el) => {
+                                                if (el) {
+                                                  el.style.height = "auto";
+                                                  el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
+                                                }
+                                              }}
+                                              onInput={(e) => {
+                                                const target = e.currentTarget;
+                                                target.style.height = "auto";
+                                                target.style.height = `${Math.max(target.scrollHeight, 120)}px`;
+                                              }}
+                                              className="auto-expand-input w-full min-h-[120px] px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base sm:text-lg placeholder-slate-400 overflow-hidden resize-none leading-relaxed [field-sizing:content]"
                                             />
                                           </div>
 
@@ -4676,7 +4880,7 @@ function TeacherMeetingPage() {
                               <label className="text-sm font-black text-slate-700 block">पत्र दिनांक</label>
                               <input
                                 type="date"
-                                onClick={(e) => { try { e.currentTarget.showPicker(); } catch {} }}
+                                onClick={(e) => { try { e.currentTarget.showPicker(); } catch { } }}
                                 value={invitationLetterDate}
                                 onChange={(e) => setInvitationLetterDate(e.target.value)}
                                 className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base cursor-pointer"
@@ -4781,7 +4985,7 @@ function TeacherMeetingPage() {
                               <label className="text-sm font-black text-slate-700 block">दिनांक</label>
                               <input
                                 type="date"
-                                onClick={(e) => { try { e.currentTarget.showPicker(); } catch {} }}
+                                onClick={(e) => { try { e.currentTarget.showPicker(); } catch { } }}
                                 value={invitationDate}
                                 onChange={(e) => {
                                   const dateVal = e.target.value;
@@ -4970,18 +5174,26 @@ function TeacherMeetingPage() {
                         <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
                           <div
                             id="invitation-pdf-content"
-                            style={{ width: "794px", boxSizing: "border-box", margin: "0 auto" }}
-                            className="p-8 bg-white text-slate-900 font-serif leading-relaxed text-sm space-y-4 border-4 border-double border-slate-900"
+                            style={{
+                              width: "794px",
+                              boxSizing: "border-box",
+                              margin: "0 auto",
+                              fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
+                            }}
+                            className="p-7 bg-white text-slate-900 leading-relaxed text-sm space-y-3 border-4 border-double border-slate-900"
                           >
                             {/* Title Header */}
-                            <div className="text-center pb-2 border-b-2 border-slate-900">
+                            <div className="text-center pb-2 border-b-2 border-slate-900 space-y-0.5">
                               <h1 className="text-xl font-black tracking-wide text-slate-900">
                                 {invitationTitle || `॥ ${currentCommName} सभा – निमंत्रण ॥`}
                               </h1>
+                              {invitationSubtitle && (
+                                <p className="text-sm font-bold text-slate-700">{invitationSubtitle}</p>
+                              )}
                             </div>
 
                             {/* Metadata Header Row */}
-                            <div className="space-y-1 text-sm font-bold pt-1">
+                            <div className="space-y-1 text-sm font-bold pt-0.5">
                               <div className="flex justify-between items-center border-b border-slate-300 pb-1.5">
                                 <div><span className="font-black">शाळेचे नाव :</span> {schoolName || "____________________"}</div>
                                 <div><span className="font-black">गाव :</span> {invitationVillage || "____________"}</div>
@@ -4995,19 +5207,19 @@ function TeacherMeetingPage() {
                             </div>
 
                             {/* Recipient Section */}
-                            <div className="space-y-0.5 pt-2 text-sm font-bold">
+                            <div className="space-y-0.5 pt-1 text-sm font-bold">
                               <p className="font-black text-base">प्रति,</p>
                               <p><span className="font-black">श्री./सौ. :</span> {invitationMemberName || "____________________________"}</p>
                               <p><span className="font-black">पद / सदस्य :</span> {invitationMemberPost || "________________________"}</p>
                             </div>
 
                             {/* Subject */}
-                            <div className="pt-1 text-sm font-black underline underline-offset-4">
+                            <div className="pt-0.5 text-sm font-black underline underline-offset-4">
                               विषय : {invitationSubject || `${currentCommName} सभेस उपस्थित राहण्याबाबत.`}
                             </div>
 
                             {/* Body Paragraphs */}
-                            <div className="space-y-2 pt-1 text-sm font-medium text-justify leading-relaxed">
+                            <div className="space-y-1 pt-0.5 text-sm font-medium text-justify leading-relaxed">
                               <p className="font-black">{invitationSalutation || "महोदय / महोदया,"}</p>
                               <p className="indent-6">
                                 {invitationBodyParagraph1 || `आपणास अत्यंत आनंदाने व आदराने आमंत्रित करण्यात येते की, आपल्या शाळेच्या ${currentCommName} ची सभा खालील दिलेल्या वेळ व ठिकाणी आयोजित करण्यात आली आहे.`}
@@ -5018,9 +5230,9 @@ function TeacherMeetingPage() {
                             </div>
 
                             {/* Meeting Details Box */}
-                            <div className="border-2 border-slate-900 rounded-lg p-3 space-y-1.5 bg-slate-50/50">
-                              <h2 className="text-sm font-black underline border-b border-slate-300 pb-1 text-slate-900">सभेचा तपशील</h2>
-                              <div className="grid grid-cols-2 gap-2 text-sm font-bold">
+                            <div className="border-2 border-slate-900 rounded-lg p-2.5 space-y-1 bg-slate-50/60">
+                              <h2 className="text-sm font-black underline border-b border-slate-300 pb-0.5 text-slate-900">सभेचा तपशील</h2>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm font-bold">
                                 <div><span className="font-black">दिनांक :</span> {invitationDate ? formatDateToDDMMYYYY(invitationDate, "/") : "__________________"}</div>
                                 <div><span className="font-black">वार :</span> {invitationDay || "__________________"}</div>
                                 <div><span className="font-black">वेळ :</span> {invitationTime || "__________________"}</div>
@@ -5029,10 +5241,10 @@ function TeacherMeetingPage() {
                             </div>
 
                             {/* Agenda Items */}
-                            <div className="space-y-1.5 pt-1">
-                              <h2 className="text-sm font-black underline border-b border-slate-300 pb-1 text-slate-900">सभेची विषयपत्रिका</h2>
+                            <div className="space-y-1 pt-0.5">
+                              <h2 className="text-sm font-black underline border-b border-slate-300 pb-0.5 text-slate-900">सभेची विषयपत्रिका</h2>
                               {invitationAgendaItems.length > 0 ? (
-                                <ol className="list-decimal list-inside space-y-1 text-sm font-bold pl-2">
+                                <ol className="list-decimal list-inside space-y-0.5 text-sm font-bold pl-2">
                                   {invitationAgendaItems.map((item, idx) => (
                                     <li key={idx} className="leading-snug">{item}</li>
                                   ))}
@@ -5043,18 +5255,23 @@ function TeacherMeetingPage() {
                             </div>
 
                             {/* Footer Note */}
-                            <div className="pt-2 border-t border-slate-300">
-                              <p className="text-sm font-bold text-center leading-relaxed">
+                            <div className="pt-1 border-t border-slate-300">
+                              <p className="text-xs sm:text-sm font-bold text-center leading-relaxed">
                                 {invitationFooterNote || "शाळेच्या सर्वांगीण विकासात आणि व्यवस्थापनात आपले योगदान अत्यंत मोलाचे आहे. तरी कृपया आपण या सभेस वेळेवर उपस्थित राहावे, ही नम्र विनंती."}
                               </p>
                             </div>
 
-                            {/* Signature Section */}
-                            <div className="flex justify-end pt-6">
-                              <div className="text-center space-y-1.5 w-64">
-                                <div className="w-full border-b-2 border-slate-900 h-8" />
+                            {/* Dual Signatures Section */}
+                            <div className="grid grid-cols-2 gap-8 pt-5">
+                              <div className="text-center space-y-1">
+                                <div className="w-48 border-b-2 border-slate-900 h-8 mx-auto" />
+                                <p className="text-sm font-black text-slate-900">समिती अध्यक्ष</p>
+                                <p className="text-xs font-bold text-slate-700">{currentCommName}</p>
+                              </div>
+                              <div className="text-center space-y-1">
+                                <div className="w-48 border-b-2 border-slate-900 h-8 mx-auto" />
                                 <p className="text-sm font-black text-slate-900">{invitationSignatoryTitle || "मुख्याध्यापक / सचिव"}</p>
-                                <p className="text-xs font-bold text-slate-800">{invitationSignatoryOrg || currentCommName}</p>
+                                <p className="text-xs font-bold text-slate-700">{invitationSignatoryOrg || currentCommName}</p>
                               </div>
                             </div>
                           </div>

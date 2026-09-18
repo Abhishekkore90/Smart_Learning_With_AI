@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 // @ts-ignore
 import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
-import { ArrowLeft, ChevronDown, ChevronUp, Plus, Trash2, Save, Sparkles, Check } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Plus, Save, Sparkles, Check } from "lucide-react";
 import { toast } from "sonner";
 import { CLASS_1_OUTCOMES, OutcomeItem } from "@/data/class1_outcomes";
 import { CLASS_2_OUTCOMES } from "@/data/class2_outcomes";
@@ -157,6 +157,12 @@ export function CCESubjectWise({
   onBack: () => void;
 }) {
   const [activeClass, setActiveClass] = useState<string>(initialClass || "1st");
+
+  useEffect(() => {
+    if (initialClass && initialClass !== activeClass) {
+      setActiveClass(initialClass);
+    }
+  }, [initialClass]);
   const [activeSemester, setActiveSemester] = useState<Semester>("sem1");
   const [expandedSubject, setExpandedSubject] = useState<string | null>("marathi");
   const [students, setStudents] = useState<Student[]>([]);
@@ -178,6 +184,123 @@ export function CCESubjectWise({
     code: string;
     text: string;
   } | null>(null);
+
+  // Scroll position preservation refs
+  const savedScrollYRef = useRef<number>(0);
+  const lastClickedCodeRef = useRef<string | null>(null);
+  const autoSaveTimerRef = useRef<any>(null);
+
+  const setRating = (subKey: string, code: string, studentId: string, value: number) => {
+    setRatingData((prev) => {
+      const updated = {
+        ...prev,
+        [subKey]: {
+          ...(prev[subKey] || {}),
+          [code]: {
+            ...((prev[subKey] || {})[code] || {}),
+            [studentId]: value,
+          },
+        },
+      };
+
+      // 1. Instant local storage cache update
+      try {
+        const cacheKey = `cce_outcomes_ratings_${activeClass}_${academicYear}_${activeSemester}`;
+        localStorage.setItem(cacheKey, JSON.stringify(updated));
+      } catch (e) {}
+
+      // 2. Automatic background Firestore save (debounced 400ms)
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = setTimeout(() => {
+        const teacherId = getTeacherId();
+        const medium = localStorage.getItem("cce_selected_medium") || "marathi";
+
+        const docIdsToSave = Array.from(new Set([
+          `${activeClass}_${academicYear}_${activeSemester}`,
+          `${activeClass}_${medium}_${academicYear}_${activeSemester}`,
+          teacherId ? `${teacherId}_${activeClass}_${academicYear}_${activeSemester}` : null,
+          teacherId ? `${teacherId}_${activeClass}_${medium}_${academicYear}_${activeSemester}` : null,
+        ].filter(Boolean) as string[]));
+
+        const payload = {
+          class: activeClass,
+          academicYear,
+          semester: activeSemester,
+          medium,
+          teacherId: teacherId || "",
+          ratings: updated,
+          updatedAt: new Date().toISOString(),
+        };
+
+        Promise.all(
+          docIdsToSave.map((id) =>
+            setDoc(doc(db, "cce_outcomes", id), payload, { merge: true })
+          )
+        ).catch((err) => console.warn("Background auto-save error:", err));
+      }, 400);
+
+      return updated;
+    });
+  };
+
+  const saveRatings = async () => {
+    setSaving(true);
+    try {
+      const teacherId = getTeacherId();
+      const medium = localStorage.getItem("cce_selected_medium") || "marathi";
+
+      const docIdsToSave = Array.from(new Set([
+        `${activeClass}_${academicYear}_${activeSemester}`,
+        `${activeClass}_${medium}_${academicYear}_${activeSemester}`,
+        teacherId ? `${teacherId}_${activeClass}_${academicYear}_${activeSemester}` : null,
+        teacherId ? `${teacherId}_${activeClass}_${medium}_${academicYear}_${activeSemester}` : null,
+      ].filter(Boolean) as string[]));
+
+      const payload = {
+        class: activeClass,
+        academicYear,
+        semester: activeSemester,
+        medium,
+        teacherId: teacherId || "",
+        ratings: ratingData,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await Promise.all(
+        docIdsToSave.map((id) =>
+          setDoc(doc(db, "cce_outcomes", id), payload, { merge: true })
+        )
+      );
+
+      // Also persist to local cache
+      try {
+        const cacheKey = `cce_outcomes_ratings_${activeClass}_${academicYear}_${activeSemester}`;
+        localStorage.setItem(cacheKey, JSON.stringify(ratingData));
+      } catch (e) {}
+
+      toast.success("गुणवत्तेच्या नोंदी जतन झाल्या!");
+      setEditingOutcome(null);
+    } catch (err: any) {
+      toast.error("जतन अयशस्वी: " + err.message);
+    }
+    setSaving(false);
+  };
+  // Restore scroll position when returning from outcome detail view
+  useEffect(() => {
+    if (!editingOutcome && lastClickedCodeRef.current) {
+      const code = lastClickedCodeRef.current;
+      const targetY = savedScrollYRef.current;
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`outcome-item-${code}`);
+        if (el) {
+          el.scrollIntoView({ block: "center", behavior: "auto" });
+        } else if (targetY > 0) {
+          window.scrollTo({ top: targetY, behavior: "auto" });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [editingOutcome]);
 
   // Compute visible subjects for activeClass (class subjects + 3 special subjects: kala, karyanubhav, sharirik)
   const visibleSubjects = useMemo(() => {
@@ -293,69 +416,128 @@ export function CCESubjectWise({
     };
   }, [activeClass, academicYear]);
 
-  // 3. Load student ratings for activeClass & activeSemester
+  // Helper for deep merging rating objects
+  const deepMergeRatings = (target: any, source: any) => {
+    if (!source || typeof source !== "object") return target;
+    const result = { ...(target || {}) };
+    for (const key of Object.keys(source)) {
+      if (!result[key]) {
+        result[key] = source[key];
+      } else if (typeof source[key] === "object" && source[key] !== null && typeof result[key] === "object" && result[key] !== null) {
+        result[key] = deepMergeRatings(result[key], source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    return result;
+  };
+
+  // 3. Load student ratings for activeClass & activeSemester (with local cache hydration + deep merging)
   useEffect(() => {
+    let isMounted = true;
+    const cacheKey = `cce_outcomes_ratings_${activeClass}_${academicYear}_${activeSemester}`;
+
+    // 1. Instantly hydrate from local storage so ratings never vanish on refresh
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+          setRatingData(parsed);
+        }
+      }
+    } catch (e) {}
+
     const loadRatings = async () => {
       setLoading(true);
       try {
-        const ref = doc(db, "cce_outcomes", `${activeClass}_${academicYear}_${activeSemester}`);
-        const snap = await getDoc(ref);
-        setRatingData(snap.exists() ? snap.data().ratings || {} : {});
+        const teacherId = getTeacherId();
+        const medium = localStorage.getItem("cce_selected_medium") || "marathi";
+
+        const docIdsToFetch = Array.from(new Set([
+          `${activeClass}_${academicYear}_${activeSemester}`,
+          `${activeClass}_${medium}_${academicYear}_${activeSemester}`,
+          teacherId ? `${teacherId}_${activeClass}_${academicYear}_${activeSemester}` : null,
+          teacherId ? `${teacherId}_${activeClass}_${medium}_${academicYear}_${activeSemester}` : null,
+        ].filter(Boolean) as string[]));
+
+        let merged: any = {};
+        // Start with existing cached data
+        try {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) merged = JSON.parse(cached) || {};
+        } catch (e) {}
+
+        for (const dId of docIdsToFetch) {
+          try {
+            const snap = await getDoc(doc(db, "cce_outcomes", dId));
+            if (snap.exists()) {
+              const data = snap.data().ratings || snap.data();
+              if (data && typeof data === "object") {
+                merged = deepMergeRatings(merged, data);
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (isMounted) {
+          setRatingData(merged);
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(merged));
+          } catch (e) {}
+        }
       } catch (err) {
         console.warn("Error loading ratings:", err);
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     };
 
-    const ref = doc(db, "cce_outcomes", `${activeClass}_${academicYear}_${activeSemester}`);
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        if (snap.exists()) {
-          setRatingData(snap.data().ratings || {});
-        }
-        setLoading(false);
-      },
-      (err) => console.warn("Ratings snapshot error:", err)
-    );
-
     loadRatings();
-    return () => unsub();
+    return () => {
+      isMounted = false;
+    };
   }, [activeClass, academicYear, activeSemester]);
 
-  // Get outcomes list for a subject (checks dynamic saved outcomes first, then CLASS_1_OUTCOMES fallback if 1st class)
+  // Get outcomes list for a subject (merges base class outcome bank with any custom saved outcomes)
   const getOutcomesForSubject = (subKey: string): OutcomeItem[] => {
+    const norm = String(activeClass || "1st").trim().toLowerCase();
+    const num = norm.replace(/[^0-9]/g, "");
+
+    let bank: Record<string, OutcomeItem[]> | null = null;
+    if (num === "1") bank = CLASS_1_OUTCOMES;
+    else if (num === "2") bank = CLASS_2_OUTCOMES;
+    else if (num === "3") bank = CLASS_3_OUTCOMES;
+    else if (num === "4") bank = CLASS_4_OUTCOMES;
+    else if (num === "5") bank = CLASS_5_OUTCOMES;
+    else if (num === "6") bank = CLASS_6_OUTCOMES;
+    else if (num === "7") bank = CLASS_7_OUTCOMES;
+    else if (num === "8") bank = CLASS_8_OUTCOMES;
+
+    let baseBankList: OutcomeItem[] = [];
+    if (bank && bank[subKey] && Array.isArray(bank[subKey]) && bank[subKey].length > 0) {
+      baseBankList = bank[subKey];
+    } else if ((subKey === "kala" || subKey === "karyanubhav" || subKey === "sharirik") && CLASS_1_OUTCOMES[subKey]) {
+      baseBankList = CLASS_1_OUTCOMES[subKey];
+    }
+
     const custom = classOutcomes[subKey];
-    if (Array.isArray(custom) && custom.length > 0) return custom;
-    if (activeClass === "1st" && CLASS_1_OUTCOMES[subKey]) {
-      return CLASS_1_OUTCOMES[subKey];
+    if (!custom || !Array.isArray(custom) || custom.length === 0) {
+      return baseBankList;
     }
-    if (activeClass === "2nd" && CLASS_2_OUTCOMES[subKey]) {
-      return CLASS_2_OUTCOMES[subKey];
-    }
-    if ((activeClass === "3rd" || activeClass === "3") && CLASS_3_OUTCOMES[subKey]) {
-      return CLASS_3_OUTCOMES[subKey];
-    }
-    if ((activeClass === "4th" || activeClass === "4") && CLASS_4_OUTCOMES[subKey]) {
-      return CLASS_4_OUTCOMES[subKey];
-    }
-    if ((activeClass === "5th" || activeClass === "5") && CLASS_5_OUTCOMES[subKey]) {
-      return CLASS_5_OUTCOMES[subKey];
-    }
-    if ((activeClass === "6th" || activeClass === "6") && CLASS_6_OUTCOMES[subKey]) {
-      return CLASS_6_OUTCOMES[subKey];
-    }
-    if ((activeClass === "7th" || activeClass === "7") && CLASS_7_OUTCOMES[subKey]) {
-      return CLASS_7_OUTCOMES[subKey];
-    }
-    if ((activeClass === "8th" || activeClass === "8") && CLASS_8_OUTCOMES[subKey]) {
-      return CLASS_8_OUTCOMES[subKey];
-    }
-    // Fallback for the 3 special subjects across all classes if not defined in that class file
-    if ((subKey === "kala" || subKey === "karyanubhav" || subKey === "sharirik") && CLASS_1_OUTCOMES[subKey]) {
-      return CLASS_1_OUTCOMES[subKey];
-    }
-    return [];
+
+    // Merge base bank items and custom items by outcome code/id
+    const itemMap = new Map<string, OutcomeItem>();
+    baseBankList.forEach((item) => {
+      const key = (item.code || item.id || "").trim();
+      if (key) itemMap.set(key, item);
+    });
+
+    custom.forEach((item) => {
+      const key = (item.code || item.id || "").trim();
+      if (key) itemMap.set(key, item);
+    });
+
+    return Array.from(itemMap.values());
   };
 
   // Add new outcome for current active class and subject
@@ -443,41 +625,6 @@ export function CCESubjectWise({
 
   const getFilledCount = (subKey: string, code: string): number =>
     students.filter((s) => getRating(subKey, code, s.id) > 0).length;
-
-  const setRating = (subKey: string, code: string, studentId: string, value: number) => {
-    setRatingData((prev) => ({
-      ...prev,
-      [subKey]: {
-        ...(prev[subKey] || {}),
-        [code]: {
-          ...((prev[subKey] || {})[code] || {}),
-          [studentId]: value,
-        },
-      },
-    }));
-  };
-
-  const saveRatings = async () => {
-    setSaving(true);
-    try {
-      await setDoc(
-        doc(db, "cce_outcomes", `${activeClass}_${academicYear}_${activeSemester}`),
-        {
-          class: activeClass,
-          academicYear,
-          semester: activeSemester,
-          ratings: ratingData,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-      toast.success("गुणवत्तेच्या नोंदी जतन झाल्या!");
-      setEditingOutcome(null);
-    } catch (err: any) {
-      toast.error("जतन अयशस्वी: " + err.message);
-    }
-    setSaving(false);
-  };
 
   // ── OUTCOME DETAIL RATING VIEW ──
   if (editingOutcome) {
@@ -608,20 +755,11 @@ export function CCESubjectWise({
           </div>
         </div>
 
-        {/* Class Selection Dropdown */}
+        {/* Active Class Badge */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">इयत्ता:</span>
-          <select
-            value={activeClass}
-            onChange={(e) => setActiveClass(e.target.value)}
-            className="px-4 py-2.5 bg-white border-2 border-blue-500 rounded-xl text-xs text-blue-700 font-extrabold outline-none shadow-xs focus:ring-2 focus:ring-blue-100 cursor-pointer"
-          >
-            {CLASS_OPTIONS.map((cls) => (
-              <option key={cls.key} value={cls.key}>
-                {cls.label}
-              </option>
-            ))}
-          </select>
+          <span className="px-3.5 py-1.5 bg-blue-50 border border-blue-200 rounded-xl text-xs font-black text-blue-700 shadow-xs">
+            इयत्ता {activeClass}
+          </span>
         </div>
       </div>
 
@@ -728,19 +866,22 @@ export function CCESubjectWise({
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {outcomesList.map((item) => {
+                        {outcomesList.map((item, idx) => {
                           const filledCount = getFilledCount(subject.key, item.code);
                           return (
                             <div
-                              key={item.id}
-                              onClick={() =>
+                              id={`outcome-item-${item.code}`}
+                              key={`out_${item.id || item.code || "item"}_${idx}`}
+                              onClick={() => {
+                                savedScrollYRef.current = window.scrollY || document.documentElement.scrollTop || 0;
+                                lastClickedCodeRef.current = item.code;
                                 setEditingOutcome({
                                   subjectKey: subject.key,
                                   subjectLabel: subject.label,
                                   code: item.code,
                                   text: item.text,
-                                })
-                              }
+                                });
+                              }}
                               className="flex items-center justify-between gap-3 p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-blue-400 hover:shadow-md active:scale-[0.995] transition-all cursor-pointer group"
                             >
                               <div className="flex items-start gap-3 flex-1">
@@ -766,16 +907,6 @@ export function CCESubjectWise({
                                     })
                                   }
                                 />
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteOutcome(subject.key, item.id);
-                                  }}
-                                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-                                  title="काढून टाका"
-                                >
-                                  <Trash2 className="size-4" />
-                                </button>
                               </div>
                             </div>
                           );

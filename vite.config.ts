@@ -48,6 +48,78 @@ export default defineConfig({
         html2canvas: require.resolve('html2canvas-pro'),
       },
     },
+    plugins: [
+      {
+        name: 'razorpay-dev-order-api',
+        configureServer(server: any) {
+          server.middlewares.use('/api/create_razorpay_order', (req: any, res: any) => {
+            if (req.method === 'POST') {
+              let body = '';
+              req.on('data', (chunk: any) => body += chunk);
+              req.on('end', () => {
+                try {
+                  const data = JSON.parse(body || '{}');
+                  const amount = data.amount ? Math.round(Number(data.amount) * 100) : 5000;
+                  const moduleId = data.moduleId || 'module_unlock';
+                  const moduleTitle = data.moduleTitle || 'Module Unlock';
+
+                  const https = require('https');
+                  const keyId = 'rzp_test_TdQJUNjMtn0i6U';
+                  const keySecret = 'IlSDsGMynxPJ1xdzOIlOHVz5';
+                  const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+
+                  const postData = JSON.stringify({
+                    amount: amount,
+                    currency: 'INR',
+                    receipt: 'rcpt_' + Date.now(),
+                    payment_capture: 1,
+                    notes: { moduleId, moduleTitle }
+                  });
+
+                  const razorpayReq = https.request('https://api.razorpay.com/v1/orders', {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': 'Basic ' + auth,
+                      'Content-Type': 'application/json',
+                      'Content-Length': Buffer.byteLength(postData)
+                    }
+                  }, (razorpayRes: any) => {
+                    let resBody = '';
+                    razorpayRes.on('data', (chunk: any) => resBody += chunk);
+                    razorpayRes.on('end', () => {
+                      try {
+                        const parsed = JSON.parse(resBody);
+                        parsed.key_id = keyId;
+                        res.setHeader('Content-Type', 'application/json');
+                        res.statusCode = razorpayRes.statusCode;
+                        res.end(JSON.stringify(parsed));
+                      } catch (e) {
+                        res.statusCode = 500;
+                        res.end(JSON.stringify({ error: 'Failed parsing Razorpay response' }));
+                      }
+                    });
+                  });
+
+                  razorpayReq.on('error', (err: any) => {
+                    res.statusCode = 500;
+                    res.end(JSON.stringify({ error: err.message }));
+                  });
+
+                  razorpayReq.write(postData);
+                  razorpayReq.end();
+                } catch (err: any) {
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ error: 'Invalid JSON body' }));
+                }
+              });
+            } else {
+              res.statusCode = 405;
+              res.end();
+            }
+          });
+        }
+      }
+    ],
     server: {
       port: 8080,
       host: true,

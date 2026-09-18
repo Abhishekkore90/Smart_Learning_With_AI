@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
+import { formatMarathiClassName } from "@/lib/smartPlanningParser";
 
 export interface MonthlyPlanningViewerProps {
   htmlContent?: string;
@@ -439,13 +440,13 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
       // 3. Strict 7-Column Table
       html += `<table class="pdf-table w-full table-fixed border-collapse border border-slate-400 text-[10px] font-sans my-0" style="width: 100%; table-layout: fixed; border-collapse: collapse;">`;
       html += `<colgroup>`;
-      html += `<col style="width: 6%;" />`;
+      html += `<col style="width: 4.5%;" />`;
+      html += `<col style="width: 15.5%;" />`;
       html += `<col style="width: 18%;" />`;
       html += `<col style="width: 18%;" />`;
-      html += `<col style="width: 18%;" />`;
-      html += `<col style="width: 16%;" />`;
-      html += `<col style="width: 12%;" />`;
-      html += `<col style="width: 12%;" />`;
+      html += `<col style="width: 14%;" />`;
+      html += `<col style="width: 10%;" />`;
+      html += `<col style="width: 10%;" />`;
       html += `</colgroup>`;
 
       html += `<thead>`;
@@ -532,11 +533,11 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
       container.style.zIndex = "-9999";
       container.innerHTML = `
         <style>
-          .pdf-export-container { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; background: #ffffff; padding: 6px; margin: 0; width: 1150px !important; min-width: 1150px !important; box-sizing: border-box !important; }
-          .month-card-container { margin: 0 !important; padding: 4px 0 !important; background: #ffffff; width: 1138px !important; min-width: 1138px !important; }
-          table.pdf-table { width: 1138px !important; min-width: 1138px !important; table-layout: fixed !important; border-collapse: collapse !important; margin-top: 6px; margin-bottom: 6px; }
-          table.pdf-table th, table.pdf-table td { border: 1.5px solid #334155 !important; padding: 5px 6px !important; font-size: 11px !important; word-wrap: break-word !important; overflow-wrap: break-word !important; white-space: normal !important; vertical-align: top !important; line-height: 1.5 !important; }
-          table.pdf-table th { background-color: #fef3c7 !important; color: #78350f !important; font-weight: bold !important; text-align: center !important; font-size: 11.5px !important; }
+          .pdf-export-container { font-family: 'Noto Sans Devanagari', 'Inter', sans-serif; background: #ffffff; padding: 4px; margin: 0; width: 950px !important; min-width: 950px !important; box-sizing: border-box !important; }
+          .month-card-container { margin: 0 !important; padding: 2px 0 !important; background: #ffffff; width: 940px !important; min-width: 940px !important; page-break-after: always !important; break-after: page !important; }
+          table.pdf-table { width: 940px !important; min-width: 940px !important; table-layout: fixed !important; border-collapse: collapse !important; margin-top: 4px; margin-bottom: 4px; }
+          table.pdf-table th, table.pdf-table td { border: 1.5px solid #334155 !important; padding: 3px 4px !important; font-size: 11px !important; word-wrap: break-word !important; overflow-wrap: break-word !important; white-space: normal !important; vertical-align: middle !important; line-height: 1.3 !important; }
+          table.pdf-table th { background-color: #fef3c7 !important; color: #78350f !important; font-weight: bold !important; text-align: center !important; font-size: 11px !important; }
         </style>
         ${cleanTableMarkup}
       `;
@@ -550,174 +551,39 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
       const pdf = new jsPDF({
         unit: "mm",
         format: "a4",
-        orientation: "landscape",
+        orientation: "portrait",
       });
 
-      const pdfWidth = 287; // A4 landscape width (297mm - 10mm margins)
-      const pdfPageHeight = 190; // A4 landscape height (210mm - 20mm margins)
-      let pdfCurrentY = 10;
+      const pdfWidth = 190; // A4 portrait width (210mm - 20mm margins: 10mm left, 10mm right)
+      const pdfPageHeight = 277; // A4 portrait height (297mm - 20mm margins: 10mm top, 10mm bottom)
 
       const monthEls = Array.from(container.querySelectorAll(".month-card-container")) as HTMLElement[];
 
-      const findExactVisualRowCut = (
-        canvas: HTMLCanvasElement,
-        approxY: number,
-        searchRangePx: number = 40
-      ): number => {
-        try {
-          const ctx = canvas.getContext("2d");
-          if (!ctx) return approxY;
-
-          const width = canvas.width;
-          const startY = Math.max(5, Math.floor(approxY - searchRangePx));
-          const endY = Math.min(canvas.height - 5, Math.floor(approxY + 15));
-          const bandHeight = endY - startY + 1;
-
-          if (bandHeight <= 0) return approxY;
-
-          const imgData = ctx.getImageData(0, startY, width, bandHeight);
-          const data = imgData.data;
-
-          let bestY = approxY;
-          let minDarkCount = Infinity;
-
-          const leftX = Math.floor(width * 0.05);
-          const rightX = Math.floor(width * 0.95);
-
-          for (let r = bandHeight - 1; r >= 0; r--) {
-            const currentAbsoluteY = startY + r;
-            let darkCount = 0;
-
-            for (let x = leftX; x < rightX; x += 4) {
-              const idx = (r * width + x) * 4;
-              const red = data[idx];
-              const green = data[idx + 1];
-              const blue = data[idx + 2];
-
-              if (red < 160 && green < 160 && blue < 160) {
-                darkCount++;
-              }
-            }
-
-            if (darkCount < minDarkCount) {
-              minDarkCount = darkCount;
-              bestY = currentAbsoluteY;
-              if (darkCount === 0) break;
-            }
-          }
-
-          return bestY;
-        } catch (err) {
-          return approxY;
-        }
-      };
-
       for (let i = 0; i < monthEls.length; i++) {
         const monthEl = monthEls[i];
-        const monthRect = monthEl.getBoundingClientRect();
-        const tbodyTrs = Array.from(monthEl.querySelectorAll("tbody tr")) as HTMLElement[];
-        const trBottomsDom = tbodyTrs.map((tr) => tr.getBoundingClientRect().bottom - monthRect.top);
 
         const monthCanvas = await html2canvas(monthEl, {
           scale: 2,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
-          windowWidth: 1200,
+          windowWidth: 950,
         });
 
-        const scaleY = monthCanvas.height / (monthRect.height || 1);
-        const trBottomsCanvas = trBottomsDom.map((y) => y * scaleY);
-
-        // Every new month MUST start on a FRESH PAGE
+        // Each month starts on a fresh page
         if (i > 0) {
           pdf.addPage();
-          pdfCurrentY = 10;
         }
 
-        let canvasY = 0;
+        const monthImgData = monthCanvas.toDataURL("image/jpeg", 0.98);
+        const unscaledHeightMm = (monthCanvas.height * pdfWidth) / monthCanvas.width;
 
-        while (canvasY < monthCanvas.height - 2) {
-          let maxAllowedMm = pdfPageHeight - pdfCurrentY + 10;
-          let maxCanvasPx = (maxAllowedMm * monthCanvas.width) / pdfWidth;
+        // Proprotionally fit the entire monthly section onto one single A4 Portrait page
+        const renderHeightMm = Math.min(unscaledHeightMm, pdfPageHeight);
 
-          let sliceHeightPx = 0;
-
-          if (canvasY + maxCanvasPx >= monthCanvas.height - 2) {
-            sliceHeightPx = monthCanvas.height - canvasY;
-          } else {
-            let targetCanvasY = canvasY + maxCanvasPx;
-            let bestSplit = 0;
-
-            for (let k = 0; k < trBottomsCanvas.length; k++) {
-              const b = trBottomsCanvas[k];
-              if (b <= targetCanvasY && b > canvasY + 5 * scaleY) {
-                bestSplit = b;
-              } else if (b > targetCanvasY) {
-                break;
-              }
-            }
-
-            if (bestSplit <= canvasY && pdfCurrentY > 15) {
-              pdf.addPage();
-              pdfCurrentY = 10;
-              const freshMaxMm = pdfPageHeight - pdfCurrentY + 10;
-              maxCanvasPx = (freshMaxMm * monthCanvas.width) / pdfWidth;
-              targetCanvasY = canvasY + maxCanvasPx;
-
-              for (let k = 0; k < trBottomsCanvas.length; k++) {
-                const b = trBottomsCanvas[k];
-                if (b <= targetCanvasY && b > canvasY + 5 * scaleY) {
-                  bestSplit = b;
-                } else if (b > targetCanvasY) {
-                  break;
-                }
-              }
-            }
-
-            if (bestSplit > canvasY) {
-              const visualSplit = findExactVisualRowCut(monthCanvas, bestSplit, Math.round(35 * scaleY));
-              sliceHeightPx = visualSplit - canvasY;
-            } else {
-              const fallbackSplit = findExactVisualRowCut(monthCanvas, canvasY + maxCanvasPx, Math.round(35 * scaleY));
-              sliceHeightPx = Math.max(10, Math.min(fallbackSplit - canvasY, monthCanvas.height - canvasY));
-            }
-          }
-
-          const sliceCanvas = document.createElement("canvas");
-          sliceCanvas.width = monthCanvas.width;
-          sliceCanvas.height = Math.ceil(sliceHeightPx);
-          const ctx = sliceCanvas.getContext("2d");
-          if (ctx) {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-            ctx.drawImage(
-              monthCanvas,
-              0,
-              canvasY,
-              monthCanvas.width,
-              sliceHeightPx,
-              0,
-              0,
-              monthCanvas.width,
-              sliceHeightPx
-            );
-          }
-
-          const sliceImgData = sliceCanvas.toDataURL("image/jpeg", 0.98);
-          const sliceHeightMm = (sliceHeightPx * pdfWidth) / monthCanvas.width;
-
-          pdf.addImage(sliceImgData, "JPEG", 10, pdfCurrentY, pdfWidth, sliceHeightMm);
-
-          canvasY += sliceHeightPx;
-          pdfCurrentY += sliceHeightMm;
-
-          if (canvasY < monthCanvas.height - 2) {
-            pdf.addPage();
-            pdfCurrentY = 10;
-          }
-        }
+        pdf.addImage(monthImgData, "JPEG", 10, 10, pdfWidth, renderHeightMm);
       }
+
 
       if (container.parentNode) {
         container.parentNode.removeChild(container);
@@ -728,13 +594,10 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
         return String(str).replace(/[0-9]/g, (w) => devanagariDigits[parseInt(w, 10)]);
       };
       const devYear = toDevanagariDigits("2026-27");
+      const classNameMr = formatMarathiClassName(title || fileName || "1st");
 
-      let exportFileName = fileName || "";
-      if (!exportFileName || !exportFileName.startsWith("इयत्ता_")) {
-        exportFileName = `इयत्ता_1st_संपूर्ण_मासिक_नियोजन_${devYear}.pdf`;
-      } else {
-        exportFileName = exportFileName.endsWith(".pdf") ? exportFileName : `${exportFileName}.pdf`;
-      }
+      let exportFileName = `इयत्ता_${classNameMr}_संपूर्ण_मासिक_नियोजन_${devYear}.pdf`;
+
 
       pdf.save(exportFileName);
       toast.success("🎉 महिनानिहाय PDF यशस्वीरित्या डाउनलोड झाली!");
@@ -928,9 +791,10 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
       {activeTab !== "preview" && (
       <div className="w-full flex-1 bg-white rounded-xl shadow-2xl border border-slate-300 overflow-auto p-4 text-slate-900 max-h-[calc(100vh-160px)] min-h-0">
         {/* 1. Main Header Title Banner */}
-        <div className="bg-indigo-900 text-white text-center font-black text-lg md:text-xl py-3 px-5 rounded-t-xl shadow-sm tracking-wide">
-          अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - {subjectName}
+        <div className="bg-indigo-50 border border-indigo-200 text-indigo-950 text-center font-black text-base md:text-lg py-2.5 px-5 rounded-t-xl shadow-xs tracking-wide">
+          मासिक नियोजन, विषय - {subjectName || "मराठी"} व सन २०२६ - २७
         </div>
+
 
         {/* 2. Sub-Header Metadata Box (2-Row Grid) */}
         <div className="bg-slate-100 border-x border-b border-slate-300 px-5 py-3 text-sm md:text-base font-extrabold flex flex-col gap-1.5 rounded-b-xl mb-4 text-slate-900">
@@ -954,13 +818,13 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
           <table className="w-full min-w-[860px] table-fixed text-left border-collapse text-slate-900 text-xs font-sans">
             <colgroup>
               {role === "admin" && isEditMode && <col style={{ width: "50px" }} />}
-              <col style={{ width: "65px" }} />
-              <col style={{ width: "175px" }} />
+              <col style={{ width: "48px" }} />
+              <col style={{ width: "150px" }} />
               <col style={{ width: "165px" }} />
               <col style={{ width: "160px" }} />
-              <col style={{ width: "145px" }} />
-              <col style={{ width: "105px" }} />
-              <col style={{ width: "95px" }} />
+              <col style={{ width: "130px" }} />
+              <col style={{ width: "90px" }} />
+              <col style={{ width: "80px" }} />
             </colgroup>
 
             <thead>

@@ -108,6 +108,24 @@ export function ModulePaywall({
   const { user, profile } = useAuth();
   const teacherId = getTeacherId(user, profile) || "teacher_guest";
 
+  const latestPricingRef = React.useRef<ModulePricing | null>(null);
+
+  useEffect(() => {
+    if (pricing) {
+      latestPricingRef.current = pricing;
+      if (
+        pricing.enabled === false ||
+        pricing.price === 0 ||
+        pricing.monthlyPrice === 0 ||
+        pricing.yearlyPrice === 0 ||
+        pricing.perStudentPrice === 0
+      ) {
+        setIsUnlocked(true);
+        setLoading(false);
+      }
+    }
+  }, [pricing]);
+
   useEffect(() => {
     let unsubPricing: () => void;
     let unsubPayment: () => void;
@@ -144,10 +162,11 @@ export function ModulePaywall({
       try {
         // 1. Listen to pricing doc for this module
         unsubPricing = onSnapshot(doc(db, "cce_module_pricing", moduleId), (snap) => {
+          let pData: ModulePricing;
           if (snap.exists()) {
-            setPricing(snap.data() as ModulePricing);
+            pData = snap.data() as ModulePricing;
           } else {
-            setPricing({
+            pData = {
               id: moduleId,
               title: defaultTitle || moduleId,
               price: 149,
@@ -159,7 +178,21 @@ export function ModulePaywall({
               ],
               validityDays: 365,
               upiId: "smartlearning@upi",
-            });
+            };
+          }
+
+          setPricing(pData);
+          latestPricingRef.current = pData;
+
+          if (
+            pData.enabled === false ||
+            pData.price === 0 ||
+            pData.monthlyPrice === 0 ||
+            pData.yearlyPrice === 0 ||
+            pData.perStudentPrice === 0
+          ) {
+            setIsUnlocked(true);
+            setLoading(false);
           }
         });
 
@@ -246,7 +279,20 @@ export function ModulePaywall({
               setIsUnlocked(true);
               setPaymentInfo(paidData);
             } else {
-              setIsUnlocked(false);
+              const currentPricing = latestPricingRef.current;
+              const isPaywallOff =
+                currentPricing &&
+                (currentPricing.enabled === false ||
+                  currentPricing.price === 0 ||
+                  currentPricing.monthlyPrice === 0 ||
+                  currentPricing.yearlyPrice === 0 ||
+                  currentPricing.perStudentPrice === 0);
+
+              if (isPaywallOff) {
+                setIsUnlocked(true);
+              } else {
+                setIsUnlocked(false);
+              }
             }
             setLoading(false);
           });
@@ -341,13 +387,13 @@ export function ModulePaywall({
             }
 
             const quota = totalStudentsCount > 0 ? totalStudentsCount : 1;
-            const record = {
+            const record: Record<string, any> = {
               id: paymentDocKey,
               teacherId,
               teacherName,
               teacherEmail,
               teacherPhone,
-              moduleId: pricing.id,
+              moduleId: pricing.id || moduleId,  // ← fallback to prop if pricing.id undefined
               moduleTitle: isMonthlyOptionModule
                 ? meetingPlan === "yearly"
                   ? `${pricing.title || defaultTitle || moduleId} (वार्षिक - संपूर्ण वर्ष)`
@@ -362,15 +408,21 @@ export function ModulePaywall({
               expiresAt: expiresAt.toISOString(),
               studentsCount: quota,
               paidQuota: quota,
-              perStudentRate: isPerStudentModule ? perStudentRate : undefined,
               paymentType: isMonthlyOptionModule ? (meetingPlan === "yearly" ? "FULL_YEAR" : "MONTHLY") : "FULL",
-              unlockedMonth: isMonthlyOptionModule && meetingPlan === "monthly" ? targetMonth : undefined,
-              unlockedMonths: isMonthlyOptionModule
-                ? meetingPlan === "yearly"
-                  ? ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"]
-                  : [targetMonth]
-                : undefined,
             };
+
+            // Only include optional fields if they have valid values (Firestore rejects undefined)
+            if (isPerStudentModule && perStudentRate !== undefined) {
+              record.perStudentRate = perStudentRate;
+            }
+            if (isMonthlyOptionModule && meetingPlan === "monthly") {
+              record.unlockedMonth = targetMonth;
+            }
+            if (isMonthlyOptionModule) {
+              record.unlockedMonths = meetingPlan === "yearly"
+                ? ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"]
+                : [targetMonth];
+            }
 
             await setDoc(doc(db, "teacher_module_payments", paymentDocKey), record, { merge: true });
             

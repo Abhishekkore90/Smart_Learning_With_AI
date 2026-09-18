@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
+import { formatMarathiClassName } from "@/lib/smartPlanningParser";
 
 interface PlanningTableViewerProps {
   parsedData?: ParsedTableResult | null;
@@ -606,13 +607,11 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
         return String(str).replace(/[0-9]/g, (w) => devanagariDigits[parseInt(w, 10)]);
       };
       const devYear = toDevanagariDigits("2026-27");
+      const classNameMr = formatMarathiClassName(title || fileName || "1st");
+      const isMonthly = (fileName || "").includes("मासिक") || (title || "").includes("मासिक");
+      const planTypeStr = isMonthly ? "संपूर्ण_मासिक_नियोजन" : "संपूर्ण_वार्षिक_नियोजन";
+      const exportFileName = `इयत्ता_${classNameMr}_${planTypeStr}_${devYear}.pdf`;
 
-      let exportFileName = fileName || "";
-      if (!exportFileName || !exportFileName.startsWith("इयत्ता_")) {
-        exportFileName = `इयत्ता_1st_संपूर्ण_वार्षिक_नियोजन_${devYear}.pdf`;
-      } else {
-        exportFileName = exportFileName.endsWith(".pdf") ? exportFileName : `${exportFileName}.pdf`;
-      }
 
       const opt = {
         margin: [8, 8, 8, 8],

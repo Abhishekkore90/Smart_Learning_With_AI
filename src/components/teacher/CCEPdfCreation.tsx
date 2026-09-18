@@ -154,7 +154,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, selectedMedium, on
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="अध्ययन निष्पती प्रगतीदर्शक">
             <Suspense fallback={renderLoading()}>
-              <SubjectWiseResult initialClass={selectedClass} initialYear={academicYear} initialMedium={selectedMedium} />
+              <SubjectWiseResult initialClass={selectedClass} initialYear={academicYear} initialSemester={selectedTerm} initialMedium={selectedMedium} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -295,7 +295,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, selectedMedium, on
                   <h3 className="text-[15px] font-bold text-slate-800 group-hover:text-blue-600 transition-colors leading-snug whitespace-pre-line">
                     {option.label}
                   </h3>
-                  {option.id === "cce_register" && (
+                  {(option.id === "cce_register" || option.id === "learning_outcomes") && (
                     <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
                       selectedTerm === "sem1"
                         ? "bg-amber-100 text-amber-800 border-amber-300"

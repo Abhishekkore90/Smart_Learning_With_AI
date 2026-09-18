@@ -17,18 +17,45 @@ import { CLASS_6_OUTCOMES } from "@/data/class6_outcomes";
 import { CLASS_7_OUTCOMES } from "@/data/class7_outcomes";
 import { CLASS_8_OUTCOMES } from "@/data/class8_outcomes";
 
+// Helper for deep merging nested outcome rating objects without overwriting existing subject/code maps
+const deepMergeRatings = (target, source) => {
+  if (!source || typeof source !== "object") return target;
+  const result = { ...(target || {}) };
+  for (const key of Object.keys(source)) {
+    if (!result[key]) {
+      result[key] = source[key];
+    } else if (typeof source[key] === "object" && source[key] !== null && typeof result[key] === "object" && result[key] !== null) {
+      result[key] = deepMergeRatings(result[key], source[key]);
+    } else {
+      result[key] = source[key];
+    }
+  }
+  return result;
+};
+
 // Dynamic Class Outcomes Resolver
+// Dynamic Class Outcomes Resolver (mirrors CCESubjectWise dashboard)
 const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
   const normKey = subjectKey === "maths" ? "math" : subjectKey;
+  const possibleSubKeys = Array.from(new Set([
+    subjectKey,
+    normKey,
+    subjectKey ? subjectKey.toLowerCase() : "",
+    subjectKey === "marathi" ? "मराठी" : "",
+    subjectKey === "hindi" ? "हिंदी" : "",
+    subjectKey === "english" ? "इंग्रजी" : "",
+    subjectKey === "math" || subjectKey === "maths" ? "गणित" : "",
+    subjectKey === "evs1" ? "परिसर अभ्यास १" : "",
+    subjectKey === "evs2" ? "परिसर अभ्यास २" : "",
+    subjectKey === "science" ? "सामान्य विज्ञान" : "",
+    subjectKey === "history" ? "इतिहास व नागरिकशास्त्र" : "",
+    subjectKey === "geography" ? "भूगोल" : "",
+    subjectKey === "kala" ? "कला" : "",
+    subjectKey === "karyanubhav" ? "कार्यानुभव" : "",
+    subjectKey === "sharirik" ? "शारीरिक" : "",
+  ].filter(Boolean)));
 
-  // Check custom user-created outcomes first
-  if (customOutcomesMap[normKey] && Array.isArray(customOutcomesMap[normKey]) && customOutcomesMap[normKey].length > 0) {
-    return customOutcomesMap[normKey];
-  }
-  if (customOutcomesMap[subjectKey] && Array.isArray(customOutcomesMap[subjectKey]) && customOutcomesMap[subjectKey].length > 0) {
-    return customOutcomesMap[subjectKey];
-  }
-
+  // 1. Get base static class outcome bank
   const norm = String(classValue || "1st").toLowerCase().replace(/[^0-9]/g, "") || "1";
 
   let outcomeBank = null;
@@ -41,17 +68,48 @@ const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
   else if (norm === "7") outcomeBank = CLASS_7_OUTCOMES;
   else if (norm === "8") outcomeBank = CLASS_8_OUTCOMES;
 
+  let baseBankList = [];
   if (outcomeBank) {
-    if (outcomeBank[normKey]) return outcomeBank[normKey];
-    if (outcomeBank[subjectKey]) return outcomeBank[subjectKey];
+    for (const k of possibleSubKeys) {
+      if (outcomeBank[k] && Array.isArray(outcomeBank[k]) && outcomeBank[k].length > 0) {
+        baseBankList = outcomeBank[k];
+        break;
+      }
+    }
   }
 
-  // Fallback for the 3 special subjects across all classes if not defined in that class file
-  if (["kala", "karyanubhav", "sharirik"].includes(normKey) && CLASS_1_OUTCOMES[normKey]) {
-    return CLASS_1_OUTCOMES[normKey];
+  if (baseBankList.length === 0 && ["kala", "karyanubhav", "sharirik"].includes(normKey) && CLASS_1_OUTCOMES[normKey]) {
+    baseBankList = CLASS_1_OUTCOMES[normKey];
   }
 
-  return [];
+  // 2. Check custom user-created / saved outcomes (from cce_outcomes_list_v2 or localStorage)
+  let customList = [];
+  if (customOutcomesMap && typeof customOutcomesMap === "object") {
+    for (const k of possibleSubKeys) {
+      if (customOutcomesMap[k] && Array.isArray(customOutcomesMap[k]) && customOutcomesMap[k].length > 0) {
+        customList = customOutcomesMap[k];
+        break;
+      }
+    }
+  }
+
+  if (customList.length === 0) {
+    return baseBankList;
+  }
+
+  // Merge base bank items and custom items by outcome code/id
+  const itemMap = new Map();
+  baseBankList.forEach((item) => {
+    const key = (item.code || item.id || "").trim();
+    if (key) itemMap.set(key, item);
+  });
+
+  customList.forEach((item) => {
+    const key = (item.code || item.id || "").trim();
+    if (key) itemMap.set(key, item);
+  });
+
+  return Array.from(itemMap.values());
 };
 
 const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, student }) => {
@@ -83,7 +141,7 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
               <th className="border-r border-b border-slate-400 p-1 text-center leading-tight">
                 अध्ययन<br />निष्पत्ती<br />क्र.
               </th>
-              <th className="border-r border-b border-slate-400 p-1.5 text-left">
+              <th className="border-r border-b border-slate-400 p-1.5 text-center align-middle">
                 अध्ययन निष्पत्ती
               </th>
               <th colSpan={4} className="border-b border-slate-400 p-0 text-center">
@@ -105,7 +163,7 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
               const isLast = idx === outcomes.length - 1;
               return (
                 <tr
-                  key={item.code}
+                  key={`out_${item.code || item.id || "item"}_${idx}`}
                   className={`text-[10.5px] ${!isLast ? "border-b border-slate-300" : ""}`}
                 >
                   <td className="border-r border-slate-300 p-1 text-center font-bold text-[9.5px] whitespace-nowrap bg-slate-50/50">
@@ -160,6 +218,12 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   }, [initialMedium]);
 
   useEffect(() => {
+    if (initialSemester && initialSemester !== selectedSemester) {
+      setSelectedSemester(initialSemester);
+    }
+  }, [initialSemester]);
+
+  useEffect(() => {
     const handleMediumUpdate = () => {
       if (typeof localStorage !== "undefined") {
         const storedMedium = localStorage.getItem("cce_selected_medium");
@@ -207,7 +271,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
   useEffect(() => {
     loadData();
-  }, [selectedClass, academicYear, selectedMedium]);
+  }, [selectedClass, academicYear, selectedMedium, selectedSemester]);
 
   const loadData = async () => {
     setLoading(true);
@@ -313,15 +377,39 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           activeSubs = getDefaultSubjectsForClass(selectedClass, currentMed);
         }
 
-        setConfiguredSubjects(activeSubs);
+        const rawClassNum = selectedClass.replace(/\D/g, "");
+        const classVariants = Array.from(new Set([
+          selectedClass,
+          rawClassNum,
+          rawClassNum ? `${rawClassNum}st` : null,
+          rawClassNum ? `${rawClassNum}nd` : null,
+          rawClassNum ? `${rawClassNum}rd` : null,
+          rawClassNum ? `${rawClassNum}th` : null,
+        ].filter(Boolean)));
 
         // Fetch custom user-created learning outcomes if saved
-        try {
-          const customListSnap = await getDoc(doc(db, "cce_outcomes_list_v2", `${selectedClass}_${academicYear}`));
-          if (customListSnap.exists() && customListSnap.data().outcomes) {
-            setCustomOutcomesData(customListSnap.data().outcomes);
-          }
-        } catch (e) { }
+        let mergedCustomOutcomes = {};
+        classVariants.forEach((cls) => {
+          try {
+            const cached = localStorage.getItem(`cce_class_outcomes_${cls}_${academicYear}`);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed && typeof parsed === "object") {
+                mergedCustomOutcomes = { ...mergedCustomOutcomes, ...parsed };
+              }
+            }
+          } catch (e) {}
+        });
+
+        for (const cls of classVariants) {
+          try {
+            const customListSnap = await getDoc(doc(db, "cce_outcomes_list_v2", `${cls}_${academicYear}`));
+            if (customListSnap.exists() && customListSnap.data().outcomes) {
+              mergedCustomOutcomes = { ...mergedCustomOutcomes, ...customListSnap.data().outcomes };
+            }
+          } catch (e) { }
+        }
+        setCustomOutcomesData(mergedCustomOutcomes);
       } catch (e) { }
 
       // 2. Fetch Students for Selected Class
@@ -349,42 +437,91 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         const bunnyOutcomes = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_outcomes.json`);
         const bunnyLevels = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_levels.json`);
 
-        // Try teacher-isolated outcome docs first, then generic
-        const outcomeDocIds = [
-          `${currentTeacherId}_${selectedClass}_${academicYear}_sem2`,
-          `${selectedClass}_${academicYear}_sem2`,
-          `${currentTeacherId}_${selectedClass}_${academicYear}_sem1`,
-          `${selectedClass}_${academicYear}_sem1`,
-          `${currentTeacherId}_${selectedClass}_${academicYear}`,
-          docId,
-        ];
+        const targetSem = selectedSemester || "sem2";
+        const currentMed = localStorage.getItem("cce_selected_medium") || "marathi";
+
+        const rawClassNum = selectedClass.replace(/\D/g, "");
+        const classVariants = Array.from(new Set([
+          selectedClass,
+          rawClassNum,
+          rawClassNum ? `${rawClassNum}st` : null,
+          rawClassNum ? `${rawClassNum}nd` : null,
+          rawClassNum ? `${rawClassNum}rd` : null,
+          rawClassNum ? `${rawClassNum}th` : null,
+        ].filter(Boolean)));
+
+        // Query documents matching the selected semester strictly to prevent cross-semester overwrites
+        const outcomeDocIds = [];
+        classVariants.forEach((cls) => {
+          if (currentTeacherId) {
+            outcomeDocIds.push(`${currentTeacherId}_${cls}_${academicYear}_${targetSem}`);
+            outcomeDocIds.push(`${currentTeacherId}_${cls}_${currentMed}_${academicYear}_${targetSem}`);
+            outcomeDocIds.push(`${currentTeacherId}_${cls}_${academicYear}`);
+            outcomeDocIds.push(`${currentTeacherId}_${cls}_${currentMed}_${academicYear}`);
+          }
+          outcomeDocIds.push(`${cls}_${academicYear}_${targetSem}`);
+          outcomeDocIds.push(`${cls}_${currentMed}_${academicYear}_${targetSem}`);
+          outcomeDocIds.push(`${cls}_${academicYear}`);
+          outcomeDocIds.push(`${cls}_${currentMed}_${academicYear}`);
+        });
+        if (docId) outcomeDocIds.push(docId);
+
         let mergedRatings = {};
         for (const oDocId of outcomeDocIds) {
           try {
             const outSnap = await getDoc(doc(db, "cce_outcomes", oDocId));
             if (outSnap.exists()) {
               const rData = outSnap.data().ratings || outSnap.data();
-              mergedRatings = { ...mergedRatings, ...rData };
+              mergedRatings = deepMergeRatings(mergedRatings, rData);
             }
           } catch (e) { }
         }
-        mergedRatings = { ...mergedRatings, ...(bunnyOutcomes || {}) };
+        if (bunnyOutcomes) {
+          mergedRatings = deepMergeRatings(mergedRatings, bunnyOutcomes);
+        }
+
+        // Hydrate ratings from localStorage so teacher-filled option ratings appear instantly
+        classVariants.forEach((cls) => {
+          try {
+            const cached = localStorage.getItem(`cce_outcomes_ratings_${cls}_${academicYear}_${targetSem}`);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed && typeof parsed === "object") {
+                mergedRatings = deepMergeRatings(mergedRatings, parsed);
+              }
+            }
+          } catch (e) {}
+        });
+
         setOutcomesRatings(mergedRatings);
 
         // Fetch levels data (teacher-isolated first)
         let mergedLevels = {};
-        const levelDocIds = [`${currentTeacherId}_${selectedClass}_${academicYear}`, docId];
+        const levelDocIds = [];
+        classVariants.forEach((cls) => {
+          if (currentTeacherId) {
+            levelDocIds.push(`${currentTeacherId}_${cls}_${academicYear}_${targetSem}`);
+            levelDocIds.push(`${currentTeacherId}_${cls}_${currentMed}_${academicYear}_${targetSem}`);
+            levelDocIds.push(`${currentTeacherId}_${cls}_${academicYear}`);
+          }
+          levelDocIds.push(`${cls}_${academicYear}_${targetSem}`);
+          levelDocIds.push(`${cls}_${currentMed}_${academicYear}_${targetSem}`);
+          levelDocIds.push(`${cls}_${academicYear}`);
+        });
+        if (docId) levelDocIds.push(docId);
+
         for (const lDocId of levelDocIds) {
           try {
             const levSnap = await getDoc(doc(db, "cce_levels_v2", lDocId));
             if (levSnap.exists()) {
               const lData = levSnap.data().levelsData || levSnap.data();
-              mergedLevels = { ...mergedLevels, ...lData };
-              break;
+              mergedLevels = deepMergeRatings(mergedLevels, lData);
             }
           } catch (e) { }
         }
-        mergedLevels = { ...mergedLevels, ...(bunnyLevels || {}) };
+        if (bunnyLevels) {
+          mergedLevels = deepMergeRatings(mergedLevels, bunnyLevels);
+        }
         setLevelsData(mergedLevels);
       } catch (e) {
         console.error("Error fetching outcome levels:", e);
@@ -398,16 +535,18 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
         let mergedMarks = {};
         const marksDocIds = [
-          `${currentTeacherId}_${selectedClass}_${academicYear}`,
-          `${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}`,
+          currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}` : null,
+          currentTeacherId ? `${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}` : null,
           docId,
-        ];
+        ].filter(Boolean);
         for (const mDocId of marksDocIds) {
           try {
             const marksSnap = await getDoc(doc(db, "cce_marks_v2", mDocId));
             if (marksSnap.exists()) {
               const mData = marksSnap.data();
-              const mRecords = mData.semester2 || mData.semester1 || mData.marksData || mData.data || mData || {};
+              const mRecords = selectedSemester === "sem1"
+                ? (mData.semester1 || mData.semester2 || mData.marksData || mData.data || mData || {})
+                : (mData.semester2 || mData.semester1 || mData.marksData || mData.data || mData || {});
               mergedMarks = { ...mergedMarks, ...mRecords };
             }
           } catch (e) { }
@@ -428,12 +567,39 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
     if (!printRef.current) return;
     setDownloading(true);
     toast.info("अध्ययन निष्पती PDF तयार होत आहे, कृपया वाट पाहा...");
+
+    const container = printRef.current;
+
+    // Save original styles to restore after capture
+    const originalStyles = {
+      position: container.style.position,
+      left: container.style.left,
+      top: container.style.top,
+      width: container.style.width,
+      maxWidth: container.style.maxWidth,
+      visibility: container.style.visibility,
+      opacity: container.style.opacity,
+      zIndex: container.style.zIndex,
+      pointerEvents: container.style.pointerEvents,
+      display: container.style.display,
+    };
+
     try {
+      // 1. Apply deterministic PDF capture state (Req 3, 12)
+      container.style.position = "fixed";
+      container.style.left = "-10000px";
+      container.style.top = "0px";
+      container.style.width = "794px"; // Fixed A4 width at 96 DPI
+      container.style.maxWidth = "794px";
+      container.style.visibility = "visible";
+      container.style.opacity = "1";
+      container.style.zIndex = "-9999";
+      container.style.pointerEvents = "none";
+      container.style.display = "block";
+      container.classList.add("cce-pdf-generating");
+
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
-
-      const container = printRef.current;
-      container.classList.add("cce-pdf-generating");
 
       if (document.fonts && document.fonts.ready) {
         try {
@@ -458,11 +624,290 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      const pageElements = container.querySelectorAll(".pdf-page");
+      // 2. TWO-PASS REAL DOM MEASUREMENT & DYNAMIC PAGINATION
+      const generatedPages = [];
+
+      for (const student of students) {
+        const activeSubjectSections = [
+          { key: "मराठी", title: "प्रथम भाषा: मराठी", outcomes: marathiOutcomes, subjectName: "मराठी" },
+          { key: "हिंदी", title: "द्वितीय भाषा: हिंदी", outcomes: hindiOutcomes, subjectName: "हिंदी" },
+          { key: "गणित", title: "गणित", outcomes: mathsOutcomes, subjectName: "गणित" },
+          { key: "इंग्रजी", title: "तृतीय भाषा: इंग्रजी", outcomes: englishOutcomes, subjectName: "इंग्रजी" },
+          { key: "परिसर अभ्यास १", title: "परिसर अभ्यास १", outcomes: evs1Outcomes, subjectName: "परिसर अभ्यास १" },
+          { key: "परिसर अभ्यास २", title: "परिसर अभ्यास २", outcomes: evs2Outcomes, subjectName: "परिसर अभ्यास २" },
+          { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान" },
+          { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र" },
+          { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल" },
+          { key: "कला", title: "कला", outcomes: kalaOutcomes, subjectName: "कला" },
+          { key: "कार्यानुभव", title: "कार्यानुभव / कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: "कार्यानुभव" },
+          { key: "शारीरिक", title: "शारीरिक शिक्षण व आरोग्य", outcomes: sharirikOutcomes, subjectName: "शारीरिक" },
+        ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
+
+        for (const sec of activeSubjectSections) {
+          // Pass 1: Render full subject table in a real DOM measurement page
+          const fullRowsHtml = sec.outcomes.map((item, idx) => {
+            const level = getUserSelectedLevel(student, item.code, sec.subjectName);
+            const isLast = idx === sec.outcomes.length - 1;
+            return `
+              <tr style="font-size: 11px; ${!isLast ? "border-bottom: 1px solid #cbd5e1;" : ""}">
+                <td style="padding: 5px; text-align: center; font-weight: bold; font-size: 9.5px; width: 10%; background-color: #f8fafc; border-right: 1px solid #cbd5e1;">
+                  ${item.code || ""}
+                </td>
+                <td style="padding: 6px; text-align: left; font-weight: 500; font-size: 11px; line-height: 1.3; width: 74%; border-right: 1px solid #cbd5e1;">
+                  ${item.text || ""}
+                </td>
+                <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+                  ${level === 1 ? "✓" : ""}
+                </td>
+                <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+                  ${level === 2 ? "✓" : ""}
+                </td>
+                <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+                  ${level === 3 ? "✓" : ""}
+                </td>
+                <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%;">
+                  ${level === 4 ? "✓" : ""}
+                </td>
+              </tr>
+            `;
+          }).join("");
+
+          const measureEl = document.createElement("div");
+          measureEl.className = "pdf-page bg-white flex flex-col justify-between";
+          measureEl.style.cssText = "width: 794px; min-height: 1122px; padding: 24px; box-sizing: border-box; background: #ffffff; position: absolute; top: 0; left: -10000px; visibility: hidden;";
+
+          measureEl.innerHTML = `
+            <div>
+              <h1 id="m_title" style="font-size: 16px; font-weight: 900; color: #1e3a8a; text-align: center; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a; padding-bottom: 4px; letter-spacing: -0.025em; line-height: 1.2;">
+                अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
+              </h1>
+              <div id="m_student" style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 900; color: #1e293b; background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; margin-bottom: 8px;">
+                <span>विद्यार्थ्याचे नाव - <b style="color: #0f172a; font-weight: 900;">${student.fullName || student.name || ""}</b></span>
+                <span>इयत्ता - <b>${selectedClass}</b></span>
+                <span>तुकडी - <b>${student.division || student.section || student.tukdi || division}</b></span>
+                <span>हजेरी क्र. <b>${student.rollNo || ""}</b></span>
+                <span>${selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+              </div>
+              <div id="m_banner" style="margin-bottom: 8px;">
+                <h3 style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin: 0; text-align: center; background-color: #fef3c7; padding: 4px 10px; border-radius: 6px; border: 1.5px solid #fde68a;">
+                  ${sec.title}
+                </h3>
+              </div>
+              <div id="m_table_container" style="width: 100%; border: 1.5px solid #94a3b8; border-radius: 6px; overflow: hidden; background: #ffffff;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; color: #0f172a; table-layout: fixed;">
+                  <colgroup>
+                    <col style="width: 10%;" />
+                    <col style="width: 74%;" />
+                    <col style="width: 4%;" />
+                    <col style="width: 4%;" />
+                    <col style="width: 4%;" />
+                    <col style="width: 4%;" />
+                  </colgroup>
+                  <thead>
+                    <tr id="m_thead_row" style="background-color: #f1f5f9; font-weight: 900; font-size: 10.5px; border-bottom: 1.5px solid #94a3b8;">
+                      <th style="border-right: 1px solid #94a3b8; padding: 4px; text-align: center; line-height: 1.2;">
+                        अध्ययन<br />निष्पत्ती<br />क्र.
+                      </th>
+                      <th style="border-right: 1px solid #94a3b8; padding: 4px 6px; text-align: center; vertical-align: middle;">
+                        अध्ययन निष्पत्ती
+                      </th>
+                      <th colSpan="4" style="padding: 0; text-align: center;">
+                        <div style="border-bottom: 1px solid #94a3b8; padding: 2px 0; font-weight: 900; text-align: center; font-size: 10.5px;">
+                          स्तर
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 10px;">
+                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">1</div>
+                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">2</div>
+                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">3</div>
+                          <div style="padding: 2px 0; text-align: center; font-weight: bold;">4</div>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody id="m_tbody">${fullRowsHtml}</tbody>
+                </table>
+              </div>
+            </div>
+            <div id="m_footer" style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px; border-top: 1px solid #cbd5e1; margin-top: 6px; font-size: 10.5px; font-weight: bold; color: #1e293b;">
+              <div style="text-align: center;">
+                <p style="font-weight: 800; margin: 0;">${schoolData.teacherName || "वर्गशिक्षक"}</p>
+                <p style="font-size: 9.5px; color: #64748b; font-weight: 500; margin: 0;">वर्गशिक्षक</p>
+              </div>
+              <div style="text-align: center;">
+                <p style="font-weight: 800; margin: 0;">${schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                <p style="font-size: 9.5px; color: #64748b; font-weight: 500; margin: 0;">मुख्याध्यापक</p>
+              </div>
+            </div>
+          `;
+
+          container.appendChild(measureEl);
+
+          // Measure heights directly from DOM
+          const h1H = measureEl.querySelector("#m_title")?.getBoundingClientRect().height || 33;
+          const stdH = measureEl.querySelector("#m_student")?.getBoundingClientRect().height || 37;
+          const bannerH = measureEl.querySelector("#m_banner")?.getBoundingClientRect().height || 35;
+          const theadH = measureEl.querySelector("#m_thead_row")?.getBoundingClientRect().height || 38;
+          const footerH = measureEl.querySelector("#m_footer")?.getBoundingClientRect().height || 41;
+
+          // Padding and non-table height total
+          const pageInnerHeight = 1122 - 48; // 1074px
+          const nonTableHeight = h1H + 8 + stdH + 8 + bannerH + 8 + theadH + 3 + footerH + 12;
+          const availableTableBodyHeight = pageInnerHeight - nonTableHeight;
+
+          const trNodes = Array.from(measureEl.querySelectorAll("#m_tbody tr"));
+          const rowHeights = trNodes.map((tr) => Math.max(28, Math.ceil(tr.getBoundingClientRect().height || tr.offsetHeight || 32)));
+
+          container.removeChild(measureEl);
+
+          // Pass 2: Chunk outcomes dynamically to fill available A4 height max
+          const subjectChunks = [];
+          let currentChunk = [];
+          let currentHeightSum = 0;
+
+          for (let i = 0; i < sec.outcomes.length; i++) {
+            const rHeight = rowHeights[i] || 32;
+
+            if (currentHeightSum + rHeight <= availableTableBodyHeight && currentChunk.length > 0) {
+              currentChunk.push(sec.outcomes[i]);
+              currentHeightSum += rHeight;
+            } else if (currentChunk.length === 0) {
+              currentChunk.push(sec.outcomes[i]);
+              currentHeightSum += rHeight;
+            } else {
+              subjectChunks.push(currentChunk);
+              currentChunk = [sec.outcomes[i]];
+              currentHeightSum = rHeight;
+            }
+          }
+          if (currentChunk.length > 0) {
+            subjectChunks.push(currentChunk);
+          }
+
+          const totalParts = subjectChunks.length;
+          subjectChunks.forEach((chunk, chunkIdx) => {
+            const partTitle = totalParts > 1
+              ? `${sec.title} (भाग ${chunkIdx + 1}/${totalParts})`
+              : sec.title;
+
+            generatedPages.push({
+              student,
+              secTitle: partTitle,
+              secKey: sec.key,
+              subjectName: sec.subjectName,
+              outcomesChunk: chunk,
+            });
+          });
+        }
+      }
+
+      // Render generatedPages into container as .pdf-page elements
+      let pagesHtml = generatedPages.map((pgData) => {
+        const student = pgData.student;
+        const rowsHtml = pgData.outcomesChunk.map((item, idx) => {
+          const level = getUserSelectedLevel(student, item.code, pgData.subjectName);
+          const isLast = idx === pgData.outcomesChunk.length - 1;
+          return `
+            <tr style="font-size: 11px; ${!isLast ? "border-bottom: 1px solid #cbd5e1;" : ""}">
+              <td style="padding: 5px; text-align: center; font-weight: bold; font-size: 9.5px; width: 10%; background-color: #f8fafc; border-right: 1px solid #cbd5e1;">
+                ${item.code || ""}
+              </td>
+              <td style="padding: 6px; text-align: left; font-weight: 500; font-size: 11px; line-height: 1.3; width: 74%; border-right: 1px solid #cbd5e1;">
+                ${item.text || ""}
+              </td>
+              <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+                ${level === 1 ? "✓" : ""}
+              </td>
+              <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+                ${level === 2 ? "✓" : ""}
+              </td>
+              <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+                ${level === 3 ? "✓" : ""}
+              </td>
+              <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%;">
+                ${level === 4 ? "✓" : ""}
+              </td>
+            </tr>
+          `;
+        }).join("");
+
+        return `
+          <div
+            class="pdf-page bg-white flex flex-col justify-between"
+            style="width: 794px; height: 1122px; min-height: 1122px; max-height: 1122px; padding: 24px; box-sizing: border-box; margin-bottom: 20px; overflow: hidden; background: #ffffff;"
+          >
+            <div>
+              <h1 style="font-size: 16px; font-weight: 900; color: #1e3a8a; text-align: center; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a; padding-bottom: 4px; letter-spacing: -0.025em; line-height: 1.2;">
+                अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
+              </h1>
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 900; color: #1e293b; background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; margin-bottom: 8px;">
+                <span>विद्यार्थ्याचे नाव - <b style="color: #0f172a; font-weight: 900;">${student.fullName || student.name || ""}</b></span>
+                <span>इयत्ता - <b>${selectedClass}</b></span>
+                <span>तुकडी - <b>${student.division || student.section || student.tukdi || division}</b></span>
+                <span>हजेरी क्र. <b>${student.rollNo || ""}</b></span>
+                <span>${selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+              </div>
+              <div style="margin-bottom: 8px;">
+                <h3 style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin: 0; text-align: center; background-color: #fef3c7; padding: 4px 10px; border-radius: 6px; border: 1.5px solid #fde68a;">
+                  ${pgData.secTitle}
+                </h3>
+              </div>
+              <div style="width: 100%; border: 1.5px solid #94a3b8; border-radius: 6px; overflow: hidden; background: #ffffff;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; color: #0f172a; table-layout: fixed;">
+                  <colgroup>
+                    <col style="width: 10%;" />
+                    <col style="width: 74%;" />
+                    <col style="width: 4%;" />
+                    <col style="width: 4%;" />
+                    <col style="width: 4%;" />
+                    <col style="width: 4%;" />
+                  </colgroup>
+                  <thead>
+                    <tr style="background-color: #f1f5f9; font-weight: 900; font-size: 10.5px; border-bottom: 1.5px solid #94a3b8;">
+                      <th style="border-right: 1px solid #94a3b8; padding: 4px; text-align: center; line-height: 1.2;">
+                        अध्ययन<br />निष्पत्ती<br />क्र.
+                      </th>
+                      <th style="border-right: 1px solid #94a3b8; padding: 4px 6px; text-align: center; vertical-align: middle;">
+                        अध्ययन निष्पत्ती
+                      </th>
+                      <th colSpan="4" style="padding: 0; text-align: center;">
+                        <div style="border-bottom: 1px solid #94a3b8; padding: 2px 0; font-weight: 900; text-align: center; font-size: 10.5px;">
+                          स्तर
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 10px;">
+                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">1</div>
+                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">2</div>
+                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">3</div>
+                          <div style="padding: 2px 0; text-align: center; font-weight: bold;">4</div>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>${rowsHtml}</tbody>
+                </table>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px; border-top: 1px solid #cbd5e1; margin-top: 6px; font-size: 10.5px; font-weight: bold; color: #1e293b;">
+              <div style="text-align: center;">
+                <p style="font-weight: 800; margin: 0;">${schoolData.teacherName || "वर्गशिक्षक"}</p>
+                <p style="font-size: 9.5px; color: #64748b; font-weight: 500; margin: 0;">वर्गशिक्षक</p>
+              </div>
+              <div style="text-align: center;">
+                <p style="font-weight: 800; margin: 0;">${schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                <p style="font-size: 9.5px; color: #64748b; font-weight: 500; margin: 0;">मुख्याध्यापक</p>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      container.innerHTML = pagesHtml;
+
+      // 4. Capture each .pdf-page individually and generate jsPDF
+      const pageElements = Array.from(container.querySelectorAll(".pdf-page"));
+      console.log("PDF pages:", pageElements.length);
+
       if (!pageElements || pageElements.length === 0) {
         toast.error("कोणतेही पान सापडले नाही!");
-        container.classList.remove("cce-pdf-generating");
-        setDownloading(false);
         return;
       }
 
@@ -473,68 +918,61 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         compress: true,
       });
 
+      const captureScale = Math.min(2, window.devicePixelRatio || 2);
+
       for (let i = 0; i < pageElements.length; i++) {
+        console.log(`Generating PDF page ${i + 1}/${pageElements.length}`);
         const pageEl = pageElements[i];
 
         const canvas = await html2canvas(pageEl, {
-          scale: 2,
+          scale: captureScale,
           useCORS: true,
           allowTaint: true,
           logging: false,
           backgroundColor: "#ffffff",
           scrollX: 0,
           scrollY: 0,
-          onclone: (clonedDoc, clonedElement) => {
-            try {
-              const styleTags = Array.from(document.querySelectorAll("style"));
-              styleTags.forEach((st) => {
-                clonedDoc.head.appendChild(st.cloneNode(true));
-              });
-
-              let cssText = "";
-              Array.from(document.styleSheets).forEach((sheet) => {
-                try {
-                  const rules = Array.from(sheet.cssRules || sheet.rules || []);
-                  rules.forEach((rule) => {
-                    cssText += rule.cssText + "\n";
-                  });
-                } catch (e) {}
-              });
-
-              if (cssText) {
-                const inlineStyle = clonedDoc.createElement("style");
-                inlineStyle.textContent = cssText;
-                clonedDoc.head.appendChild(inlineStyle);
-              }
-
-              const imgs = Array.from(clonedElement.querySelectorAll("img"));
-              imgs.forEach((img) => {
-                try {
-                  if (img.src && !img.src.startsWith("data:")) {
-                    const c = document.createElement("canvas");
-                    c.width = img.naturalWidth || img.width || 100;
-                    c.height = img.naturalHeight || img.height || 100;
-                    const ctx = c.getContext("2d");
-                    if (ctx) {
-                      ctx.drawImage(img, 0, 0, c.width, c.height);
-                      img.src = c.toDataURL("image/png");
-                    }
-                  }
-                } catch (e) {}
-              });
-            } catch (e) {}
-
-            clonedElement.style.margin = "0";
-            clonedElement.style.padding = "14px";
-            clonedElement.style.display = "block";
-            clonedElement.style.visibility = "visible";
-          },
+          windowWidth: 794,
         });
 
-        // Compressed high-efficiency JPEG encoding (keeps multi-page PDF < 10 MB)
-        const imgData = canvas.toDataURL("image/jpeg", 0.72);
+        // Aspect ratio scaling calculation for A4 printable area (200mm x 287mm)
+        const PAGE_WIDTH = 210;
+        const PAGE_HEIGHT = 297;
+        const BORDER = 5; // 5mm outer margin
+
+        const availableWidth = PAGE_WIDTH - BORDER * 2; // 200mm
+        const availableHeight = PAGE_HEIGHT - BORDER * 2; // 287mm
+
+        const ratio = canvas.width / canvas.height;
+        let renderWidth = availableWidth;
+        let renderHeight = renderWidth / ratio;
+
+        if (renderHeight > availableHeight) {
+          renderHeight = availableHeight;
+          renderWidth = renderHeight * ratio;
+        }
+
+        const x = (PAGE_WIDTH - renderWidth) / 2;
+        const y = (PAGE_HEIGHT - renderHeight) / 2;
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.88);
+
         if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 2.5, 2.5, 205, 292, undefined, "FAST");
+        pdf.addImage(
+          imgData,
+          "JPEG",
+          x,
+          y,
+          renderWidth,
+          renderHeight,
+          undefined,
+          "FAST"
+        );
+
+        // Draw crisp 5mm outer rectangular border directly in jsPDF on ALL pages
+        pdf.setLineWidth(0.35);
+        pdf.setDrawColor(71, 85, 105); // slate-600 border line
+        pdf.rect(BORDER, BORDER, availableWidth, availableHeight);
       }
 
       pdf.save(`अध्ययन_निष्पत्ती_प्रगतीदर्शक_${selectedClass}_${academicYear}.pdf`);
@@ -543,8 +981,19 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       console.error("PDF generation error:", err);
       toast.error("PDF निर्मितीत अडचण आली: " + err.message);
     } finally {
-      if (printRef.current) {
-        printRef.current.classList.remove("cce-pdf-generating");
+      // 5. Complete Restoration of DOM & State
+      if (container) {
+        container.style.position = originalStyles.position;
+        container.style.left = originalStyles.left;
+        container.style.top = originalStyles.top;
+        container.style.width = originalStyles.width;
+        container.style.maxWidth = originalStyles.maxWidth;
+        container.style.visibility = originalStyles.visibility;
+        container.style.opacity = originalStyles.opacity;
+        container.style.zIndex = originalStyles.zIndex;
+        container.style.pointerEvents = originalStyles.pointerEvents;
+        container.style.display = originalStyles.display;
+        container.classList.remove("cce-pdf-generating");
       }
       setDownloading(false);
     }
@@ -562,7 +1011,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   };
 
   const isSubjectActive = (subName) => {
-    if (!configuredSubjects || configuredSubjects.length === 0) return false;
+    if (!configuredSubjects || configuredSubjects.length === 0) return true;
     const name = subName.toLowerCase().trim();
 
     return configuredSubjects.some((s) => {
@@ -593,76 +1042,132 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
   /**
    * Resolves the EXACT level (1, 2, 3, or 4) entered by the user for a specific student and outcome code.
-   * Checks outcomesRatings, levelsData, and marksData across all ID and subject aliases.
+   * Checks outcomesRatings, levelsData, and marksData across all ID, code, and subject aliases.
    */
   const getUserSelectedLevel = (student, outcomeCode, subjectName) => {
     if (!student) return null;
 
-    const possibleStudentKeys = [
-      student.id,
-      student.rollNo,
-      student.name,
-      student.fullName,
-      String(student.rollNo),
-    ].filter(Boolean);
+    const parseLevelVal = (val) => {
+      if (val === undefined || val === null || val === 0 || val === "" || val === false) return null;
+      if (typeof val === "number" && val >= 1 && val <= 4) return val;
+      const str = String(val).trim();
+      const digits = str.match(/[1-4]/);
+      if (digits) {
+        const num = parseInt(digits[0], 10);
+        if (num >= 1 && num <= 4) return num;
+      }
+      return null;
+    };
 
-    const possibleSubKeys = [
-      subjectName,
-      subjectName ? subjectName.toLowerCase() : "",
-      subjectName && subjectName.includes("मराठी") ? "marathi" : "",
-      subjectName && subjectName.includes("हिंदी") ? "hindi" : "",
-      subjectName && subjectName.includes("इंग्रजी") ? "english" : "",
-      subjectName && subjectName.includes("गणित") ? "math" : "",
-      subjectName && subjectName.includes("गणित") ? "maths" : "",
-      subjectName && subjectName.includes("परिसर १") ? "evs1" : "",
-      subjectName && subjectName.includes("परिसर २") ? "evs2" : "",
-      subjectName && subjectName.includes("परिसर") ? "evs" : "",
-      subjectName && subjectName.includes("विज्ञान") ? "science" : "",
-      subjectName && subjectName.includes("इतिहास") ? "history" : "",
-      subjectName && subjectName.includes("भूगोल") ? "geography" : "",
-      subjectName && subjectName.includes("कला") ? "kala" : "",
-      subjectName && (subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण")) ? "karyanubhav" : "",
-      subjectName && (subjectName.includes("शारीरिक") || subjectName.includes("आरोग्य")) ? "sharirik" : "",
-    ].filter(Boolean);
+    const possibleStudentKeys = Array.from(
+      new Set([
+        student.id,
+        student.rollNo,
+        String(student.rollNo),
+        student.name,
+        student.fullName,
+        student._id,
+        student.srNo,
+        student.studentId,
+        student.roll_no,
+        String(student.id),
+        student.rollNo ? String(student.rollNo).padStart(2, "0") : null,
+        student.rollNo ? String(parseInt(student.rollNo, 10)) : null,
+      ].filter(Boolean))
+    );
 
-    // 1. Check outcomesRatings: ratings[subjectKey][outcomeCode][studentId]
-    for (const subKey of possibleSubKeys) {
-      if (outcomesRatings[subKey] && outcomesRatings[subKey][outcomeCode]) {
-        const studentMap = outcomesRatings[subKey][outcomeCode];
+    const possibleSubKeys = Array.from(
+      new Set([
+        subjectName,
+        subjectName ? subjectName.toLowerCase() : "",
+        subjectName && subjectName.includes("मराठी") ? "marathi" : "",
+        subjectName && subjectName.includes("हिंदी") ? "hindi" : "",
+        subjectName && subjectName.includes("इंग्रजी") ? "english" : "",
+        subjectName && subjectName.includes("गणित") ? "math" : "",
+        subjectName && subjectName.includes("गणित") ? "maths" : "",
+        subjectName && (subjectName.includes("परिसर अभ्यास १") || subjectName.includes("परिसर १")) ? "evs1" : "",
+        subjectName && (subjectName.includes("परिसर अभ्यास २") || subjectName.includes("परिसर २")) ? "evs2" : "",
+        subjectName && subjectName.includes("परिसर") ? "evs" : "",
+        subjectName && (subjectName.includes("सामान्य विज्ञान") || subjectName.includes("विज्ञान")) ? "science" : "",
+        subjectName && (subjectName.includes("इतिहास") || subjectName.includes("नागरिकशास्त्र")) ? "history" : "",
+        subjectName && subjectName.includes("भूगोल") ? "geography" : "",
+        subjectName && subjectName.includes("कला") ? "kala" : "",
+        subjectName && (subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण")) ? "karyanubhav" : "",
+        subjectName && (subjectName.includes("शारीरिक") || subjectName.includes("आरोग्य")) ? "sharirik" : "",
+      ].filter(Boolean))
+    );
+
+    const possibleOutcomeCodes = Array.from(
+      new Set([
+        outcomeCode,
+        outcomeCode ? outcomeCode.toLowerCase() : "",
+        outcomeCode ? outcomeCode.toUpperCase() : "",
+        outcomeCode ? outcomeCode.replace(/_/g, ".") : "",
+        outcomeCode ? outcomeCode.replace(/\./g, "_") : "",
+        outcomeCode ? outcomeCode.replace(/^[A-Za-z]+_?/, "") : "",
+      ].filter(Boolean))
+    );
+
+    const sources = [outcomesRatings, levelsData];
+
+    for (const source of sources) {
+      if (!source || typeof source !== "object") continue;
+
+      // Structure A: source[subKey][code][studentId]
+      for (const subKey of possibleSubKeys) {
+        const subData = source[subKey];
+        if (!subData || typeof subData !== "object") continue;
+
+        for (const code of possibleOutcomeCodes) {
+          const codeData = subData[code];
+          if (codeData && typeof codeData === "object") {
+            for (const stdKey of possibleStudentKeys) {
+              const res = parseLevelVal(codeData[stdKey]);
+              if (res) return res;
+            }
+          }
+        }
+
+        // Structure B: source[subKey][studentId][code]
         for (const stdKey of possibleStudentKeys) {
-          const val = studentMap[stdKey];
-          if (val !== undefined && val !== null && val !== 0 && val !== "") {
-            const parsed = parseInt(val);
-            if (parsed >= 1 && parsed <= 4) return parsed;
+          const stdData = subData[stdKey];
+          if (stdData && typeof stdData === "object") {
+            for (const code of possibleOutcomeCodes) {
+              const res = parseLevelVal(stdData[code]);
+              if (res) return res;
+            }
           }
         }
       }
-    }
 
-    // Direct check for top-level outcomeCode in outcomesRatings
-    if (outcomesRatings[outcomeCode]) {
-      const studentMap = outcomesRatings[outcomeCode];
+      // Structure C: source[studentId][subKey][code] or source[studentId][code]
       for (const stdKey of possibleStudentKeys) {
-        const val = studentMap[stdKey];
-        if (val !== undefined && val !== null && val !== 0 && val !== "") {
-          const parsed = parseInt(val);
-          if (parsed >= 1 && parsed <= 4) return parsed;
+        const stdData = source[stdKey];
+        if (!stdData || typeof stdData !== "object") continue;
+
+        for (const code of possibleOutcomeCodes) {
+          const res = parseLevelVal(stdData[code]);
+          if (res) return res;
+        }
+
+        for (const subKey of possibleSubKeys) {
+          const subData = stdData[subKey];
+          if (subData && typeof subData === "object") {
+            for (const code of possibleOutcomeCodes) {
+              const res = parseLevelVal(subData[code]);
+              if (res) return res;
+            }
+          }
         }
       }
-    }
 
-    // 2. Check direct levelsData: levelsData[studentId][outcomeCode]
-    for (const stdKey of possibleStudentKeys) {
-      const stdLevels = levelsData[stdKey];
-      if (stdLevels && typeof stdLevels === "object") {
-        if (stdLevels[outcomeCode]) {
-          const parsed = parseInt(stdLevels[outcomeCode]);
-          if (parsed >= 1 && parsed <= 4) return parsed;
-        }
-        for (const subKey of possibleSubKeys) {
-          if (stdLevels[subKey] && stdLevels[subKey][outcomeCode]) {
-            const parsed = parseInt(stdLevels[subKey][outcomeCode]);
-            if (parsed >= 1 && parsed <= 4) return parsed;
+      // Structure D: source[code][studentId]
+      for (const code of possibleOutcomeCodes) {
+        const codeData = source[code];
+        if (codeData && typeof codeData === "object") {
+          for (const stdKey of possibleStudentKeys) {
+            const res = parseLevelVal(codeData[stdKey]);
+            if (res) return res;
           }
         }
       }
@@ -730,12 +1235,9 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         </div>
       )}
 
-      {/* -------------------- PRINT CONTAINER (CLASS-SPECIFIC OUTCOMES & USER SELECTED LEVELS) -------------------- */}
-      <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
-        {(() => {
-          const displayedStudents = students;
-
-          return displayedStudents.map((student, sIdx) => {
+      {/* -------------------- 1. SCREEN VIEW (SINGLE CONTINUOUS TABLE PER SUBJECT ON WEB UI) -------------------- */}
+      <div className="cce-screen-view max-w-4xl mx-auto space-y-6 mb-8 no-print">
+        {students.map((student) => {
           const activeSubjectSections = [
             { key: "मराठी", title: "प्रथम भाषा: मराठी", outcomes: marathiOutcomes, subjectName: "मराठी" },
             { key: "हिंदी", title: "द्वितीय भाषा: हिंदी", outcomes: hindiOutcomes, subjectName: "हिंदी" },
@@ -751,39 +1253,23 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             { key: "शारीरिक", title: "शारीरिक शिक्षण व आरोग्य", outcomes: sharirikOutcomes, subjectName: "शारीरिक" },
           ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
 
-          return activeSubjectSections.map((sec, subIdx) => {
-            const isFirstPage = sIdx === 0 && subIdx === 0;
-            return (
-              <div
-                key={`${student.id}_${sec.key}`}
-                className={`pdf-page bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between mb-4 ${
-                  !isFirstPage ? "pdf-page-break" : ""
-                }`}
-                style={{
-                  minHeight: "275mm",
-                  boxSizing: "border-box",
-                  pageBreakBefore: isFirstPage ? "auto" : "always",
-                  breakBefore: isFirstPage ? "auto" : "page",
-                  pageBreakInside: "avoid",
-                  breakInside: "avoid",
-                }}
-              >
-                <div>
-                  {/* Header Title */}
+          return (
+            <div key={`screen_${student.id}`} className="space-y-6">
+              {activeSubjectSections.map((sec) => (
+                <div key={`screen_${student.id}_${sec.key}`} className="bg-white p-5 border border-slate-200 rounded-2xl shadow-sm">
                   <h1 className="text-lg font-black text-blue-900 text-center mb-2.5 border-b-2 border-blue-900 pb-1 tracking-tight">
                     अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
                   </h1>
 
-                  {/* Student Metadata Bar */}
-                  <div className="flex items-center justify-between text-xs font-black text-slate-800 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-300 mb-3">
-                    <span>विद्यार्थ्याचे नाव - <b className="text-slate-900 font-black">{student.name}</b></span>
+                  <div className="flex flex-wrap items-center justify-between text-xs font-black text-slate-800 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-300 mb-3 gap-2">
+                    <span>विद्यार्थ्याचे नाव - <b className="text-slate-900 font-black">{student.fullName || student.name}</b></span>
                     <span>इयत्ता - <b>{selectedClass}</b></span>
                     <span>तुकडी - <b>{student.division || student.section || student.tukdi || division}</b></span>
                     <span>हजेरी क्र. <b>{student.rollNo}</b></span>
                     <span>{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
                   </div>
 
-                  {/* Single Subject Table on New Dedicated Page */}
+                  {/* Single Continuous Table for Web Screen View */}
                   <OutcomeTable
                     title={sec.title}
                     outcomes={sec.outcomes}
@@ -791,26 +1277,130 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                     getUserSelectedLevel={getUserSelectedLevel}
                     student={student}
                   />
-                </div>
 
-                {/* Signatures Footer */}
-                <div
-                  className="flex items-center justify-between pt-2.5 border-t border-slate-200 mt-2 text-[11px] font-bold text-slate-800"
-                  style={{ breakInside: "avoid", pageBreakInside: "avoid" }}
-                >
-                  <div className="text-center">
-                    <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                    <p className="text-[10px] text-slate-500 font-medium">वर्गशिक्षक</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                    <p className="text-[10px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 mt-2 text-[11px] font-bold text-slate-800">
+                    <div className="text-center">
+                      <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                      <p className="text-[10px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                      <p className="text-[10px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* -------------------- 2. PDF CAPTURE CONTAINER (PAGINATED & BALANCED A4 PAGES FOR PDF DOWNLOAD) -------------------- */}
+      <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto hidden print:block">
+        {(() => {
+          const displayedStudents = students;
+          let globalPageIndex = 0;
+
+          // Dynamically balances outcomes across pages to fully fill A4 page height
+          const chunkSubjectOutcomes = (outcomes, maxPerPage = 20) => {
+            if (!outcomes || outcomes.length === 0) return [];
+            const total = outcomes.length;
+            if (total <= maxPerPage) return [outcomes];
+            const numPages = Math.ceil(total / maxPerPage);
+            const itemsPerPage = Math.ceil(total / numPages);
+            const chunks = [];
+            for (let i = 0; i < total; i += itemsPerPage) {
+              chunks.push(outcomes.slice(i, i + itemsPerPage));
+            }
+            return chunks;
+          };
+
+          return displayedStudents.flatMap((student) => {
+            const activeSubjectSections = [
+              { key: "मराठी", title: "प्रथम भाषा: मराठी", outcomes: marathiOutcomes, subjectName: "मराठी" },
+              { key: "हिंदी", title: "द्वितीय भाषा: हिंदी", outcomes: hindiOutcomes, subjectName: "हिंदी" },
+              { key: "गणित", title: "गणित", outcomes: mathsOutcomes, subjectName: "गणित" },
+              { key: "इंग्रजी", title: "तृतीय भाषा: इंग्रजी", outcomes: englishOutcomes, subjectName: "इंग्रजी" },
+              { key: "परिसर अभ्यास १", title: "परिसर अभ्यास १", outcomes: evs1Outcomes, subjectName: "परिसर अभ्यास १" },
+              { key: "परिसर अभ्यास २", title: "परिसर अभ्यास २", outcomes: evs2Outcomes, subjectName: "परिसर अभ्यास २" },
+              { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान" },
+              { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र" },
+              { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल" },
+              { key: "कला", title: "कला", outcomes: kalaOutcomes, subjectName: "कला" },
+              { key: "कार्यानुभव", title: "कार्यानुभव / कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: "कार्यानुभव" },
+              { key: "शारीरिक", title: "शारीरिक शिक्षण व आरोग्य", outcomes: sharirikOutcomes, subjectName: "शारीरिक" },
+            ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
+
+            return activeSubjectSections.flatMap((sec) => {
+              const chunks = chunkSubjectOutcomes(sec.outcomes, 20);
+
+              return chunks.map((outcomeChunk, chunkIdx) => {
+                const isFirstPage = globalPageIndex === 0;
+                globalPageIndex++;
+                const totalParts = chunks.length;
+                const partTitle = totalParts > 1
+                  ? `${sec.title} (भाग ${chunkIdx + 1}/${totalParts})`
+                  : sec.title;
+
+                return (
+                  <div
+                    key={`${student.id}_${sec.key}_part_${chunkIdx}`}
+                    className={`pdf-page bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between mb-4 ${
+                      !isFirstPage ? "pdf-page-break" : ""
+                    }`}
+                    style={{
+                      minHeight: "275mm",
+                      boxSizing: "border-box",
+                      pageBreakBefore: isFirstPage ? "auto" : "always",
+                      breakBefore: isFirstPage ? "auto" : "page",
+                      pageBreakInside: "avoid",
+                      breakInside: "avoid",
+                    }}
+                  >
+                    <div>
+                      {/* Header Title */}
+                      <h1 className="text-lg font-black text-blue-900 text-center mb-2.5 border-b-2 border-blue-900 pb-1 tracking-tight">
+                        अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
+                      </h1>
+
+                      {/* Student Metadata Bar */}
+                      <div className="flex items-center justify-between text-xs font-black text-slate-800 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-300 mb-3">
+                        <span>विद्यार्थ्याचे नाव - <b className="text-slate-900 font-black">{student.fullName || student.name}</b></span>
+                        <span>इयत्ता - <b>{selectedClass}</b></span>
+                        <span>तुकडी - <b>{student.division || student.section || student.tukdi || division}</b></span>
+                        <span>हजेरी क्र. <b>{student.rollNo}</b></span>
+                        <span>{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+                      </div>
+
+                      {/* Chunked Subject Table */}
+                      <OutcomeTable
+                        title={partTitle}
+                        outcomes={outcomeChunk}
+                        subjectName={sec.subjectName}
+                        getUserSelectedLevel={getUserSelectedLevel}
+                        student={student}
+                      />
+                    </div>
+
+                    {/* Signatures Footer */}
+                    <div
+                      className="flex items-center justify-between pt-2.5 border-t border-slate-200 mt-2 text-[11px] font-bold text-slate-800"
+                      style={{ breakInside: "avoid", pageBreakInside: "avoid" }}
+                    >
+                      <div className="text-center">
+                        <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                        <p className="text-[10px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                        <p className="text-[10px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              });
+            });
           });
-        });
         })()}
       </div>
     </div>

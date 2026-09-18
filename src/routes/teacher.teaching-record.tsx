@@ -95,7 +95,7 @@ function TeachingRecordPage() {
   // Class & Medium level access control & pricing state for Teaching Record
   const [unlockedClassMediums, setUnlockedClassMediums] = useState<string[]>([]);
   const [purchasingClass, setPurchasingClass] = useState(false);
-  const [teachingPricing, setTeachingPricing] = useState<{ price: number; classPrices?: Record<string, number> }>({ price: 299 });
+  const [teachingPricing, setTeachingPricing] = useState<{ price: number; enabled?: boolean; classPrices?: Record<string, number> }>({ price: 299, enabled: true });
 
   const isSuperAdmin =
     (user?.email || "").toLowerCase().trim() === "abhishekkore90@gmail.com" ||
@@ -108,6 +108,7 @@ function TeachingRecordPage() {
         const data = snap.data();
         setTeachingPricing({
           price: typeof data.price === "number" ? data.price : 299,
+          enabled: data.enabled !== undefined ? data.enabled : true,
           classPrices: data.classPrices || {},
         });
       }
@@ -196,6 +197,9 @@ function TeachingRecordPage() {
     !selectedClass ||
     !selectedMedium ||
     isSuperAdmin ||
+    teachingPricing.enabled === false ||
+    teachingPricing.price === 0 ||
+    currentClassPrice === 0 ||
     unlockedClassMediums.includes(currentClassKey) ||
     unlockedClassMediums.includes(`${normMedium}_ALL`) ||
     unlockedClassMediums.includes(`ALL_${normClass}`) ||
@@ -783,7 +787,7 @@ function TeachingRecordPage() {
       </div>
 
       <main className="w-full pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
-        <ModulePaywall moduleId="teaching-record" defaultTitle="दैनिक अध्यापन टाचणवही (Teaching Diary)" isPaidTab={false}>
+        <ModulePaywall moduleId="teaching-record" defaultTitle="दैनिक अध्यापन टाचणवही (Teaching Diary)">
           <PinGate sectionKey="teaching_record">
           <div className="p-3 sm:p-5 md:p-6 w-full max-w-[98%] xl:max-w-[96%] mx-auto space-y-6 print:p-0 print:max-w-full">
             {/* Top Navigation Bar with ONLY Back Button */}

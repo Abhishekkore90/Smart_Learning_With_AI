@@ -2,6 +2,7 @@ import React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { useState } from "react";
 import {
   Download,
@@ -3004,6 +3005,7 @@ function StudentPortfolioPage() {
         className="lg:pl-0 pt-32 sm:pt-24 md:pt-20 px-2 sm:px-4 md:px-6 pb-6"
         style={{ height: "fit-content" }}
       >
+        <ModulePaywall moduleId="stats-student" defaultTitle="विद्यार्थी संचिका (Student Portfolio)">
         {/* Sheets presentation workspace */}
         <div
           className="bg-[#0d1b4b]/30 p-2 sm:p-4 pb-2 rounded-2xl sm:rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto"
@@ -3259,6 +3261,7 @@ function StudentPortfolioPage() {
           </div>
 
         </div>
+        </ModulePaywall>
       </main>
     </div>
   );

@@ -23,6 +23,10 @@ export const MASTER_CCE_REMARKS: SubjectRemarks = EMPTY_SUBJECT_REMARKS;
 // Class 1st Remarks
 export const CLASS_1_REMARKS: SubjectRemarks = {
   prathambhasha: [
+    "C-9.1.1: जास्त लांबीची अपरिचित गाणी,(4 ते 8 वाक्ये) काळजीपूर्वक ऐकतो,त्याबद्दल संभाषण करतो आणि प्रश्न विचारतो.",
+    "C-9.1.2: मोठी (10 ओळी) गाणी कविता गातो व मोठ्याने पुन्हा म्हणून दाखवितो.",
+    "C-9.2.1: शिक्षकांच्या मदतीने यमक जुळवतो लहान कविता तयार करतो.",
+    "C-9.3.1 : संभाषणात सहभागी होतो.बोलण्यासाठी स्वतःची वेळ येण्याची वाट पाहतो आणि इतरांना बोलू देतो.",
     "कार्डावरील शब्दाचे वाचन करतो",
     "शब्दाचे पृथक्करण करून वाचन करतो",
     "वाक्य वाचतो, वाचनाचा सराव करतो",
@@ -1484,6 +1488,8 @@ export const CLASS_1_REMARKS: SubjectRemarks = {
     "प्रात्यक्षिकात आवडीने सहभाग घेते."
   ]
 };
+
+CLASS_1_REMARKS.marathi = CLASS_1_REMARKS.prathambhasha;
 
 // Class 2nd Remarks
 export const CLASS_2_REMARKS: SubjectRemarks = {

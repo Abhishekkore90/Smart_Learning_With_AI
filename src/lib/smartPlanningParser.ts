@@ -82,6 +82,25 @@ const MARATHI_CLASS_NAMES: Record<string, string> = {
   "Class 8": "इयत्ता आठवी",
 };
 
+export function formatMarathiClassName(rawClassId?: string): string {
+  if (!rawClassId) return "पहिली";
+  const str = String(rawClassId).trim().toLowerCase();
+
+  if (str.includes("पहिली") || str === "1" || str === "1st" || str.includes("first") || str.includes("class 1")) return "पहिली";
+  if (str.includes("दुसरी") || str === "2" || str === "2nd" || str.includes("second") || str.includes("class 2")) return "दुसरी";
+  if (str.includes("तिसरी") || str === "3" || str === "3rd" || str.includes("third") || str.includes("class 3")) return "तिसरी";
+  if (str.includes("चौथी") || str === "4" || str === "4th" || str.includes("fourth") || str.includes("class 4")) return "चौथी";
+  if (str.includes("पाचवी") || str.includes("पांचवी") || str === "5" || str === "5th" || str.includes("fifth") || str.includes("class 5")) return "पाचवी";
+  if (str.includes("सहावी") || str === "6" || str === "6th" || str.includes("sixth") || str.includes("class 6")) return "सहावी";
+  if (str.includes("सातवी") || str === "7" || str === "7th" || str.includes("seventh") || str.includes("class 7")) return "सातवी";
+  if (str.includes("आठवी") || str === "8" || str === "8th" || str.includes("eighth") || str.includes("class 8")) return "आठवी";
+  if (str.includes("नववी") || str === "9" || str === "9th" || str.includes("ninth") || str.includes("class 9")) return "नववी";
+  if (str.includes("दहावी") || str === "10" || str === "10th" || str.includes("tenth") || str.includes("class 10")) return "दहावी";
+
+  return rawClassId.replace(/^इयत्ता\s*/i, "").replace(/^Class\s*/i, "").trim() || "पहिली";
+}
+
+
 /**
  * Extracts metadata (Title, Planned Periods, Working Days) from top rows of uploaded sheet
  */

@@ -217,10 +217,18 @@ export function CCEStudentList({
         }
       });
 
-      // 2. Listen to pricing for perStudentPrice
+      // 2. Listen to pricing for perStudentPrice and paywall toggle
+      let isPaywallDisabled = false;
       unsubPricing = onSnapshot(doc(db, "cce_module_pricing", "cce-result"), (snap) => {
-        if (snap.exists() && snap.data().perStudentPrice) {
-          setPerStudentPrice(snap.data().perStudentPrice);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.perStudentPrice) {
+            setPerStudentPrice(data.perStudentPrice);
+          }
+          if (data.enabled === false || data.price === 0 || data.perStudentPrice === 0) {
+            isPaywallDisabled = true;
+            setIsAdminGranted(true);
+          }
         }
       });
 
@@ -233,7 +241,7 @@ export function CCEStudentList({
           return matchesUser && matchesMod && data.status === "GRANTED";
         });
         const isSuperAdmin = (user as any)?.role === "admin" || localStorage.getItem("is_super_admin") === "true";
-        setIsAdminGranted(isGranted || isSuperAdmin);
+        setIsAdminGranted(isGranted || isSuperAdmin || isPaywallDisabled);
       });
 
       // 4. Count total teacher students across ALL classes & mediums

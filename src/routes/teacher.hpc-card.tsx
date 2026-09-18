@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { Users, ClipboardCheck, User, ArrowLeft, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -129,6 +130,7 @@ function TeacherHpcCardPage() {
       <TeacherSidebar />
 
       <main className="lg:pl-0 pt-16 min-h-screen">
+        <ModulePaywall moduleId="hpc-card" defaultTitle="Holistic Progress Card (HPC)" totalStudentsCount={studentsCount}>
         <div className="p-6 md:p-10 space-y-8 max-w-full mx-auto">
           {activeTab !== "dashboard" && (
             <div className="mb-6">
@@ -337,6 +339,7 @@ function TeacherHpcCardPage() {
             </motion.div>
           )}
         </div>
+        </ModulePaywall>
       </main>
     </div>
   );

@@ -30,13 +30,17 @@ export const processRazorpayPayment = async (options: RazorpayPaymentOptions) =>
     throw new Error("रेझरपे SDK लोड होऊ शकले नाही. इंटरनेट कनेक्शन तपासा.");
   }
 
-  const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_TRgZXfPjk5xEuo";
+  const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  let razorpayKey = isLocalhost ? "rzp_test_TdQJUNjMtn0i6U" : (import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_TRgZXfPjk5xEuo");
   const amountInPaise = Math.round(options.amount * 100);
 
   let generatedOrderId: string | undefined = undefined;
 
-  // Try creating Razorpay Order via PHP backend endpoint if configured
-  const phpEndpoint = import.meta.env.VITE_RAZORPAY_PHP_ENDPOINT || "https://learnify-academy.in/create_razorpay_order.php";
+  // On localhost, use Vite dev server endpoint to create test orders directly with Razorpay API
+  // On production, use PHP endpoint on sgkbrainova.com
+  const phpEndpoint = isLocalhost
+    ? "/api/create_razorpay_order"
+    : (import.meta.env.VITE_RAZORPAY_PHP_ENDPOINT || "https://sgkbrainova.com/create_razorpay_order.php");
 
   try {
     const res = await fetch(phpEndpoint, {
@@ -48,14 +52,20 @@ export const processRazorpayPayment = async (options: RazorpayPaymentOptions) =>
         moduleTitle: options.moduleTitle,
       }),
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.id) {
-        generatedOrderId = data.id;
+    const data = await res.json();
+    console.log("[Razorpay Order Response]", res.status, data);
+    if (res.ok && data && data.id) {
+      generatedOrderId = data.id;
+      if (data.key_id) {
+        razorpayKey = data.key_id;
+        console.log("[Razorpay] Using Key:", razorpayKey.substring(0, 14) + "...");
       }
+      console.log("[Razorpay] Order ID created:", generatedOrderId);
+    } else {
+      console.warn("[Razorpay Order Error]", data?.error || data?.razorpay_msg || data);
     }
   } catch (err) {
-    console.warn("PHP Order creation endpoint not reached, attempting fallback checkout...", err);
+    console.warn("Order creation endpoint not reached, attempting fallback checkout...", err);
   }
 
   const rzpOptions: any = {
@@ -93,6 +103,7 @@ export const processRazorpayPayment = async (options: RazorpayPaymentOptions) =>
     },
   };
 
+  // ✅ Always send order_id (localhost whitelisted in Razorpay Dashboard)
   if (generatedOrderId) {
     rzpOptions.order_id = generatedOrderId;
   }
