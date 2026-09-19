@@ -122,7 +122,6 @@ function LandingPage() {
       btnHover: "group-hover:bg-icon-pink group-hover:text-white group-hover:border-transparent",
       actionText: "Open Digital School",
       to: "/digital-school",
-      externalUrl: "https://digitalschool.sgkbrainova.com/",
     },
     {
       title: t.c2_title || "Teacher Section",

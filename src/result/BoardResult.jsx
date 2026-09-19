@@ -1204,19 +1204,19 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
         >
           {/* Main Border Box with Equal Spacing on All Sides */}
-          <div className="border-2 border-slate-700 rounded-none p-6 sm:p-10 h-full w-full flex flex-col justify-between items-center text-center relative z-10" style={{ boxSizing: "border-box" }}>
+          <div className="border-2 border-slate-700 rounded-none p-6 sm:p-10 h-full w-full flex flex-col justify-center items-center text-center relative z-10 space-y-7 sm:space-y-8" style={{ boxSizing: "border-box" }}>
 
             {/* Top School Header Section */}
-            <div className="space-y-1.5 w-full">
+            <div className="space-y-2 w-full">
               <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight leading-snug">
                 {schoolData.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
               </h2>
-              <p className="text-xs font-semibold text-slate-500 font-mono tracking-widest uppercase mt-1">
-                UDISE : {schoolData.udise || "s1"}
+              <p className="text-base sm:text-lg font-extrabold text-slate-700 font-mono tracking-wider uppercase mt-2">
+                UDISE : <span className="text-lg sm:text-xl font-black text-slate-950">{schoolData.udise || "s1"}</span>
               </p>
 
               {/* Horizontal Line with Diamond Node */}
-              <div className="flex items-center justify-center gap-3 my-5 max-w-xs mx-auto">
+              <div className="flex items-center justify-center gap-3 my-4 max-w-xs mx-auto">
                 <div className="h-[1.5px] bg-slate-300 w-24" />
                 <div className="size-1.5 bg-slate-400 rotate-45 shrink-0" />
                 <div className="h-[1.5px] bg-slate-300 w-24" />
@@ -1224,7 +1224,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             </div>
 
             {/* Main Title & Academic Year Section */}
-            <div className="space-y-2.5 my-auto w-full">
+            <div className="space-y-2.5 w-full">
               <h1 className="text-3xl sm:text-4xl font-black text-[#881337] tracking-tight">
                 सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही
               </h1>
@@ -1234,7 +1234,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             </div>
 
             {/* Class & Division Box */}
-            <div className="my-auto w-full">
+            <div className="w-full">
               <div className="inline-block bg-[#e0f2fe] border border-[#93c5fd] rounded-lg px-8 py-3.5 shadow-xs">
                 <h3 className="text-lg sm:text-xl font-black text-[#0f172a] tracking-wide">
                   इयत्ता : {getMarathiClassName(selectedClass)} {formatDivision(division) ? `  तुकडी : ${formatDivision(division)}` : "  तुकडी : अ"}
@@ -1379,14 +1379,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
               >
                 <div
-                  className={`border-2 border-slate-700 rounded-none h-full w-full flex flex-col justify-between relative z-10 ${pageMode === "1page" ? "p-3 sm:p-4" : "p-6"}`}
+                  className={`border-2 border-slate-700 rounded-none h-full w-full flex flex-col justify-between relative z-10 ${pageMode === "1page" ? (subjects.length >= 8 ? "p-2 sm:p-2.5" : "p-3 sm:p-4") : "p-6"}`}
                   style={{ boxSizing: "border-box" }}
                 >
                 <div>
-                  <h2 className={`font-black text-[#004080] text-center tracking-tight ${pageMode === "1page" ? "text-xl mb-2" : "text-2xl mb-4"}`}>सातत्यपूर्ण सर्वंकष मूल्यांकन</h2>
+                  <h2 className={`font-black text-[#004080] text-center tracking-tight ${pageMode === "1page" ? (subjects.length >= 8 ? "text-base sm:text-lg mb-1" : "text-xl mb-2") : "text-2xl mb-4"}`}>सातत्यपूर्ण सर्वंकष मूल्यांकन</h2>
 
                   {/* Student Meta Header */}
-                  <div className={`flex items-center justify-between font-bold text-slate-900 border-b-2 border-sky-100 ${pageMode === "1page" ? "text-xs font-extrabold pb-2 mb-2.5" : "text-sm font-extrabold pb-3 mb-4"}`}>
+                  <div className={`flex items-center justify-between font-bold text-slate-900 border-b-2 border-sky-100 ${pageMode === "1page" ? (subjects.length >= 8 ? "text-[11px] font-extrabold pb-1 mb-1.5" : "text-xs font-extrabold pb-2 mb-2.5") : "text-sm font-extrabold pb-3 mb-4"}`}>
                     <span>विद्यार्थ्याचे नाव - <b className="text-slate-900">{student.name}</b></span>
                     <span>इयत्ता - <b>{selectedClass}</b></span>
                     <span>तुकडी - <b>{division}</b></span>
@@ -1398,23 +1398,23 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   <div className="overflow-x-auto">
                     <table className={`w-full border-collapse border-2 border-[#0080ff] text-center font-medium table-fixed text-xs`}>
                       <colgroup>
-                        <col style={{ width: "4%" }} />
-                        <col style={{ width: "22%" }} />
-                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "2.5%" }} />
+                        <col style={{ width: "20%" }} />
                         <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "4.5%" }} />
-                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "5.4%" }} />
+                        <col style={{ width: "2.8%" }} />
                       </colgroup>
                       <thead>
                         {/* Header Row 1 */}
@@ -1444,7 +1444,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                         </tr>
 
                         {/* Header Row 2: Vertical Labels */}
-                        <tr className={`bg-[#bfe5ff] text-[#002b66] font-bold border-b border-[#0080ff] ${pageMode === "1page" ? "h-16" : "h-28"}`}>
+                        <tr className={`bg-[#bfe5ff] text-[#002b66] font-bold border-b border-[#0080ff] ${pageMode === "1page" ? (subjects.length >= 8 ? "h-13" : "h-16") : "h-28"}`}>
                           {/* Formative Vertical Labels */}
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
                             <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>तोंडीकाम</div>
@@ -1679,16 +1679,17 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           const grandMax = 100;
                           const grade = grandTotalObt !== "" ? getGrade((Number(grandTotalObt) / grandMax) * 100) : "";
 
-                          const cellPad = "p-1.5 text-xs font-bold";
+                          const isCompact = pageMode === "1page" && subjects.length >= 8;
+                          const cellPad = isCompact ? "py-0.5 px-0.5 text-[9.5px] font-bold" : "p-1.5 text-xs font-bold";
 
                           return (
                             <React.Fragment key={subjectName}>
                               {/* Row 1: पैकी */}
                               <tr className="bg-white text-slate-900 font-bold border-t border-[#0080ff]">
-                                <td rowSpan={2} className="border border-[#0080ff] bg-white p-1 text-center align-top pt-3.5 font-extrabold text-slate-900 text-xs">
+                                <td rowSpan={2} className={`border border-[#0080ff] bg-white p-0.5 text-center align-middle font-extrabold text-slate-900 ${isCompact ? "text-[10px]" : "text-xs pt-3.5"}`}>
                                   {subIdx + 1}
                                 </td>
-                                <td rowSpan={2} className="border border-[#0080ff] bg-white p-1 text-center align-top pt-3 text-[#002b66] font-extrabold text-[11px] leading-tight whitespace-normal break-words">
+                                <td rowSpan={2} className={`border border-[#0080ff] bg-white p-0.5 text-center align-middle text-[#002b66] font-extrabold ${isCompact ? "text-[10px] leading-tight" : "text-[11px] leading-tight pt-3"} whitespace-normal break-words`}>
                                   {subjectName}
                                 </td>
                                 <td className={`border border-[#0080ff] ${cellPad} text-slate-800 font-bold bg-white align-middle text-center`}>पैकी</td>
@@ -1711,7 +1712,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                   </>
                                 )}
                                 <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{grandMax}</td>
-                                <td rowSpan={2} className="border border-[#0080ff] bg-white p-1 text-center align-top pt-3.5 font-extrabold text-slate-900 text-xs">
+                                <td rowSpan={2} className={`border border-[#0080ff] bg-white p-0.5 text-center align-middle font-extrabold text-slate-900 ${isCompact ? "text-[10px]" : "text-xs pt-3.5"}`}>
                                   {grade || "-"}
                                 </td>
                               </tr>
@@ -1746,17 +1747,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                   {/* Inline Compact Remarks — ONLY in 1-page mode */}
                   {pageMode === "1page" && (
-                    <div className="mt-2">
-                      <h3 className="text-xs font-black text-sky-800 text-center mb-1 border-b border-sky-200 pb-1">वर्णनात्मक नोंदी</h3>
-                      <table className="w-full border-collapse border border-sky-400 text-xs font-medium">
-                        <thead>
-                          <tr className="bg-sky-100 text-sky-950 font-bold">
-                            <th className="border border-sky-400 p-1 text-left w-1/4">विषय / घटक</th>
-                            <th className="border border-sky-400 p-1 text-left w-3/4">वर्णनात्मक नोंदी</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(() => {
+                    <div className={subjects.length >= 8 ? "mt-1.5" : "mt-2"}>
+                      <h3 className={`font-black text-sky-800 text-center border-b border-sky-200 ${subjects.length >= 8 ? "text-[11px] mb-1 pb-0.5" : "text-xs mb-1 pb-1"}`}>वर्णनात्मक नोंदी</h3>
+                      {(() => {
                             const getFormattedRemark = (remarksObj, labelOrKey) => {
                               if (!remarksObj || typeof remarksObj !== "object") return "-";
                               let val = remarksObj[labelOrKey];
@@ -1828,31 +1821,75 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             };
 
                             const getR = getFormattedRemark;
+                            const allRemarksItems = [
+                              ...subjects,
+                              "विशेष प्रगती",
+                              "सुधारणा आवश्यक",
+                              "आवड / छंद",
+                              "व्यक्तिमत्त्व गुणविशेष"
+                            ];
+
+                            if (subjects.length >= 8) {
+                              const half = Math.ceil(allRemarksItems.length / 2);
+                              const col1 = allRemarksItems.slice(0, half);
+                              const col2 = allRemarksItems.slice(half);
+
+                              const renderSubTable = (itemsList) => (
+                                <table className="w-full border-collapse border border-sky-400 text-[10px] font-medium table-fixed">
+                                  <colgroup>
+                                    <col style={{ width: "35%" }} />
+                                    <col style={{ width: "65%" }} />
+                                  </colgroup>
+                                  <thead>
+                                    <tr className="bg-sky-100 text-sky-950 font-bold">
+                                      <th className="border border-sky-400 p-0.5 text-left">विषय / घटक</th>
+                                      <th className="border border-sky-400 p-0.5 text-left">वर्णनात्मक नोंदी</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {itemsList.map((item) => (
+                                      <tr key={item} className="border-b border-sky-300">
+                                        <td className="border border-sky-400 p-0.5 font-bold text-slate-900 bg-sky-50/50 leading-tight whitespace-normal break-words align-top">{item}</td>
+                                        <td className="border border-sky-400 p-0.5 text-slate-800 leading-tight text-[9.5px] whitespace-normal break-words align-top">{getR(studentRemarks, item)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              );
+
+                              return (
+                                <div className="grid grid-cols-2 gap-2 items-start">
+                                  <div>{renderSubTable(col1)}</div>
+                                  <div>{renderSubTable(col2)}</div>
+                                </div>
+                              );
+                            }
+
                             return (
-                              <>
-                                {subjects.map((s) => (
-                                  <tr key={s} className="border-b border-sky-300">
-                                    <td className="border border-sky-400 p-1 font-bold text-slate-900 bg-sky-50/50 leading-snug">{s}</td>
-                                    <td className="border border-sky-400 p-1 text-slate-800 leading-snug">{getR(studentRemarks, s)}</td>
+                              <table className="w-full border-collapse border border-sky-400 text-xs font-medium">
+                                <thead>
+                                  <tr className="bg-sky-100 text-sky-950 font-bold">
+                                    <th className="border border-sky-400 p-1 text-left w-1/4">विषय / घटक</th>
+                                    <th className="border border-sky-400 p-1 text-left w-3/4">वर्णनात्मक नोंदी</th>
                                   </tr>
-                                ))}
-                                {["विशेष प्रगती", "सुधारणा आवश्यक", "आवड / छंद", "व्यक्तिमत्त्व गुणविशेष"].map((label) => (
-                                  <tr key={label} className="border-b border-sky-300">
-                                    <td className="border border-sky-400 p-1 font-bold text-slate-900 bg-sky-50/50 leading-snug">{label}</td>
-                                    <td className="border border-sky-400 p-1 text-slate-800 leading-snug">{getR(studentRemarks, label)}</td>
-                                  </tr>
-                                ))}
-                              </>
+                                </thead>
+                                <tbody>
+                                  {allRemarksItems.map((item) => (
+                                    <tr key={item} className="border-b border-sky-300">
+                                      <td className="border border-sky-400 p-1 font-bold text-slate-900 bg-sky-50/50 leading-snug">{item}</td>
+                                      <td className="border border-sky-400 p-1 text-slate-800 leading-snug">{getR(studentRemarks, item)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             );
                           })()}
-                        </tbody>
-                      </table>
                     </div>
                   )}
                 </div>
 
                 {/* Footer Signatures */}
-                <div className={`flex items-center justify-between border-t border-slate-200 font-bold text-slate-900 ${pageMode === "1page" ? "pt-2 mt-2 text-xs" : "pt-4 mt-3 text-xs"}`}>
+                <div className={`flex items-center justify-between border-t border-slate-200 font-bold text-slate-900 ${pageMode === "1page" ? (subjects.length >= 8 ? "pt-1 mt-1 text-[11px]" : "pt-2 mt-2 text-xs") : "pt-4 mt-3 text-xs"}`}>
                   <div className="text-center">
                     <p className={pageMode === "1page" ? "font-extrabold text-xs" : "font-extrabold text-sm"}>{schoolData.teacherName || "वर्गशिक्षक"}</p>
                     <p className={pageMode === "1page" ? "text-[10px] text-slate-500 font-medium" : "text-[11px] text-slate-600 font-medium"}>वर्गशिक्षक</p>

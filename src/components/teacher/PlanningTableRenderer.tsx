@@ -114,6 +114,21 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   const activeUrl = fileUrl || record?.fileUrl || null;
   const activeRecordId = record?.id || (record as any)?.recordKey || `plan_${record?.classId || "1"}_${record?.subjectId || "all"}`;
 
+  // Reliable check for whether this record is Monthly Planning or Annual Planning
+  const isMonthly = useMemo(() => {
+    const recAny = record as any;
+    const pType = String(recAny?.planningType || recAny?.category || "").toLowerCase().trim();
+    const titleStr = String(recAny?.title || recAny?.name || recAny?.fileName || parsedWorkbook?.classTitle || "").toLowerCase().trim();
+
+    if (pType === "annual" || pType === "varshik" || pType === "varshik_niyojan" || titleStr.includes("वार्षिक") || titleStr.includes("annual")) {
+      return false;
+    }
+    if (pType === "monthly" || pType === "masik" || pType === "masik_niyojan" || titleStr.includes("मासिक") || titleStr.includes("monthly")) {
+      return true;
+    }
+    return recAny?.planningType === "monthly" || recAny?.category === "masik_niyojan";
+  }, [record, parsedWorkbook]);
+
   // Load User-Specific Edit (Persisted in LocalStorage / Firestore for logged in user)
   useEffect(() => {
     let isMounted = true;
@@ -277,7 +292,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     }
 
     // 2. Check if Monthly Planning is requested
-    const isMonthlyPlan = record?.planningType === "monthly" || record?.category === "masik_niyojan";
+    const isMonthlyPlan = isMonthly;
     if (isMonthlyPlan) {
       if (parsedWorkbook && parsedWorkbook.monthlySections && Object.keys(parsedWorkbook.monthlySections).length > 0) {
         return Object.values(parsedWorkbook.monthlySections).map((mSec: any) => ({
@@ -376,31 +391,41 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   // Clean main document class title
   const cleanClassTitle = useMemo(() => {
     let title = parsedWorkbook?.classTitle || "";
-    const isMonthlyPlan = record?.planningType === "monthly" || (record as any)?.category === "masik_niyojan";
     if (!title || title.length > 50) {
-      return `इयत्ता : ${record?.classId || "१ ली"} ${isMonthlyPlan ? "मासिक नियोजन" : "संपूर्ण वार्षिक नियोजन"} सन २०२६-२७`;
+      const clsName = formatMarathiClassName(record?.classId || record?.fileName || "1st");
+      return `इयत्ता : ${clsName} ${isMonthly ? "मासिक नियोजन" : "वार्षिक नियोजन"} सन :- 2026-27`;
     }
     return title;
-  }, [parsedWorkbook, record]);
+  }, [parsedWorkbook, record, isMonthly]);
 
   // Helper to format clean section/month banner title
   const formatCleanSectionTitle = (sec: SubjectSection) => {
     const rawTitle = (sec.displaySubjectName || sec.subjectName || "").trim();
 
-    // 1. Check if it's a monthly section or contains month names
-    const monthRegex = /(जुन|जून|जुलै|ऑगस्ट|सप्टेंबर|सप्टें|ऑक्टोबर|ऑक्टो|नोव्हेंबर|नोव्हें|डिसेंबर|डिसे|जानेवारी|जाने|फेब्रुवारी|फेब्रु|मार्च|एप्रिल|मे)/i;
-    const match = rawTitle.match(monthRegex);
-
     const rawSubj = normalizeSubjectName(sec.subjectName) || (selectedSubjectFilter !== "all" ? selectedSubjectFilter : "") || "मराठी";
     const cleanSubj = rawSubj === "all" ? "मराठी" : rawSubj;
+    const clsName = formatMarathiClassName(record?.classId || record?.fileName || "1st");
 
-    if (match) {
-      let monthName = match[1];
-      if (monthName === "जुन") monthName = "जून";
-      return `मासिक नियोजन माहे - ${monthName}, विषय - ${cleanSubj} व सन २०२६ - २७`;
+    let baseLine = cleanClassTitle;
+    if (!baseLine || baseLine.length > 50) {
+      baseLine = `इयत्ता : ${clsName} ${isMonthly ? "मासिक नियोजन" : "वार्षिक नियोजन"} सन :- 2026-27`;
     }
 
-    return `मासिक नियोजन, विषय - ${cleanSubj} व सन २०२६ - २७`;
+    if (isMonthly) {
+      // Check if it's a monthly section or contains month names
+      const monthRegex = /(जुन|जून|जुलै|ऑगस्ट|सप्टेंबर|सप्टें|ऑक्टोबर|ऑक्टो|नोव्हेंबर|नोव्हें|डिसेंबर|डिसे|जानेवारी|जाने|फेब्रुवारी|फेब्रु|मार्च|एप्रिल|मे)/i;
+      const match = rawTitle.match(monthRegex);
+
+      if (match) {
+        let monthName = match[1];
+        if (monthName === "जुन") monthName = "जून";
+        if (!baseLine.includes(monthName)) {
+          baseLine = baseLine.replace("मासिक नियोजन", `मासिक नियोजन माहे - ${monthName}`);
+        }
+      }
+    }
+
+    return `${baseLine}, विषय : ${cleanSubj}, माध्यम : ${displayMedium}`;
   };
 
 
@@ -1166,10 +1191,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       const html2canvasModule = await import("html2canvas");
       const html2canvas = html2canvasModule.default || html2canvasModule;
 
-      const isMonthly = record?.category === "masik_niyojan" || record?.planningType === "monthly" || (record?.fileName || "").includes("मासिक");
       const orientation = "portrait";
       const pdfWidth = 190;
-      const pdfPageHeight = 277;
+      const pdfPageHeight = 297;
       const exportWidth = "950px";
 
       const pdf = new jsPDF({
@@ -1188,7 +1212,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         return;
       }
 
-      let pdfCurrentY = 10;
+      let totalPdfPages = 0;
 
       for (let i = 0; i < subjectSections.length; i++) {
         const sec = subjectSections[i];
@@ -1203,257 +1227,159 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           input.parentNode?.replaceChild(span, input);
         });
 
-        // Explicitly set font family for Devanagari text rendering
-        secClone.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
+        // Extract components of the section
+        const schoolHeader = secClone.querySelector(".pdf-school-header");
+        const subjectBanner = secClone.querySelector(".pdf-subject-banner");
+        const tableEl = secClone.querySelector("table");
+        const colgroup = secClone.querySelector("colgroup");
+        const thead = secClone.querySelector("thead");
+        const allTrs = Array.from(secClone.querySelectorAll("tbody tr")) as HTMLElement[];
+        const sigBar = secClone.querySelector(".pdf-signature-bar");
 
+        if (allTrs.length === 0) continue;
+
+        // Group rows into Month Blocks (Annual Planning) or Date Blocks (Monthly Planning)
+        const trGroups: HTMLElement[][] = [];
+        let currentGroup: HTMLElement[] = [];
+
+        allTrs.forEach((tr) => {
+          const isMonthStart = tr.getAttribute("data-month-start") === "true";
+          const firstTd = tr.querySelector("td");
+          const firstTdText = firstTd?.textContent?.trim() || "";
+          const isMonthByText = !isMonthly && isMarathiMonth(firstTdText);
+
+          if ((isMonthStart || isMonthByText) && currentGroup.length > 0) {
+            trGroups.push(currentGroup);
+            currentGroup = [];
+          }
+          currentGroup.push(tr);
+        });
+        if (currentGroup.length > 0) {
+          trGroups.push(currentGroup);
+        }
+
+        // Hidden container to construct and measure DOM pages
         const tempContainer = document.createElement("div");
         tempContainer.className = "pdf-export-active";
-        tempContainer.style.position = "absolute";
-        tempContainer.style.left = "-9999px";
+        tempContainer.style.position = "fixed";
+        tempContainer.style.left = "0px";
         tempContainer.style.top = "0px";
-        tempContainer.style.width = exportWidth;
+        tempContainer.style.zIndex = "-9999";
+        tempContainer.style.width = exportWidth; // "950px"
         tempContainer.style.backgroundColor = "#ffffff";
-        tempContainer.appendChild(secClone);
+        tempContainer.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
         document.body.appendChild(tempContainer);
 
-        // Measure DOM element boundaries BEFORE html2canvas rendering
-        const secRect = secClone.getBoundingClientRect();
+        // A4 page height budget in DOM pixels at 950px width:
+        // Total A4 is 950 * (297 / 210) = 1343px. 1340px utilizes the full A4 height with ~19mm safe margin!
+        const PAGE_MAX_HEIGHT = 1340;
 
-        const tbodyTrs = Array.from(secClone.querySelectorAll("tbody tr")) as HTMLElement[];
-        const trBottomsDom = tbodyTrs.map((tr) => tr.getBoundingClientRect().bottom - secRect.top);
+        const pageList: HTMLElement[] = [];
 
-        const sigEl = secClone.querySelector(".pdf-signature-bar") as HTMLElement;
+        const createNewPage = (isFirstPage: boolean) => {
+          const pageDiv = document.createElement("div");
+          pageDiv.className = "p-4 bg-white space-y-3.5";
+          pageDiv.style.width = exportWidth;
+          pageDiv.style.boxSizing = "border-box";
+          pageDiv.style.backgroundColor = "#ffffff";
+          pageDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
 
-        // Yield browser main thread before heavy html2canvas rendering to prevent Chrome freeze
+          if (isFirstPage) {
+            if (schoolHeader) pageDiv.appendChild(schoolHeader.cloneNode(true));
+            if (subjectBanner) pageDiv.appendChild(subjectBanner.cloneNode(true));
+          }
+
+          const pageTable = document.createElement("table");
+          if (tableEl) pageTable.className = tableEl.className;
+          pageTable.style.width = "100%";
+          pageTable.style.borderCollapse = "collapse";
+          pageTable.style.backgroundColor = "#ffffff";
+
+          if (colgroup) pageTable.appendChild(colgroup.cloneNode(true));
+          if (thead) pageTable.appendChild(thead.cloneNode(true));
+
+          const pageTbody = document.createElement("tbody");
+          pageTable.appendChild(pageTbody);
+          pageDiv.appendChild(pageTable);
+
+          tempContainer.appendChild(pageDiv);
+          pageList.push(pageDiv);
+          return { pageDiv, tbody: pageTbody };
+        };
+
+        let currentPage = createNewPage(true);
+
+        for (let g = 0; g < trGroups.length; g++) {
+          const group = trGroups[g];
+          const clonedRows = group.map((tr) => tr.cloneNode(true) as HTMLElement);
+          clonedRows.forEach((tr) => currentPage.tbody.appendChild(tr));
+
+          // If adding this entire month overflows the page, and the page already has at least one month:
+          // Move this month to a fresh page!
+          if (currentPage.pageDiv.offsetHeight > PAGE_MAX_HEIGHT && currentPage.tbody.children.length > group.length) {
+            clonedRows.forEach((tr) => tr.remove());
+            currentPage = createNewPage(false);
+            const freshClonedRows = group.map((tr) => tr.cloneNode(true) as HTMLElement);
+            freshClonedRows.forEach((tr) => currentPage.tbody.appendChild(tr));
+          }
+        }
+
+        // Add signature bar on the last page of this subject
+        if (sigBar) {
+          const clonedSig = sigBar.cloneNode(true) as HTMLElement;
+          currentPage.pageDiv.appendChild(clonedSig);
+
+          // If signature bar causes overflow and page has multiple months,
+          // move the last month and signature to a new page
+          if (currentPage.pageDiv.offsetHeight > PAGE_MAX_HEIGHT && trGroups.length > 1) {
+            const lastGroup = trGroups[trGroups.length - 1];
+            if (currentPage.tbody.children.length > lastGroup.length) {
+              clonedSig.remove();
+              for (let k = 0; k < lastGroup.length; k++) {
+                currentPage.tbody.lastElementChild?.remove();
+              }
+              currentPage = createNewPage(false);
+              lastGroup.forEach((tr) => currentPage.tbody.appendChild(tr.cloneNode(true)));
+              currentPage.pageDiv.appendChild(clonedSig);
+            }
+          }
+        }
+
+        // Yield main thread before rendering
         await new Promise((resolve) => setTimeout(resolve, 30));
 
-        const secCanvas = await html2canvas(secClone, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          windowWidth: 950,
-        });
+        // Render each generated page directly with html2canvas (NO SLICING = ZERO WORD CUTTING!)
+        for (let p = 0; p < pageList.length; p++) {
+          const pageDiv = pageList[p];
+          tempContainer.innerHTML = "";
+          tempContainer.appendChild(pageDiv);
 
-        let theadCanvas: HTMLCanvasElement | null = null;
-        const theadEl = secClone.querySelector("thead") as HTMLElement;
-        if (theadEl) {
-          theadCanvas = await html2canvas(theadEl, {
+          // Allow DOM to settle
+          await new Promise((resolve) => setTimeout(resolve, 30));
+
+          const pageCanvas = await html2canvas(pageDiv, {
             scale: 2,
             useCORS: true,
             logging: false,
             backgroundColor: "#ffffff",
             windowWidth: 950,
+            x: 0,
+            y: 0,
+            width: 950,
+            height: pageDiv.offsetHeight,
           });
+
+          if (totalPdfPages > 0) {
+            pdf.addPage();
+          }
+          totalPdfPages++;
+
+          const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.98);
+          const pageHeightMm = (pageCanvas.height * pdfWidth) / pageCanvas.width;
+          pdf.addImage(pageImgData, "JPEG", 10, 10, pdfWidth, pageHeightMm);
         }
 
         document.body.removeChild(tempContainer);
-
-        const scaleY = secCanvas.height / (secRect.height || 1);
-
-        let sigTopCanvas = secCanvas.height;
-        if (sigEl) {
-          sigTopCanvas = (sigEl.getBoundingClientRect().top - secRect.top) * scaleY;
-        }
-
-        const trTopsCanvas: number[] = [];
-        const trBottomsCanvas: number[] = [];
-        tbodyTrs.forEach((tr) => {
-          const topPx = (tr.getBoundingClientRect().top - secRect.top) * scaleY;
-          // Add a +6*scaleY safety buffer to ensure bottom border & Devanagari matra descenders are 100% captured without clipping
-          const bottomPx = (tr.getBoundingClientRect().bottom - secRect.top) * scaleY + (6 * scaleY);
-          trTopsCanvas.push(topPx);
-          trBottomsCanvas.push(bottomPx);
-        });
-
-        // Identify Date Block Boundaries (in Canvas Y coordinates)
-        interface DateBlock {
-          startIdx: number;
-          endIdx: number;
-          topPx: number;
-          bottomPx: number;
-          heightPx: number;
-        }
-
-        const dateBlocks: DateBlock[] = [];
-        let rIdx = 0;
-
-        while (rIdx < tbodyTrs.length) {
-          const startIdx = rIdx;
-          let endIdx = startIdx + 1;
-
-          while (endIdx < tbodyTrs.length) {
-            const trEl = tbodyTrs[endIdx];
-            const isMonthStart = trEl.getAttribute("data-month-start") === "true";
-            const tds = Array.from(trEl.querySelectorAll("td"));
-            const firstTdText = tds[0]?.textContent?.trim() || "";
-            const isNewDateVal = firstTdText !== "" && firstTdText !== "-" && firstTdText !== "null";
-
-            if (isMonthStart || isNewDateVal) {
-              break;
-            }
-
-            endIdx++;
-          }
-
-          const topPx = trTopsCanvas[startIdx];
-          const bottomPx = trBottomsCanvas[endIdx - 1];
-          const heightPx = bottomPx - topPx;
-
-          dateBlocks.push({
-            startIdx,
-            endIdx,
-            topPx,
-            bottomPx,
-            heightPx,
-          });
-
-          rIdx = endIdx;
-        }
-
-        // Each subject section starts on a fresh page (except subject 0 on page 1)
-        if (i > 0) {
-          pdf.addPage();
-          pdfCurrentY = 10;
-        }
-
-        let canvasY = 0;
-
-        while (canvasY < secCanvas.height - 2) {
-          // Yield browser event loop inside pagination loop so Chrome stays responsive
-          await new Promise((resolve) => setTimeout(resolve, 20));
-
-          // Filter remaining date blocks that start at or after canvasY
-          const remainingDbs = dateBlocks.filter((db) => db.bottomPx > canvasY + 2 * scaleY);
-          if (remainingDbs.length > 0) {
-            const firstRemainingDb = remainingDbs[0];
-            // Snap canvasY to exact date block top if starting near it on a new page
-            if (
-              Math.abs(canvasY - firstRemainingDb.topPx) < 5 * scaleY ||
-              (canvasY <= firstRemainingDb.topPx && firstRemainingDb.topPx - canvasY < 15 * scaleY)
-            ) {
-              canvasY = firstRemainingDb.topPx;
-            }
-          }
-
-          // On continuation page (canvasY > 0), render Table Header (thead) at top of page first
-          if (canvasY > 0 && pdfCurrentY <= 15 && theadCanvas) {
-            const theadImgData = theadCanvas.toDataURL("image/jpeg", 0.98);
-            const theadHeightMm = (theadCanvas.height * pdfWidth) / theadCanvas.width;
-            pdf.addImage(theadImgData, "JPEG", 10, pdfCurrentY, pdfWidth, theadHeightMm);
-            pdfCurrentY += theadHeightMm;
-          }
-
-          const maxAllowedMm = pdfPageHeight - pdfCurrentY - 5;
-          let maxCanvasPx = (maxAllowedMm * secCanvas.width) / pdfWidth;
-
-          // Remaining section height to render
-          const remainingTotalPx = secCanvas.height - canvasY;
-
-          // If remaining subject canvas height fits on current page (with up to 15mm page bottom margin tolerance), render completely!
-          if (remainingTotalPx <= maxCanvasPx + (15 * (secCanvas.width / pdfWidth))) {
-            const sliceHeightPx = remainingTotalPx;
-
-            const sliceCanvas = document.createElement("canvas");
-            sliceCanvas.width = secCanvas.width;
-            sliceCanvas.height = Math.ceil(sliceHeightPx);
-            const ctx = sliceCanvas.getContext("2d");
-            if (ctx) {
-              ctx.fillStyle = "#ffffff";
-              ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-              ctx.drawImage(secCanvas, 0, canvasY, secCanvas.width, sliceHeightPx, 0, 0, secCanvas.width, sliceHeightPx);
-            }
-
-            const sliceImgData = sliceCanvas.toDataURL("image/jpeg", 0.98);
-            const sliceHeightMm = (sliceHeightPx * pdfWidth) / secCanvas.width;
-            pdf.addImage(sliceImgData, "JPEG", 10, pdfCurrentY, pdfWidth, sliceHeightMm);
-
-            canvasY += sliceHeightPx;
-            pdfCurrentY += sliceHeightMm + 6;
-            break;
-          }
-
-          let targetCutY = 0;
-
-          // Find date blocks fitting within maxCanvasPx
-          const fittingDbs = remainingDbs.filter((db) => db.bottomPx <= canvasY + maxCanvasPx + 2 * scaleY);
-
-          if (fittingDbs.length > 0) {
-            let selectedDb = fittingDbs[fittingDbs.length - 1];
-            let testCutY = selectedDb.bottomPx;
-            let remainingAfterCut = secCanvas.height - testCutY;
-
-            // Orphan Page Protection: If cutting here leaves < 200px (header + <=1 row + signature) for next page
-            if (remainingAfterCut < 200 * scaleY && remainingAfterCut > 0) {
-              // Option A: If the remaining overflow is small enough to fit within A4 bottom margin (up to 25mm extra), render all on current page!
-              if (remainingTotalPx <= maxCanvasPx + (25 * (secCanvas.width / pdfWidth))) {
-                testCutY = secCanvas.height;
-              } else if (fittingDbs.length > 1) {
-                // Option B: Pull back cut by 1 date block to leave substantial content for next page
-                selectedDb = fittingDbs[fittingDbs.length - 2];
-                testCutY = selectedDb.bottomPx;
-              }
-            }
-            targetCutY = testCutY;
-          } else if (pdfCurrentY > 25) {
-            // The upcoming date block does NOT fit in remaining page space!
-            // Move entire block to next page!
-            pdf.addPage();
-            pdfCurrentY = 10;
-            continue;
-          } else {
-            // Large date block fallback (> 1 full page): split by exact row boundary with safety buffer
-            let bestSplit = 0;
-            const limitY = canvasY + maxCanvasPx;
-            for (let k = 0; k < trBottomsCanvas.length; k++) {
-              const b = trBottomsCanvas[k];
-              if (b <= limitY && b > canvasY + 5 * scaleY) {
-                bestSplit = b;
-              } else if (b > limitY) {
-                break;
-              }
-            }
-            targetCutY = bestSplit > canvasY ? bestSplit : limitY;
-          }
-
-          const sliceHeightPx = Math.max(10, Math.min(targetCutY - canvasY, secCanvas.height - canvasY));
-
-          const sliceCanvas = document.createElement("canvas");
-          sliceCanvas.width = secCanvas.width;
-          sliceCanvas.height = Math.ceil(sliceHeightPx);
-          const ctx = sliceCanvas.getContext("2d");
-          if (ctx) {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-            ctx.drawImage(secCanvas, 0, canvasY, secCanvas.width, sliceHeightPx, 0, 0, secCanvas.width, sliceHeightPx);
-
-            const borderWidth = Math.max(3, Math.round(3 * (secCanvas.width / 1000)));
-
-            if (canvasY + sliceHeightPx < secCanvas.height - 2) {
-              ctx.strokeStyle = "#1e293b";
-              ctx.lineWidth = borderWidth;
-              ctx.beginPath();
-              ctx.moveTo(0, sliceCanvas.height - borderWidth / 2);
-              ctx.lineTo(sliceCanvas.width, sliceCanvas.height - borderWidth / 2);
-              ctx.stroke();
-            }
-          }
-
-          const sliceImgData = sliceCanvas.toDataURL("image/jpeg", 0.98);
-          const sliceHeightMm = (sliceHeightPx * pdfWidth) / secCanvas.width;
-
-          pdf.addImage(sliceImgData, "JPEG", 10, pdfCurrentY, pdfWidth, sliceHeightMm);
-
-          canvasY += sliceHeightPx;
-          pdfCurrentY += sliceHeightMm;
-
-          if (canvasY < secCanvas.height - 2) {
-            pdf.addPage();
-            pdfCurrentY = 10;
-          } else {
-            pdfCurrentY += 6;
-          }
-        }
       }
 
       const classNameMr = formatMarathiClassName(record?.classId || record?.fileName || "1st");
@@ -1497,7 +1423,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     );
   }
 
-  const isMonthly = record?.planningType === "monthly" || record?.category === "masik_niyojan";
   const categoryHeaders = isMonthly ? DEFAULT_HEADERS.masik_niyojan : DEFAULT_HEADERS.varshik_niyojan;
 
   return (
@@ -1788,21 +1713,21 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     break-inside: avoid !important;
                     box-sizing: border-box !important;
                     color: #0f172a !important;
-                    font-size: 16.5px !important;
+                    font-size: 15.5px !important;
                     font-weight: 700 !important;
-                    line-height: 1.65 !important;
-                    padding: 10px 10px !important;
+                    line-height: 1.45 !important;
+                    padding: 8px 8px !important;
                     -webkit-print-color-adjust: exact !important;
                     print-color-adjust: exact !important;
                   }
                   .pdf-export-active th {
                     background-color: #f1f5f9 !important;
                     color: #0f172a !important;
-                    font-size: 17.5px !important;
+                    font-size: 16.5px !important;
                     font-weight: 900 !important;
                     text-align: center !important;
                     vertical-align: middle !important;
-                    padding: 12px 10px !important;
+                    padding: 10px 8px !important;
                   }
                   .pdf-export-active td.text-center,
                   .pdf-export-active td.align-middle {
@@ -1818,6 +1743,15 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                   .pdf-export-active td.bg-amber-50\/40,
                   .pdf-export-active td.bg-amber-50 {
                     background-color: #fffbe6 !important;
+                  }
+                  .pdf-export-active .pdf-subject-banner {
+                    justify-content: center !important;
+                    text-align: center !important;
+                  }
+                  .pdf-export-active .pdf-subject-banner h3 {
+                    text-align: center !important;
+                    justify-content: center !important;
+                    width: 100% !important;
                   }
                   .pdf-export-active .pdf-signature-bar {
                     padding-top: 24px !important;
@@ -1884,33 +1818,27 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         >
                         {/* Header Title & School Info Card for THIS Subject */}
                         <div className="pdf-school-header border-2 border-slate-900 rounded-2xl p-5 sm:p-6 bg-slate-50 space-y-3.5 text-sm sm:text-base font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900">
-                          <div className="text-center space-y-2 border-b-2 border-slate-900 pb-4">
+                          <div className="text-center border-b-2 border-slate-900 pb-3">
                             <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-indigo-950 uppercase tracking-wide print:text-slate-950">
                               {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
                             </h2>
-                            <h3 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900 uppercase">
-                              {isMonthly ? formatCleanSectionTitle(sec) : cleanClassTitle}
-                            </h3>
                           </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs sm:text-sm md:text-base font-bold text-slate-900 pt-1.5">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs sm:text-sm md:text-base font-bold text-slate-900 pt-1.5">
                             <div><span className="text-slate-600 font-semibold">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
-                            <div><span className="text-slate-600 font-semibold">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
-                            <div><span className="text-slate-600 font-semibold">UDISE क्र.:</span> <span className="font-mono font-extrabold text-slate-950">{schoolProfile.udiseNumber || "—"}</span></div>
-                            <div><span className="text-slate-600 font-semibold">वर्ग शिक्षक:</span> <span className="font-extrabold text-slate-950">{schoolProfile.teacherName || "—"}</span></div>
-                            <div><span className="text-slate-600 font-semibold">मुख्याध्यापक:</span> <span className="font-extrabold text-slate-950">{schoolProfile.headMasterName || "—"}</span></div>
-                            <div><span className="text-slate-600 font-semibold">माध्यम:</span> <span className="font-extrabold text-slate-950">{displayMedium}</span></div>
+                            <div className="sm:text-center"><span className="text-slate-600 font-semibold">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
+                            <div className="sm:text-right"><span className="text-slate-600 font-semibold">UDISE क्र.:</span> <span className="font-mono font-extrabold text-slate-950">{schoolProfile.udiseNumber || "—"}</span></div>
                           </div>
                         </div>
 
                         {/* Subject Banner Header */}
-                        <div className="pdf-subject-banner bg-indigo-50/90 border border-indigo-200 text-indigo-950 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
-                          <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2 text-indigo-950">
-                            <BookOpen className="size-4 text-indigo-600" />
+                        <div className="pdf-subject-banner relative bg-indigo-50/90 border border-indigo-200 text-indigo-950 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-0 shadow-xs">
+                          <h3 className="text-xs sm:text-sm md:text-base font-black uppercase tracking-wider flex items-center justify-center gap-2 text-indigo-950 text-center flex-wrap sm:px-32">
+                            <BookOpen className="size-4 text-indigo-600 shrink-0" />
                             <span>{formatCleanSectionTitle(sec)}</span>
                           </h3>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[11px] font-bold text-indigo-700 bg-indigo-100/80 px-2.5 py-1 rounded-full border border-indigo-200">
+                          <div className="sm:absolute sm:right-4 sm:top-1/2 sm:-translate-y-1/2 flex items-center gap-2.5 shrink-0">
+                            <span className="text-[11px] font-bold text-indigo-700 bg-indigo-100/80 px-2.5 py-1 rounded-full border border-indigo-200 whitespace-nowrap">
                               {filteredRows.length} ओळी (Rows)
                             </span>
 
@@ -1947,12 +1875,12 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                   </>
                                 ) : (
                                   <>
+                                    <col style={{ width: "80px" }} />
+                                    <col style={{ width: "60px" }} />
+                                    <col style={{ width: "80px" }} />
+                                    <col style={{ width: "80px" }} />
+                                    <col style={{ width: "505px" }} />
                                     <col style={{ width: "85px" }} />
-                                    <col style={{ width: "65px" }} />
-                                    <col style={{ width: "85px" }} />
-                                    <col style={{ width: "85px" }} />
-                                    <col style={{ width: "350px" }} />
-                                    <col style={{ width: "220px" }} />
                                     {isInlineEditing && <col style={{ width: "60px" }} />}
                                   </>
                                 )}

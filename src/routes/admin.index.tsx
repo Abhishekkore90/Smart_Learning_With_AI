@@ -30,6 +30,7 @@ import {
   CloudUpload,
   Book,
   DollarSign,
+  Monitor,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -43,6 +44,17 @@ export const Route = createFileRoute("/admin/")({
 });
 
 const adminModules = [
+  {
+    title: "Digital School Inquiries",
+    desc: "Manage inquiries, school details, and demo requests for Offline Digital School software.",
+    icon: Monitor,
+    to: "/admin/digital-school-inquiries",
+    color: "from-violet-600 to-indigo-700",
+    glow: "bg-violet-400/20",
+    stats: "Offline Inquiries",
+    trend: "Live Sync",
+    status: "Active",
+  },
   {
     title: "Website Contact Messages",
     desc: "Read and reply to user inquiries submitted via the website Contact Us form.",

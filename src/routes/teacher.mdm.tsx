@@ -569,10 +569,12 @@ function TeacherMDMPage() {
 
       for (let i = 0; i < pages.length; i++) {
         const pageEl = pages[i];
-        const exactContentWidth = isPortraitReport ? 850 : 1400;
+        const isBForm = pageEl.classList.contains("b-form-page");
+        const exactContentWidth = isPortraitReport ? 850 : (isBForm ? 1850 : 1400);
+        const exactContentHeight = isBForm ? 1293 : undefined;
 
         const canvas = await html2canvas(pageEl, {
-          scale: 2.5,
+          scale: 2.2,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
@@ -617,15 +619,180 @@ function TeacherMDMPage() {
               h1 { font-size: 26px !important; font-weight: 900 !important; }
               h2 { font-size: 20px !important; font-weight: 800 !important; }
               p, span, div, label { color: #000000 !important; font-size: 16px !important; }
+
+              /* Full-page B-Form Page 2 & 3 adjustments with larger, highly readable fonts */
+              .b-form-page {
+                width: 1850px !important;
+                min-width: 1850px !important;
+                max-width: 1850px !important;
+                min-height: 1293px !important;
+                height: 1293px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                padding: 16px 24px !important;
+                box-sizing: border-box !important;
+                background-color: #ffffff !important;
+              }
+              /* Top Page Header */
+              .b-form-page h1 {
+                font-size: 24px !important;
+                font-weight: 900 !important;
+                letter-spacing: 0.5px !important;
+                margin-bottom: 2px !important;
+              }
+              .b-form-page h2 {
+                font-size: 17px !important;
+                font-weight: 900 !important;
+              }
+              .b-form-page .b-form-header-school-info div,
+              .b-form-page .b-form-header-school-info span {
+                font-size: 16.5px !important;
+                font-weight: 800 !important;
+              }
+              .b-form-page .b-form-stats-bar {
+                font-size: 17px !important;
+                font-weight: 900 !important;
+                padding: 6px 12px !important;
+                background-color: #f8fafc !important;
+              }
+              .b-form-page .b-form-stats-bar span {
+                font-size: 18px !important;
+                font-weight: 900 !important;
+              }
+
+              /* Main Table */
+              .b-form-page .b-form-main-table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                border-collapse: collapse !important;
+                border: 1.5px solid #000000 !important;
+                flex: 1 !important;
+                margin-top: 4px !important;
+                margin-bottom: 6px !important;
+              }
+              /* Header Row 1: Overall title & rowspan columns */
+              .b-form-page .b-form-main-table thead tr:first-child th {
+                height: 40px !important;
+                font-size: 17.5px !important;
+                font-weight: 900 !important;
+                padding: 4px 2px !important;
+                border: 1px solid #000000 !important;
+                background-color: #f1f5f9 !important;
+                vertical-align: middle !important;
+              }
+              /* Header Row 2: 18 Material Names */
+              .b-form-page .b-form-main-table thead tr:nth-child(2) th {
+                height: 56px !important;
+                min-height: 56px !important;
+                font-size: 14.5px !important;
+                font-weight: 900 !important;
+                line-height: 1.25 !important;
+                padding: 3px 2px !important;
+                border: 1px solid #000000 !important;
+                background-color: #f8fafc !important;
+                vertical-align: middle !important;
+                word-break: keep-all !important;
+                overflow-wrap: break-word !important;
+                text-align: center !important;
+              }
+              /* Header Row 3: Quantities per student */
+              .b-form-page .b-form-main-table thead tr:nth-child(3) th {
+                height: 38px !important;
+                min-height: 38px !important;
+                font-size: 13px !important;
+                font-weight: 800 !important;
+                line-height: 1.2 !important;
+                padding: 2px 1px !important;
+                border: 1px solid #000000 !important;
+                background-color: #f1f5f9 !important;
+                vertical-align: middle !important;
+                white-space: pre-line !important;
+                text-align: center !important;
+              }
+              /* Main Data Rows */
+              .b-form-page .b-form-main-table tbody tr {
+                height: 64px !important;
+                min-height: 64px !important;
+              }
+              .b-form-page .b-form-main-table tbody td {
+                border: 1px solid #000000 !important;
+                vertical-align: middle !important;
+              }
+              /* Column 1: Sr. No */
+              .b-form-page .b-form-main-table tbody td:first-child {
+                font-size: 18px !important;
+                font-weight: 900 !important;
+                text-align: center !important;
+                padding: 2px !important;
+              }
+              /* Column 2: Particulars / तपशील */
+              .b-form-page .b-form-main-table tbody td:nth-child(2) {
+                font-size: 15.5px !important;
+                font-weight: 900 !important;
+                line-height: 1.32 !important;
+                padding: 4px 8px !important;
+                text-align: left !important;
+                word-break: break-word !important;
+              }
+              /* Columns 3 to 20: 18 Material Stock Numbers */
+              .b-form-page .b-form-main-table tbody td:not(:first-child):not(:nth-child(2)) {
+                font-size: 16.5px !important;
+                font-weight: 900 !important;
+                padding: 2px 2px !important;
+                text-align: center !important;
+                white-space: nowrap !important;
+                overflow: visible !important;
+                letter-spacing: 0.3px !important;
+              }
+              /* Vegetable Sub-Table */
+              .b-form-page .b-form-veg-table {
+                width: 550px !important;
+                min-width: 550px !important;
+                margin-top: 8px !important;
+                margin-bottom: 8px !important;
+                border-collapse: collapse !important;
+                border: 1.5px solid #000000 !important;
+              }
+              .b-form-page .b-form-veg-table th {
+                font-size: 16px !important;
+                font-weight: 900 !important;
+                padding: 6px 16px !important;
+                border: 1px solid #000000 !important;
+                background-color: #f1f5f9 !important;
+              }
+              .b-form-page .b-form-veg-table td {
+                font-size: 16px !important;
+                font-weight: 900 !important;
+                padding: 6px 16px !important;
+                border: 1px solid #000000 !important;
+              }
+              /* Signatures Footer */
+              .b-form-page .b-form-footer {
+                width: 100% !important;
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                font-size: 16.5px !important;
+                font-weight: 900 !important;
+                padding-top: 10px !important;
+                margin-top: auto !important;
+                border-top: 1.5px solid #000000 !important;
+              }
             `;
             clonedDoc.head.appendChild(pdfStyle);
 
             const targetEl = element || clonedDoc.querySelector(".print-page") || clonedDoc.body.firstElementChild;
             if (targetEl) {
               targetEl.style.width = isPortraitReport ? "100%" : `${exactContentWidth}px`;
+              targetEl.style.minWidth = isPortraitReport ? "100%" : `${exactContentWidth}px`;
               targetEl.style.maxWidth = isPortraitReport ? "100%" : `${exactContentWidth}px`;
               targetEl.style.margin = "0 auto";
               targetEl.style.boxSizing = "border-box";
+              if (isBForm || targetEl.classList.contains("b-form-page") || (element && element.classList && element.classList.contains("b-form-page"))) {
+                targetEl.style.height = `${exactContentHeight}px`;
+                targetEl.style.minHeight = `${exactContentHeight}px`;
+              }
             }
 
             // Explicitly force table borders and cell border styles
@@ -685,7 +852,7 @@ function TeacherMDMPage() {
         }
 
         const xPos = (pdfWidth - imgWidth) / 2;
-        const yPos = 7;
+        const yPos = Math.max(3, (pdfHeight - imgHeight) / 2);
 
         if (i > 0) pdf.addPage('a4', isPortraitReport ? 'p' : 'l');
         pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
@@ -1498,6 +1665,21 @@ function TeacherMDMPage() {
         }
       });
 
+      const clonedSelects = clone.querySelectorAll("select");
+      const origSelects = element.querySelectorAll("select");
+      clonedSelects.forEach((select: HTMLSelectElement, idx: number) => {
+        const origSelect = origSelects[idx] as HTMLSelectElement;
+        const selectedText = origSelect && origSelect.options[origSelect.selectedIndex]
+          ? origSelect.options[origSelect.selectedIndex].text
+          : (select.options[select.selectedIndex]?.text || select.value);
+        const span = document.createElement("span");
+        span.textContent = selectedText || " ";
+        span.className = "cook-helper-box inline-flex items-center justify-center px-2.5 py-1 bg-white border border-slate-400 rounded-md font-black text-slate-900";
+        if (select.parentNode) {
+          select.parentNode.replaceChild(span, select);
+        }
+      });
+
       const isCertificate = monthlyMdmReportType === "certificate";
       let maxScrollWidth = 0;
       element.querySelectorAll('table, .print-page').forEach((el) => {
@@ -1509,10 +1691,13 @@ function TeacherMDMPage() {
       if (!maxScrollWidth) maxScrollWidth = element.scrollWidth || element.offsetWidth || 800;
 
       const isPortraitReport = getReportOrientation(monthlyMdmReportType) === "portrait";
+      const isPoshanReport = monthlyMdmReportType === "poshan_ahar_daily_entry";
       const totalRenderWidth = isCertificate
         ? Math.max(maxScrollWidth + 40, 840)
         : isPortraitReport
         ? Math.max(maxScrollWidth + 40, 890)
+        : isPoshanReport
+        ? 2050
         : Math.max(maxScrollWidth + 80, 1750);
 
       clone.style.position = 'absolute';
@@ -1534,8 +1719,8 @@ function TeacherMDMPage() {
         pEl.style.minWidth = `${totalRenderWidth}px`;
         pEl.style.margin = '0 auto';
         pEl.style.boxSizing = 'border-box';
-        pEl.style.paddingLeft = '20px';
-        pEl.style.paddingRight = '20px';
+        pEl.style.paddingLeft = isPoshanReport ? '8px' : '20px';
+        pEl.style.paddingRight = isPoshanReport ? '8px' : '20px';
       });
 
       clone.querySelectorAll('*').forEach((el) => {
@@ -1568,7 +1753,6 @@ function TeacherMDMPage() {
       }
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      const isPoshanReport = monthlyMdmReportType === "poshan_ahar_daily_entry";
       const isMasikTandul = monthlyMdmReportType === "masik_tandul_report";
       const isMasikSatha = monthlyMdmReportType === "masik_goshwara";
       const monthShort = monthlyMdmReportMonth.split(' ')[0];
@@ -1615,7 +1799,7 @@ function TeacherMDMPage() {
         pageEl.style.width = `${totalRenderWidth}px`;
         pageEl.style.minWidth = `${totalRenderWidth}px`;
         pageEl.style.maxWidth = `${totalRenderWidth}px`;
-        if (isDailyTandul) {
+        if (isDailyTandul || isPoshanReport) {
           pageEl.style.height = `${targetPageHeight}px`;
           pageEl.style.minHeight = `${targetPageHeight}px`;
           pageEl.style.maxHeight = `${targetPageHeight}px`;
@@ -1625,7 +1809,7 @@ function TeacherMDMPage() {
         pageEl.style.justifyContent = "space-between";
         pageEl.style.boxSizing = "border-box";
         pageEl.style.backgroundColor = "#ffffff";
-        pageEl.style.padding = isDailyTandul ? "10px 16px" : isPortraitReport ? "14px 20px" : "16px 24px";
+        pageEl.style.padding = isDailyTandul ? "10px 16px" : isPoshanReport ? "10px 8px" : isPortraitReport ? "14px 20px" : "16px 24px";
         pageEl.style.overflow = "hidden";
 
         const canvas = await html2canvas(pageEl, {
@@ -1635,7 +1819,7 @@ function TeacherMDMPage() {
           backgroundColor: "#ffffff",
           windowWidth: totalRenderWidth + 60,
           width: totalRenderWidth,
-          height: isDailyTandul ? targetPageHeight : Math.max(pageEl.scrollHeight, targetPageHeight),
+          height: (isDailyTandul || isPoshanReport) ? targetPageHeight : Math.max(pageEl.scrollHeight, targetPageHeight),
           scrollY: 0,
           scrollX: 0,
           onclone: (clonedDoc: any, element: HTMLElement) => {
@@ -1678,22 +1862,122 @@ function TeacherMDMPage() {
                 background-color: #ffffff !important;
               }
               tbody tr {
-                height: ${isDailyTandul ? "32px" : "38px"} !important;
-                min-height: ${isDailyTandul ? "32px" : "38px"} !important;
+                height: ${isPoshanReport ? "28px" : isDailyTandul ? "32px" : "38px"} !important;
+                min-height: ${isPoshanReport ? "28px" : isDailyTandul ? "32px" : "38px"} !important;
               }
               th, td {
                 border: 1px solid #000000 !important;
                 color: #000000 !important;
                 font-weight: 800 !important;
                 vertical-align: middle !important;
-                font-size: ${isDailyTandul ? "14.5px" : "17.5px"} !important;
-                line-height: 1.25 !important;
-                padding: ${isDailyTandul ? "3px 2px" : "6px 3px"} !important;
+                font-size: ${isPoshanReport ? "11.5px" : isDailyTandul ? "14.5px" : "17.5px"} !important;
+                line-height: ${isPoshanReport ? "1.15" : "1.25"} !important;
+                padding: ${isPoshanReport ? "2px 1px" : isDailyTandul ? "3px 2px" : "6px 3px"} !important;
               }
               th {
                 background-color: #e2e8f0 !important;
                 font-weight: 900 !important;
-                font-size: ${isDailyTandul ? "15px" : "18.5px"} !important;
+                font-size: ${isPoshanReport ? "11.5px" : isDailyTandul ? "15px" : "18.5px"} !important;
+              }
+              .poshan-pdf-page {
+                width: 2050px !important;
+                min-width: 2050px !important;
+                max-width: 2050px !important;
+                height: 1433px !important;
+                min-height: 1433px !important;
+                max-height: 1433px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                padding: 12px 14px !important;
+                box-sizing: border-box !important;
+                background-color: #ffffff !important;
+                overflow: hidden !important;
+              }
+              .poshan-pdf-page .poshan-daily-table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                border-collapse: collapse !important;
+                border: 1.5px solid #000000 !important;
+                flex: 1 !important;
+              }
+              .poshan-pdf-page .poshan-daily-table thead tr {
+                height: 56px !important;
+                min-height: 56px !important;
+              }
+              .poshan-pdf-page .poshan-daily-table th {
+                font-size: 13.5px !important;
+                font-weight: 900 !important;
+                line-height: 1.2 !important;
+                padding: 3px 1px !important;
+                border: 1px solid #000000 !important;
+                background-color: #f1f5f9 !important;
+                text-align: center !important;
+                vertical-align: middle !important;
+                white-space: pre-wrap !important;
+                word-break: break-word !important;
+              }
+              .poshan-pdf-page .poshan-daily-table tbody tr {
+                height: 52px !important;
+                min-height: 52px !important;
+              }
+              .poshan-pdf-page .poshan-daily-table tbody td {
+                font-size: 14.5px !important;
+                font-weight: 800 !important;
+                line-height: 1.2 !important;
+                padding: 2px 1px !important;
+                border: 1px solid #000000 !important;
+                text-align: center !important;
+                vertical-align: middle !important;
+                white-space: nowrap !important;
+              }
+              .poshan-pdf-page .poshan-daily-table tbody tr:last-child {
+                height: 48px !important;
+                min-height: 48px !important;
+                background-color: #fef3c7 !important;
+              }
+              .poshan-pdf-page .poshan-daily-table tbody tr:last-child td {
+                font-size: 15px !important;
+                font-weight: 900 !important;
+              }
+              .poshan-pdf-page h2 {
+                font-size: 22px !important;
+                font-weight: 900 !important;
+                margin-bottom: 2px !important;
+              }
+              .poshan-pdf-page h3 {
+                font-size: 17px !important;
+                font-weight: 900 !important;
+              }
+              .poshan-pdf-page p,
+              .poshan-pdf-page div {
+                font-size: 14px !important;
+              }
+              .poshan-pdf-page .poshan-summary-card {
+                font-size: 15px !important;
+                font-weight: 700 !important;
+                padding: 10px 16px !important;
+                margin-top: 10px !important;
+              }
+              .poshan-pdf-page .poshan-summary-card span {
+                font-size: 16px !important;
+              }
+              .poshan-pdf-page .poshan-summary-card .cook-helper-box {
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-size: 14px !important;
+                font-weight: 900 !important;
+                line-height: 1.2 !important;
+                padding: 3px 10px !important;
+                height: 30px !important;
+                min-height: 30px !important;
+                border: 1px solid #94a3b8 !important;
+                background-color: #ffffff !important;
+                border-radius: 6px !important;
+                box-sizing: border-box !important;
+                vertical-align: middle !important;
+                white-space: nowrap !important;
               }
               h1 {
                 font-size: ${isDailyTandul ? "22px" : "26px"} !important;
@@ -1729,7 +2013,7 @@ function TeacherMDMPage() {
               p.style.width = `${totalRenderWidth}px`;
               p.style.minWidth = `${totalRenderWidth}px`;
               p.style.maxWidth = `${totalRenderWidth}px`;
-              if (isDailyTandul) {
+              if (isDailyTandul || isPoshanReport) {
                 p.style.height = `${targetPageHeight}px`;
                 p.style.minHeight = `${targetPageHeight}px`;
                 p.style.maxHeight = `${targetPageHeight}px`;
@@ -1739,7 +2023,7 @@ function TeacherMDMPage() {
               p.style.justifyContent = "space-between";
               p.style.boxSizing = "border-box";
               p.style.backgroundColor = "#ffffff";
-              p.style.padding = isDailyTandul ? "10px 16px" : isPortraitReport ? "14px 20px" : "16px 24px";
+              p.style.padding = isDailyTandul ? "10px 16px" : isPoshanReport ? "10px 8px" : isPortraitReport ? "14px 20px" : "16px 24px";
               p.style.overflow = "hidden";
             });
 
@@ -1755,7 +2039,7 @@ function TeacherMDMPage() {
             const isGoshwara = monthlyMdmReportType === "masik_goshwara";
             const isTandulBill = monthlyMdmReportType === "masik_tandul_bill";
             const is31DayReport = !isGoshwara && !isTandulBill && monthlyMdmReportType !== "poshan_ahar_daily_entry";
-            const targetRowHeight = isGoshwara ? "36px" : isDailyTandul ? "32px" : (isTandulBill || is31DayReport) ? "23.5px" : "36px";
+            const targetRowHeight = isPoshanReport ? "52px" : isGoshwara ? "36px" : isDailyTandul ? "32px" : (isTandulBill || is31DayReport) ? "23.5px" : "36px";
 
             const tableRows = clonedDoc.querySelectorAll("tbody tr");
             tableRows.forEach((tr: HTMLElement) => {
@@ -1778,7 +2062,7 @@ function TeacherMDMPage() {
               element.style.width = `${totalRenderWidth}px`;
               element.style.minWidth = `${totalRenderWidth}px`;
               element.style.maxWidth = `${totalRenderWidth}px`;
-              if (isDailyTandul) {
+              if (isDailyTandul || isPoshanReport) {
                 element.style.height = `${targetPageHeight}px`;
                 element.style.minHeight = `${targetPageHeight}px`;
                 element.style.maxHeight = `${targetPageHeight}px`;
@@ -1787,7 +2071,7 @@ function TeacherMDMPage() {
               element.style.flexDirection = "column";
               element.style.justifyContent = "space-between";
               element.style.boxSizing = "border-box";
-              element.style.padding = isDailyTandul ? "10px 16px" : isPortraitReport ? "14px 20px" : "16px 24px";
+              element.style.padding = isDailyTandul ? "10px 16px" : isPoshanReport ? "10px 8px" : isPortraitReport ? "14px 20px" : "16px 24px";
             }
           }
         });
@@ -13595,7 +13879,7 @@ function TeacherMDMPage() {
 
                             return (
                               <div key={`page-${startDay}`} className={`w-full poshan-pdf-page bg-white p-3 md:p-5 flex flex-col justify-between border border-slate-300 rounded-xl shadow-xs print:border-none print:shadow-none print:p-0 min-h-[1157px] print:min-h-0 ${isFirstPage ? "mb-6 print:mb-0" : "html2pdf__page-break print:break-before-page"}`}>
-                                <div className="space-y-2">
+                                <div className="flex-1 flex flex-col justify-between h-full space-y-2">
                                 {isFirstPage && (
                                   <div className="text-center mb-4 space-y-1">
                                     <h2 className="text-sm md:text-base font-black text-slate-900 tracking-tight uppercase">प्रधानमंत्री पोषण शक्ती निर्माण योजना — पोषण आहार दैनंदिन नोंदी</h2>
@@ -13624,12 +13908,25 @@ function TeacherMDMPage() {
                                   {monthYearStr} — दिनांक {isFirstPage ? "१–१५" : `१६–${daysInMonth}`}
                                 </div>
 
-                                <div className="w-full overflow-x-auto">
-                                  <table className="min-w-[1650px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
+                                <div className="w-full flex-1 flex flex-col overflow-x-auto">
+                                  <table className="poshan-daily-table w-full min-w-[1750px] border-collapse border border-slate-700 text-center text-xs font-medium table-fixed flex-1 h-full">
+                                    <colgroup>
+                                      <col style={{ width: "2.3%" }} />
+                                      <col style={{ width: "2.9%" }} />
+                                      <col style={{ width: "3.8%" }} />
+                                      <col style={{ width: "2.7%" }} />
+                                      <col style={{ width: "2.7%" }} />
+                                      <col style={{ width: "2.7%" }} />
+                                      {itemKeysOrder.map((ik) => (
+                                        <col key={ik} style={{ width: ik === "Onion Garlic Masala" ? "4.2%" : "3.17%" }} />
+                                      ))}
+                                      <col style={{ width: "4.8%" }} />
+                                      <col style={{ width: "6.1%" }} />
+                                    </colgroup>
                                     <thead>
                                       <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700">
                                         {colHeaders.map((h, idx) => (
-                                          <th key={idx} className="border-r border-slate-700 px-1 py-1 leading-tight font-bold whitespace-pre-wrap text-[11px] bg-slate-100" style={{minWidth: idx < 3 ? '65px' : '48px'}}>
+                                          <th key={idx} className="border-r border-slate-700 px-0.5 py-1 leading-tight font-bold whitespace-pre-wrap text-[10.5px] bg-slate-100">
                                             {h}
                                           </th>
                                         ))}
@@ -13657,8 +13954,8 @@ function TeacherMDMPage() {
                                         return (
                                           <tr key={day} className={`border-b border-slate-700 h-[42px] text-xs ${isSunday || daily.isHoliday ? "bg-red-50/70" : rowIdx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
                                             <td className="border-r border-slate-700 px-1 py-1 text-xs font-bold align-middle">{day}</td>
-                                            <td className="border-r border-slate-700 px-1 py-1 text-xs font-semibold align-middle">{String(day).padStart(2,'0')}/{String(monthNum).padStart(2,'0')}</td>
-                                            <td className={`border-r border-slate-700 px-1 py-1 text-xs font-semibold align-middle ${isSunday || daily.isHoliday ? "text-red-600 font-bold" : ""}`}>{weekday}</td>
+                                            <td className="border-r border-slate-700 px-1 py-1 text-xs font-semibold align-middle whitespace-nowrap">{String(day).padStart(2,'0')}/{String(monthNum).padStart(2,'0')}</td>
+                                            <td className={`border-r border-slate-700 px-1 py-1 text-xs font-semibold align-middle whitespace-nowrap ${isSunday || daily.isHoliday ? "text-red-600 font-bold" : ""}`}>{weekday}</td>
                                             <td className="border-r border-slate-700 px-1 py-1 font-semibold align-middle">{daily.isHoliday || !daily.enrolled ? "" : daily.enrolled}</td>
                                             <td className="border-r border-slate-700 px-1 py-1 font-bold align-middle">{daily.isHoliday || bene === 0 ? "" : bene}</td>
                                             <td className="border-r border-slate-700 px-1 py-1 font-bold align-middle">{daily.isHoliday || bene === 0 ? "" : bene}</td>
@@ -13713,7 +14010,7 @@ function TeacherMDMPage() {
                                 {!isFirstPage ? (
                                   <div className="mt-4 space-y-2">
                                     {/* Yellow Summary Card */}
-                                    <div className="border border-amber-300/90 bg-[#fffef0] px-3 py-1.5 rounded-xl space-y-1 font-sans text-xs shadow-xs">
+                                    <div className="poshan-summary-card border border-amber-300/90 bg-[#fffef0] px-3 py-1.5 rounded-xl space-y-1 font-sans text-xs shadow-xs">
                                       <div className="flex items-center gap-2">
                                         <span className="font-bold text-slate-900">महिन्यातील एकूण ताटांची संख्या</span>
                                         <span className="bg-emerald-100/90 text-emerald-900 border border-emerald-300 font-extrabold px-3 py-0.5 rounded-md text-xs">
@@ -13748,7 +14045,7 @@ function TeacherMDMPage() {
                                                 setCookCount(val.toString());
                                                 setHelperCountVal(val.toString());
                                               }}
-                                              className="px-2 py-0.5 bg-white border border-slate-400 rounded text-xs font-black text-slate-900 cursor-pointer shadow-2xs outline-none"
+                                              className="cook-helper-box px-2.5 py-1 bg-white border border-slate-400 rounded-md text-xs font-black text-slate-900 cursor-pointer shadow-2xs outline-none h-auto min-h-[28px] leading-normal"
                                             >
                                               <option value={1}>1 व्यक्ती (₹2,500)</option>
                                               <option value={2}>2 व्यक्ती (₹5,000)</option>
@@ -14772,8 +15069,8 @@ function TeacherMDMPage() {
                                 const classEnrolled = classRegData.enrolled || (isPrimary ? Number(profile?.patPrimary || 0) : Number(profile?.patUpper || 0));
 
                                 return (
-                                  <div className="print-page border border-slate-400 p-4 md:p-6 bg-white text-black font-sans text-xs relative w-full min-w-[1000px]  shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0">
-                                    <div>
+                                  <div className="print-page b-form-page border border-slate-400 p-4 md:p-6 bg-white text-black font-sans text-xs relative w-full min-w-[1000px] min-h-[960px] shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0">
+                                    <div className="flex-1 flex flex-col justify-between h-full">
                                       {/* Top Header matching Image 2 */}
                                       <div className="text-center space-y-0.5 mb-2 border-b-2 border-black pb-1.5">
                                         <h1 className="text-sm md:text-base font-extrabold uppercase text-black tracking-wide">
@@ -14784,7 +15081,7 @@ function TeacherMDMPage() {
                                           <span>इयत्ता :- {standardLabel}</span>
                                           <span>माहे :- {marathiMonthName} {reportYear ? toMarathiNumbers(reportYear.toString()) : ""}</span>
                                         </h2>
-                                        <div className="flex justify-between items-center text-sm font-bold text-black pt-1 px-2">
+                                        <div className="b-form-header-school-info flex justify-between items-center text-sm font-bold text-black pt-1 px-2">
                                           <div>जिल्हा परिषद शाळा, <span className="font-extrabold border-b border-black px-2">{reportSchoolName || profile?.schoolName || ""}</span></div>
                                           <div>केंद्र :- <span className="font-extrabold border-b border-black px-2">{profile?.center || profile?.kendra || ""}</span></div>
                                           <div>ता. :- <span className="font-extrabold border-b border-black px-2">{profile?.taluka || ""}</span></div>
@@ -14793,7 +15090,7 @@ function TeacherMDMPage() {
                                       </div>
 
                                       {/* Sub-header stats row matching Image 2 */}
-                                      <div className="flex justify-between items-center border border-black p-1 mb-2 text-sm font-bold text-black bg-slate-50">
+                                      <div className="b-form-stats-bar flex justify-between items-center border border-black p-1 mb-2 text-sm font-bold text-black bg-slate-50">
                                         <div className="w-[20%] text-center border-r border-black font-extrabold">
                                           पट :- <span className="text-sm border-b border-black px-2">{toMarathiNumbers(classEnrolled.toString())}</span>
                                         </div>
@@ -14806,13 +15103,13 @@ function TeacherMDMPage() {
                                       </div>
 
                                       {/* 18-Column Main Table matching Image 2 with explicit colgroup */}
-                                      <div className="w-full overflow-x-auto">
-                                        <table className="w-full min-w-[1100px] border-collapse border border-black text-center text-xs font-sans table-fixed">
+                                      <div className="w-full flex-1 flex flex-col overflow-x-auto my-1">
+                                        <table className="b-form-main-table w-full min-w-[1600px] border-collapse border border-black text-center text-xs font-sans table-fixed flex-1 h-full">
                                           <colgroup>
-                                            <col style={{ width: "3.2%" }} />
-                                            <col style={{ width: "15%" }} />
+                                            <col style={{ width: "2.8%" }} />
+                                            <col style={{ width: "13.6%" }} />
                                             {B_FORM_ITEMS.map((item) => (
-                                              <col key={item.key} style={{ width: "4.54%" }} />
+                                              <col key={item.key} style={{ width: "4.64%" }} />
                                             ))}
                                           </colgroup>
                                           <thead>
@@ -14846,7 +15143,7 @@ function TeacherMDMPage() {
                                               {B_FORM_ITEMS.map((item) => {
                                                 const data = getBFormStockData(item.key, cls);
                                                 return (
-                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight whitespace-nowrap">
                                                     {data.opening > 0 ? toMarathiNumbers(data.opening.toFixed(3)) : ""}
                                                   </td>
                                                 );
@@ -14860,7 +15157,7 @@ function TeacherMDMPage() {
                                               {B_FORM_ITEMS.map((item) => {
                                                 const data = getBFormStockData(item.key, cls);
                                                 return (
-                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight whitespace-nowrap">
                                                     {data.received > 0 ? toMarathiNumbers(data.received.toFixed(3)) : ""}
                                                   </td>
                                                 );
@@ -14874,7 +15171,7 @@ function TeacherMDMPage() {
                                               {B_FORM_ITEMS.map((item) => {
                                                 const data = getBFormStockData(item.key, cls);
                                                 return (
-                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight whitespace-nowrap">
                                                     {data.borrowed > 0 ? toMarathiNumbers(data.borrowed.toFixed(3)) : ""}
                                                   </td>
                                                 );
@@ -14888,7 +15185,7 @@ function TeacherMDMPage() {
                                               {B_FORM_ITEMS.map((item) => {
                                                 const data = getBFormStockData(item.key, cls);
                                                 return (
-                                                  <td key={item.key} className="border border-black p-0.5 text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                                  <td key={item.key} className="border border-black p-0.5 text-xs leading-tight whitespace-nowrap">
                                                     {data.total > 0 ? toMarathiNumbers(data.total.toFixed(3)) : ""}
                                                   </td>
                                                 );
@@ -14902,7 +15199,7 @@ function TeacherMDMPage() {
                                               {B_FORM_ITEMS.map((item) => {
                                                 const data = getBFormStockData(item.key, cls);
                                                 return (
-                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight whitespace-nowrap">
                                                     {data.spent > 0 || item.key === "Rice" ? (cookedDays > 0 ? toMarathiNumbers(cookedDays.toString()) : "") : ""}
                                                   </td>
                                                 );
@@ -14916,7 +15213,7 @@ function TeacherMDMPage() {
                                               {B_FORM_ITEMS.map((item) => {
                                                 const data = getBFormStockData(item.key, cls);
                                                 return (
-                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight whitespace-nowrap">
                                                     {data.spent > 0 || item.key === "Rice" ? (beneficiarySum > 0 ? toMarathiNumbers(beneficiarySum.toString()) : "") : ""}
                                                   </td>
                                                 );
@@ -14930,7 +15227,7 @@ function TeacherMDMPage() {
                                               {B_FORM_ITEMS.map((item) => {
                                                 const data = getBFormStockData(item.key, cls);
                                                 return (
-                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight whitespace-nowrap">
                                                     {data.spent > 0 ? toMarathiNumbers(data.spent.toFixed(3)) : ""}
                                                   </td>
                                                 );
@@ -14944,7 +15241,7 @@ function TeacherMDMPage() {
                                               {B_FORM_ITEMS.map((item) => {
                                                 const data = getBFormStockData(item.key, cls);
                                                 return (
-                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                                  <td key={item.key} className="border border-black p-0.5 font-semibold text-xs leading-tight whitespace-nowrap">
                                                     {data.spoiled > 0 ? toMarathiNumbers(data.spoiled.toFixed(3)) : ""}
                                                   </td>
                                                 );
@@ -14958,7 +15255,7 @@ function TeacherMDMPage() {
                                               {B_FORM_ITEMS.map((item) => {
                                                 const data = getBFormStockData(item.key, cls);
                                                 return (
-                                                  <td key={item.key} className="border border-black p-0.5 text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                                  <td key={item.key} className="border border-black p-0.5 text-xs leading-tight whitespace-nowrap">
                                                     <span className={data.closing < 0 ? "text-red-600 font-bold font-mono" : ""}>{toMarathiNumbers(data.closing.toFixed(3))}</span>
                                                   </td>
                                                 );
@@ -14970,7 +15267,7 @@ function TeacherMDMPage() {
 
                                       {/* Vegetable Usage Sub-table (भाजीपाला वापर तक्ता) */}
                                       <div className="mt-3 flex justify-start">
-                                        <table className="border-collapse border border-black text-center text-xs font-sans">
+                                        <table className="b-form-veg-table border-collapse border border-black text-center text-xs font-sans">
                                           <thead>
                                             <tr className="bg-slate-100 font-bold border-b border-black text-xs">
                                               <th className="border border-black px-8 py-1 min-w-[120px] text-center">तपशील</th>
@@ -14986,6 +15283,12 @@ function TeacherMDMPage() {
                                           </tbody>
                                         </table>
                                       </div>
+
+                                        {/* Bottom Signatures & Date */}
+                                        <div className="b-form-footer flex justify-between items-center text-xs md:text-sm font-black text-black pt-3 mt-auto border-t border-black">
+                                          <div>दिनांक : ____________</div>
+                                          <div className="text-right">मुख्याध्यापक स्वाक्षरी व शिक्का</div>
+                                        </div>
                                     </div>
                                   </div>
                                 );

@@ -817,12 +817,12 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
               <table className="w-full min-w-[860px] table-fixed text-left border-collapse text-slate-900 text-sm font-sans">
                 <colgroup>
                   {role === "admin" && isEditMode && <col style={{ width: "50px" }} />}
-                  <col style={{ width: "95px" }} />
-                  <col style={{ width: "75px" }} />
-                  <col style={{ width: "95px" }} />
-                  <col style={{ width: "95px" }} />
-                  <col style={{ width: "320px" }} />
-                  <col style={{ width: "220px" }} />
+                  <col style={{ width: "80px" }} />
+                  <col style={{ width: "60px" }} />
+                  <col style={{ width: "80px" }} />
+                  <col style={{ width: "80px" }} />
+                  <col style={{ width: "505px" }} />
+                  <col style={{ width: "85px" }} />
                 </colgroup>
             <tbody className="divide-y divide-slate-300">
               {(() => {

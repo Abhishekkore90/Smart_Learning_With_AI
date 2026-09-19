@@ -1780,8 +1780,11 @@ export function AcademicPlanningSystem({
       (rec.rawHeaders && rec.rawHeaders.length > 0)
     );
 
+    const recAny = rec as any;
     let enrichedRec = {
       ...rec,
+      planningType: rec.planningType || (selectedPlanningType === "monthly" ? "monthly" : "annual"),
+      category: recAny?.category || (selectedPlanningType === "monthly" ? "masik_niyojan" : "varshik_niyojan"),
       fileUrl: targetUrl,
       ...(isExcel && { fileType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
     };

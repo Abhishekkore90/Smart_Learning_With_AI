@@ -78,6 +78,7 @@ import { Route as AdminModulePaymentsRouteImport } from './routes/admin.module-p
 import { Route as AdminMeetingTemplatesRouteImport } from './routes/admin.meeting-templates'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminEnrollmentsRouteImport } from './routes/admin.enrollments'
+import { Route as AdminDigitalSchoolInquiriesRouteImport } from './routes/admin.digital-school-inquiries'
 import { Route as AdminContactMessagesRouteImport } from './routes/admin.contact-messages'
 import { Route as AdminCceRemarksRouteImport } from './routes/admin.cce-remarks'
 import { Route as AdminAssemblyRouteImport } from './routes/admin.assembly'
@@ -451,6 +452,12 @@ const AdminEnrollmentsRoute = AdminEnrollmentsRouteImport.update({
   path: '/admin/enrollments',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDigitalSchoolInquiriesRoute =
+  AdminDigitalSchoolInquiriesRouteImport.update({
+    id: '/admin/digital-school-inquiries',
+    path: '/admin/digital-school-inquiries',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminContactMessagesRoute = AdminContactMessagesRouteImport.update({
   id: '/admin/contact-messages',
   path: '/admin/contact-messages',
@@ -623,6 +630,7 @@ export interface FileRoutesByFullPath {
   '/admin/assembly': typeof AdminAssemblyRoute
   '/admin/cce-remarks': typeof AdminCceRemarksRoute
   '/admin/contact-messages': typeof AdminContactMessagesRoute
+  '/admin/digital-school-inquiries': typeof AdminDigitalSchoolInquiriesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
@@ -720,6 +728,7 @@ export interface FileRoutesByTo {
   '/admin/assembly': typeof AdminAssemblyRoute
   '/admin/cce-remarks': typeof AdminCceRemarksRoute
   '/admin/contact-messages': typeof AdminContactMessagesRoute
+  '/admin/digital-school-inquiries': typeof AdminDigitalSchoolInquiriesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
@@ -819,6 +828,7 @@ export interface FileRoutesById {
   '/admin/assembly': typeof AdminAssemblyRoute
   '/admin/cce-remarks': typeof AdminCceRemarksRoute
   '/admin/contact-messages': typeof AdminContactMessagesRoute
+  '/admin/digital-school-inquiries': typeof AdminDigitalSchoolInquiriesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
@@ -919,6 +929,7 @@ export interface FileRouteTypes {
     | '/admin/assembly'
     | '/admin/cce-remarks'
     | '/admin/contact-messages'
+    | '/admin/digital-school-inquiries'
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
@@ -1016,6 +1027,7 @@ export interface FileRouteTypes {
     | '/admin/assembly'
     | '/admin/cce-remarks'
     | '/admin/contact-messages'
+    | '/admin/digital-school-inquiries'
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
@@ -1114,6 +1126,7 @@ export interface FileRouteTypes {
     | '/admin/assembly'
     | '/admin/cce-remarks'
     | '/admin/contact-messages'
+    | '/admin/digital-school-inquiries'
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
@@ -1213,6 +1226,7 @@ export interface RootRouteChildren {
   AdminAssemblyRoute: typeof AdminAssemblyRoute
   AdminCceRemarksRoute: typeof AdminCceRemarksRoute
   AdminContactMessagesRoute: typeof AdminContactMessagesRoute
+  AdminDigitalSchoolInquiriesRoute: typeof AdminDigitalSchoolInquiriesRoute
   AdminEnrollmentsRoute: typeof AdminEnrollmentsRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminMeetingTemplatesRoute: typeof AdminMeetingTemplatesRoute
@@ -1757,6 +1771,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEnrollmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/digital-school-inquiries': {
+      id: '/admin/digital-school-inquiries'
+      path: '/admin/digital-school-inquiries'
+      fullPath: '/admin/digital-school-inquiries'
+      preLoaderRoute: typeof AdminDigitalSchoolInquiriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/contact-messages': {
       id: '/admin/contact-messages'
       path: '/admin/contact-messages'
@@ -2035,6 +2056,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAssemblyRoute: AdminAssemblyRoute,
   AdminCceRemarksRoute: AdminCceRemarksRoute,
   AdminContactMessagesRoute: AdminContactMessagesRoute,
+  AdminDigitalSchoolInquiriesRoute: AdminDigitalSchoolInquiriesRoute,
   AdminEnrollmentsRoute: AdminEnrollmentsRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminMeetingTemplatesRoute: AdminMeetingTemplatesRoute,

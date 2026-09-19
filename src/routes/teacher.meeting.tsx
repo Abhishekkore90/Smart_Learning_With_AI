@@ -347,6 +347,51 @@ const getResolvedMonthName = (meeting?: any, monthKey?: string, dateVal?: string
   return "";
 };
 
+// Helper to format meeting time into clean Marathi format (e.g. "11:00" -> "सकाळी ११:०० वा.")
+const formatMeetingTimeMarathi = (timeStr?: string | null): string => {
+  if (!timeStr) return "सकाळी ११:०० वा.";
+  const cleaned = String(timeStr).trim();
+  if (!cleaned) return "सकाळी ११:०० वा.";
+
+  // If already formatted with Marathi period markers or "वा.", return with "वा." ensured
+  if (cleaned.includes("वा.") || cleaned.includes("सकाळी") || cleaned.includes("दुपारी") || cleaned.includes("संध्याकाळी") || cleaned.includes("रात्री")) {
+    return cleaned.endsWith("वा.") ? cleaned : `${cleaned} वा.`;
+  }
+
+  // Handle standard 12-hour or 24-hour format (e.g., "11:00", "14:30", "02:30 PM")
+  const ampmMatch = cleaned.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?$/i);
+  if (ampmMatch) {
+    let hours = parseInt(ampmMatch[1], 10);
+    const minutes = ampmMatch[2];
+    const ampm = ampmMatch[3]?.toUpperCase();
+
+    if (ampm === "PM" && hours < 12) hours += 12;
+    if (ampm === "AM" && hours === 12) hours = 0;
+
+    let period = "सकाळी";
+    if (hours >= 12 && hours < 16) {
+      period = "दुपारी";
+    } else if (hours >= 16 && hours < 20) {
+      period = "संध्याकाळी";
+    } else if (hours >= 20 || hours < 6) {
+      period = "रात्री";
+    }
+
+    let displayHours = hours % 12;
+    if (displayHours === 0) displayHours = 12;
+
+    const toDevanagari = (num: number | string) =>
+      String(num).replace(/[0-9]/g, (d) => "०१२३४५६७८९"[parseInt(d, 10)]);
+
+    const formattedHours = toDevanagari(displayHours < 10 ? `०${displayHours}` : displayHours);
+    const formattedMinutes = toDevanagari(minutes);
+
+    return `${period} ${formattedHours}:${formattedMinutes} वा.`;
+  }
+
+  return `${cleaned} वा.`;
+};
+
 function TeacherMeetingPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const { lang } = useLanguage();
@@ -444,6 +489,7 @@ function TeacherMeetingPage() {
   const [headmasterName, setHeadmasterName] = useState("");
   const [presidentName, setPresidentName] = useState("");
   const [meetingDate, setMeetingDate] = useState("");
+  const [meetingTime, setMeetingTime] = useState("11:00");
   const [academicYear, setAcademicYear] = useState("");
   const [meetingNumber, setMeetingNumber] = useState("१");
   const [formMembers, setFormMembers] = useState<any[]>(
@@ -620,6 +666,7 @@ function TeacherMeetingPage() {
   const [editHeadmasterName, setEditHeadmasterName] = useState("");
   const [editPresidentName, setEditPresidentName] = useState("");
   const [editMeetingDate, setEditMeetingDate] = useState("");
+  const [editMeetingTime, setEditMeetingTime] = useState("11:00");
   const [editAcademicYear, setEditAcademicYear] = useState("");
   const [editMeetingNumber, setEditMeetingNumber] = useState("");
   const [editMembers, setEditMembers] = useState<any[]>(
@@ -857,6 +904,7 @@ function TeacherMeetingPage() {
       setEditHeadmasterName(selectedPastMeeting.headmasterName || "");
       setEditPresidentName(selectedPastMeeting.presidentName || "");
       setEditMeetingDate(selectedPastMeeting.date || "");
+      setEditMeetingTime(selectedPastMeeting.time || "11:00");
       setEditAcademicYear(selectedPastMeeting.academicYear || "२०२५-२६");
       setEditMeetingNumber(selectedPastMeeting.meetingNumber || "");
       setEditMembers(
@@ -1461,6 +1509,7 @@ function TeacherMeetingPage() {
           formMembers.find((m: any) => m.role === "अध्यक्ष")?.name ||
           "",
         date: meetingDate,
+        time: meetingTime || "11:00",
         academicYear,
         meetingNumber,
         createdAt: new Date().toISOString(),
@@ -1507,6 +1556,7 @@ function TeacherMeetingPage() {
         headmasterName: editHeadmasterName,
         presidentName: editPresidentName,
         date: editMeetingDate,
+        time: editMeetingTime || "11:00",
         academicYear: editAcademicYear,
         meetingNumber: editMeetingNumber,
         members: editMembers,
@@ -1523,6 +1573,7 @@ function TeacherMeetingPage() {
         headmasterName: editHeadmasterName,
         presidentName: editPresidentName,
         date: editMeetingDate,
+        time: editMeetingTime || "11:00",
         academicYear: editAcademicYear,
         meetingNumber: editMeetingNumber,
         members: editMembers,
@@ -1679,7 +1730,13 @@ function TeacherMeetingPage() {
       // 5. If any input/textarea exists (e.g. edit mode), convert to clean text
       clone.querySelectorAll("input").forEach((inp: any) => {
         const span = document.createElement("span");
-        span.textContent = inp.value || " ";
+        if (inp.type === "time") {
+          span.textContent = formatMeetingTimeMarathi(inp.value);
+        } else if (inp.type === "date" && inp.value) {
+          span.textContent = formatDateToDDMMYYYY(inp.value, "/");
+        } else {
+          span.textContent = inp.value || " ";
+        }
         span.style.fontFamily = "inherit";
         span.style.fontWeight = "bold";
         span.style.color = "#0f172a";
@@ -2775,17 +2832,30 @@ function TeacherMeetingPage() {
                                         className="bg-transparent border-none outline-none font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
                                       />
                                     </div>
-                                    <div className="flex items-center gap-1.5 col-span-1 sm:col-span-2 md:col-span-2">
+                                    <div className="flex items-center gap-1.5">
                                       <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
-                                        सचिव/मुख्याध्यापक:
+                                        सभा दिनांक:
                                       </span>
                                       <input
-                                        type="text"
-                                        value={editHeadmasterName}
+                                        type="date"
+                                        value={editMeetingDate}
                                         onChange={(e) =>
-                                          setEditHeadmasterName(e.target.value)
+                                          setEditMeetingDate(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none  font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
+                                        className="bg-transparent border-none outline-none font-extrabold text-slate-900 w-full cursor-pointer"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
+                                        सभा वेळ:
+                                      </span>
+                                      <input
+                                        type="time"
+                                        value={editMeetingTime}
+                                        onChange={(e) =>
+                                          setEditMeetingTime(e.target.value)
+                                        }
+                                        className="bg-transparent border-none outline-none font-extrabold text-slate-900 w-full cursor-pointer"
                                       />
                                     </div>
                                     <div className="flex items-center gap-1.5">
@@ -2797,19 +2867,6 @@ function TeacherMeetingPage() {
                                         value={editSchoolName}
                                         onChange={(e) =>
                                           setEditSchoolName(e.target.value)
-                                        }
-                                        className="bg-transparent border-none outline-none font-extrabold text-slate-900 w-full"
-                                      />
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
-                                        समिती अध्यक्षांचे नाव:
-                                      </span>
-                                      <input
-                                        type="text"
-                                        value={editPresidentName}
-                                        onChange={(e) =>
-                                          setEditPresidentName(e.target.value)
                                         }
                                         className="bg-transparent border-none outline-none font-extrabold text-slate-900 w-full"
                                       />
@@ -2829,15 +2886,28 @@ function TeacherMeetingPage() {
                                     </div>
                                     <div className="flex items-center gap-1.5">
                                       <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
-                                        सभा दिनांक:
+                                        समिती अध्यक्षांचे नाव:
                                       </span>
                                       <input
-                                        type="date"
-                                        value={editMeetingDate}
+                                        type="text"
+                                        value={editPresidentName}
                                         onChange={(e) =>
-                                          setEditMeetingDate(e.target.value)
+                                          setEditPresidentName(e.target.value)
                                         }
-                                        className="bg-transparent border-none outline-none font-extrabold text-slate-900 w-full cursor-pointer"
+                                        className="bg-transparent border-none outline-none font-extrabold text-slate-900 w-full"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-slate-900 font-black text-xs sm:text-sm md:text-base shrink-0">
+                                        सचिव/मुख्याध्यापक:
+                                      </span>
+                                      <input
+                                        type="text"
+                                        value={editHeadmasterName}
+                                        onChange={(e) =>
+                                          setEditHeadmasterName(e.target.value)
+                                        }
+                                        className="bg-transparent border-none outline-none  font-black text-slate-900 text-xs sm:text-sm md:text-base w-full min-w-0"
                                       />
                                     </div>
                                   </div>
@@ -3235,7 +3305,7 @@ function TeacherMeetingPage() {
                                       <div className="flex items-baseline gap-1">
                                         <span className="text-slate-900 font-black shrink-0">सभा वेळ:</span>
                                         <span className="font-bold text-slate-900">
-                                          {selectedPastMeeting.time ? `${selectedPastMeeting.time} वा.` : "सकाळी ११:०० वा."}
+                                          {formatMeetingTimeMarathi(selectedPastMeeting.time || meetingTime || "11:00")}
                                         </span>
                                       </div>
                                       <div className="flex items-baseline gap-1 col-span-2">
@@ -3423,7 +3493,7 @@ function TeacherMeetingPage() {
                                         </span>
                                         {mt.time && (
                                           <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                                            <Clock size={10} /> {mt.time} वा.
+                                            <Clock size={10} /> {formatMeetingTimeMarathi(mt.time)}
                                           </span>
                                         )}
                                       </div>
@@ -3834,16 +3904,19 @@ function TeacherMeetingPage() {
                                       animate={{ opacity: 1, height: "auto" }}
                                       exit={{ opacity: 0, height: 0 }}
                                       transition={{ duration: 0.3 }}
-                                      className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-slate-200 overflow-hidden"
+                                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 pt-4 border-t border-slate-200 overflow-hidden"
                                     >
-                                      <div className="space-y-2">
-                                        <label className="text-sm font-black text-slate-800 block">
-                                          शैक्षणिक वर्ष निवडा (Select Academic Year)
-                                        </label>
+                                      {/* 1. Academic Year */}
+                                      <div className="space-y-1.5 flex flex-col justify-end">
+                                        <div className="flex items-center h-6">
+                                          <label className="text-xs sm:text-sm font-black text-slate-800 truncate">
+                                            शैक्षणिक वर्ष (Academic Year)
+                                          </label>
+                                        </div>
                                         <select
                                           value={academicYear}
                                           onChange={(e) => setAcademicYear(e.target.value)}
-                                          className="w-full px-5 py-4 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 shadow-md cursor-pointer transition-all"
+                                          className="w-full h-12 px-4 bg-white border-2 border-slate-300 rounded-xl text-sm sm:text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-900 shadow-sm cursor-pointer transition-all"
                                         >
                                           <option value="२०२४-२५">२०२४-२५</option>
                                           <option value="२०२५-२६">२०२५-२६</option>
@@ -3852,31 +3925,64 @@ function TeacherMeetingPage() {
                                         </select>
                                       </div>
 
-                                      <div className="space-y-2">
-                                        <label className="text-sm font-black text-slate-800 block">
-                                          सभा क्रमांक प्रविष्ट करा (Enter Meeting Number)
-                                        </label>
+                                      {/* 2. Meeting Number */}
+                                      <div className="space-y-1.5 flex flex-col justify-end">
+                                        <div className="flex items-center h-6">
+                                          <label className="text-xs sm:text-sm font-black text-slate-800 truncate">
+                                            सभा क्रमांक (Meeting No.)
+                                          </label>
+                                        </div>
                                         <input
                                           type="text"
                                           value={meetingNumber}
                                           onChange={(e) => setMeetingNumber(e.target.value)}
                                           placeholder="उदा. १, २, ३..."
-                                          className="w-full px-5 py-4 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 shadow-md transition-all"
+                                          className="w-full h-12 px-4 bg-white border-2 border-slate-300 rounded-xl text-sm sm:text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-900 shadow-sm transition-all"
                                         />
                                       </div>
 
-                                      <div className="space-y-2">
-                                        <label className="text-sm font-black text-slate-800 block">
-                                          सभा दिनांक निवडा (Select Meeting Date)
-                                        </label>
+                                      {/* 3. Meeting Date */}
+                                      <div className="space-y-1.5 flex flex-col justify-end">
+                                        <div className="flex items-center h-6">
+                                          <label className="text-xs sm:text-sm font-black text-slate-800 truncate">
+                                            सभा दिनांक (Meeting Date)
+                                          </label>
+                                        </div>
                                         <div className="relative">
-                                          <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 size-5 pointer-events-none" />
+                                          <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 size-4.5 pointer-events-none" />
                                           <input
                                             type="date"
                                             onClick={(e) => { try { e.currentTarget.showPicker(); } catch { } }}
                                             value={meetingDate}
                                             onChange={(e) => handleDateChange(e.target.value)}
-                                            className="w-full pl-12 pr-5 py-3.5 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 cursor-pointer shadow-md transition-all"
+                                            className="w-full h-12 pl-11 pr-4 bg-white border-2 border-slate-300 rounded-xl text-sm sm:text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-900 cursor-pointer shadow-sm transition-all"
+                                          />
+                                        </div>
+                                      </div>
+
+                                      {/* 4. Meeting Time */}
+                                      <div className="space-y-1.5 flex flex-col justify-end">
+                                        <div className="flex items-center justify-between gap-1.5 h-6">
+                                          <label className="text-xs sm:text-sm font-black text-slate-800 truncate">
+                                            सभा वेळ (Meeting Time)
+                                          </label>
+                                          <span className="shrink-0 whitespace-nowrap text-[11px] font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                                            {formatMeetingTimeMarathi(meetingTime)}
+                                          </span>
+                                        </div>
+                                        <div className="relative">
+                                          <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 size-4.5 pointer-events-none" />
+                                          <input
+                                            type="time"
+                                            onClick={(e) => { try { e.currentTarget.showPicker(); } catch { } }}
+                                            value={meetingTime}
+                                            onChange={(e) => {
+                                              setMeetingTime(e.target.value);
+                                              if (!invitationTime) {
+                                                setInvitationTime(e.target.value);
+                                              }
+                                            }}
+                                            className="w-full h-12 pl-11 pr-4 bg-white border-2 border-slate-300 rounded-xl text-sm sm:text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-900 cursor-pointer shadow-sm transition-all"
                                           />
                                         </div>
                                       </div>
@@ -5235,7 +5341,7 @@ function TeacherMeetingPage() {
                               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm font-bold">
                                 <div><span className="font-black">दिनांक :</span> {invitationDate ? formatDateToDDMMYYYY(invitationDate, "/") : "__________________"}</div>
                                 <div><span className="font-black">वार :</span> {invitationDay || "__________________"}</div>
-                                <div><span className="font-black">वेळ :</span> {invitationTime || "__________________"}</div>
+                                <div><span className="font-black">वेळ :</span> {invitationTime ? formatMeetingTimeMarathi(invitationTime) : "__________________"}</div>
                                 <div><span className="font-black">स्थळ :</span> {invitationVenue || schoolName || "__________________"}</div>
                               </div>
                             </div>

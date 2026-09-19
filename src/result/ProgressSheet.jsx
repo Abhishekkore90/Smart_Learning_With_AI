@@ -1264,7 +1264,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                       </h2>
                     </div>
                     <p className="text-[8.5px] font-extrabold text-slate-800 mt-0.5">
-                      दूरध्वनी क्र. : <span className="font-black text-slate-950">{schoolData.udise || student.udise || ""}</span>
+                      यु-डायस क्र. : <span className="font-black text-slate-950">{schoolData.udise || student.udise || ""}</span>
                     </p>
                   </div>
 
@@ -1724,46 +1724,46 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                           <span>यु-डायस : <b className="text-blue-950 font-black text-[13px]">{schoolData.udise || student.udise || ""}</b></span>
                         </div>
                         <div className="space-y-1 pt-0.5">
-                          <div className="flex border-b border-slate-200 pb-0.5">
+                          <div className="flex border-b border-slate-200 pb-0.5 items-baseline">
                             <span className="text-slate-800 font-bold shrink-0 text-[11.5px] mr-1.5">शाळेचे नाव :</span>
-                            <span className="font-bold text-slate-900 text-[11.5px] truncate">{schoolData.schoolName || student.schoolName || ""}</span>
+                            <span className="font-bold text-slate-900 text-[11.5px] leading-snug break-words flex-1">{schoolData.schoolName || student.schoolName || ""}</span>
                           </div>
-                          <div className="flex border-b border-slate-200 pb-0.5 bg-amber-100/70 px-1 py-0.5 rounded-md">
+                          <div className="flex border-b border-slate-200 pb-0.5 bg-amber-100/70 px-1 py-0.5 rounded-md items-baseline">
                             <span className="text-slate-950 font-bold shrink-0 text-[11.5px] mr-1.5">विद्यार्थ्याचे नाव:</span>
-                            <span className="font-bold text-blue-950 text-[11.5px] truncate">{student.fullName || student.name || ""}</span>
+                            <span className="font-bold text-blue-950 text-[11.5px] leading-snug break-words flex-1">{student.fullName || student.name || ""}</span>
                           </div>
-                          <div className="flex border-b border-slate-200 pb-0.5">
+                          <div className="flex border-b border-slate-200 pb-0.5 items-baseline">
                             <span className="text-slate-800 font-bold shrink-0 text-[11.5px] mr-1.5">जन्म दिनांक :</span>
                             <span className="font-bold text-slate-900 text-[11.5px]">{formatDob(student.dob)}</span>
                           </div>
-                          <div className="flex border-b border-slate-200 pb-0.5 justify-between">
+                          <div className="flex border-b border-slate-200 pb-0.5 justify-between items-baseline">
                             <div><span className="text-slate-800 font-bold text-[11.5px]">इयत्ता : </span><b className="text-slate-900 text-[11.5px]">{getMarathiClassName(selectedClass)}</b></div>
                             <div><span className="text-slate-800 font-bold text-[11.5px]">आधार क्रमांक : </span><b className="text-slate-900 text-[11.5px]">{student.aadhar || student.aadhaarNo || ""}</b></div>
                             <div><span className="text-slate-800 font-bold text-[11.5px]">तुकडी : </span><b className="text-slate-950 text-[11.5px]">{formatDivision(student.division || student.studentInfo?.division || student.section, division)}</b></div>
                           </div>
-                          <div className="flex border-b border-slate-200 pb-0.5 justify-between">
+                          <div className="flex border-b border-slate-200 pb-0.5 justify-between items-baseline">
                             <div><span className="text-slate-800 font-bold text-[11.5px]">स्टुडन्ट आयडी : </span><b className="text-slate-900 text-[11.5px]">{getCleanStudentId(student.studentId || student.saralId || student.penNo)}</b></div>
                             <div><span className="text-slate-800 font-bold text-[11.5px]">जन. रजि. नं : </span><b className="text-slate-900 text-[11.5px]">{student.generalRegNo || student.grNo || ""}</b></div>
                           </div>
-                          <div className="flex border-b border-slate-200 pb-0.5 justify-between">
-                            <div className="truncate"><span className="text-slate-800 font-bold text-[11.5px]">वडिलांचे नाव : </span><b className="text-slate-900 text-[11.5px]">{student.fatherName || ""}</b></div>
+                          <div className="flex border-b border-slate-200 pb-0.5 justify-between items-baseline">
+                            <div className="flex-1 min-w-0 mr-2"><span className="text-slate-800 font-bold text-[11.5px]">वडिलांचे नाव : </span><b className="text-slate-900 text-[11.5px] break-words">{student.fatherName || ""}</b></div>
                             <div className="shrink-0 ml-2"><span className="text-slate-800 font-bold text-[11.5px]">व्यवसाय : </span><b className="text-slate-900 text-[11.5px]">{student.fatherOccupation || ""}</b></div>
                           </div>
-                          <div className="flex border-b border-slate-200 pb-0.5 justify-between">
-                            <div className="truncate"><span className="text-slate-800 font-bold text-[11.5px]">आईचे नाव : </span><b className="text-slate-900 text-[11.5px]">{student.motherName || ""}</b></div>
+                          <div className="flex border-b border-slate-200 pb-0.5 justify-between items-baseline">
+                            <div className="flex-1 min-w-0 mr-2"><span className="text-slate-800 font-bold text-[11.5px]">आईचे नाव : </span><b className="text-slate-900 text-[11.5px] break-words">{student.motherName || ""}</b></div>
                             <div className="shrink-0 ml-2"><span className="text-slate-800 font-bold text-[11.5px]">व्यवसाय : </span><b className="text-slate-900 text-[11.5px]">{student.motherOccupation || ""}</b></div>
                           </div>
-                          <div className="flex border-b border-slate-200 pb-0.5 justify-between">
+                          <div className="flex border-b border-slate-200 pb-0.5 justify-between items-baseline">
                             <div><span className="text-slate-800 font-bold text-[11.5px]">मातृभाषा : </span><b className="text-slate-900 text-[11.5px]">{student.motherTongue || ""}</b></div>
                             <div><span className="text-slate-800 font-bold text-[11.5px]">माध्यम : </span><b className="text-slate-900 text-[11.5px]">{student.medium || ""}</b></div>
                           </div>
-                          <div className="flex border-b border-slate-200 pb-0.5 justify-between">
+                          <div className="flex border-b border-slate-200 pb-0.5 justify-between items-baseline">
                             <div><span className="text-slate-800 font-bold text-[11.5px]">धर्म : </span><b className="text-slate-900 text-[11.5px]">{student.religion || ""}</b></div>
                             <div><span className="text-slate-800 font-bold text-[11.5px]">संवर्ग : </span><b className="text-slate-900 text-[11.5px]">{student.caste || student.casteCategory || ""}</b></div>
                           </div>
-                          <div className="flex">
+                          <div className="flex items-baseline">
                             <span className="text-slate-800 font-bold shrink-0 text-[11.5px] mr-1.5">पत्ता :</span>
-                            <span className="font-bold text-slate-900 text-[11.5px] truncate">{student.address || ""}</span>
+                            <span className="font-bold text-slate-900 text-[11.5px] leading-snug break-words flex-1">{student.address || ""}</span>
                           </div>
                         </div>
                       </div>
@@ -1784,16 +1784,38 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                 </div>
               );
 
+              const studentFullName = (student.fullName || student.name || "").trim();
+              const nameCharLength = studentFullName.length;
+              // Dynamic font size scaling based on length (strength) of student name:
+              const dynamicNameSizeClass = nameCharLength > 36 
+                ? "text-[12px] sm:text-[12.5px]" 
+                : nameCharLength > 24 
+                  ? "text-[13.5px] sm:text-[14px]" 
+                  : "text-[15px] sm:text-[16px]";
+
               const page2Inner = (
                 <>
-                  <div className="flex items-center justify-between border-b-2 border-orange-400 pb-1.5 mb-2 text-[14px] font-black text-slate-950 bg-amber-50/90 py-1.5 px-3 rounded-xl border border-orange-300 shrink-0">
-                    <div>
-                      विद्यार्थ्याचे नाव: <span className="font-black text-blue-950 text-[16px]">{student.fullName || student.name || ""}</span>
+                  <div className="w-full flex items-center justify-between border-2 border-orange-400 py-1.5 px-5 mb-2.5 text-[14px] font-black text-slate-950 bg-amber-50/95 rounded-full shadow-xs shrink-0 box-border">
+                    <div className="flex items-center gap-2 flex-1 mr-4 min-w-0">
+                      <span className="text-slate-800 font-extrabold shrink-0 text-[13.5px] whitespace-nowrap">
+                        विद्यार्थ्याचे नाव :
+                      </span>
+                      <span className={`font-black text-blue-950 leading-snug break-words ${dynamicNameSizeClass}`}>
+                        {studentFullName || "—"}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-5 text-[14px]">
-                      <span>इयत्ता: <b className="font-black text-[14.5px]">{getMarathiClassName(selectedClass)}</b></span>
-                      <span>तुकडी: <b className="font-black text-[14.5px]">{formatDivision(student.division || student.studentInfo?.division || student.section, division)}</b></span>
-                      <span>हजेरी क्र.: <b className="font-black text-[15px] text-blue-950">{student.rollNo || idx + 1}</b></span>
+                    <div className="flex items-center gap-3.5 sm:gap-5 text-[13.5px] shrink-0 whitespace-nowrap font-bold text-slate-800">
+                      <span>
+                        इयत्ता : <b className="font-black text-[14px] text-slate-950">{getMarathiClassName(selectedClass)}</b>
+                      </span>
+                      <span className="text-orange-400 font-bold">•</span>
+                      <span>
+                        तुकडी : <b className="font-black text-[14px] text-slate-950">{formatDivision(student.division || student.studentInfo?.division || student.section, division)}</b>
+                      </span>
+                      <span className="text-orange-400 font-bold">•</span>
+                      <span>
+                        हजेरी क्र. : <b className="font-black text-[15px] text-blue-950">{student.rollNo || idx + 1}</b>
+                      </span>
                     </div>
                   </div>
                   <div className="grid grid-cols-12 gap-2 flex-1 w-full overflow-hidden min-h-0">
