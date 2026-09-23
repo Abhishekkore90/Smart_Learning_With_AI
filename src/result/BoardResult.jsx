@@ -5,7 +5,7 @@ import { Download, ArrowLeft, Loader2, AlertCircle, FileText, Copy } from "lucid
 import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { getTeacherId, matchStudentTeacherClassAndMedium } from "../lib/teacherIsolationHelper";
-import { fetchStudentsForClass, hasStudentFilledData } from "./firestoreMarksHelper";
+import { fetchStudentsForClass, hasStudentFilledData, normalizeClassKey } from "./firestoreMarksHelper";
 import "./result.css";
 
 const DEFAULT_SUBJECTS = [
@@ -54,6 +54,102 @@ const getGradeKeyFromScore = (score, max = 100) => {
   if (pct >= 33) return "d";
   if (pct >= 21) return "i1";
   return "i2";
+};
+
+// Default weightage rules when user hasn't filled Bharansh Nischiti
+const getDefaultSubjectWeightage = (clsStr, isPractical) => {
+  if (isPractical) {
+    return {
+      tondiKaam: "20",
+      pratyakshikPrayog: "40",
+      upakramKriti: "40",
+      prakalpa: "20",
+      chaachaniLekhi: "10",
+      swadhyayVargakarya: "10",
+      itar: "10",
+      sankalitTondi: "0",
+      sankalitPratyakshik: "0",
+      sankalitLekhi: "0",
+    };
+  }
+
+  const c = String(clsStr || "").toLowerCase().trim();
+  const is1or2 = c.includes("1") || c.includes("2") || c.includes("पहिली") || c.includes("दुसरी");
+  const is3or4 = c.includes("3") || c.includes("4") || c.includes("तिसरी") || c.includes("चौथी");
+  const is5or6 = c.includes("5") || c.includes("6") || c.includes("पाचवी") || c.includes("सहावी");
+  const is7or8 = c.includes("7") || c.includes("8") || c.includes("सातवी") || c.includes("आठवी");
+
+  if (is1or2) {
+    // आकारिक 70 + संकलित 30 = 100
+    return {
+      tondiKaam: "10",
+      pratyakshikPrayog: "10",
+      upakramKriti: "10",
+      prakalpa: "10",
+      chaachaniLekhi: "20",
+      swadhyayVargakarya: "10",
+      itar: "0",
+      sankalitTondi: "5",
+      sankalitPratyakshik: "5",
+      sankalitLekhi: "20",
+    };
+  } else if (is3or4) {
+    // आकारिक 60 + संकलित 40 = 100
+    return {
+      tondiKaam: "10",
+      pratyakshikPrayog: "10",
+      upakramKriti: "10",
+      prakalpa: "10",
+      chaachaniLekhi: "10",
+      swadhyayVargakarya: "10",
+      itar: "0",
+      sankalitTondi: "5",
+      sankalitPratyakshik: "5",
+      sankalitLekhi: "30",
+    };
+  } else if (is5or6) {
+    // आकारिक 50 + संकलित 50 = 100
+    return {
+      tondiKaam: "10",
+      pratyakshikPrayog: "5",
+      upakramKriti: "10",
+      prakalpa: "10",
+      chaachaniLekhi: "10",
+      swadhyayVargakarya: "5",
+      itar: "0",
+      sankalitTondi: "5",
+      sankalitPratyakshik: "5",
+      sankalitLekhi: "40",
+    };
+  } else if (is7or8) {
+    // आकारिक 40 + संकलित 60 = 100
+    return {
+      tondiKaam: "5",
+      pratyakshikPrayog: "5",
+      upakramKriti: "10",
+      prakalpa: "10",
+      chaachaniLekhi: "5",
+      swadhyayVargakarya: "5",
+      itar: "0",
+      sankalitTondi: "5",
+      sankalitPratyakshik: "5",
+      sankalitLekhi: "50",
+    };
+  } else {
+    // Default fallback (Class 1 & 2: 70 + 30 = 100)
+    return {
+      tondiKaam: "10",
+      pratyakshikPrayog: "10",
+      upakramKriti: "10",
+      prakalpa: "10",
+      chaachaniLekhi: "20",
+      swadhyayVargakarya: "10",
+      itar: "0",
+      sankalitTondi: "5",
+      sankalitPratyakshik: "5",
+      sankalitLekhi: "20",
+    };
+  }
 };
 
 const CASTE_CATEGORIES = [
@@ -263,6 +359,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
   useEffect(() => {
     loadUserFirestoreData(selectedTerm);
+    const handleWeightageUpdate = () => {
+      loadUserFirestoreData(selectedTerm);
+    };
+    window.addEventListener("cce_weightage_updated", handleWeightageUpdate);
+    return () => {
+      window.removeEventListener("cce_weightage_updated", handleWeightageUpdate);
+    };
   }, [selectedClass, academicYear, selectedMedium, selectedTerm]);
 
   const loadUserFirestoreData = async (term = "sem2") => {
@@ -795,20 +898,35 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
       // 6. Fetch Weightage Data (cce_weightage_v2 & local cache)
       try {
         let weightageMap = {};
-        const cacheKey = `cce_weightage_cache_${selectedClass}_${academicYear}`;
-        try {
-          const cached = localStorage.getItem(cacheKey);
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            if (parsed && typeof parsed === "object") weightageMap = parsed;
-          }
-        } catch (e) {}
+        const normCls = normalizeClassKey(selectedClass) || selectedClass;
+        const cacheKeys = [
+          currentTeacherId ? `cce_weightage_cache_${currentTeacherId}_${selectedClass}_${academicYear}` : null,
+          currentTeacherId ? `cce_weightage_cache_${currentTeacherId}_${normCls}_${academicYear}` : null,
+          `cce_weightage_cache_${selectedClass}_${academicYear}`,
+          `cce_weightage_cache_${normCls}_${academicYear}`,
+        ].filter(Boolean);
+
+        for (const ck of cacheKeys) {
+          try {
+            const cached = localStorage.getItem(ck);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed && typeof parsed === "object" && (parsed.semester1 || parsed.semester2 || parsed.rows || parsed.data)) {
+                weightageMap = parsed;
+                break;
+              }
+            }
+          } catch (e) {}
+        }
 
         if (Object.keys(weightageMap).length === 0) {
           const docIdsToTry = [
-            `${currentTeacherId}_${selectedClass}_${academicYear}`,
+            currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}` : null,
+            currentTeacherId ? `${currentTeacherId}_${normCls}_${academicYear}` : null,
             `${selectedClass}_${academicYear}`,
-          ];
+            `${normCls}_${academicYear}`,
+          ].filter(Boolean);
+
           for (const dId of docIdsToTry) {
             try {
               const snap = await getDoc(doc(db, "cce_weightage_v2", dId));
@@ -1540,144 +1658,141 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           };
 
                           const getSubjectWeightage = (subName, stdId, stdRoll) => {
-                            if (!weightageData) return {};
+                            if (!weightageData || typeof weightageData !== "object" || Object.keys(weightageData).length === 0) return null;
 
                             const findInList = (list) => {
                               if (!Array.isArray(list) || list.length === 0) return null;
+
+                              const matchSub = (subjectsMap) => {
+                                if (!subjectsMap || typeof subjectsMap !== "object") return null;
+                                if (subjectsMap[subName]) return subjectsMap[subName];
+                                const lower = String(subName).toLowerCase().trim();
+                                for (const [sKey, sVal] of Object.entries(subjectsMap)) {
+                                  const sLower = String(sKey).toLowerCase().trim();
+                                  if (
+                                    (lower.includes("मराठी") && sLower.includes("मराठी")) ||
+                                    (lower.includes("इंग्रजी") && sLower.includes("इंग्रजी")) ||
+                                    (lower.includes("हिंदी") && sLower.includes("हिंदी")) ||
+                                    (lower.includes("गणित") && sLower.includes("गणित")) ||
+                                    (lower.includes("कला") && sLower.includes("कला")) ||
+                                    (lower.includes("कार्यानुभव") && sLower.includes("कार्यानुभव")) ||
+                                    (lower.includes("शारीरिक") && sLower.includes("शारीरिक")) ||
+                                    (lower.includes("परिसर") && sLower.includes("परिसर")) ||
+                                    (lower.includes("विज्ञान") && sLower.includes("विज्ञान")) ||
+                                    (lower.includes("सामाजिक") && sLower.includes("सामाजिक")) ||
+                                    (lower.includes("इतिहास") && sLower.includes("इतिहास")) ||
+                                    (lower.includes("भूगोल") && sLower.includes("भूगोल")) ||
+                                    sLower === lower
+                                  ) {
+                                    return sVal;
+                                  }
+                                }
+                                return null;
+                              };
+
+                              // 1. Try matching student by ID or roll number
                               if (stdId || stdRoll) {
                                 const stdMatch = list.find((i) => {
-                                  if (!i.studentIds || !Array.isArray(i.studentIds)) return false;
+                                  if (!i.studentIds || !Array.isArray(i.studentIds) || i.studentIds.length === 0) return false;
                                   return i.studentIds.some(id => String(id) === String(stdId) || String(id) === String(stdRoll));
                                 });
                                 if (stdMatch && stdMatch.subjects) {
-                                  if (stdMatch.subjects[subName]) return stdMatch.subjects[subName];
-                                  const lower = String(subName).toLowerCase().trim();
-                                  for (const [sKey, sVal] of Object.entries(stdMatch.subjects)) {
-                                    const sLower = String(sKey).toLowerCase().trim();
-                                    if (
-                                      (lower.includes("मराठी") && sLower.includes("मराठी")) ||
-                                      (lower.includes("इंग्रजी") && sLower.includes("इंग्रजी")) ||
-                                      (lower.includes("हिंदी") && sLower.includes("हिंदी")) ||
-                                      (lower.includes("गणित") && sLower.includes("गणित")) ||
-                                      (lower.includes("कला") && sLower.includes("कला")) ||
-                                      (lower.includes("कार्यानुभव") && sLower.includes("कार्यानुभव")) ||
-                                      (lower.includes("शारीरिक") && sLower.includes("शारीरिक")) ||
-                                      (lower.includes("परिसर") && sLower.includes("परिसर"))
-                                    ) {
-                                      return sVal;
-                                    }
-                                  }
+                                  const res = matchSub(stdMatch.subjects);
+                                  if (res) return res;
                                 }
                               }
+
+                              // 2. Try group with empty studentIds (applicable to all students)
+                              const allStudentsItem = list.find((i) => !i.studentIds || !Array.isArray(i.studentIds) || i.studentIds.length === 0);
+                              if (allStudentsItem && allStudentsItem.subjects) {
+                                const res = matchSub(allStudentsItem.subjects);
+                                if (res) return res;
+                              }
+
+                              // 3. Fallback to any item in list
                               for (const item of list) {
                                 if (item && item.subjects) {
-                                  if (item.subjects[subName]) return item.subjects[subName];
-                                  const lower = String(subName).toLowerCase().trim();
-                                  for (const [sKey, sVal] of Object.entries(item.subjects)) {
-                                    const sLower = String(sKey).toLowerCase().trim();
-                                    if (
-                                      (lower.includes("मराठी") && sLower.includes("मराठी")) ||
-                                      (lower.includes("इंग्रजी") && sLower.includes("इंग्रजी")) ||
-                                      (lower.includes("हिंदी") && sLower.includes("हिंदी")) ||
-                                      (lower.includes("गणित") && sLower.includes("गणित")) ||
-                                      (lower.includes("कला") && sLower.includes("कला")) ||
-                                      (lower.includes("कार्यानुभव") && sLower.includes("कार्यानुभव")) ||
-                                      (lower.includes("शारीरिक") && sLower.includes("शारीरिक")) ||
-                                      (lower.includes("परिसर") && sLower.includes("परिसर"))
-                                    ) {
-                                      return sVal;
-                                    }
-                                  }
+                                  const res = matchSub(item.subjects);
+                                  if (res) return res;
                                 }
                               }
                               return null;
                             };
 
-                            const sem2 = weightageData.semester2 || (weightageData.data ? weightageData.data.semester2 : null);
                             const sem1 = weightageData.semester1 || (weightageData.data ? weightageData.data.semester1 : null);
+                            const sem2 = weightageData.semester2 || (weightageData.data ? weightageData.data.semester2 : null);
                             const rows = weightageData.rows || (weightageData.data ? weightageData.data.rows : null);
 
-                            const matchSem2 = findInList(sem2);
-                            if (matchSem2) return matchSem2;
-                            const matchSem1 = findInList(sem1);
-                            if (matchSem1) return matchSem1;
+                            const activeSemList = selectedTerm === "sem1" ? sem1 : sem2;
+                            const fallbackSemList = selectedTerm === "sem1" ? sem2 : sem1;
+
+                            const matchActive = findInList(activeSemList);
+                            if (matchActive) return matchActive;
+                            const matchFallback = findInList(fallbackSemList);
+                            if (matchFallback) return matchFallback;
                             const matchRows = findInList(rows);
                             if (matchRows) return matchRows;
 
                             if (weightageData[subName]) return weightageData[subName];
                             if (weightageData.data && weightageData.data[subName]) return weightageData.data[subName];
 
-                            return {};
+                            return null;
                           };
 
                           const subData = getSubData(subjectName);
                           const sw = getSubjectWeightage(subjectName, student.id, student.rollNo);
+                          const hasWeightage = !!(sw && typeof sw === "object" && Object.values(sw).some(v => v !== undefined && v !== null && String(v).trim() !== ""));
                           const isPracticalSub = subjectName.includes("कला") || subjectName.includes("कार्यानुभव") || subjectName.includes("शारीरिक");
 
-                          const getWVal = (keys, defaultVal) => {
-                            if (sw && typeof sw === "object") {
+                          const getWVal = (keys) => {
+                            if (hasWeightage && sw && typeof sw === "object") {
                               for (const k of keys) {
                                 if (sw[k] !== undefined && sw[k] !== null && String(sw[k]).trim() !== "") {
                                   return String(sw[k]).trim();
                                 }
                               }
                             }
-                            if (subData && typeof subData === "object") {
-                              for (const k of keys) {
-                                const maxKey = `${k}Max`;
-                                if (subData[maxKey] !== undefined && subData[maxKey] !== null && String(subData[maxKey]).trim() !== "") {
-                                  return String(subData[maxKey]).trim();
-                                }
-                              }
-                            }
-                            return String(defaultVal);
+                            return "";
                           };
 
-                          const getDefaultLekhiMax = (clsStr) => {
-                            const c = String(clsStr || "").toLowerCase().trim();
-                            if (c.includes("1") || c.includes("2")) return "20";
-                            if (c.includes("3") || c.includes("4")) return "30";
-                            if (c.includes("5") || c.includes("6")) return "40";
-                            if (c.includes("7") || c.includes("8")) return "50";
-                            return "20";
-                          };
+                          const tondiKaamMax = getWVal(["tondiKaam", "tondi", "oral"]);
+                          const pratyakshikPrayogMax = getWVal(["pratyakshikPrayog", "pratyakshik", "practical", "activity"]);
+                          const upakramKritiMax = getWVal(["upakramKriti", "upakram", "kriti"]);
+                          const prakalpaMax = getWVal(["prakalpa", "prakalp", "project"]);
+                          const chaachaniLekhiMax = getWVal(["chaachaniLekhi", "chaachani", "test", "exam"]);
+                          const swadhyayVargakaryaMax = getWVal(["swadhyayVargakarya", "swadhyay", "vargakarya", "homework"]);
+                          const itarMax = getWVal(["itar", "other"]);
 
-                          const tondiKaamMax = getWVal(["tondiKaam", "tondi", "oral"], "10");
-                          const pratyakshikPrayogMax = getWVal(["pratyakshikPrayog", "pratyakshik", "practical", "activity"], isPracticalSub ? "20" : "10");
-                          const upakramKritiMax = getWVal(["upakramKriti", "upakram", "kriti"], isPracticalSub ? "20" : "10");
-                          const prakalpaMax = getWVal(["prakalpa", "prakalp", "project"], isPracticalSub ? "20" : "10");
-                          const chaachaniLekhiMax = getWVal(["chaachaniLekhi", "chaachani", "test", "exam"], isPracticalSub ? "10" : "10");
-                          const swadhyayVargakaryaMax = getWVal(["swadhyayVargakarya", "swadhyay", "vargakarya", "homework"], isPracticalSub ? "10" : "20");
-                          const itarMax = getWVal(["itar", "other"], isPracticalSub ? "10" : "0");
+                          const sankalitTondiMax = isPracticalSub ? "" : getWVal(["sankalitTondi", "sankalitOral"]);
+                          const sankalitPratyakshikMax = isPracticalSub ? "" : getWVal(["sankalitPratyakshik", "sankalitPractical"]);
+                          const sankalitLekhiMax = isPracticalSub ? "" : getWVal(["sankalitLekhi", "sankalitWritten"]);
 
-                          const sankalitTondiMax = isPracticalSub ? "0" : getWVal(["sankalitTondi", "sankalitOral"], "10");
-                          const sankalitPratyakshikMax = getWVal(["sankalitPratyakshik", "sankalitPractical"], "0");
-                          const sankalitLekhiMax = isPracticalSub ? "0" : getWVal(["sankalitLekhi", "sankalitWritten"], getDefaultLekhiMax(selectedClass));
+                          const tondiKaamObt = (hasWeightage && Number(tondiKaamMax) === 0) ? "" : (subData.tondiKaam ?? subData.tondi ?? subData.oral ?? "");
+                          const pratyakshikPrayogObt = (hasWeightage && Number(pratyakshikPrayogMax) === 0) ? "" : (subData.pratyakshikPrayog ?? subData.practical ?? subData.activity ?? "");
+                          const upakramKritiObt = (hasWeightage && Number(upakramKritiMax) === 0) ? "" : (subData.upakramKriti ?? subData.upakram ?? subData.project ?? "");
+                          const prakalpaObt = (hasWeightage && Number(prakalpaMax) === 0) ? "" : (subData.prakalp ?? subData.prakalpa ?? "");
+                          const chaachaniLekhiObt = (hasWeightage && Number(chaachaniLekhiMax) === 0) ? "" : (subData.chaachaniLekhi ?? subData.chaachani ?? subData.test ?? subData.exam ?? "");
+                          const swadhyayVargakaryaObt = (hasWeightage && Number(swadhyayVargakaryaMax) === 0) ? "" : (subData.swadhyayVargakarya ?? subData.swadhyay ?? subData.vargakarya ?? subData.homework ?? "");
+                          const itarObt = (hasWeightage && Number(itarMax) === 0) ? "" : (subData.itar ?? subData.other ?? "");
 
-                          const tondiKaamObt = Number(tondiKaamMax) > 0 ? (subData.tondiKaam ?? subData.tondi ?? subData.oral ?? "") : "";
-                          const pratyakshikPrayogObt = Number(pratyakshikPrayogMax) > 0 ? (subData.pratyakshikPrayog ?? subData.practical ?? subData.activity ?? "") : "";
-                          const upakramKritiObt = Number(upakramKritiMax) > 0 ? (subData.upakramKriti ?? subData.upakram ?? subData.project ?? "") : "";
-                          const prakalpaObt = Number(prakalpaMax) > 0 ? (subData.prakalp ?? subData.prakalpa ?? "") : "";
-                          const chaachaniLekhiObt = Number(chaachaniLekhiMax) > 0 ? (subData.chaachaniLekhi ?? subData.chaachani ?? subData.test ?? subData.exam ?? "") : "";
-                          const swadhyayVargakaryaObt = Number(swadhyayVargakaryaMax) > 0 ? (subData.swadhyayVargakarya ?? subData.swadhyay ?? subData.vargakarya ?? subData.homework ?? "") : "";
-                          const itarObt = Number(itarMax) > 0 ? (subData.itar ?? subData.other ?? "") : "";
-
-                          const sankalitTondiObt = (!isPracticalSub && Number(sankalitTondiMax) > 0) ? (subData.sankalitTondi ?? subData.semesterOral ?? "") : "";
-                          const sankalitPratyakshikObt = Number(sankalitPratyakshikMax) > 0 ? (subData.sankalitPratyakshik ?? subData.semesterPractical ?? "") : "";
-                          const sankalitLekhiObt = (!isPracticalSub && Number(sankalitLekhiMax) > 0) ? (subData.sankalitLekhi ?? subData.lekhi ?? subData.written ?? subData.semesterWritten ?? "") : "";
+                          const sankalitTondiObt = (!isPracticalSub && (!hasWeightage || Number(sankalitTondiMax) > 0)) ? (subData.sankalitTondi ?? subData.semesterOral ?? "") : "";
+                          const sankalitPratyakshikObt = (!isPracticalSub && (!hasWeightage || Number(sankalitPratyakshikMax) > 0)) ? (subData.sankalitPratyakshik ?? subData.semesterPractical ?? "") : "";
+                          const sankalitLekhiObt = (!isPracticalSub && (!hasWeightage || Number(sankalitLekhiMax) > 0)) ? (subData.sankalitLekhi ?? subData.lekhi ?? subData.written ?? subData.semesterWritten ?? "") : "";
 
                           const hasFormative = tondiKaamObt !== "" || pratyakshikPrayogObt !== "" || upakramKritiObt !== "" || prakalpaObt !== "" || chaachaniLekhiObt !== "" || swadhyayVargakaryaObt !== "" || itarObt !== "";
                           const formTotalObt = hasFormative ? ((Number(tondiKaamObt) || 0) + (Number(pratyakshikPrayogObt) || 0) + (Number(upakramKritiObt) || 0) + (Number(prakalpaObt) || 0) + (Number(chaachaniLekhiObt) || 0) + (Number(swadhyayVargakaryaObt) || 0) + (Number(itarObt) || 0)) : (subData.akarik ?? subData.formTotal ?? subData.Akarik?.Total ?? "");
-                          const formTotalMax = (Number(tondiKaamMax) || 0) + (Number(pratyakshikPrayogMax) || 0) + (Number(upakramKritiMax) || 0) + (Number(prakalpaMax) || 0) + (Number(chaachaniLekhiMax) || 0) + (Number(swadhyayVargakaryaMax) || 0) + (Number(itarMax) || 0) || (isPracticalSub ? 100 : 70);
+                          const formTotalMaxNum = (Number(tondiKaamMax) || 0) + (Number(pratyakshikPrayogMax) || 0) + (Number(upakramKritiMax) || 0) + (Number(prakalpaMax) || 0) + (Number(chaachaniLekhiMax) || 0) + (Number(swadhyayVargakaryaMax) || 0) + (Number(itarMax) || 0);
+                          const formTotalMax = hasWeightage ? (formTotalMaxNum > 0 ? formTotalMaxNum : "") : "";
 
                           const hasSummative = (sankalitTondiObt !== "" || sankalitPratyakshikObt !== "" || sankalitLekhiObt !== "") && !isPracticalSub;
                           const semTotalObt = hasSummative ? ((Number(sankalitTondiObt) || 0) + (Number(sankalitPratyakshikObt) || 0) + (Number(sankalitLekhiObt) || 0)) : (isPracticalSub ? "" : (subData.sankalit ?? subData.semTotal ?? subData.Sanklik?.Total ?? ""));
-                          const semTotalMax = isPracticalSub ? "" : ((Number(sankalitTondiMax) || 0) + (Number(sankalitPratyakshikMax) || 0) + (Number(sankalitLekhiMax) || 0) || 30);
+                          const semTotalMaxNum = (Number(sankalitTondiMax) || 0) + (Number(sankalitPratyakshikMax) || 0) + (Number(sankalitLekhiMax) || 0);
+                          const semTotalMax = isPracticalSub ? "" : (hasWeightage ? (semTotalMaxNum > 0 ? semTotalMaxNum : "") : "");
 
                           const hasGrand = formTotalObt !== "" || semTotalObt !== "";
                           const grandTotalObt = hasGrand ? ((Number(formTotalObt) || 0) + (Number(semTotalObt) || 0)) : (subData.total ?? subData.grandTotal ?? subData.obtained ?? subData.marks ?? "");
-                          const grandMax = 100;
-                          const grade = grandTotalObt !== "" ? getGrade((Number(grandTotalObt) / grandMax) * 100) : "";
+                          const grandMax = hasWeightage ? 100 : "";
+                          const grade = grandTotalObt !== "" ? getGrade((Number(grandTotalObt) / 100) * 100) : "";
 
                           const isCompact = pageMode === "1page" && subjects.length >= 8;
                           const cellPad = isCompact ? "py-0.5 px-0.5 text-[9.5px] font-bold" : "p-1.5 text-xs font-bold";

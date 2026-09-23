@@ -1037,7 +1037,7 @@ export function AcademicPlanningSystem({
 
       const updatedRecord: PlanningFileRecord = {
         ...viewModalFile,
-        fileUrl: newBlobUrl,
+        fileUrl: viewModalFile.fileUrl && !viewModalFile.fileUrl.startsWith("blob:") ? viewModalFile.fileUrl : newBlobUrl,
         uploadedAt: new Date().toISOString(),
       };
 
@@ -1246,7 +1246,7 @@ export function AcademicPlanningSystem({
         subjectId: editingFileRecord?.subjectId || selectedSubject || "मराठी",
         planningType: editingFileRecord?.planningType || selectedPlanningType,
         fileName: editingFileRecord?.fileName || fileNameStr,
-        fileUrl: newBlobUrl,
+        fileUrl: (editingFileRecord?.fileUrl && !editingFileRecord.fileUrl.startsWith("blob:")) ? editingFileRecord.fileUrl : newBlobUrl,
         fileSize: `${fileSizeMb} MB`,
         fileType: "application/pdf",
         uploadedBy: mode,
@@ -1784,6 +1784,9 @@ export function AcademicPlanningSystem({
       setUploadProgress(100);
 
       // 6. Update local state and cache
+      try {
+        localStorage.setItem(`cce_meta_${recordKey}`, newRecord.uploadedAt || "");
+      } catch (e) {}
       setPlanningFiles((prev) => {
         const updated = { ...prev, [recordKey]: newRecord };
         try {
@@ -1935,28 +1938,12 @@ export function AcademicPlanningSystem({
     const latestRec = planningFiles[rec.id] || rec;
     let targetUrl = latestRec.fileUrl;
 
-    // Check if Admin uploaded a newer version (uploadedAt changed)
-    const cachedMeta = localStorage.getItem(`cce_meta_${latestRec.id}`);
-    const isNewerAdminVersion = cachedMeta && cachedMeta !== latestRec.uploadedAt;
-
-    if (isNewerAdminVersion) {
-      try {
-        const dbReq = indexedDB.open("cce_file_store", 1);
-        dbReq.onsuccess = () => {
-          const idb = dbReq.result;
-          if (idb.objectStoreNames.contains("files")) {
-            const tx = idb.transaction("files", "readwrite");
-            tx.objectStore("files").delete(latestRec.id);
-          }
-        };
-      } catch (e) { }
-    }
-    localStorage.setItem(`cce_meta_${latestRec.id}`, latestRec.uploadedAt || "");
-
+    // Prefer locally stored binary Blob from IndexedDB if available
     const blobFromDb = await getFileFromIndexedDB(latestRec.id);
-    if (blobFromDb && !isNewerAdminVersion) {
+    if (blobFromDb) {
       targetUrl = URL.createObjectURL(blobFromDb);
     }
+    localStorage.setItem(`cce_meta_${latestRec.id}`, latestRec.uploadedAt || "");
 
     if (!targetUrl) {
       toast.error("अद्याप फाईल उपलब्ध नाही, कृपया फाईल निवडून पुन्हा अपलोड करा.");

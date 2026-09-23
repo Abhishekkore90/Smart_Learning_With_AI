@@ -11,15 +11,16 @@ export function getBunnyStorageUrl(publicUrl: string): string {
   }
 
   try {
+    const urlObj = new URL(publicUrl);
+    const zone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
+    const rawPath = decodeURIComponent(urlObj.pathname).replace(/^\//, "");
+    const cleanPath = rawPath.startsWith(zone + "/") ? rawPath.slice(zone.length + 1) : rawPath;
+
     if (import.meta.env.DEV) {
       // DEV: use Vite proxy (vite.config.ts /api/bunny-storage → storage.bunnycdn.com)
-      const urlObj = new URL(publicUrl);
-      const path = urlObj.pathname.replace(/^\//, "");
-      const zone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
-      return `/api/bunny-storage/${zone}/${path}`;
+      return `/api/bunny-storage/${zone}/${encodeURI(cleanPath)}`;
     } else {
       // PROD: use our secure Vercel serverless proxy function
-      // The API key stays on the server — never exposed to the browser
       return `/api/pdf-proxy?url=${encodeURIComponent(publicUrl)}`;
     }
   } catch (e) {

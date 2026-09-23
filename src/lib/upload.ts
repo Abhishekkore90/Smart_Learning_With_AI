@@ -119,7 +119,7 @@ function uploadToBunny(
 
     const executeRequest = (targetUrl: string) => {
       xhr.open("PUT", targetUrl);
-      xhr.timeout = 3000; // 3 seconds timeout for fast upload/fallback
+      xhr.timeout = 60000; // 60 seconds timeout for reliable cloud upload
       xhr.setRequestHeader("AccessKey", apiKey);
       xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
 
@@ -211,13 +211,13 @@ function uploadToFirebase(
     const storageRef = ref(storage, path);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
-    // 3-second safety timeout so Firebase Storage retry limit doesn't block the app
+    // 60-second safety timeout for reliable upload
     timer = setTimeout(() => {
       try {
         uploadTask.cancel();
       } catch (e) {}
       reject(new Error("Firebase Storage upload request timed out."));
-    }, 3000);
+    }, 60000);
 
     uploadTask.on(
       "state_changed",

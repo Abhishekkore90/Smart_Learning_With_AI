@@ -225,30 +225,77 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         let buffer: ArrayBuffer | null = null;
 
         // 1. Try network fetch if activeUrl is present
-        if (activeUrl) {
+        if (activeUrl && !activeUrl.startsWith("blob:")) {
           try {
-            let response = await fetch(fetchUrl);
-            if (!response.ok && fetchUrl !== activeUrl) {
-              response = await fetch(activeUrl);
+            const headers: Record<string, string> = {};
+            if (import.meta.env.DEV && import.meta.env.VITE_BUNNY_STORAGE_API_KEY) {
+              headers["AccessKey"] = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
             }
-            if (response.ok) {
-              buffer = await response.arrayBuffer();
+
+            let response = await fetch(fetchUrl, { headers });
+            let cType = response.headers.get("content-type") || "";
+            let isHtml = cType.includes("text/html");
+
+            // If fetchUrl returned HTML or failed, and it's a Bunny URL, try dev proxy or secure pdf-proxy
+            if ((!response.ok || isHtml) && activeUrl.includes("b-cdn.net")) {
+              const zone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
+              const rawPath = decodeURIComponent(new URL(activeUrl).pathname).replace(/^\//, "");
+              const cleanPath = rawPath.startsWith(zone + "/") ? rawPath.slice(zone.length + 1) : rawPath;
+              const directStorageProxyUrl = `/api/bunny-storage/${zone}/${encodeURI(cleanPath)}`;
+
+              try {
+                const proxyRes = await fetch(directStorageProxyUrl, { headers });
+                const proxyCType = proxyRes.headers.get("content-type") || "";
+                if (proxyRes.ok && !proxyCType.includes("text/html")) {
+                  response = proxyRes;
+                  cType = proxyCType;
+                  isHtml = false;
+                }
+              } catch (e) {}
+            }
+
+            if (response.ok && !isHtml) {
+              const ab = await response.arrayBuffer();
+              const firstBytes = new Uint8Array(ab.slice(0, 50));
+              const textHeader = new TextDecoder().decode(firstBytes).toLowerCase();
+              if (!textHeader.includes("<!doctype") && !textHeader.includes("<html")) {
+                buffer = ab;
+              } else {
+                console.warn("Received HTML SPA fallback instead of binary file.");
+              }
             }
           } catch (e) {
             console.warn("Network fetch notice, trying IndexedDB fallback:", e);
           }
-        }
-
-        // 2. Fallback to local IndexedDB if network fetch failed or activeUrl missing
-        if (!buffer && (activeRecordId || record?.id)) {
+        } else if (activeUrl && activeUrl.startsWith("blob:")) {
           try {
-            const keyToLookup = activeRecordId || record?.id || "";
-            const blobFromDb = await getFileFromIndexedDB(keyToLookup);
-            if (blobFromDb) {
-              buffer = await blobFromDb.arrayBuffer();
+            const blobRes = await fetch(activeUrl);
+            if (blobRes.ok) {
+              buffer = await blobRes.arrayBuffer();
             }
           } catch (e) {
-            console.warn("IndexedDB fallback notice:", e);
+            console.warn("Blob URL expired, trying IndexedDB fallback:", e);
+          }
+        }
+
+        // 2. Fallback to local IndexedDB if network fetch failed or activeUrl missing/expired
+        if (!buffer) {
+          const keysToTry = [
+            activeRecordId,
+            record?.id,
+            (record as any)?.recordKey,
+            `plan_${record?.classId || "1"}_${record?.subjectId || "all"}`,
+            `2026-27_${(record as any)?.mediumId || "marathi"}_${record?.classId || "1st"}_${record?.planningType || "annual"}_${record?.subjectId || "all"}`
+          ].filter(Boolean) as string[];
+
+          for (const key of keysToTry) {
+            try {
+              const blobFromDb = await getFileFromIndexedDB(key);
+              if (blobFromDb) {
+                buffer = await blobFromDb.arrayBuffer();
+                break;
+              }
+            } catch (e) {}
           }
         }
 

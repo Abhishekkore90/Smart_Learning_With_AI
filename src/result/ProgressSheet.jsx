@@ -1414,7 +1414,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                           <thead>
                             <tr className="bg-orange-50/60 font-black text-slate-900 border-b border-orange-300 text-[9px] h-[14px]">
                               <th className="border-r border-orange-300 px-0.5 py-0 text-center w-[34%]">महिना</th>
-                              <th className="border-r border-orange-300 px-0.5 py-0 text-center w-[33%]">शाळा दिवस</th>
+                              <th className="border-r border-orange-300 px-0.5 py-0 text-center w-[33%]">कामाचे दिवस</th>
                               <th className="px-0.5 py-0 text-center w-[33%]">उपस्थित दिवस</th>
                             </tr>
                           </thead>
