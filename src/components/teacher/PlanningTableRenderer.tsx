@@ -44,6 +44,8 @@ import type { ParsedSheet } from "@/services/fileReader/types";
 import { auth, db } from "@/lib/firebase";
 import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
+import { getFileFromIndexedDB } from "@/lib/indexedDbStorage";
+import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 
 interface PlanningTableRendererProps {
   record: PlanningDocumentRecord | null;
@@ -99,10 +101,20 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [parsedWorkbook, setParsedWorkbook] = useState<AnnualPlanningWorkbook | null>(null);
-  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>("all"); // "all" or specific subject
+  const initialFilter = record?.subjectId && record.subjectId !== "all" ? record.subjectId : "all";
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>(initialFilter); // "all" or specific subject
   const [loadingWorkbook, setLoadingWorkbook] = useState<boolean>(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
   const [questionBankSheets, setQuestionBankSheets] = useState<ParsedSheet[]>([]);
+
+  // Keep selectedSubjectFilter in sync if record changes
+  useEffect(() => {
+    if (record?.subjectId && record.subjectId !== "all") {
+      setSelectedSubjectFilter(record.subjectId);
+    } else {
+      setSelectedSubjectFilter("all");
+    }
+  }, [record?.id, record?.subjectId]);
 
   // Inline Table Editing State & User-Specific Storage
   const [isInlineEditing, setIsInlineEditing] = useState<boolean>(false);
@@ -206,17 +218,43 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     setParsedWorkbook(null);
     setQuestionBankSheets([]);
 
-    const fetchUrl = getBunnyStorageUrl(activeUrl);
+    const fetchUrl = activeUrl ? getBunnyStorageUrl(activeUrl) : "";
 
     const loadWorkbook = async () => {
       try {
-        let response = await fetch(fetchUrl);
-        if (!response.ok && fetchUrl !== activeUrl) {
-          response = await fetch(activeUrl);
-        }
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        let buffer: ArrayBuffer | null = null;
 
-        const buffer = await response.arrayBuffer();
+        // 1. Try network fetch if activeUrl is present
+        if (activeUrl) {
+          try {
+            let response = await fetch(fetchUrl);
+            if (!response.ok && fetchUrl !== activeUrl) {
+              response = await fetch(activeUrl);
+            }
+            if (response.ok) {
+              buffer = await response.arrayBuffer();
+            }
+          } catch (e) {
+            console.warn("Network fetch notice, trying IndexedDB fallback:", e);
+          }
+        }
+
+        // 2. Fallback to local IndexedDB if network fetch failed or activeUrl missing
+        if (!buffer && (activeRecordId || record?.id)) {
+          try {
+            const keyToLookup = activeRecordId || record?.id || "";
+            const blobFromDb = await getFileFromIndexedDB(keyToLookup);
+            if (blobFromDb) {
+              buffer = await blobFromDb.arrayBuffer();
+            }
+          } catch (e) {
+            console.warn("IndexedDB fallback notice:", e);
+          }
+        }
+
+        if (!buffer) {
+          throw new Error("Workbook data could not be retrieved.");
+        }
 
         if (record?.planningType === "question_bank") {
           const parsed = await parseExcelData(buffer, { preserveFormatting: true });
@@ -244,7 +282,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [activeUrl]);
+  }, [activeUrl, activeRecordId, record?.id]);
 
   // All subject sections extracted from Excel or stored record
   const allSectionsAvailable = useMemo<SubjectSection[]>(() => {
@@ -365,14 +403,17 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
   // List of Available Subjects
   const availableSubjectNames = useMemo(() => {
+    if (record?.planningType === "question_bank" && questionBankSheets.length > 0) {
+      return questionBankSheets.map((s) => s.sheetName);
+    }
     if (allSectionsAvailable.length > 0) {
       return allSectionsAvailable.map((s) => s.subjectName);
     }
     if (parsedWorkbook && parsedWorkbook.allSubjectNames.length > 0) {
       return parsedWorkbook.allSubjectNames;
     }
-    return ["मराठी", "गणित", "इंग्रजी", "कलाशिक्षण", "कार्यशिक्षण", "शारीरिक शिक्षण"];
-  }, [allSectionsAvailable, parsedWorkbook]);
+    return getDefaultSubjectsForClass(record?.classId || "1st", (record as any)?.mediumId);
+  }, [record?.planningType, record?.classId, (record as any)?.mediumId, questionBankSheets, allSectionsAvailable, parsedWorkbook]);
 
   // Dynamic Selected Medium Display
   const displayMedium = useMemo(() => {
@@ -902,10 +943,25 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     if (!sections || sections.length === 0) return [];
     if (filter === "all") return sections;
 
+    const fLower = filter.trim().toLowerCase();
+    const isFilterPart1 = fLower.includes("भाग १") || fLower.includes("भाग 1") || fLower.includes("part 1");
+    const isFilterPart2 = fLower.includes("भाग २") || fLower.includes("भाग 2") || fLower.includes("part 2");
+
     const matched = sections.filter((sec) => {
       const sName = (sec.subjectName || "").trim().toLowerCase();
       const dName = (sec.displaySubjectName || "").trim().toLowerCase();
-      const fLower = filter.trim().toLowerCase();
+
+      const isSecPart1 = sName.includes("भाग १") || sName.includes("भाग 1") || sName.includes("part 1") || dName.includes("भाग १") || dName.includes("भाग 1");
+      const isSecPart2 = sName.includes("भाग २") || sName.includes("भाग 2") || sName.includes("part 2") || dName.includes("भाग २") || dName.includes("भाग 2");
+
+      // Strict separation: Part 1 must never match Part 2
+      if (isFilterPart1 && isSecPart2) return false;
+      if (isFilterPart2 && isSecPart1) return false;
+
+      // If filtering for Part 1 specifically, must match Part 1
+      if (isFilterPart1) return isSecPart1;
+      // If filtering for Part 2 specifically, must match Part 2
+      if (isFilterPart2) return isSecPart2;
 
       return (
         sName === fLower ||
@@ -1588,8 +1644,35 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                   </div>
                 </div>
 
-                {questionBankSheets.length > 0 ? (
-                  questionBankSheets.map((sheet, sheetIndex) => {
+                {/* Filter Question Bank sheets according to selectedSubjectFilter */}
+                {(() => {
+                  const filteredSheets = questionBankSheets.filter((sheet) => {
+                    if (selectedSubjectFilter === "all") return true;
+                    const fLower = selectedSubjectFilter.trim().toLowerCase();
+                    const sName = (sheet.sheetName || "").trim().toLowerCase();
+
+                    const isFilterPart1 = fLower.includes("भाग १") || fLower.includes("भाग 1") || fLower.includes("part 1");
+                    const isFilterPart2 = fLower.includes("भाग २") || fLower.includes("भाग 2") || fLower.includes("part 2");
+                    const isSecPart1 = sName.includes("भाग १") || sName.includes("भाग 1") || sName.includes("part 1");
+                    const isSecPart2 = sName.includes("भाग २") || sName.includes("भाग 2") || sName.includes("part 2");
+
+                    if (isFilterPart1 && isSecPart2) return false;
+                    if (isFilterPart2 && isSecPart1) return false;
+                    if (isFilterPart1) return isSecPart1;
+                    if (isFilterPart2) return isSecPart2;
+
+                    return sName === fLower || sName.includes(fLower) || fLower.includes(sName);
+                  });
+
+                  if (filteredSheets.length === 0) {
+                    return (
+                      <div className="p-8 text-center text-slate-400 font-bold text-xs">
+                        निवडलेल्या विषयासाठी ({selectedSubjectFilter}) कोणतीही शीट सापडली नाही.
+                      </div>
+                    );
+                  }
+
+                  return filteredSheets.map((sheet, sheetIndex) => {
                     const nonEmptyRows = sheet.rows.filter((row) => row.some((cell) => String(cell || "").trim() !== ""));
                     const headerIndex = nonEmptyRows.findIndex((row) => row.some((cell) => String(cell || "").includes("प्रश्न क्रमांक") || String(cell || "").toLowerCase().includes("question number")));
                     const tableHeader = headerIndex >= 0 ? nonEmptyRows[headerIndex] : sheet.headers;
@@ -1652,10 +1735,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         </div>
                       </div>
                     );
-                  })
-                ) : (
-                  <div className="p-8 text-center text-slate-400 font-bold text-xs">प्रश्नपेढी डेटा उपलब्ध नाही.</div>
-                )}
+                  });
+                })()}
               </>
             ) : (
               <>

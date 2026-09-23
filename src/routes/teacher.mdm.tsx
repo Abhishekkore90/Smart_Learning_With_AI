@@ -49,7 +49,17 @@ import { useLanguage } from "@/hooks/use-language";
 import { DICTIONARY } from "@/lib/translations";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
+import html2pdf from "html2pdf.js";
 import { PinGate } from "@/components/teacher/PinGate";
+
+const getHtml2PdfEngine = () => {
+  let fn = html2pdf as any;
+  if (fn && fn.default) fn = fn.default;
+  if (typeof fn !== "function" && typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
+    fn = (window as any).html2pdf;
+  }
+  return fn;
+};
 import MDMCertificate from "@/components/teacher/MDMCertificate";
 import {
   calculateCookHelperCount,
@@ -517,15 +527,7 @@ function TeacherMDMPage() {
     if (!container) return;
     setIsExporting(true);
     try {
-      const { default: html2pdf } = await import("html2pdf.js");
-      let html2pdfFn = html2pdf;
-      // @ts-ignore
-      if (html2pdfFn && html2pdfFn.default) { html2pdfFn = html2pdfFn.default; }
-      if (typeof html2pdfFn !== "function") {
-        if (typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
-          html2pdfFn = (window as any).html2pdf;
-        }
-      }
+      const html2pdfFn = getHtml2PdfEngine();
       if (typeof html2pdfFn !== "function") {
         throw new Error("html2pdf library is not loaded properly.");
       }
@@ -549,8 +551,7 @@ function TeacherMDMPage() {
       }
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      const { default: html2canvas } = await import("html2canvas-pro");
-      const { jsPDF } = await import("jspdf");
+
 
       const repKey = String(monthlyMdmReportType || selectedReportCategory || "");
       const isPortraitReport =
@@ -884,15 +885,7 @@ function TeacherMDMPage() {
     let toastId: string | undefined;
     try {
       toastId = toast.loading("PDF डाऊनलोड होत आहे...");
-      const { default: html2pdf } = await import("html2pdf.js");
-      let html2pdfFn = html2pdf;
-      // @ts-ignore
-      if (html2pdfFn && html2pdfFn.default) { html2pdfFn = html2pdfFn.default; }
-      if (typeof html2pdfFn !== "function") {
-        if (typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
-          html2pdfFn = (window as any).html2pdf;
-        }
-      }
+      const html2pdfFn = getHtml2PdfEngine();
       if (typeof html2pdfFn !== "function") {
         throw new Error("html2pdf library is not loaded properly.");
       }
@@ -903,45 +896,62 @@ function TeacherMDMPage() {
         : `MDM_Rice_Annual_Report_${annualReportYear || "2026-27"}.pdf`;
 
       if (isGrainReport) {
-        const opt = {
-          margin: [2, 2, 2, 2],
-          filename,
-          image: { type: "jpeg" as const, quality: 0.98 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            onclone: (clonedDoc: any) => {
-              clonedDoc.body.style.margin = "0";
-              clonedDoc.body.style.padding = "0";
-              clonedDoc.documentElement.style.margin = "0";
-              clonedDoc.documentElement.style.padding = "0";
+        if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 150));
 
-              const reportEl = clonedDoc.getElementById("annual-report-print");
-              if (reportEl) {
-                const printWidth = "1020px";
-                reportEl.style.width = printWidth;
-                reportEl.style.minWidth = printWidth;
-                reportEl.style.maxWidth = printWidth;
-                reportEl.style.padding = "2px 4px";
-                reportEl.style.boxSizing = "border-box";
-                reportEl.style.backgroundColor = "#ffffff";
-                reportEl.style.border = "none";
-                reportEl.style.margin = "0px auto";
+        const pageElements = Array.from(element.querySelectorAll(".annual-page-container")) as HTMLElement[];
+        if (pageElements.length > 0) {
+          const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+          const pdfWidth = pdf.internal.pageSize.getWidth(); // 297mm
+          const pdfHeight = pdf.internal.pageSize.getHeight(); // 210mm
+          const marginX = 4;
+          const marginY = 4;
+          const availWidth = pdfWidth - (marginX * 2); // 289mm
+          const availHeight = pdfHeight - (marginY * 2); // 202mm
 
-                const trRows = reportEl.querySelectorAll("tr");
-                trRows.forEach((r: any) => {
-                  r.style.pageBreakInside = "avoid";
-                  r.style.breakInside = "avoid";
-                  r.style.height = "42px";
-                });
+          for (let i = 0; i < pageElements.length; i++) {
+            const pageEl = pageElements[i];
+            const canvas = await html2canvas(pageEl, {
+              scale: 2.5,
+              useCORS: true,
+              logging: false,
+              backgroundColor: "#ffffff",
+              windowWidth: 1200,
+              onclone: (clonedDoc: any, clonedEl: HTMLElement) => {
+                clonedEl.style.width = "1200px";
+                clonedEl.style.maxWidth = "1200px";
+                clonedEl.style.minWidth = "1200px";
+                clonedEl.style.boxSizing = "border-box";
+                clonedEl.style.padding = "8px 12px";
+                clonedEl.style.backgroundColor = "#ffffff";
               }
+            });
+
+            const imgData = canvas.toDataURL("image/jpeg", 0.98);
+            let finalWidth = availWidth;
+            let finalHeight = (canvas.height * finalWidth) / canvas.width;
+
+            if (finalHeight > availHeight) {
+              finalHeight = availHeight;
+              finalWidth = (canvas.width * finalHeight) / canvas.height;
             }
-          },
-          jsPDF: { unit: "mm", format: "a4", orientation: "landscape" as const },
-          pagebreak: { mode: ["legacy"], avoid: ["tr", "thead"] }
-        };
-        await html2pdfFn().set(opt).from(element).save();
+
+            const xPos = (pdfWidth - finalWidth) / 2;
+            const yPos = (pdfHeight - finalHeight) / 2;
+
+            if (i > 0) {
+              pdf.addPage("a4", "landscape");
+            }
+            pdf.addImage(imgData, "JPEG", xPos, yPos, finalWidth, finalHeight);
+          }
+
+          pdf.save(filename);
+          if (toastId) toast.dismiss(toastId);
+          toast.success("PDF यशस्वीपणे डाऊनलोड झाली!");
+          return;
+        }
       } else {
         // Direct jsPDF 1-Page Rendering for Rice Annual Utilization Report
         if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
@@ -949,8 +959,7 @@ function TeacherMDMPage() {
         }
         await new Promise((resolve) => setTimeout(resolve, 150));
 
-        const { default: html2canvas } = await import("html2canvas-pro");
-        const { jsPDF } = await import("jspdf");
+
 
         const canvas = await html2canvas(element, {
           scale: 2.5,
@@ -1439,15 +1448,7 @@ function TeacherMDMPage() {
     if (!element) return;
     setIsExporting(true);
     try {
-      const { default: html2pdf } = await import("html2pdf.js");
-      let html2pdfFn = html2pdf;
-      // @ts-ignore
-      if (html2pdfFn && html2pdfFn.default) { html2pdfFn = html2pdfFn.default; }
-      if (typeof html2pdfFn !== "function") {
-        if (typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
-          html2pdfFn = (window as any).html2pdf;
-        }
-      }
+      const html2pdfFn = getHtml2PdfEngine();
       if (typeof html2pdfFn !== "function") {
         throw new Error("html2pdf library is not loaded properly.");
       }
@@ -1507,15 +1508,7 @@ function TeacherMDMPage() {
     if (!element) return;
     setIsExporting(true);
     try {
-      const { default: html2pdf } = await import("html2pdf.js");
-      let html2pdfFn = html2pdf;
-      // @ts-ignore
-      if (html2pdfFn && html2pdfFn.default) { html2pdfFn = html2pdfFn.default; }
-      if (typeof html2pdfFn !== "function") {
-        if (typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
-          html2pdfFn = (window as any).html2pdf;
-        }
-      }
+      const html2pdfFn = getHtml2PdfEngine();
       if (typeof html2pdfFn !== "function") {
         throw new Error("html2pdf library is not loaded properly.");
       }
@@ -1575,15 +1568,7 @@ function TeacherMDMPage() {
     if (!element) return;
     setIsExporting(true);
     try {
-      const { default: html2pdf } = await import("html2pdf.js");
-      let html2pdfFn = html2pdf;
-      // @ts-ignore
-      if (html2pdfFn && html2pdfFn.default) { html2pdfFn = html2pdfFn.default; }
-      if (typeof html2pdfFn !== "function") {
-        if (typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
-          html2pdfFn = (window as any).html2pdf;
-        }
-      }
+      const html2pdfFn = getHtml2PdfEngine();
       if (typeof html2pdfFn !== "function") {
         throw new Error("html2pdf library is not loaded properly.");
       }
@@ -1770,8 +1755,7 @@ function TeacherMDMPage() {
         ? `दैनंदिन-तांदूळ-खर्च-नोंदवही-${monthShort}-${monthlyMdmReportMonth.includes('2026') ? '2026' : '2027'}.pdf`
         : `मासिक_अहवाल_${monthlyMdmReportMonth.replace(/\s+/g, '_')}.pdf`;
 
-      const { default: html2canvas } = await import("html2canvas-pro");
-      const { jsPDF } = await import("jspdf");
+
 
       const isDailyTandul = monthlyMdmReportType === "daily_tandul_register";
       const dynamicOrientation = getReportOrientation(monthlyMdmReportType);
@@ -2125,8 +2109,7 @@ function TeacherMDMPage() {
       }
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      const { default: html2canvas } = await import("html2canvas-pro");
-      const { jsPDF } = await import("jspdf");
+
 
       const canvas = await html2canvas(element, {
         scale: 2,
@@ -2223,8 +2206,7 @@ function TeacherMDMPage() {
       }
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      const { default: html2canvas } = await import("html2canvas-pro");
-      const { jsPDF } = await import("jspdf");
+
 
       const canvas = await html2canvas(element, {
         scale: 2,
@@ -3381,6 +3363,88 @@ function TeacherMDMPage() {
 
   // Opening Stock (Initial Stock) States & Logic
   const [openingStockDate, setOpeningStockDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [openingItem, setOpeningItem] = useState("");
+  const [openingQty, setOpeningQty] = useState("");
+  const [openingDate, setOpeningDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [openingRemark, setOpeningRemark] = useState("");
+  const [openingRecords, setOpeningRecords] = useState<
+    { id: string; item: string; qty: string; date: string; remark: string }[]
+  >([]);
+
+  const handleSaveOpeningStockLog = async () => {
+    if (!user) return;
+    if (!openingItem || !openingQty) {
+      toast.warning(t("कृपया साहित्य आणि प्रमाण प्रविष्ट करा.", "Please select item and quantity."));
+      return;
+    }
+    setSaving(true);
+    try {
+      const udise = getUdise();
+      const newRecord = {
+        id: Date.now().toString(),
+        item: openingItem,
+        qty: openingQty,
+        date: openingDate,
+        remark: openingRemark,
+      };
+      const updated = [newRecord, ...openingRecords];
+      setOpeningRecords(updated);
+
+      const itemKey = getItemKeyFromName(openingItem);
+      let updatedValues = { ...openingStockValues };
+      if (itemKey) {
+        const currentVal = parseFloat(openingStockValues[itemKey] || "0") || 0;
+        const addedVal = parseFloat(openingQty) || 0;
+        updatedValues = {
+          ...openingStockValues,
+          [itemKey]: roundStock(currentVal + addedVal).toString(),
+        };
+        setOpeningStockValues(updatedValues);
+      }
+
+      setOpeningItem("");
+      setOpeningQty("");
+      setOpeningRemark("");
+
+      await setDoc(
+        doc(db, "school_data", `${udise}_mdm`),
+        {
+          openingRecords: updated,
+          openingStockRecords: updated,
+          openingStock: updatedValues,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+      toast.success(t("आरंभीची शिल्लक नोंद यशस्वीरित्या जतन केली!", "Opening stock record saved successfully!"));
+    } catch (e) {
+      console.error(e);
+      toast.error(t("नोंद जतन करण्यात अडचण आली.", "Failed to save record"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteOpeningStockLog = async (id: string) => {
+    if (!user) return;
+    try {
+      const udise = getUdise();
+      const updated = openingRecords.filter((r) => r.id !== id);
+      setOpeningRecords(updated);
+      await setDoc(
+        doc(db, "school_data", `${udise}_mdm`),
+        { openingRecords: updated, openingStockRecords: updated, updatedAt: new Date().toISOString() },
+        { merge: true },
+      );
+      toast.success(t("नोंद यशस्वीरित्या हटवली!", "Record deleted successfully!"));
+    } catch (e) {
+      console.error(e);
+      toast.error(t("नोंद हटवण्यात अडचण आली.", "Failed to delete record"));
+    }
+  };
+
   const [openingStockDateMap, setOpeningStockDateMap] = useState<
     Record<
       string,
@@ -3650,8 +3714,7 @@ function TeacherMDMPage() {
       }
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      const { default: html2canvas } = await import("html2canvas-pro");
-      const { jsPDF } = await import("jspdf");
+
 
       const canvas = await html2canvas(element, {
         scale: 2,
@@ -5064,8 +5127,8 @@ function TeacherMDMPage() {
     return found;
   };
 
-  // Returns the opening (previous month closing) balance for an item.
-  // Looks up history chain up to 12 months back, never reads current month's saved prev.
+  // Returns the opening (previous month 31st closing) balance for an item.
+  // Calculates previous month closing balance dynamically matching reports.
   const getOpeningStock = (
     monthName: string,
     yearStr: string,
@@ -5097,20 +5160,17 @@ function TeacherMDMPage() {
     }
 
     if (depth > 12) {
-      const itemKey = getItemKeyFromName(itemName);
       return getInitialOpeningStockValue(itemName);
     }
 
     const prevKey = getPreviousMonthKey(monthName, yearStr, classStr);
     if (!prevKey) {
-      const itemKey = getItemKeyFromName(itemName);
       return getInitialOpeningStockValue(itemName);
     }
 
     const firstUnderscore = prevKey.indexOf("_");
     const secondUnderscore = prevKey.indexOf("_", firstUnderscore + 1);
     if (firstUnderscore === -1 || secondUnderscore === -1) {
-      const itemKey = getItemKeyFromName(itemName);
       return getInitialOpeningStockValue(itemName);
     }
 
@@ -5118,58 +5178,7 @@ function TeacherMDMPage() {
     const prevMonth = prevKey.substring(firstUnderscore + 1, secondUnderscore);
     const prevClass = prevKey.substring(secondUnderscore + 1);
 
-    // Check if we have active data (register or incoming) for the previous month
-    const hasDataForPrevMonth = (() => {
-      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-      const monthIndex = monthNames.findIndex(m => m.toLowerCase() === prevMonth.toLowerCase());
-      if (monthIndex === -1) return false;
-
-      // Check incoming
-      if (customIncomingRecords[prevKey]) return true;
-
-      // Check register
-      const hasRegister = Object.keys(customRegisterRecords || {}).some((dateStr) => {
-        const d = new Date(dateStr);
-        if (!isNaN(d.getTime()) && d.getMonth() === monthIndex && d.getFullYear().toString() === prevYear) {
-          const record = customRegisterRecords[dateStr];
-          const classRecord = record[prevClass] || (prevClass === "1 To 5" ? record : null);
-          return classRecord && (Number(classRecord.beneficiary) > 0);
-        }
-        return false;
-      });
-      return hasRegister;
-    })();
-
-    if (!hasDataForPrevMonth) {
-      // Does a saved history snapshot exist for the previous month?
-      const prevSaved = stockRecordsHistory[prevKey];
-      if (prevSaved) {
-        const prevItem = prevSaved.find((r) => r.item === itemName);
-        if (prevItem) {
-          const closing =
-            (Number(prevItem.prev) || 0) +
-            (Number(prevItem.received) || 0) -
-            (Number(prevItem.used) || 0) -
-            (Number(prevItem.damaged) || 0);
-          return roundStock(closing);
-        }
-      }
-      // If no saved history exists, carry forward from previous-previous month recursively or initial stock
-      const prevStockVal = getOpeningStock(
-        prevMonth,
-        prevYear,
-        prevClass,
-        itemName,
-        depth + 1,
-        customRegisterRecords,
-        customIncomingRecords,
-      );
-      if (prevStockVal > 0) return prevStockVal;
-      const itemKey = getItemKeyFromName(itemName);
-      return getInitialOpeningStockValue(itemName);
-    }
-
-    // No saved snapshot or we have active data → calculate previous month's closing on the fly
+    // Recursively compute previous month's opening stock
     const prevOpening = getOpeningStock(
       prevMonth,
       prevYear,
@@ -5179,7 +5188,10 @@ function TeacherMDMPage() {
       customRegisterRecords,
       customIncomingRecords,
     );
+
     const itemKey = getItemKeyFromName(itemName);
+
+    // 1. Calculate Received for previous month
     let prevIncTabQty = 0;
     incRecords.forEach((r) => {
       if (!r.date || !r.item || !r.qty) return;
@@ -5205,10 +5217,14 @@ function TeacherMDMPage() {
     });
     const prevKeyData = customIncomingRecords[prevKey] || {};
     const prevReceived = (Number(prevKeyData[itemName]) || Number(prevKeyData[itemKey]) || 0) + prevIncTabQty;
+
+    // 2. Calculate Loksahabhag for previous month
     const prevLok = getLokForMonth(itemName, prevMonth, Number(prevYear) || 2026);
+
+    // 3. Calculate Damaged for previous month
     const prevDamaged = getDamagedForMonth(itemName, prevMonth, Number(prevYear) || 2026);
 
-    // Calculate used for prev month on the fly using custom/live records
+    // 4. Calculate Used for previous month from daily register
     let prevUsed = 0;
     const isPrevPrimary = prevClass === "1 To 5";
     Object.keys(customRegisterRecords || {}).forEach((dateStr) => {
@@ -5256,6 +5272,7 @@ function TeacherMDMPage() {
     });
     prevUsed = roundStock(prevUsed);
 
+    // Closing stock at the end of previous month = Opening + Received + Loksahabhag - Used - Damaged
     const closing = prevOpening + prevReceived + prevLok - prevUsed - prevDamaged;
     return roundStock(closing);
   };
@@ -5763,6 +5780,11 @@ function TeacherMDMPage() {
           }
           if (firestoreData.lokRecords && Array.isArray(firestoreData.lokRecords)) {
             setLokRecords(firestoreData.lokRecords);
+          }
+          if (firestoreData.openingRecords && Array.isArray(firestoreData.openingRecords)) {
+            setOpeningRecords(firestoreData.openingRecords);
+          } else if (firestoreData.openingStockRecords && Array.isArray(firestoreData.openingStockRecords)) {
+            setOpeningRecords(firestoreData.openingStockRecords);
           }
           if (firestoreData.damagedRecords && Array.isArray(firestoreData.damagedRecords)) {
             setDamagedRecords(firestoreData.damagedRecords);
@@ -7447,12 +7469,17 @@ function TeacherMDMPage() {
     let total = 0;
     const targetKey = getItemKeyFromName(itemName);
     damagedRecords.forEach((rec) => {
-      if (maxDateStr && rec.date && rec.date.trim() > maxDateStr.trim()) return;
-      const d = new Date(rec.date);
-      if (!isNaN(d.getTime()) && d.getMonth() === mIdx && d.getFullYear() === year) {
-        const recKey = getItemKeyFromName(rec.item);
-        if ((recKey && recKey === targetKey) || rec.item.toLowerCase().trim() === itemName.toLowerCase().trim()) {
-          total += parseFloat(rec.qty) || 0;
+      if (!rec.date || !rec.item || !rec.qty) return;
+      if (maxDateStr && rec.date.trim() > maxDateStr.trim()) return;
+      const parts = rec.date.split("-");
+      if (parts.length === 3) {
+        const recYear = parseInt(parts[0], 10);
+        const recMonthIdx = parseInt(parts[1], 10) - 1;
+        if (recYear === year && recMonthIdx === mIdx) {
+          const recKey = getItemKeyFromName(rec.item);
+          if ((recKey && recKey === targetKey) || rec.item.toLowerCase().trim() === itemName.toLowerCase().trim()) {
+            total += parseFloat(rec.qty) || 0;
+          }
         }
       }
     });
@@ -7466,11 +7493,17 @@ function TeacherMDMPage() {
     let total = 0;
     const targetKey = getItemKeyFromName(itemName);
     lokRecords.forEach((rec) => {
-      if (maxDateStr && rec.date && rec.date.trim() > maxDateStr.trim()) return;
-      const d = new Date(rec.date);
-      if (!isNaN(d.getTime()) && d.getMonth() === mIdx && d.getFullYear() === year) {
-        if (getItemKeyFromName(rec.item) === targetKey || rec.item.toLowerCase() === itemName.toLowerCase()) {
-          total += parseFloat(rec.qty) || 0;
+      if (!rec.date || !rec.item || !rec.qty) return;
+      if (maxDateStr && rec.date.trim() > maxDateStr.trim()) return;
+      const parts = rec.date.split("-");
+      if (parts.length === 3) {
+        const recYear = parseInt(parts[0], 10);
+        const recMonthIdx = parseInt(parts[1], 10) - 1;
+        if (recYear === year && recMonthIdx === mIdx) {
+          const recKey = getItemKeyFromName(rec.item);
+          if ((recKey && recKey === targetKey) || rec.item.toLowerCase().trim() === itemName.toLowerCase().trim()) {
+            total += parseFloat(rec.qty) || 0;
+          }
         }
       }
     });
@@ -8558,9 +8591,22 @@ function TeacherMDMPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200">
-                            {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
+                             {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
                               const isPriorToInitial = !!(initialStockDate && openingStockDate && openingStockDate < initialStockDate);
-                              const openVal = isPriorToInitial ? 0 : roundStock(parseFloat(openingStockValues[item.key] || "0"));
+                              
+                              const targetParts = (openingStockDate || "").split("-");
+                              let targetYr = "2026";
+                              let targetMo = "August";
+                              if (targetParts.length === 3) {
+                                targetYr = targetParts[0];
+                                const mIndex = parseInt(targetParts[1], 10) - 1;
+                                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                                if (mIndex >= 0 && mIndex <= 11) targetMo = monthNames[mIndex];
+                              }
+                              const calculatedOpening = roundStock(getOpeningStock(targetMo, targetYr, "1 To 5", item.key));
+                              const hasCustomVal = openingStockValues[item.key] !== undefined && openingStockValues[item.key] !== "" && !isNaN(parseFloat(openingStockValues[item.key]));
+                              const openVal = isPriorToInitial ? 0 : (hasCustomVal ? roundStock(parseFloat(openingStockValues[item.key])) : calculatedOpening);
+
                               const borInVal = isPriorToInitial ? 0 : roundStock(parseFloat(openingStockBorrowedIn[item.key] || "0"));
                               const borOutVal = isPriorToInitial ? 0 : roundStock(parseFloat(openingStockBorrowedOut[item.key] || "0"));
                               const lokVal = isPriorToInitial ? 0 : roundStock(parseFloat(openingStockLoksahabhag[item.key] || "0"));
@@ -8589,7 +8635,7 @@ function TeacherMDMPage() {
                                       step="0.001"
                                       min="0"
                                       placeholder="0"
-                                      value={isPriorToInitial ? "0" : (openingStockValues[item.key] || "")}
+                                      value={isPriorToInitial ? "0" : (openingStockValues[item.key] !== undefined && openingStockValues[item.key] !== "" ? openingStockValues[item.key] : calculatedOpening.toString())}
                                       onChange={(e) => handleOpeningStockChange(item.key, e.target.value)}
                                       disabled={isPriorToInitial}
                                       className="w-full h-9 text-center border border-emerald-300 rounded-lg font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 bg-white text-xs px-2 shadow-2xs outline-none disabled:bg-slate-100 disabled:text-slate-400"
@@ -8774,8 +8820,143 @@ function TeacherMDMPage() {
                         </tbody>
                       </table>
                     </div>
+
+                  {/* Bottom Cards: Individual Initial Stock Entry & Recent Initial Stock Logs */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
+                    {/* Left Column: Form Card */}
+                    <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                      <h3 className="font-bold text-base text-slate-800">
+                        {lang === "mr" ? "आरंभीची शिल्लक नोंदवा (पावती / नोंद निहाय)" : "Report Initial Stock Entry"}
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs font-bold text-slate-600 block mb-1">
+                            {lang === "mr" ? "साहित्य *" : "Material / Item *"}
+                          </label>
+                          <select
+                            value={openingItem}
+                            onChange={(e) => setOpeningItem(e.target.value)}
+                            className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                          >
+                            <option value="">{lang === "mr" ? "साहित्य निवडा" : "Select Material"}</option>
+                            <option value="तांदूळ (kg)">तांदूळ (kg) - Rice</option>
+                            <option value="मूगडाळ (kg)">मूगडाळ (kg) - Moong Dal</option>
+                            <option value="तूरडाळ (kg)">तूरडाळ (kg) - Tur Dal</option>
+                            <option value="मसूरडाळ (kg)">मसूरडाळ (kg) - Masoor Dal</option>
+                            <option value="मटकी (kg)">मटकी (kg) - Moth Beans</option>
+                            <option value="अख्खा मूग (kg)">अख्खा मूग (kg) - Whole Moong</option>
+                            <option value="चवळी (kg)">चवळी (kg) - Cowpea</option>
+                            <option value="हरभरा (kg)">हरभरा (kg) - Chana</option>
+                            <option value="वाटाणा (kg)">वाटाणा (kg) - Peas</option>
+                            <option value="सोयाबीन वडी (kg)">सोयाबीन वडी (kg) - Soyabean Chunks</option>
+                            <option value="जिरे (kg)">जिरे (kg) - Cumin</option>
+                            <option value="मोहरी (kg)">मोहरी (kg) - Mustard</option>
+                            <option value="हळद (kg)">हळद (kg) - Turmeric</option>
+                            <option value="तिखट मसाला (kg)">तिखट मसाला (kg) - Chili Masala</option>
+                            <option value="मीठ (kg)">मीठ (kg) - Salt</option>
+                            <option value="गरम मसाला (kg)">गरम मसाला (kg) - Garam Masala</option>
+                            <option value="तेल (kg)">तेल (kg) - Cooking Oil</option>
+                            <option value="गूळ / साखर (kg)">गूळ / साखर (kg) - Sugar / Jaggery</option>
+                            <option value="दूध / दूध पावडर (L)">दूध / दूध पावडर (L) - Milk</option>
+                            <option value="भाजीपाला (kg)">भाजीपाला (kg) - Vegetables</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-600 block mb-1">
+                            {lang === "mr" ? "प्रमाण (kg) *" : "Quantity (kg) *"}
+                          </label>
+                          <input
+                            type="number"
+                            step="0.001"
+                            placeholder={lang === "mr" ? "प्रमाण (kg)" : "Quantity"}
+                            value={openingQty}
+                            onChange={(e) => setOpeningQty(e.target.value)}
+                            className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-600 block mb-1">
+                            {lang === "mr" ? "दिनांक *" : "Date *"}
+                          </label>
+                          <input
+                            type="date"
+                            value={openingDate}
+                            onChange={(e) => setOpeningDate(e.target.value)}
+                            className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-slate-600 block mb-1">
+                            {lang === "mr" ? "शेरा / नोंदीचे तपशील" : "Remarks / Details"}
+                          </label>
+                          <textarea
+                            rows={2}
+                            placeholder={lang === "mr" ? "शेरा किंवा तपशील प्रविष्ट करा..." : "Enter remarks..."}
+                            value={openingRemark}
+                            onChange={(e) => setOpeningRemark(e.target.value)}
+                            className="w-full p-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 resize-y"
+                          />
+                        </div>
+                        <button
+                          onClick={handleSaveOpeningStockLog}
+                          disabled={saving}
+                          className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                          {lang === "mr" ? "Save (जतन करा)" : "Save Record"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Recent Initial Stock Logs Table */}
+                    <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                      <h3 className="font-bold text-base text-slate-800">
+                        {lang === "mr" ? "अलीकडील आरंभीची शिल्लक नोंदी" : "Recent Initial Stock Logs"}
+                      </h3>
+                      <div className="w-full overflow-x-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 font-bold">
+                              <th className="p-2.5">{lang === "mr" ? "दिनांक" : "Date"}</th>
+                              <th className="p-2.5">{lang === "mr" ? "साहित्य" : "Material"}</th>
+                              <th className="p-2.5">{lang === "mr" ? "प्रमाण" : "Quantity"}</th>
+                              <th className="p-2.5">{lang === "mr" ? "टीप" : "Remark"}</th>
+                              <th className="p-2.5 text-right"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {openingRecords.length === 0 ? (
+                              <tr>
+                                <td colSpan={5} className="p-6 text-center text-slate-400 font-medium">
+                                  {lang === "mr" ? "कोणतीही आरंभीची शिल्लक नोंद उपलब्ध नाही." : "No initial stock records found."}
+                                </td>
+                              </tr>
+                            ) : (
+                              openingRecords.map((r) => (
+                                <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/80">
+                                  <td className="p-2.5 font-medium">{r.date}</td>
+                                  <td className="p-2.5 font-bold text-slate-800">{r.item}</td>
+                                  <td className="p-2.5 font-extrabold text-emerald-700">+{r.qty} kg</td>
+                                  <td className="p-2.5 text-slate-600">{r.remark || "-"}</td>
+                                  <td className="p-2.5 text-right">
+                                    <button
+                                      onClick={() => handleDeleteOpeningStockLog(r.id)}
+                                      className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                      title={lang === "mr" ? "हटवा" : "Delete"}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
-                )}
+                </div>
+              )}
 
                 {/* 2. STOCK RECEIVED (साहित्य आवक) TAB - Table with Opening Stock + Received = Total Stock */}
                 {activeTab === "incoming" && (
@@ -9003,8 +9184,143 @@ function TeacherMDMPage() {
                             })}
                           </tbody>
                         </table>
+                      </div>
                     </div>
-                  </div>
+
+                    {/* Bottom Cards: Individual Incoming Entry & Recent Incoming Stock Logs */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
+                      {/* Left Column: Form Card */}
+                      <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800">
+                          {lang === "mr" ? "साहित्य आवक नोंदवा (चालन / पावती निहाय)" : "Report Stock Received (Voucher Entry)"}
+                        </h3>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "साहित्य *" : "Material / Item *"}
+                            </label>
+                            <select
+                              value={incItem}
+                              onChange={(e) => setIncItem(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                            >
+                              <option value="">{lang === "mr" ? "साहित्य निवडा" : "Select Material"}</option>
+                              <option value="तांदूळ (kg)">तांदूळ (kg) - Rice</option>
+                              <option value="मूगडाळ (kg)">मूगडाळ (kg) - Moong Dal</option>
+                              <option value="तूरडाळ (kg)">तूरडाळ (kg) - Tur Dal</option>
+                              <option value="मसूरडाळ (kg)">मसूरडाळ (kg) - Masoor Dal</option>
+                              <option value="मटकी (kg)">मटकी (kg) - Moth Beans</option>
+                              <option value="अख्खा मूग (kg)">अख्खा मूग (kg) - Whole Moong</option>
+                              <option value="चवळी (kg)">चवळी (kg) - Cowpea</option>
+                              <option value="हरभरा (kg)">हरभरा (kg) - Chana</option>
+                              <option value="वाटाणा (kg)">वाटाणा (kg) - Peas</option>
+                              <option value="सोयाबीन वडी (kg)">सोयाबीन वडी (kg) - Soyabean Chunks</option>
+                              <option value="जिरे (kg)">जिरे (kg) - Cumin</option>
+                              <option value="मोहरी (kg)">मोहरी (kg) - Mustard</option>
+                              <option value="हळद (kg)">हळद (kg) - Turmeric</option>
+                              <option value="तिखट मसाला (kg)">तिखट मसाला (kg) - Chili Masala</option>
+                              <option value="मीठ (kg)">मीठ (kg) - Salt</option>
+                              <option value="गरम मसाला (kg)">गरम मसाला (kg) - Garam Masala</option>
+                              <option value="तेल (kg)">तेल (kg) - Cooking Oil</option>
+                              <option value="गूळ / साखर (kg)">गूळ / साखर (kg) - Sugar / Jaggery</option>
+                              <option value="दूध / दूध पावडर (L)">दूध / दूध पावडर (L) - Milk</option>
+                              <option value="भाजीपाला (kg)">भाजीपाला (kg) - Vegetables</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "प्रमाण (kg) *" : "Quantity (kg) *"}
+                            </label>
+                            <input
+                              type="number"
+                              step="0.001"
+                              placeholder={lang === "mr" ? "प्रमाण (kg)" : "Quantity"}
+                              value={incQty}
+                              onChange={(e) => setIncQty(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "दिनांक *" : "Date *"}
+                            </label>
+                            <input
+                              type="date"
+                              value={incDate}
+                              onChange={(e) => setIncDate(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "शेरा / चालन क्रमांक" : "Remarks / Challan No"}
+                            </label>
+                            <textarea
+                              rows={2}
+                              placeholder={lang === "mr" ? "शेरा किंवा चालन क्र. प्रविष्ट करा..." : "Enter remarks or challan no..."}
+                              value={incRemark}
+                              onChange={(e) => setIncRemark(e.target.value)}
+                              className="w-full p-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 resize-y"
+                            />
+                          </div>
+                          <button
+                            onClick={handleSaveIncomingStock}
+                            disabled={saving}
+                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                          >
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {lang === "mr" ? "Save (जतन करा)" : "Save Record"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Right Column: Recent Incoming Stock Logs Table */}
+                      <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800">
+                          {lang === "mr" ? "अलीकडील साहित्य आवक नोंदी" : "Recent Stock Received Logs"}
+                        </h3>
+                        <div className="w-full overflow-x-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 font-bold">
+                                <th className="p-2.5">{lang === "mr" ? "दिनांक" : "Date"}</th>
+                                <th className="p-2.5">{lang === "mr" ? "साहित्य" : "Material"}</th>
+                                <th className="p-2.5">{lang === "mr" ? "प्रमाण" : "Quantity"}</th>
+                                <th className="p-2.5">{lang === "mr" ? "टीप / चालन क्र." : "Remark"}</th>
+                                <th className="p-2.5 text-right"></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {incRecords.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} className="p-6 text-center text-slate-400 font-medium">
+                                    {lang === "mr" ? "कोणतीही साहित्य आवक नोंद उपलब्ध नाही." : "No stock received records found."}
+                                  </td>
+                                </tr>
+                              ) : (
+                                incRecords.map((r) => (
+                                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/80">
+                                    <td className="p-2.5 font-medium">{r.date}</td>
+                                    <td className="p-2.5 font-bold text-slate-800">{r.item}</td>
+                                    <td className="p-2.5 font-extrabold text-blue-700">+{r.qty} kg</td>
+                                    <td className="p-2.5 text-slate-600">{r.remark || "-"}</td>
+                                    <td className="p-2.5 text-right">
+                                      <button
+                                        onClick={() => handleDeleteIncomingStock(r.id)}
+                                        className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                        title={lang === "mr" ? "हटवा" : "Delete"}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -11182,10 +11498,12 @@ function TeacherMDMPage() {
                                   const isCurrentSelectedDate = fullDateKey === registerDate;
 
                                   const rawMenu = classData?.menu || getMenuForRegisterDate(fullDateKey);
-                                  const recipeName = dayOfWeek === 0 ? "सुट्टी" : (rawMenu === "No Menu Available" ? "—" : rawMenu);
+                                  const isSunday = dayOfWeek === 0;
+                                  const isHoliday = isSunday || !!classData?.isHoliday || rawMenu === "सुट्टी" || rawMenu === "रविवार सुट्टी";
+                                  const recipeName = isHoliday ? "सुट्टी" : (rawMenu === "No Menu Available" ? "—" : rawMenu);
 
                                   const beneCountRaw = isCurrentSelectedDate ? (registerBeneficiary || classData?.beneficiary || classData?.beneficiaries || "") : (classData?.beneficiary || classData?.beneficiaries || "");
-                                  const beneNum = Number(beneCountRaw) || 0;
+                                  const beneNum = isHoliday ? 0 : (Number(beneCountRaw) || 0);
 
                                   const rawEnr = isCurrentSelectedDate
                                     ? (totalEnrolled || classData?.totalEnrolled || classData?.enrolled || classData?.pat || "")
@@ -11195,9 +11513,9 @@ function TeacherMDMPage() {
                                     ? (presentCount || classData?.presentCount || classData?.present || classData?.hajar || "")
                                     : (classData?.presentCount || classData?.present || classData?.hajar || "");
 
-                                  const totalEnr = rawEnr !== "" ? rawEnr : (beneNum > 0 ? beneNum.toString() : "—");
-                                  const presentSt = rawPres !== "" ? rawPres : (beneNum > 0 ? beneNum.toString() : "—");
-                                  const beneCount = beneNum > 0 ? beneNum.toString() : "—";
+                                  const totalEnr = isHoliday ? "—" : (rawEnr !== "" ? rawEnr : (beneNum > 0 ? beneNum.toString() : "—"));
+                                  const presentSt = isHoliday ? "—" : (rawPres !== "" ? rawPres : (beneNum > 0 ? beneNum.toString() : "—"));
+                                  const beneCount = isHoliday ? "—" : (beneNum > 0 ? beneNum.toString() : "—");
 
                                   const enrNum = Number(totalEnr) || (beneNum > 0 ? beneNum : 0);
                                   const presNum = Number(presentSt) || (beneNum > 0 ? beneNum : 0);

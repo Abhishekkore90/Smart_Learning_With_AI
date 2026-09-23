@@ -95,15 +95,63 @@ export function normalizeSubjectName(rawName: string): string {
     return "शारीरिक शिक्षण";
 
   if (
-    clean.includes("परिसर")
-  )
+    clean.includes("परिसर") ||
+    clean.toLowerCase().includes("evs") ||
+    clean.toLowerCase().includes("parisar")
+  ) {
+    const isPart1 =
+      clean.includes("भाग १") ||
+      clean.includes("भाग 1") ||
+      clean.includes("भाग-१") ||
+      clean.includes("भाग-1") ||
+      clean.includes("भाग१") ||
+      clean.includes("भाग1") ||
+      clean.includes("part 1") ||
+      clean.includes("part-1") ||
+      clean.includes("part1") ||
+      clean.includes("- १") ||
+      clean.includes("- 1") ||
+      clean.includes("– १") ||
+      clean.includes("– 1") ||
+      clean.includes(" १") ||
+      clean.includes(" 1") ||
+      clean.endsWith("१") ||
+      clean.endsWith("1");
+
+    const isPart2 =
+      clean.includes("भाग २") ||
+      clean.includes("भाग 2") ||
+      clean.includes("भाग-२") ||
+      clean.includes("भाग-2") ||
+      clean.includes("भाग२") ||
+      clean.includes("भाग2") ||
+      clean.includes("part 2") ||
+      clean.includes("part-2") ||
+      clean.includes("part2") ||
+      clean.includes("- २") ||
+      clean.includes("- 2") ||
+      clean.includes("– २") ||
+      clean.includes("– 2") ||
+      clean.includes(" २") ||
+      clean.includes(" 2") ||
+      clean.endsWith("२") ||
+      clean.endsWith("2");
+
+    if (isPart1 && !isPart2) {
+      return "परिसर अभ्यास भाग १";
+    }
+    if (isPart2 && !isPart1) {
+      return "परिसर अभ्यास भाग २";
+    }
     return "परिसर अभ्यास";
+  }
 
   if (
+    clean.includes("सामान्य विज्ञान") ||
     clean.includes("विज्ञान") ||
     clean.toLowerCase().includes("science")
   )
-    return "विज्ञान";
+    return "सामान्य विज्ञान";
 
   if (
     clean.includes("सामाजिक") ||
@@ -245,18 +293,29 @@ export async function extractSubjectSectionsFromExcel(
   const combinedRawGrid: string[][] = [];
 
   const KNOWN_SUBJECTS = [
+    "परिसर अभ्यास भाग १",
+    "परिसर अभ्यास भाग २",
+    "परिसर अभ्यास भाग 1",
+    "परिसर अभ्यास भाग 2",
+    "परिसर अभ्यास - १",
+    "परिसर अभ्यास - २",
+    "परिसर अभ्यास",
     "मराठी",
     "गणित",
     "इंग्रजी",
+    "हिंदी",
+    "सामान्य विज्ञान",
+    "विज्ञान",
+    "सामाजिक शास्त्रे",
     "कलाशिक्षण",
     "कार्यशिक्षण",
     "शारीरिक शिक्षण",
-    "परिसर अभ्यास",
-    "विज्ञान",
-    "सामाजिक शास्त्रे",
     "English",
     "Maths",
     "Science",
+    "General Science",
+    "Social Science",
+    "Social Sciences",
   ];
 
   // Iterate over all sheets in the workbook
@@ -330,7 +389,7 @@ export async function extractSubjectSectionsFromExcel(
       }
 
       const subjMatch = rowLine.match(
-        /(?:विषय|subject)\s*[:\-–]?\s*([^\s\|()\d]+(?:\s+[^\s\|()\d]+)*)/i
+        /(?:विषय|subject)\s*[:\-–]?\s*([^|\n\r()]{2,40})/i
       );
 
       let detectedSubjText: string | null = null;
@@ -339,7 +398,9 @@ export async function extractSubjectSectionsFromExcel(
         if (
           !matchClean.includes("विवरण") &&
           !matchClean.includes("निष्पत्ती") &&
-          !matchClean.includes("निष्पती")
+          !matchClean.includes("निष्पती") &&
+          !matchClean.includes("तपशील") &&
+          matchClean.length < 35
         ) {
           detectedSubjText = matchClean;
         }
@@ -457,8 +518,11 @@ export async function extractSubjectSectionsFromExcel(
     "हिंदी",
     "इंग्रजी",
     "गणित",
-    "विज्ञान",
+    "परिसर अभ्यास भाग १",
+    "परिसर अभ्यास भाग २",
     "परिसर अभ्यास",
+    "सामान्य विज्ञान",
+    "विज्ञान",
     "सामाजिक शास्त्रे",
     "कलाशिक्षण",
     "कार्यशिक्षण",
@@ -494,12 +558,19 @@ export function splitRowsIntoSubjectSections(
   fallbackSubject: string = "मराठी"
 ): Record<string, SubjectSection> {
   const KNOWN_SUBJECTS = [
+    "परिसर अभ्यास भाग १",
+    "परिसर अभ्यास भाग २",
+    "परिसर अभ्यास भाग 1",
+    "परिसर अभ्यास भाग 2",
+    "परिसर अभ्यास - १",
+    "परिसर अभ्यास - २",
+    "परिसर अभ्यास",
     "मराठी",
     "हिंदी",
     "इंग्रजी",
     "गणित",
+    "सामान्य विज्ञान",
     "विज्ञान",
-    "परिसर अभ्यास",
     "सामाजिक शास्त्रे",
     "कलाशिक्षण",
     "कार्यशिक्षण",
@@ -507,8 +578,10 @@ export function splitRowsIntoSubjectSections(
     "English",
     "Maths",
     "Science",
+    "General Science",
     "Hindi",
     "Social Science",
+    "Social Sciences",
   ];
 
   const subjectsMap: Record<string, SubjectSection> = {};
@@ -549,7 +622,7 @@ export function splitRowsIntoSubjectSections(
     for (const c of (row || [])) {
       if (!c) continue;
       const cStr = String(c).trim();
-      const m = cStr.match(/(?:विषय|subject)\s*[:\-–]?\s*([^\s\|()\d]+(?:\s+[^\s\|()\d]+)*)/i);
+      const m = cStr.match(/(?:विषय|subject)\s*[:\-–]?\s*([^|\n\r()]{2,40})/i);
       if (m && m[1]) {
         const cleanVal = m[1].trim();
         if (
@@ -557,7 +630,8 @@ export function splitRowsIntoSubjectSections(
           !cleanVal.includes("निष्पत्ती") &&
           !cleanVal.includes("निष्पती") &&
           !cleanVal.includes("नावा") &&
-          cleanVal.length < 30
+          !cleanVal.includes("तपशील") &&
+          cleanVal.length < 35
         ) {
           detectedSubjText = cleanVal;
           break;
@@ -574,7 +648,7 @@ export function splitRowsIntoSubjectSections(
 
     if (!detectedSubjText) {
       const subjMatch = rowLine.match(
-        /(?:विषय|subject)\s*[:\-–]?\s*([^\s\|()\d]+(?:\s+[^\s\|()\d]+)*)/i
+        /(?:विषय|subject)\s*[:\-–]?\s*([^|\n\r()]{2,40})/i
       );
       if (subjMatch && subjMatch[1]) {
         const matchClean = subjMatch[1].trim();
@@ -582,7 +656,8 @@ export function splitRowsIntoSubjectSections(
           !matchClean.includes("विवरण") &&
           !matchClean.includes("निष्पत्ती") &&
           !matchClean.includes("निष्पती") &&
-          matchClean.length < 30
+          !matchClean.includes("तपशील") &&
+          matchClean.length < 35
         ) {
           detectedSubjText = matchClean;
         }

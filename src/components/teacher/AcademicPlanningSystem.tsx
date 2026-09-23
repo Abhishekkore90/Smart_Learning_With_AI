@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { auth, db, storage } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
-import { doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, collection, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { PDFDocument } from "pdf-lib";
 import {
@@ -42,6 +42,7 @@ import {
   Lock,
   CreditCard,
   Loader2,
+  Search,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -52,7 +53,7 @@ import { uploadFileWithProgress } from "@/lib/upload";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
 import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
 import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord, formatMarathiClassName } from "@/lib/smartPlanningParser";
-import { extractSubjectSectionsFromExcel } from "@/lib/smartSubjectSplitter";
+import { extractSubjectSectionsFromExcel, normalizeSubjectName } from "@/lib/smartSubjectSplitter";
 import { PlanningTableRenderer } from "@/components/teacher/PlanningTableRenderer";
 import * as XLSX from "xlsx";
 
@@ -893,6 +894,13 @@ export function AcademicPlanningSystem({
   const [viewModalFile, setViewModalFile] = useState<PlanningFileRecord | null>(null);
   const [isPdfFullscreen, setIsPdfFullscreen] = useState<boolean>(true);
 
+  // Admin All Files Management Modal State
+  const [showAllFilesModal, setShowAllFilesModal] = useState<boolean>(false);
+  const [allFilesSearchQuery, setAllFilesSearchQuery] = useState<string>("");
+  const [allFilesTypeFilter, setAllFilesTypeFilter] = useState<"all" | "annual" | "monthly" | "question_bank">("all");
+  const [allFilesClassFilter, setAllFilesClassFilter] = useState<string>("all");
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
+
   // Annotation / PDF Edit States
   const [isAnnotating, setIsAnnotating] = useState<boolean>(false);
   const [annotationTool, setAnnotationTool] = useState<"draw" | "highlight" | "text" | "erase" | "whiteout">("draw");
@@ -1470,6 +1478,54 @@ export function AcademicPlanningSystem({
     }
   };
 
+  // Helper to normalize and match class IDs flexibly (e.g. '5th', '5', 'class 5', 'पाचवी')
+  const matchClassId = (c1?: string, c2?: string): boolean => {
+    const s1 = (c1 || "").trim().toLowerCase();
+    const s2 = (c2 || "").trim().toLowerCase();
+    if (!s1 || !s2) return false;
+    if (s1 === s2) return true;
+    const num1 = s1.replace(/\D/g, "");
+    const num2 = s2.replace(/\D/g, "");
+    if (num1 && num2 && num1 === num2) return true;
+    const mrMap: Record<string, string> = {
+      "1": "पहिली", "2": "दुसरी", "3": "तिसरी", "4": "चौथी",
+      "5": "पाचवी", "6": "सहावी", "7": "सातवी", "8": "आठवी",
+    };
+    if (num1 && mrMap[num1] && (s2.includes(mrMap[num1]) || s2.includes(num1))) return true;
+    if (num2 && mrMap[num2] && (s1.includes(mrMap[num2]) || s1.includes(num2))) return true;
+    return false;
+  };
+
+  // Helper to match mediums flexibly
+  const matchMediumId = (m1?: string, m2?: string): boolean => {
+    const s1 = (m1 || "marathi").trim().toLowerCase();
+    const s2 = (m2 || "marathi").trim().toLowerCase();
+    if (s1 === s2) return true;
+    const isSemi1 = s1.includes("semi") || s1.includes("सेमी");
+    const isSemi2 = s2.includes("semi") || s2.includes("सेमी");
+    return isSemi1 === isSemi2;
+  };
+
+  // Helper to match subjects flexibly with strict part 1 vs part 2 separation
+  const matchSubjectId = (s1?: string, s2?: string): boolean => {
+    const clean1 = (s1 || "all").trim().toLowerCase();
+    const clean2 = (s2 || "all").trim().toLowerCase();
+    if (clean1 === clean2) return true;
+    if (clean1 === "all" || clean2 === "all") return true;
+
+    const norm1 = normalizeSubjectName(clean1);
+    const norm2 = normalizeSubjectName(clean2);
+    if (norm1 === norm2) return true;
+
+    const isPart1_1 = norm1.includes("भाग १") || norm1.includes("भाग 1");
+    const isPart2_1 = norm1.includes("भाग २") || norm1.includes("भाग 2");
+    const isPart1_2 = norm2.includes("भाग १") || norm2.includes("भाग 1");
+    const isPart2_2 = norm2.includes("भाग २") || norm2.includes("भाग 2");
+
+    if ((isPart1_1 && isPart2_2) || (isPart2_1 && isPart1_2)) return false;
+    return norm1.includes(norm2) || norm2.includes(norm1);
+  };
+
   // Helper to construct normalized deterministic record key:
   // academicYear_mediumId_classId_planningType_subjectId
   const getFileRecordKey = (
@@ -1489,7 +1545,7 @@ export function AcademicPlanningSystem({
     return `${year}_${med}_${cls}_${type}_${subj}`;
   };
 
-  // Reusable helper to lookup planning file record from state with logging
+  // Reusable helper to lookup planning file record from state with unified multi-class matching
   const getPlanningFile = (
     pType: "annual" | "monthly" | "question_bank" = selectedPlanningType,
     subjName?: string,
@@ -1497,30 +1553,57 @@ export function AcademicPlanningSystem({
     medId?: string,
     yearStr?: string
   ): PlanningFileRecord | undefined => {
-    const fileKey = getFileRecordKey(pType, subjName, clsId, medId, yearStr);
-    let fileRecord = planningFiles[fileKey];
+    const targetCls = clsId || selectedClass || "1st";
+    const targetMed = medId || selectedMedium || "marathi";
+    const rawSubj = subjName !== undefined ? subjName : (selectedSubject || "all");
+    const targetType = pType || selectedPlanningType || "annual";
+
+    const fileKey = getFileRecordKey(targetType, rawSubj, targetCls, targetMed, yearStr);
+    let fileRecord: PlanningFileRecord | undefined = planningFiles[fileKey];
+    if (fileRecord) return fileRecord;
 
     // Fallback check for legacy record keys (e.g. classId_mediumId_subjectId_planningType)
-    if (!fileRecord) {
-      const cls = (clsId || selectedClass || "1st").trim().toLowerCase();
-      const med = (medId || selectedMedium || "marathi").trim().toLowerCase();
-      const rawSubj = subjName !== undefined ? subjName : (selectedSubject || "all");
-      const subj = (rawSubj || "all").trim().toLowerCase();
-      const type = (pType || selectedPlanningType || "annual").trim().toLowerCase();
+    const cls = targetCls.trim().toLowerCase();
+    const med = targetMed.trim().toLowerCase();
+    const subj = (rawSubj || "all").trim().toLowerCase();
+    const type = targetType.trim().toLowerCase();
 
-      const legacyKey1 = `${cls}_${med}_${subj}_${type}`;
-      const legacyKey2 = `${cls}_${med}_${subj}`;
-      fileRecord = planningFiles[legacyKey1] || planningFiles[legacyKey2];
+    const legacyKey1 = `${cls}_${med}_${subj}_${type}`;
+    const legacyKey2 = `${cls}_${med}_${subj}`;
+    fileRecord = planningFiles[legacyKey1] || planningFiles[legacyKey2];
+    if (fileRecord) return fileRecord;
+
+    // Fallback search across all files in planningFiles with flexible class & subject normalization
+    const allFiles = Object.values(planningFiles);
+    fileRecord = allFiles.find((f) => {
+      if (!f) return false;
+      const fType = (f.planningType || "").trim().toLowerCase();
+      if (fType !== type) return false;
+      if (!matchClassId(f.classId, targetCls)) return false;
+      if (!matchMediumId(f.mediumId, targetMed)) return false;
+
+      if (subj !== "all") {
+        return matchSubjectId(f.subjectId, rawSubj);
+      }
+      return f.subjectId === "all" || !f.subjectId;
+    });
+    if (fileRecord) return fileRecord;
+
+    // If searching for a specific subject and no separate subject file is uploaded,
+    // fallback to class-wide combined file ("all") so the user can access and extract that subject
+    if (subj !== "all") {
+      fileRecord = allFiles.find((f) => {
+        if (!f) return false;
+        const fType = (f.planningType || "").trim().toLowerCase();
+        if (fType !== type) return false;
+        if (!matchClassId(f.classId, targetCls)) return false;
+        if (!matchMediumId(f.mediumId, targetMed)) return false;
+        return f.subjectId === "all" || !f.subjectId || f.id.endsWith("_all");
+      });
+      if (fileRecord) return fileRecord;
     }
 
-    console.log("Selected Class:", clsId || selectedClass);
-    console.log("Selected Medium:", medId || selectedMedium);
-    console.log("Selected Planning Type:", pType || selectedPlanningType);
-    console.log("Selected Subject:", subjName !== undefined ? subjName : selectedSubject);
-    console.log("Generated File Key:", fileKey);
-    console.log("Fetched Planning File:", fileRecord);
-
-    return fileRecord;
+    return undefined;
   };
 
   // Handle File Select with Validations (Max 20MB, Allowed Formats: PDF, DOC, DOCX)
@@ -1730,6 +1813,120 @@ export function AcademicPlanningSystem({
     }
   };
 
+  // Handle Delete / Remove Existing Planning or Question Bank File (Admin only)
+  const handleDeleteFile = async (rec: PlanningFileRecord) => {
+    if (!rec || !rec.id) {
+      toast.error("हटवण्यासाठी फाईल नोंद सापडली नाही.");
+      return;
+    }
+
+    const typeLabel =
+      rec.planningType === "annual"
+        ? "वार्षिक नियोजन (Annual)"
+        : rec.planningType === "monthly"
+          ? "मासिक नियोजन (Monthly)"
+          : "प्रश्नपेढी (Question Bank)";
+
+    const classLabel = CLASS_OPTIONS.find((c) => c.id === rec.classId)?.mr || `इयत्ता ${rec.classId}`;
+    const subjName = rec.subjectId === "all" ? "सर्व विषय (All Subjects)" : rec.subjectId;
+    const medLabel = rec.mediumId === "semi" ? "सेमी-इंग्रजी" : "मराठी";
+
+    const confirmMsg = `तुम्हाला खात्री आहे का?\n\nफाईल: '${rec.fileName || "ही फाईल"}'\nमाध्यम: ${medLabel} | ${classLabel} | ${typeLabel}\nविषय: ${subjName}\n\nही फाईल कायमस्वरूपी हटवली जाईल (This file will be permanently removed).`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setDeletingFileId(rec.id);
+      toast.info("⚡ फाईल हटवली जात आहे...");
+
+      // 1. Delete document from Firestore 'academic_plannings'
+      const docRef = doc(db, "academic_plannings", rec.id);
+      await deleteDoc(docRef);
+
+      // 2. Also remove from local IndexedDB if cached
+      try {
+        const dbReq = indexedDB.open("cce_file_store", 1);
+        dbReq.onsuccess = () => {
+          const idb = dbReq.result;
+          if (idb.objectStoreNames.contains("files")) {
+            const tx = idb.transaction("files", "readwrite");
+            tx.objectStore("files").delete(rec.id);
+          }
+        };
+      } catch (idbErr) {
+        console.warn("IndexedDB file deletion notice:", idbErr);
+      }
+
+      // 3. Clear metadata cache for this file
+      localStorage.removeItem(`cce_meta_${rec.id}`);
+
+      // 4. Update local planningFiles state & cache
+      setPlanningFiles((prev) => {
+        const updated = { ...prev };
+        delete updated[rec.id];
+        Object.keys(updated).forEach((k) => {
+          if (updated[k]?.id === rec.id) {
+            delete updated[k];
+          }
+        });
+        try {
+          localStorage.setItem("cce_academic_plannings_cache", JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+
+      // 5. If modal is currently open previewing this file, close it
+      if (viewModalFile && viewModalFile.id === rec.id) {
+        setViewModalFile(null);
+        setIsAnnotating(false);
+      }
+
+      toast.success(`🎉 '${rec.fileName || "फाईल"}' (${classLabel}) यशस्वीरित्या हटवली गेली!`);
+    } catch (err: any) {
+      console.error("Error deleting planning file:", err);
+      toast.error("फाईल हटवताना त्रुटी आली: " + (err?.message || "काहीतरी अडचण आली"));
+    } finally {
+      setDeletingFileId(null);
+    }
+  };
+
+  // List of all unique uploaded planning and question bank files across all classes & mediums
+  const allUploadedFilesList = React.useMemo(() => {
+    const list = Object.values(planningFiles).filter(Boolean);
+    const uniqueMap = new Map<string, PlanningFileRecord>();
+    list.forEach((f) => {
+      if (f && f.id && !uniqueMap.has(f.id)) {
+        uniqueMap.set(f.id, f);
+      }
+    });
+    return Array.from(uniqueMap.values()).sort((a, b) => {
+      const timeA = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+      const timeB = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [planningFiles]);
+
+  // Filtered files for the "All Files Management" modal
+  const filteredUploadedFiles = React.useMemo(() => {
+    return allUploadedFilesList.filter((f) => {
+      if (allFilesTypeFilter !== "all" && f.planningType !== allFilesTypeFilter) {
+        return false;
+      }
+      if (allFilesClassFilter !== "all" && f.classId !== allFilesClassFilter) {
+        return false;
+      }
+      if (allFilesSearchQuery.trim()) {
+        const q = allFilesSearchQuery.toLowerCase().trim();
+        const matchName = (f.fileName || "").toLowerCase().includes(q);
+        const matchSubj = (f.subjectId || "").toLowerCase().includes(q);
+        const matchClass = (f.classId || "").toLowerCase().includes(q);
+        const matchMedium = (f.mediumId || "").toLowerCase().includes(q);
+        return matchName || matchSubj || matchClass || matchMedium;
+      }
+      return true;
+    });
+  }, [allUploadedFilesList, allFilesTypeFilter, allFilesClassFilter, allFilesSearchQuery]);
+
   // Helper to trigger VIEW preview (checks IndexedDB for persistent blob across page refreshes)
   const handleViewFile = async (rec: PlanningFileRecord) => {
     if (!rec) return;
@@ -1934,6 +2131,18 @@ export function AcademicPlanningSystem({
 
         {/* Current Selections Summary Badge & School Info Edit Button */}
         <div className="flex items-center gap-3 flex-wrap justify-end">
+          {mode === "admin" && (
+            <button
+              type="button"
+              onClick={() => setShowAllFilesModal(true)}
+              className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-500 hover:to-indigo-600 text-white px-3.5 py-2 rounded-2xl text-xs font-black shadow-md cursor-pointer transition-all active:scale-95 border border-purple-300/30 shrink-0"
+              title="सर्व इयत्तांच्या अपलोड केलेल्या फाईल्स पहा व व्यवस्थापित करा"
+            >
+              <FolderOpen className="size-4 text-amber-300" />
+              <span>📂 सर्व फाईल्स व्यवस्थापन ({allUploadedFilesList.length})</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {
@@ -2337,6 +2546,27 @@ export function AcademicPlanningSystem({
                               {annualFile ? `REPLACE ${selectedClass} ANNUAL PDF (बदला)` : `UPLOAD ${selectedClass} ANNUAL PDF (अपलोड)`}
                             </button>
                           )}
+
+                          {/* Admin Remove Class File */}
+                          {annualFile && mode === "admin" && (
+                            <button
+                              type="button"
+                              disabled={deletingFileId === annualFile.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteFile(annualFile);
+                              }}
+                              className="w-full py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1.5 active:scale-95 disabled:opacity-50"
+                              title="ही फाईल कायमस्वरूपी हटवा (Remove File)"
+                            >
+                              {deletingFileId === annualFile.id ? (
+                                <Loader2 className="size-4 animate-spin text-rose-300" />
+                              ) : (
+                                <Trash2 className="size-4 text-rose-300" />
+                              )}
+                              <span>REMOVE FILE (फाईल हटवा)</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -2377,40 +2607,103 @@ export function AcademicPlanningSystem({
                     </div>
                   </div>
 
-                  {/* 3. Question Bank Card (विषयनिहाय - Sub-selection) */}
-                  <div
-                    onClick={() => {
-                      setSelectedPlanningType("question_bank");
-                      setStep("subject");
-                    }}
-                    className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 text-white rounded-[2.5rem] p-7 border border-slate-700/50 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl hover:scale-102 transition-all cursor-pointer"
-                  >
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="size-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
-                          <FolderOpen className="size-7 text-amber-300" />
+                  {/* 3. Question Bank Card (Unified with Class-wide & Subject-wise action) */}
+                  {(() => {
+                    const qbFile = getPlanningFile("question_bank", "all");
+                    return (
+                      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 text-white rounded-[2.5rem] p-7 border border-slate-700/50 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl transition-all">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="size-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
+                              <FolderOpen className="size-7 text-amber-300" />
+                            </div>
+                            {qbFile ? (
+                              <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                                <CheckCircle2 className="size-3" /> Available
+                              </span>
+                            ) : (
+                              <span className="px-3 py-1 rounded-full bg-purple-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
+                                इयत्ता {selectedClass}
+                              </span>
+                            )}
+                          </div>
+
+                          <div>
+                            <h3 className="text-2xl font-black">Question Bank</h3>
+                            <p className="text-xs font-semibold text-slate-300 mt-1">
+                              (प्रश्नपेढी दालन - इयत्ता {selectedClass})
+                            </p>
+                            <p className="text-xs text-slate-200 mt-3 leading-relaxed font-medium">
+                              {qbFile
+                                ? `फाईल: ${qbFile.fileName} (${qbFile.fileSize})`
+                                : `सर्व विषयांचे घटकनिहाय प्रश्न संच व सराव प्रश्नपत्रिका पहा किंवा डाऊनलोड करा`}
+                            </p>
+                          </div>
                         </div>
-                        <span className="px-3 py-1 rounded-full bg-purple-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
-                          विषयनिहाय
-                        </span>
-                      </div>
 
-                      <div>
-                        <h3 className="text-2xl font-black">Question Bank</h3>
-                        <p className="text-xs font-semibold text-slate-300 mt-1">
-                          (प्रश्नपेढी दालन)
-                        </p>
-                        <p className="text-xs text-slate-300 mt-3 leading-relaxed">
-                          सर्व विषयांचे घटकनिहाय प्रश्न संच व सराव प्रश्नपत्रिका पहा किंवा डाऊनलोड करा
-                        </p>
-                      </div>
-                    </div>
+                        <div className="pt-3 border-t border-white/15 space-y-2">
+                          {qbFile ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewFile(qbFile);
+                              }}
+                              className="w-full py-3 px-4 rounded-xl bg-white text-indigo-950 hover:bg-amber-300 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95"
+                            >
+                              <Eye className="size-4 text-indigo-700" /> VIEW QUESTION BANK (पहा)
+                            </button>
+                          ) : null}
 
-                    <div className="pt-4 border-t border-white/15 flex items-center justify-between font-black text-xs text-amber-300 group-hover:text-white transition-colors">
-                      <span>विषय निवडा व प्रश्नपेढी पहा</span>
-                      <span>→</span>
-                    </div>
-                  </div>
+                          <button
+                            onClick={() => {
+                              setSelectedPlanningType("question_bank");
+                              setStep("subject");
+                            }}
+                            className="w-full py-2.5 px-4 rounded-xl bg-purple-600/50 hover:bg-purple-600 text-white text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer border border-purple-400/30 active:scale-95"
+                          >
+                            <span>विषयनिहाय प्रश्नपेढी निवडा</span>
+                            <span>→</span>
+                          </button>
+
+                          {/* Admin Upload / Replace Question Bank File */}
+                          {mode === "admin" && (
+                            <button
+                              onClick={() => {
+                                setSelectedSubject("all");
+                                setUploadingType("question_bank");
+                                setUploadModalOpen(true);
+                              }}
+                              className="w-full py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1"
+                            >
+                              <Upload className="size-4" />
+                              {qbFile ? `REPLACE ${selectedClass} QUESTION BANK` : `UPLOAD ${selectedClass} QUESTION BANK`}
+                            </button>
+                          )}
+
+                          {/* Admin Remove Question Bank File */}
+                          {qbFile && mode === "admin" && (
+                            <button
+                              type="button"
+                              disabled={deletingFileId === qbFile.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteFile(qbFile);
+                              }}
+                              className="w-full py-2 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
+                              title="ही फाईल कायमस्वरूपी हटवा (Remove File)"
+                            >
+                              {deletingFileId === qbFile.id ? (
+                                <Loader2 className="size-4 animate-spin text-rose-300" />
+                              ) : (
+                                <Trash2 className="size-4 text-rose-300" />
+                              )}
+                              <span>REMOVE FILE (फाईल हटवा)</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="flex justify-center pt-4">
@@ -2503,7 +2796,7 @@ export function AcademicPlanningSystem({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (fileRec) handleViewFile(fileRec);
+                            if (fileRec) handleViewFile({ ...fileRec, subjectId: subjName });
                             else toast.error(`अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
                           }}
                           className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95"
@@ -2525,6 +2818,27 @@ export function AcademicPlanningSystem({
                           >
                             <Upload className="size-4" />
                             {fileRec ? "REPLACE FILE (बदला)" : "UPLOAD FILE (अपलोड करा)"}
+                          </button>
+                        )}
+
+                        {/* Admin Remove File Button */}
+                        {fileRec && mode === "admin" && (
+                          <button
+                            type="button"
+                            disabled={deletingFileId === fileRec.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteFile(fileRec);
+                            }}
+                            className="w-full py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-rose-200 mt-1.5 active:scale-95 disabled:opacity-50"
+                            title="ही फाईल कायमस्वरूपी हटवा (Remove File)"
+                          >
+                            {deletingFileId === fileRec.id ? (
+                              <Loader2 className="size-3.5 animate-spin text-rose-600" />
+                            ) : (
+                              <Trash2 className="size-3.5 text-rose-600" />
+                            )}
+                            <span>REMOVE FILE (फाईल हटवा)</span>
                           </button>
                         )}
                       </div>
@@ -2742,6 +3056,24 @@ export function AcademicPlanningSystem({
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end">
+                {/* Admin Delete File Button in Preview */}
+                {mode === "admin" && viewModalFile && (
+                  <button
+                    type="button"
+                    disabled={deletingFileId === viewModalFile.id}
+                    onClick={() => handleDeleteFile(viewModalFile)}
+                    className="px-3.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-400/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="ही फाईल कायमस्वरूपी हटवा (Remove this file)"
+                  >
+                    {deletingFileId === viewModalFile.id ? (
+                      <Loader2 className="size-3.5 animate-spin text-rose-300" />
+                    ) : (
+                      <Trash2 className="size-3.5 text-rose-300" />
+                    )}
+                    <span>हटवा (Delete File)</span>
+                  </button>
+                )}
+
                 {/* CLOSE */}
                 <button
                   onClick={() => {
@@ -2759,7 +3091,12 @@ export function AcademicPlanningSystem({
             <div className="flex-1 p-2 sm:p-4 overflow-hidden bg-slate-950/80 flex flex-col items-center justify-center relative">
               <div className="w-full h-full min-h-0 flex-1 relative rounded-2xl overflow-y-auto bg-white shadow-2xl flex flex-col p-4">
                 {viewModalFile && (
-                  <PlanningTableRenderer record={viewModalFile as any} fileUrl={viewModalFile.fileUrl} mode={mode} />
+                  <PlanningTableRenderer
+                    record={viewModalFile as any}
+                    fileUrl={viewModalFile.fileUrl}
+                    mode={mode}
+                    onDelete={() => handleDeleteFile(viewModalFile)}
+                  />
                 )}
               </div>
             </div>
@@ -2841,6 +3178,205 @@ export function AcademicPlanningSystem({
         </div>
       )}
 
+      {/* ALL UPLOADED FILES MANAGEMENT MODAL (ADMIN ONLY) */}
+      {showAllFilesModal && (
+        <div className="fixed inset-0 z-[110] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl w-full max-w-5xl h-[90vh] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200"
+          >
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white flex items-center justify-between shrink-0 border-b border-indigo-900/50">
+              <div className="flex items-center gap-3">
+                <div className="size-11 rounded-2xl bg-amber-400/20 border border-amber-400/30 text-amber-300 flex items-center justify-center font-bold">
+                  <FolderOpen className="size-6" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+                    <span>सर्व अपलोड केलेल्या फाईल्स व्यवस्थापन</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold border border-amber-400/30">
+                      {allUploadedFilesList.length} फाईल्स
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-300 font-medium">
+                    वार्षिक नियोजन, मासिक नियोजन आणि प्रश्नपेढीच्या सर्व फाईल्स व्यवस्थापित करा व हटवा.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowAllFilesModal(false)}
+                className="p-2 rounded-xl text-slate-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="size-6" />
+              </button>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+              {/* Search */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={allFilesSearchQuery}
+                  onChange={(e) => setAllFilesSearchQuery(e.target.value)}
+                  placeholder="इयत्ता, विषय किंवा फाईलचे नाव शोधा..."
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Type Filter Tabs */}
+              <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl shrink-0 overflow-x-auto">
+                {[
+                  { id: "all", label: "सर्व प्रकार" },
+                  { id: "annual", label: "वार्षिक" },
+                  { id: "monthly", label: "मासिक" },
+                  { id: "question_bank", label: "प्रश्नपेढी" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setAllFilesTypeFilter(t.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      allFilesTypeFilter === t.id
+                        ? "bg-white text-indigo-950 shadow-xs font-black"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Class Filter Dropdown */}
+              <select
+                value={allFilesClassFilter}
+                onChange={(e) => setAllFilesClassFilter(e.target.value)}
+                className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shrink-0 cursor-pointer"
+              >
+                <option value="all">सर्व इयत्ता (All Classes)</option>
+                {CLASS_OPTIONS.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.mr}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Files List / Table Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
+              {filteredUploadedFiles.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-12 text-center space-y-3 text-slate-400">
+                  <FolderOpen className="size-12 text-slate-300 stroke-1" />
+                  <p className="text-sm font-bold text-slate-600">कोणतीही फाईल आढळली नाही.</p>
+                  <p className="text-xs text-slate-400 max-w-sm">
+                    शोधानुसार किंवा फिल्टरनुसार फाईल्स उपलब्ध नाहीत.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3">
+                  {filteredUploadedFiles.map((file) => {
+                    const classLabel = CLASS_OPTIONS.find((c) => c.id === file.classId)?.mr || `इयत्ता ${file.classId}`;
+                    const medLabel = file.mediumId === "semi" ? "सेमी-इंग्रजी" : "मराठी माध्यम";
+                    const isDeleting = deletingFileId === file.id;
+
+                    const typeBadgeColor =
+                      file.planningType === "annual"
+                        ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                        : file.planningType === "monthly"
+                          ? "bg-teal-50 text-teal-700 border-teal-200"
+                          : "bg-purple-50 text-purple-700 border-purple-200";
+
+                    const typeLabel =
+                      file.planningType === "annual"
+                        ? "वार्षिक नियोजन"
+                        : file.planningType === "monthly"
+                          ? "मासिक नियोजन"
+                          : "प्रश्नपेढी";
+
+                    return (
+                      <div
+                        key={file.id}
+                        className="bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                      >
+                        <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                          <div className="size-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 font-bold">
+                            <FileText className="size-5 text-indigo-600" />
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${typeBadgeColor}`}>
+                                {typeLabel}
+                              </span>
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
+                                {classLabel} ({medLabel})
+                              </span>
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
+                                विषय: {file.subjectId === "all" ? "सर्व विषय (All)" : file.subjectId}
+                              </span>
+                            </div>
+                            <h4 className="text-xs sm:text-sm font-black text-slate-900 truncate" title={file.fileName}>
+                              {file.fileName}
+                            </h4>
+                            <p className="text-[10px] text-slate-400 font-semibold">
+                              साईझ: {file.fileSize || "—"} | अपलोड दिनांक: {file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString("mr-IN") : "—"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleViewFile(file);
+                            }}
+                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black rounded-xl transition-all flex items-center gap-1 cursor-pointer border border-indigo-200"
+                            title="ही फाईल पहा (View File)"
+                          >
+                            <Eye className="size-3.5" />
+                            <span>पहा (View)</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isDeleting}
+                            onClick={() => handleDeleteFile(file)}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-black rounded-xl transition-all flex items-center gap-1 cursor-pointer border border-rose-200 disabled:opacity-50"
+                            title="ही फाईल कायमस्वरूपी हटवा (Remove File)"
+                          >
+                            {isDeleting ? (
+                              <Loader2 className="size-3.5 animate-spin text-rose-600" />
+                            ) : (
+                              <Trash2 className="size-3.5 text-rose-600" />
+                            )}
+                            <span>हटवा (Remove)</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-slate-600 shrink-0">
+              <span>
+                एकूण <strong>{filteredUploadedFiles.length}</strong> फाईल्स सापडल्या (एकूण उपलब्ध: {allUploadedFilesList.length})
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAllFilesModal(false)}
+                className="px-5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold cursor-pointer transition-colors"
+              >
+                बंद करा (Close)
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* LIVE SITE DOCUMENT EDITOR MODAL */}
       {isTableEditorOpen && (
