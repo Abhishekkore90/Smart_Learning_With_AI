@@ -123,9 +123,15 @@ const MODULE_MAP: any = {
   },
 
   homework: {
-    m: "Assignment Desk",
-    e: "Student Engagement",
+    m: "गृहपाठ (Homework)",
+    e: "Student Engagement & Assignments",
     icon: BookOpen,
+    color: "bg-[#D6B97A]",
+  },
+  "question-paper": {
+    m: "प्रश्नपत्रिका (Question Paper)",
+    e: "Exam & Test Paper Generator",
+    icon: FileText,
     color: "bg-[#D6B97A]",
   },
   "monthly-meeting": {
@@ -399,11 +405,46 @@ function ModulePage() {
                   data={data}
                   onChange={(val: any) => setData(val)}
                 />
-              ) : moduleId === "teacher-statistics" ? (
-                <TeacherStatisticsEditor
-                  data={data}
-                  onChange={(val: any) => setData(val)}
-                />
+              ) : moduleId === "homework" ? (
+                <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
+                  <div className="size-20 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center shadow-inner">
+                    <BookOpen className="size-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-black text-[#1A1A1A]">
+                      गृहपाठ (Homework Workspace)
+                    </h3>
+                    <p className="text-slate-500 font-medium max-w-md mx-auto">
+                      इयत्ता पहिली ते आठवी मराठी व सेमी माध्यमासाठी विषयनिहाय गृहपाठ तयार करा व व्यवस्थापित करा.
+                    </p>
+                  </div>
+                  <Link
+                    to="/teacher/homework"
+                    className="px-10 py-5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-xl"
+                  >
+                    Open Homework Workspace
+                  </Link>
+                </div>
+              ) : moduleId === "question-paper" ? (
+                <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
+                  <div className="size-20 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
+                    <FileText className="size-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-black text-[#1A1A1A]">
+                      प्रश्नपत्रिका (Question Paper Generator)
+                    </h3>
+                    <p className="text-slate-500 font-medium max-w-md mx-auto">
+                      इयत्ता पहिली ते आठवी मराठी व सेमी माध्यमासाठी घटक चाचणी व सत्र परीक्षा प्रश्नपत्रिका तयार करा.
+                    </p>
+                  </div>
+                  <Link
+                    to="/teacher/question-paper"
+                    className="px-10 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-xl"
+                  >
+                    Open Question Paper Workspace
+                  </Link>
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
                   <div className="size-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">

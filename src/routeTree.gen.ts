@@ -44,6 +44,7 @@ import { Route as TeacherSetupRouteImport } from './routes/teacher.setup'
 import { Route as TeacherSettingsRouteImport } from './routes/teacher.settings'
 import { Route as TeacherResultRouteImport } from './routes/teacher.result'
 import { Route as TeacherRecordBookRouteImport } from './routes/teacher.record-book'
+import { Route as TeacherQuestionPaperRouteImport } from './routes/teacher.question-paper'
 import { Route as TeacherQuestionBankRouteImport } from './routes/teacher.question-bank'
 import { Route as TeacherPlanningViewRouteImport } from './routes/teacher.planning-view'
 import { Route as TeacherPlanningRouteImport } from './routes/teacher.planning'
@@ -72,11 +73,13 @@ import { Route as AdminStudentManagementRouteImport } from './routes/admin.stude
 import { Route as AdminSqafConfigRouteImport } from './routes/admin.sqaf-config'
 import { Route as AdminSqaafConfigRouteImport } from './routes/admin.sqaaf-config'
 import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
+import { Route as AdminQuestionPaperRouteImport } from './routes/admin.question-paper'
 import { Route as AdminPlanningManagementRouteImport } from './routes/admin.planning-management'
 import { Route as AdminPlanningRouteImport } from './routes/admin.planning'
 import { Route as AdminModulePaymentsRouteImport } from './routes/admin.module-payments'
 import { Route as AdminMeetingTemplatesRouteImport } from './routes/admin.meeting-templates'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminHomeworkRouteImport } from './routes/admin.homework'
 import { Route as AdminEnrollmentsRouteImport } from './routes/admin.enrollments'
 import { Route as AdminDigitalSchoolInquiriesRouteImport } from './routes/admin.digital-school-inquiries'
 import { Route as AdminContactMessagesRouteImport } from './routes/admin.contact-messages'
@@ -282,6 +285,11 @@ const TeacherRecordBookRoute = TeacherRecordBookRouteImport.update({
   path: '/teacher/record-book',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeacherQuestionPaperRoute = TeacherQuestionPaperRouteImport.update({
+  id: '/teacher/question-paper',
+  path: '/teacher/question-paper',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeacherQuestionBankRoute = TeacherQuestionBankRouteImport.update({
   id: '/teacher/question-bank',
   path: '/teacher/question-bank',
@@ -422,6 +430,11 @@ const AdminReviewsRoute = AdminReviewsRouteImport.update({
   path: '/admin/reviews',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminQuestionPaperRoute = AdminQuestionPaperRouteImport.update({
+  id: '/admin/question-paper',
+  path: '/admin/question-paper',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminPlanningManagementRoute = AdminPlanningManagementRouteImport.update({
   id: '/admin/planning-management',
   path: '/admin/planning-management',
@@ -445,6 +458,11 @@ const AdminMeetingTemplatesRoute = AdminMeetingTemplatesRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminHomeworkRoute = AdminHomeworkRouteImport.update({
+  id: '/admin/homework',
+  path: '/admin/homework',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminEnrollmentsRoute = AdminEnrollmentsRouteImport.update({
@@ -632,11 +650,13 @@ export interface FileRoutesByFullPath {
   '/admin/contact-messages': typeof AdminContactMessagesRoute
   '/admin/digital-school-inquiries': typeof AdminDigitalSchoolInquiriesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
+  '/admin/homework': typeof AdminHomeworkRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
   '/admin/module-payments': typeof AdminModulePaymentsRoute
   '/admin/planning': typeof AdminPlanningRoute
   '/admin/planning-management': typeof AdminPlanningManagementRoute
+  '/admin/question-paper': typeof AdminQuestionPaperRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sqaaf-config': typeof AdminSqaafConfigRoute
   '/admin/sqaf-config': typeof AdminSqafConfigRoute
@@ -665,6 +685,7 @@ export interface FileRoutesByFullPath {
   '/teacher/planning': typeof TeacherPlanningRoute
   '/teacher/planning-view': typeof TeacherPlanningViewRoute
   '/teacher/question-bank': typeof TeacherQuestionBankRoute
+  '/teacher/question-paper': typeof TeacherQuestionPaperRoute
   '/teacher/record-book': typeof TeacherRecordBookRoute
   '/teacher/result': typeof TeacherResultRoute
   '/teacher/settings': typeof TeacherSettingsRoute
@@ -730,11 +751,13 @@ export interface FileRoutesByTo {
   '/admin/contact-messages': typeof AdminContactMessagesRoute
   '/admin/digital-school-inquiries': typeof AdminDigitalSchoolInquiriesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
+  '/admin/homework': typeof AdminHomeworkRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
   '/admin/module-payments': typeof AdminModulePaymentsRoute
   '/admin/planning': typeof AdminPlanningRoute
   '/admin/planning-management': typeof AdminPlanningManagementRoute
+  '/admin/question-paper': typeof AdminQuestionPaperRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sqaaf-config': typeof AdminSqaafConfigRoute
   '/admin/sqaf-config': typeof AdminSqafConfigRoute
@@ -763,6 +786,7 @@ export interface FileRoutesByTo {
   '/teacher/planning': typeof TeacherPlanningRoute
   '/teacher/planning-view': typeof TeacherPlanningViewRoute
   '/teacher/question-bank': typeof TeacherQuestionBankRoute
+  '/teacher/question-paper': typeof TeacherQuestionPaperRoute
   '/teacher/record-book': typeof TeacherRecordBookRoute
   '/teacher/result': typeof TeacherResultRoute
   '/teacher/settings': typeof TeacherSettingsRoute
@@ -830,11 +854,13 @@ export interface FileRoutesById {
   '/admin/contact-messages': typeof AdminContactMessagesRoute
   '/admin/digital-school-inquiries': typeof AdminDigitalSchoolInquiriesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
+  '/admin/homework': typeof AdminHomeworkRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
   '/admin/module-payments': typeof AdminModulePaymentsRoute
   '/admin/planning': typeof AdminPlanningRoute
   '/admin/planning-management': typeof AdminPlanningManagementRoute
+  '/admin/question-paper': typeof AdminQuestionPaperRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sqaaf-config': typeof AdminSqaafConfigRoute
   '/admin/sqaf-config': typeof AdminSqafConfigRoute
@@ -863,6 +889,7 @@ export interface FileRoutesById {
   '/teacher/planning': typeof TeacherPlanningRoute
   '/teacher/planning-view': typeof TeacherPlanningViewRoute
   '/teacher/question-bank': typeof TeacherQuestionBankRoute
+  '/teacher/question-paper': typeof TeacherQuestionPaperRoute
   '/teacher/record-book': typeof TeacherRecordBookRoute
   '/teacher/result': typeof TeacherResultRoute
   '/teacher/settings': typeof TeacherSettingsRoute
@@ -931,11 +958,13 @@ export interface FileRouteTypes {
     | '/admin/contact-messages'
     | '/admin/digital-school-inquiries'
     | '/admin/enrollments'
+    | '/admin/homework'
     | '/admin/login'
     | '/admin/meeting-templates'
     | '/admin/module-payments'
     | '/admin/planning'
     | '/admin/planning-management'
+    | '/admin/question-paper'
     | '/admin/reviews'
     | '/admin/sqaaf-config'
     | '/admin/sqaf-config'
@@ -964,6 +993,7 @@ export interface FileRouteTypes {
     | '/teacher/planning'
     | '/teacher/planning-view'
     | '/teacher/question-bank'
+    | '/teacher/question-paper'
     | '/teacher/record-book'
     | '/teacher/result'
     | '/teacher/settings'
@@ -1029,11 +1059,13 @@ export interface FileRouteTypes {
     | '/admin/contact-messages'
     | '/admin/digital-school-inquiries'
     | '/admin/enrollments'
+    | '/admin/homework'
     | '/admin/login'
     | '/admin/meeting-templates'
     | '/admin/module-payments'
     | '/admin/planning'
     | '/admin/planning-management'
+    | '/admin/question-paper'
     | '/admin/reviews'
     | '/admin/sqaaf-config'
     | '/admin/sqaf-config'
@@ -1062,6 +1094,7 @@ export interface FileRouteTypes {
     | '/teacher/planning'
     | '/teacher/planning-view'
     | '/teacher/question-bank'
+    | '/teacher/question-paper'
     | '/teacher/record-book'
     | '/teacher/result'
     | '/teacher/settings'
@@ -1128,11 +1161,13 @@ export interface FileRouteTypes {
     | '/admin/contact-messages'
     | '/admin/digital-school-inquiries'
     | '/admin/enrollments'
+    | '/admin/homework'
     | '/admin/login'
     | '/admin/meeting-templates'
     | '/admin/module-payments'
     | '/admin/planning'
     | '/admin/planning-management'
+    | '/admin/question-paper'
     | '/admin/reviews'
     | '/admin/sqaaf-config'
     | '/admin/sqaf-config'
@@ -1161,6 +1196,7 @@ export interface FileRouteTypes {
     | '/teacher/planning'
     | '/teacher/planning-view'
     | '/teacher/question-bank'
+    | '/teacher/question-paper'
     | '/teacher/record-book'
     | '/teacher/result'
     | '/teacher/settings'
@@ -1228,11 +1264,13 @@ export interface RootRouteChildren {
   AdminContactMessagesRoute: typeof AdminContactMessagesRoute
   AdminDigitalSchoolInquiriesRoute: typeof AdminDigitalSchoolInquiriesRoute
   AdminEnrollmentsRoute: typeof AdminEnrollmentsRoute
+  AdminHomeworkRoute: typeof AdminHomeworkRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminMeetingTemplatesRoute: typeof AdminMeetingTemplatesRoute
   AdminModulePaymentsRoute: typeof AdminModulePaymentsRoute
   AdminPlanningRoute: typeof AdminPlanningRoute
   AdminPlanningManagementRoute: typeof AdminPlanningManagementRoute
+  AdminQuestionPaperRoute: typeof AdminQuestionPaperRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
   AdminSqaafConfigRoute: typeof AdminSqaafConfigRoute
   AdminSqafConfigRoute: typeof AdminSqafConfigRoute
@@ -1259,6 +1297,7 @@ export interface RootRouteChildren {
   TeacherPlanningRoute: typeof TeacherPlanningRoute
   TeacherPlanningViewRoute: typeof TeacherPlanningViewRoute
   TeacherQuestionBankRoute: typeof TeacherQuestionBankRoute
+  TeacherQuestionPaperRoute: typeof TeacherQuestionPaperRoute
   TeacherRecordBookRoute: typeof TeacherRecordBookRoute
   TeacherResultRoute: typeof TeacherResultRoute
   TeacherSettingsRoute: typeof TeacherSettingsRoute
@@ -1533,6 +1572,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeacherRecordBookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/teacher/question-paper': {
+      id: '/teacher/question-paper'
+      path: '/teacher/question-paper'
+      fullPath: '/teacher/question-paper'
+      preLoaderRoute: typeof TeacherQuestionPaperRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/teacher/question-bank': {
       id: '/teacher/question-bank'
       path: '/teacher/question-bank'
@@ -1729,6 +1775,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReviewsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/question-paper': {
+      id: '/admin/question-paper'
+      path: '/admin/question-paper'
+      fullPath: '/admin/question-paper'
+      preLoaderRoute: typeof AdminQuestionPaperRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/planning-management': {
       id: '/admin/planning-management'
       path: '/admin/planning-management'
@@ -1762,6 +1815,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/homework': {
+      id: '/admin/homework'
+      path: '/admin/homework'
+      fullPath: '/admin/homework'
+      preLoaderRoute: typeof AdminHomeworkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/enrollments': {
@@ -2058,11 +2118,13 @@ const rootRouteChildren: RootRouteChildren = {
   AdminContactMessagesRoute: AdminContactMessagesRoute,
   AdminDigitalSchoolInquiriesRoute: AdminDigitalSchoolInquiriesRoute,
   AdminEnrollmentsRoute: AdminEnrollmentsRoute,
+  AdminHomeworkRoute: AdminHomeworkRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminMeetingTemplatesRoute: AdminMeetingTemplatesRoute,
   AdminModulePaymentsRoute: AdminModulePaymentsRoute,
   AdminPlanningRoute: AdminPlanningRoute,
   AdminPlanningManagementRoute: AdminPlanningManagementRoute,
+  AdminQuestionPaperRoute: AdminQuestionPaperRoute,
   AdminReviewsRoute: AdminReviewsRoute,
   AdminSqaafConfigRoute: AdminSqaafConfigRoute,
   AdminSqafConfigRoute: AdminSqafConfigRoute,
@@ -2089,6 +2151,7 @@ const rootRouteChildren: RootRouteChildren = {
   TeacherPlanningRoute: TeacherPlanningRoute,
   TeacherPlanningViewRoute: TeacherPlanningViewRoute,
   TeacherQuestionBankRoute: TeacherQuestionBankRoute,
+  TeacherQuestionPaperRoute: TeacherQuestionPaperRoute,
   TeacherRecordBookRoute: TeacherRecordBookRoute,
   TeacherResultRoute: TeacherResultRoute,
   TeacherSettingsRoute: TeacherSettingsRoute,

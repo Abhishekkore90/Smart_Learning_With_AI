@@ -26,6 +26,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
+  FileText,
 } from "lucide-react";
 import {
   AreaChart,
@@ -142,6 +143,20 @@ const MODULE_CARDS = [
     to: "/teacher/stats-student",
     icon: Folder,
     description: "या विभागात आपणास विद्यार्थी संचिका उपलब्ध करून देण्यात आलेली आहे यात आपण विद्यार्थ्यांची सर्व माहिती भरून, एडिट करून, आपण ती संचिका शाळेचे नाव, शिक्षकाचे नाव व मुख्याध्यापकांच्या नावासह प्रिंट करून वापरू शकता.",
+  },
+  {
+    labelKey: "homework",
+    fallbackLabel: "१३. गृहपाठ (Homework)",
+    to: "/teacher/homework",
+    icon: BookOpen,
+    description: "या विभागात आपणास इयत्ता पहिली ते आठवी मराठी व सेमी माध्यमासाठी विषयनिहाय गृहपाठ तयार करता येईल व विद्यार्थ्यांना पाठवता येईल.",
+  },
+  {
+    labelKey: "questionPaper",
+    fallbackLabel: "१४. प्रश्नपत्रिका (Question Paper)",
+    to: "/teacher/question-paper",
+    icon: FileText,
+    description: "या विभागात आपणास इयत्ता पहिली ते आठवी मराठी व सेमी माध्यमासाठी विषयनिहाय घटक चाचणी व सत्र परीक्षा प्रश्नपत्रिका तयार करता येईल व प्रिंट काढता येईल.",
   },
 ];
 

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  FileText,
   BookOpen,
   Languages,
   GraduationCap,
@@ -17,13 +18,13 @@ import {
   Layers,
   Download,
   Printer,
-  Clock,
   Search,
   Check,
-  FileText,
   Eye,
   AlertCircle,
   Loader2,
+  Clock,
+  Filter,
   Edit3,
   Save,
   RotateCcw,
@@ -31,6 +32,7 @@ import {
   Trash2,
   School,
   ArrowLeft,
+  Share2,
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
@@ -48,11 +50,11 @@ import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 import { extractTextFromUrl } from "@/lib/contentExtractor";
 
-export const Route = createFileRoute("/teacher/homework")({
+export const Route = createFileRoute("/teacher/question-paper")({
   head: () => ({
-    meta: [{ title: "गृहपाठ (Homework) — SMART LEARNING" }],
+    meta: [{ title: "प्रश्नपत्रिका (Question Paper) — SMART LEARNING" }],
   }),
-  component: HomeworkPage,
+  component: QuestionPaperPage,
 });
 
 const CLASS_OPTIONS = [
@@ -81,6 +83,14 @@ const MEDIUM_OPTIONS = [
   },
 ];
 
+const EXAM_TYPES = [
+  { id: "unit1", label: "घटक चाचणी १ (Unit Test 1)" },
+  { id: "term1", label: "प्रथम सत्र परीक्षा (Term 1 Exam)" },
+  { id: "unit2", label: "घटक चाचणी २ (Unit Test 2)" },
+  { id: "term2", label: "द्वितीय सत्र परीक्षा (Term 2 Exam)" },
+  { id: "practice", label: "सराव चाचणी परीक्षा (Practice Test)" },
+];
+
 function getSubjectIcon(subjName: string) {
   const s = subjName.toLowerCase();
   if (s.includes("मराठी") || s.includes("हिंदी") || s.includes("भाषा")) return Languages;
@@ -90,27 +100,29 @@ function getSubjectIcon(subjName: string) {
   if (s.includes("भूगोल") || s.includes("geography")) return Globe;
   if (s.includes("इतिहास") || s.includes("history")) return ScrollText;
   if (s.includes("नागरिक") || s.includes("समाज") || s.includes("social")) return Users;
-  return BookOpen;
+  return FileText;
 }
 
 const GRADIENTS = [
-  { bg: "from-indigo-500 to-purple-600", light: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+  { bg: "from-blue-600 to-indigo-700", light: "bg-blue-50 text-blue-700 border-blue-200" },
+  { bg: "from-purple-600 to-indigo-700", light: "bg-purple-50 text-purple-700 border-purple-200" },
   { bg: "from-emerald-500 to-teal-600", light: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   { bg: "from-amber-500 to-orange-600", light: "bg-amber-50 text-amber-700 border-amber-200" },
-  { bg: "from-blue-500 to-indigo-600", light: "bg-blue-50 text-blue-700 border-blue-200" },
   { bg: "from-pink-500 to-rose-600", light: "bg-pink-50 text-pink-700 border-pink-200" },
   { bg: "from-cyan-500 to-sky-600", light: "bg-cyan-50 text-cyan-700 border-cyan-200" },
 ];
 
-interface HomeworkItem {
+interface QuestionPaperItem {
   id: string;
   medium: string;
   class: string;
   subject: string;
+  examType: string;
+  examTypeLabel: string;
+  totalMarks: string;
   title: string;
   description: string;
   content?: string;
-  dueDate?: string;
   fileUrl?: string;
   fileName?: string;
   fileSize?: number;
@@ -118,19 +130,20 @@ interface HomeworkItem {
   uploadedBy: "admin";
 }
 
-interface EditableHomeworkQuestion {
+interface EditableQuestion {
   id: string;
   qNumber: string;
   qTitle: string;
+  marks: string;
   body: string;
 }
 
-function parseHomeworkQuestions(rawText: string): EditableHomeworkQuestion[] {
+function parseQuestionsFromRawText(rawText: string): EditableQuestion[] {
   if (!rawText || !rawText.trim()) return [];
 
   const lines = rawText.split("\n");
-  const items: EditableHomeworkQuestion[] = [];
-  let currentItem: EditableHomeworkQuestion | null = null;
+  const questions: EditableQuestion[] = [];
+  let currentQ: EditableQuestion | null = null;
   let lineBuffer: string[] = [];
 
   const isQuestionHeader = (line: string) => {
@@ -144,79 +157,102 @@ function parseHomeworkQuestions(rawText: string): EditableHomeworkQuestion[] {
     );
   };
 
+  const extractMarks = (line: string) => {
+    const m = line.match(/\(?(\d+)\s*(?:गुण|marks?)\)?/i);
+    return m ? `${m[1]} गुण` : "";
+  };
+
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) {
-      if (currentItem) lineBuffer.push("");
+      if (currentQ) lineBuffer.push("");
       continue;
     }
 
     if (isQuestionHeader(trimmed)) {
-      if (currentItem) {
-        currentItem.body = lineBuffer.join("\n").trim();
-        items.push(currentItem);
+      if (currentQ) {
+        currentQ.body = lineBuffer.join("\n").trim();
+        questions.push(currentQ);
       }
-      currentItem = {
-        id: `hw_q_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        qNumber: trimmed.split(/[\s\.\)]+/)[0] || "प्र.",
-        qTitle: trimmed,
+      const marksFound = extractMarks(trimmed);
+      const cleanTitle = trimmed.replace(/\(?\d+\s*(?:गुण|marks?)\)?/i, "").trim();
+
+      currentQ = {
+        id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        qNumber: cleanTitle.split(/[\s\.\)]+/)[0] || "प्र.",
+        qTitle: cleanTitle,
+        marks: marksFound || "",
         body: "",
       };
       lineBuffer = [];
     } else {
-      lineBuffer.push(trimmed);
+      if (currentQ) {
+        lineBuffer.push(trimmed);
+      } else {
+        // First block before any explicit question header
+        lineBuffer.push(trimmed);
+      }
     }
   }
 
-  if (currentItem) {
-    currentItem.body = lineBuffer.join("\n").trim();
-    items.push(currentItem);
+  if (currentQ) {
+    currentQ.body = lineBuffer.join("\n").trim();
+    questions.push(currentQ);
   } else if (lineBuffer.length > 0) {
-    items.push({
-      id: `hw_initial`,
+    // If no explicit question numbers matched, group text into sections
+    questions.push({
+      id: `q_initial`,
       qNumber: "प्र. १",
-      qTitle: "खालील स्वाध्याय पूर्ण करा:",
+      qTitle: "खालील प्रश्न सोडवा:",
+      marks: "",
       body: lineBuffer.join("\n").trim(),
     });
   }
 
-  return items;
+  return questions;
 }
 
-function HomeworkPage() {
+function QuestionPaperPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Wizard state: "medium" -> "class" -> "subject" -> "workspace"
+  // Step state: "medium" -> "class" -> "subject" -> "workspace"
   const [step, setStep] = useState<"medium" | "class" | "subject" | "workspace">("medium");
 
   const [selectedMedium, setSelectedMedium] = useState<string>("marathi");
   const [selectedClass, setSelectedClass] = useState<string>("5th");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
 
-  // Search filter
+  // Filters
+  const [filterExamType, setFilterExamType] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Admin Uploaded Homework list
-  const [homeworkList, setHomeworkList] = useState<HomeworkItem[]>([]);
+  // Admin Uploaded Question Papers List
+  const [paperList, setPaperList] = useState<QuestionPaperItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Active Homework for Viewing / Editing Sheet
-  const [activeHomework, setActiveHomework] = useState<HomeworkItem | null>(null);
+  // Active Selected Paper for Editing/Viewing
+  const [activePaper, setActivePaper] = useState<QuestionPaperItem | null>(null);
   const [isFetchingContent, setIsFetchingContent] = useState(false);
 
-  // Editable Sheet State
+  // Editable Paper Sheet State
   const [schoolName, setSchoolName] = useState("");
   const [kendra, setKendra] = useState("");
   const [taluka, setTaluka] = useState("");
   const [udise, setUdise] = useState("");
-  const [hwTitle, setHwTitle] = useState("");
-  const [teacherName, setTeacherName] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [examName, setExamName] = useState("");
+  const [paperTitle, setPaperTitle] = useState("");
+  const [examTime, setExamTime] = useState("वेळ: २ तास");
+  const [totalMarks, setTotalMarks] = useState("५० गुण");
   const [instructions, setInstructions] = useState(
-    "सूचना: सर्व विद्यार्थ्यांनी खालील गृहपाठ आपल्या वहीत सुंदर हस्ताक्षरात लिहून पूर्ण करावा."
+    "१. सर्व प्रश्न सोडविणे अनिवार्य आहे.\n२. उजव्या बाजूचे अंक पूर्ण गुण दर्शवितात.\n३. खाडाखोड करू नये."
   );
-  const [questions, setQuestions] = useState<EditableHomeworkQuestion[]>([]);
+  const [teacherSign, setTeacherSign] = useState("विषय शिक्षक");
+  const [hmSign, setHmSign] = useState("मुख्याध्यापक");
+
+  // Questions Array
+  const [questions, setQuestions] = useState<EditableQuestion[]>([]);
+  // Full text mode fallback
   const [rawContentText, setRawContentText] = useState("");
   const [isFullTextMode, setIsFullTextMode] = useState(false);
 
@@ -227,7 +263,7 @@ function HomeworkPage() {
       } else if (!user || profile?.role !== "teacher") {
         navigate({
           to: "/login",
-          search: { redirect: "/teacher/homework", role: "teacher" } as any,
+          search: { redirect: "/teacher/question-paper", role: "teacher" } as any,
         });
       }
     }
@@ -240,25 +276,26 @@ function HomeworkPage() {
     setKendra(p.kendra || p.centerName ? `केंद्र: ${p.kendra || p.centerName}` : "");
     setTaluka(p.taluka ? `ता. ${p.taluka}` : "");
     setUdise(p.udise ? `UDISE: ${p.udise}` : "");
-    setTeacherName(p.teacherName ? `विषय शिक्षक: ${p.teacherName}` : "विषय शिक्षक");
+    if (p.teacherName) setTeacherSign(`विषय शिक्षक: ${p.teacherName}`);
+    if (p.headmaster) setHmSign(`मुख्याध्यापक: ${p.headmaster}`);
   }, []);
 
-  // Real-time listener for admin_homework
+  // Real-time listener for admin_question_papers
   useEffect(() => {
     setLoading(true);
-    const q = query(collection(db, "admin_homework"), orderBy("uploadedAt", "desc"));
+    const q = query(collection(db, "admin_question_papers"), orderBy("uploadedAt", "desc"));
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         const items = snapshot.docs.map((docSnap) => ({
           id: docSnap.id,
           ...docSnap.data(),
-        })) as HomeworkItem[];
-        setHomeworkList(items);
+        })) as QuestionPaperItem[];
+        setPaperList(items);
         setLoading(false);
       },
       (error) => {
-        console.error("Error listening to admin homework:", error);
+        console.error("Error listening to admin question papers:", error);
         setLoading(false);
       }
     );
@@ -275,29 +312,32 @@ function HomeworkPage() {
   const currentMediumObj = MEDIUM_OPTIONS.find((m) => m.id === selectedMedium);
 
   // Filter ONLY what admin uploaded for selected medium, class, and subject
-  const currentSubjectHomework = useMemo(() => {
-    return homeworkList.filter((item) => {
+  const currentSubjectPapers = useMemo(() => {
+    return paperList.filter((item) => {
       const matchMedium = item.medium === selectedMedium;
       const matchClass = item.class === selectedClass;
       const matchSubject =
         !selectedSubject ||
         item.subject?.trim().toLowerCase() === selectedSubject.trim().toLowerCase();
+      const matchExam =
+        filterExamType === "all" || item.examType === filterExamType;
       const matchSearch =
         !searchTerm ||
         item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchMedium && matchClass && matchSubject && matchSearch;
+      return matchMedium && matchClass && matchSubject && matchExam && matchSearch;
     });
-  }, [homeworkList, selectedMedium, selectedClass, selectedSubject, searchTerm]);
+  }, [paperList, selectedMedium, selectedClass, selectedSubject, filterExamType, searchTerm]);
 
-  // Open homework into editable document view
-  const handleOpenHomework = async (item: HomeworkItem) => {
-    setActiveHomework(item);
-    setHwTitle(item.title || `${selectedSubject} गृहपाठ`);
-    setDueDate(item.dueDate ? `पूर्ण करण्याची तारीख: ${item.dueDate}` : "");
+  // Open & Load Question Paper into Editable Document View
+  const handleOpenPaper = async (paper: QuestionPaperItem) => {
+    setActivePaper(paper);
+    setExamName(paper.examTypeLabel || paper.examType || "सत्र परीक्षा २०२६-२७");
+    setPaperTitle(paper.title || `${selectedSubject} प्रश्नपत्रिका`);
+    setTotalMarks(`${paper.totalMarks || "५०"} गुण`);
 
-    // Check if teacher saved edits locally
-    const savedCustomKey = `custom_hw_v2_${item.id}`;
+    // Check if teacher has saved custom edits in localStorage
+    const savedCustomKey = `custom_qp_v2_${paper.id}`;
     const cachedCustom = localStorage.getItem(savedCustomKey);
 
     if (cachedCustom) {
@@ -307,28 +347,31 @@ function HomeworkPage() {
         if (parsed.kendra) setKendra(parsed.kendra);
         if (parsed.taluka) setTaluka(parsed.taluka);
         if (parsed.udise) setUdise(parsed.udise);
-        if (parsed.hwTitle) setHwTitle(parsed.hwTitle);
-        if (parsed.teacherName) setTeacherName(parsed.teacherName);
-        if (parsed.dueDate) setDueDate(parsed.dueDate);
+        if (parsed.examName) setExamName(parsed.examName);
+        if (parsed.paperTitle) setPaperTitle(parsed.paperTitle);
+        if (parsed.examTime) setExamTime(parsed.examTime);
+        if (parsed.totalMarks) setTotalMarks(parsed.totalMarks);
         if (parsed.instructions) setInstructions(parsed.instructions);
         if (parsed.questions && Array.isArray(parsed.questions)) {
           setQuestions(parsed.questions);
           setRawContentText(parsed.rawContentText || "");
-          toast.success("आपण संपादित केलेला गृहपाठ लोड केला!");
+          toast.success("आपण संपादित केलेली प्रश्नपत्रिका लोड केली!");
           return;
         }
       } catch (e) {
-        console.warn("Failed to parse cached custom homework:", e);
+        console.warn("Failed to parse cached custom paper:", e);
       }
     }
 
-    let contentText = item.content || "";
+    // If paper already has extracted content in Firestore
+    let contentText = paper.content || "";
 
-    if (!contentText.trim() && item.fileUrl) {
+    // If content not yet extracted but fileUrl exists, extract now
+    if (!contentText.trim() && paper.fileUrl) {
       try {
         setIsFetchingContent(true);
-        toast.info("फाईलमधून गृहपाठ मजकूर वाचत आहे...");
-        contentText = await extractTextFromUrl(item.fileUrl, item.fileName);
+        toast.info("फाईलमधून प्रश्न व मजकूर मिळवत आहे...");
+        contentText = await extractTextFromUrl(paper.fileUrl, paper.fileName);
       } catch (e) {
         console.warn("Could not extract text from fileUrl:", e);
       } finally {
@@ -337,62 +380,66 @@ function HomeworkPage() {
     }
 
     if (!contentText.trim()) {
-      contentText = item.description || "खालील स्वाध्याय पूर्ण करा:";
+      contentText = paper.description || "खालील प्रश्न सोडवा:";
     }
 
     setRawContentText(contentText);
-    setQuestions(parseHomeworkQuestions(contentText));
+    const parsedQ = parseQuestionsFromRawText(contentText);
+    setQuestions(parsedQ);
   };
 
   // Save edits locally
   const handleSaveEdits = () => {
-    if (!activeHomework) return;
+    if (!activePaper) return;
     const saveObj = {
       schoolName,
       kendra,
       taluka,
       udise,
-      hwTitle,
-      teacherName,
-      dueDate,
+      examName,
+      paperTitle,
+      examTime,
+      totalMarks,
       instructions,
       questions,
       rawContentText,
       savedAt: new Date().toISOString(),
     };
-    localStorage.setItem(`custom_hw_v2_${activeHomework.id}`, JSON.stringify(saveObj));
-    toast.success("गृहपाठातील सर्व बदल यशस्वीरीत्या सेव्ह झाले!");
+    localStorage.setItem(`custom_qp_v2_${activePaper.id}`, JSON.stringify(saveObj));
+    toast.success("प्रश्नपत्रिकेतील सर्व बदल यशस्वीरीत्या सेव्ह झाले!");
   };
 
   // Reset to original admin content
   const handleResetToOriginal = async () => {
-    if (!activeHomework) return;
-    if (!confirm("तुम्हाला खात्री आहे का मूळ गृहपाठ पूर्ववत करायचा आहे?")) return;
-    localStorage.removeItem(`custom_hw_v2_${activeHomework.id}`);
+    if (!activePaper) return;
+    if (!confirm("तुम्हाला खात्री आहे का मूळ प्रश्नपत्रिका पूर्ववत करायची आहे? तुमचे केलेले बदल काढले जातील.")) return;
+    localStorage.removeItem(`custom_qp_v2_${activePaper.id}`);
 
-    let contentText = activeHomework.content || "";
-    if (!contentText.trim() && activeHomework.fileUrl) {
+    let contentText = activePaper.content || "";
+    if (!contentText.trim() && activePaper.fileUrl) {
       try {
         setIsFetchingContent(true);
-        contentText = await extractTextFromUrl(activeHomework.fileUrl, activeHomework.fileName);
+        contentText = await extractTextFromUrl(activePaper.fileUrl, activePaper.fileName);
       } catch (e) {} finally {
         setIsFetchingContent(false);
       }
     }
-    if (!contentText.trim()) contentText = activeHomework.description || "";
+    if (!contentText.trim()) contentText = activePaper.description || "";
     setRawContentText(contentText);
-    setQuestions(parseHomeworkQuestions(contentText));
-    setHwTitle(activeHomework.title);
-    setDueDate(activeHomework.dueDate ? `पूर्ण करण्याची तारीख: ${activeHomework.dueDate}` : "");
-    toast.success("मूळ गृहपाठ पूर्ववत केला गेला!");
+    setQuestions(parseQuestionsFromRawText(contentText));
+    setExamName(activePaper.examTypeLabel || activePaper.examType);
+    setPaperTitle(activePaper.title);
+    setTotalMarks(`${activePaper.totalMarks || "५०"} गुण`);
+    toast.success("मूळ प्रश्नपत्रिका पूर्ववत केली गेली!");
   };
 
   // Add question
   const handleAddQuestion = () => {
-    const newQ: EditableHomeworkQuestion = {
-      id: `hw_q_${Date.now()}`,
+    const newQ: EditableQuestion = {
+      id: `q_${Date.now()}`,
       qNumber: `प्र. ${questions.length + 1}`,
       qTitle: `खालील प्रश्न सोडवा:`,
+      marks: "५ गुण",
       body: "१) ........................................\n२) ........................................",
     };
     setQuestions([...questions, newQ]);
@@ -403,14 +450,14 @@ function HomeworkPage() {
     setQuestions(questions.filter((q) => q.id !== id));
   };
 
-  // Update question
-  const handleUpdateQuestion = (id: string, field: keyof EditableHomeworkQuestion, val: string) => {
+  // Update question field
+  const handleUpdateQuestion = (id: string, field: keyof EditableQuestion, val: string) => {
     setQuestions(
       questions.map((q) => (q.id === id ? { ...q, [field]: val } : q))
     );
   };
 
-  // Print sheet
+  // Print paper
   const handlePrint = () => {
     window.print();
   };
@@ -423,19 +470,19 @@ function HomeworkPage() {
       </div>
 
       <main className="pt-20 pb-16 px-3 sm:px-6 max-w-7xl mx-auto space-y-6">
-        {/* Module Title Banner (Hidden in print) */}
-        <div className="no-print bg-gradient-to-r from-teal-700 via-emerald-800 to-indigo-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        {/* Module Title Banner (Hidden during print) */}
+        <div className="no-print bg-gradient-to-r from-blue-700 via-indigo-800 to-purple-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 size-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-200 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-                <BookOpen className="size-3.5" /> गृहपाठ पोर्टल व संपादन
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-blue-200 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                <FileText className="size-3.5" /> प्रश्नपत्रिका निर्मिती व संपादन
               </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-                Homework / गृहपाठ
+                Question Paper / प्रश्नपत्रिका
               </h1>
-              <p className="text-xs sm:text-sm text-emerald-100 max-w-2xl font-medium">
-                इयत्ता पहिली ते आठवी मराठी व सेमी माध्यमासाठी गृहपाठ प्रत्यक्ष मजकुरासह पहा, शाळेचे नाव व मजकूर संपादित करा व प्रिंट काढा.
+              <p className="text-xs sm:text-sm text-blue-100 max-w-2xl font-medium">
+                इयत्ता पहिली ते आठवी मराठी व सेमी माध्यमासाठी प्रश्नपत्रिका प्रत्यक्ष मजकुरासह पहा, सर्व मजकूर संपादित करा, शाळेचे नाव बदला व प्रिंट काढा.
               </p>
             </div>
 
@@ -443,13 +490,13 @@ function HomeworkPage() {
             <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/15 text-xs font-bold">
               <button
                 onClick={() => {
-                  setActiveHomework(null);
+                  setActivePaper(null);
                   setStep("medium");
                 }}
                 className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
                   step === "medium"
-                    ? "bg-white text-emerald-900 shadow-sm"
-                    : "text-emerald-100 hover:text-white"
+                    ? "bg-white text-indigo-900 shadow-sm"
+                    : "text-blue-100 hover:text-white"
                 }`}
               >
                 १. माध्यम
@@ -458,15 +505,15 @@ function HomeworkPage() {
               <button
                 onClick={() => {
                   if (step !== "medium") {
-                    setActiveHomework(null);
+                    setActivePaper(null);
                     setStep("class");
                   }
                 }}
                 disabled={step === "medium"}
                 className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
                   step === "class"
-                    ? "bg-white text-emerald-900 shadow-sm"
-                    : "text-emerald-100 hover:text-white disabled:opacity-40"
+                    ? "bg-white text-indigo-900 shadow-sm"
+                    : "text-blue-100 hover:text-white disabled:opacity-40"
                 }`}
               >
                 २. इयत्ता
@@ -475,15 +522,15 @@ function HomeworkPage() {
               <button
                 onClick={() => {
                   if (step === "workspace") {
-                    setActiveHomework(null);
+                    setActivePaper(null);
                     setStep("subject");
                   }
                 }}
                 disabled={step === "medium" || step === "class"}
                 className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
                   step === "subject"
-                    ? "bg-white text-emerald-900 shadow-sm"
-                    : "text-emerald-100 hover:text-white disabled:opacity-40"
+                    ? "bg-white text-indigo-900 shadow-sm"
+                    : "text-blue-100 hover:text-white disabled:opacity-40"
                 }`}
               >
                 ३. विषय
@@ -492,11 +539,11 @@ function HomeworkPage() {
               <span
                 className={`px-3 py-1.5 rounded-xl transition-all ${
                   step === "workspace"
-                    ? "bg-white text-emerald-900 shadow-sm"
-                    : "text-emerald-100 opacity-40"
+                    ? "bg-white text-indigo-900 shadow-sm"
+                    : "text-blue-100 opacity-40"
                 }`}
               >
-                ४. गृहपाठ
+                ४. प्रश्नपत्रिका
               </span>
             </div>
           </div>
@@ -517,7 +564,7 @@ function HomeworkPage() {
                   माध्यम निवडा (Select Medium)
                 </h2>
                 <p className="text-xs text-slate-500 font-semibold">
-                  कृपया गृहपाठ पाहण्यासाठी प्रथम माध्यम निवडा
+                  कृपया प्रश्नपत्रिका पाहण्यासाठी प्रथम माध्यम निवडा
                 </p>
               </div>
 
@@ -533,8 +580,8 @@ function HomeworkPage() {
                       }}
                       className={`relative p-8 rounded-3xl text-left transition-all duration-300 border-2 cursor-pointer shadow-md hover:shadow-xl ${
                         isSelected
-                          ? `bg-gradient-to-br ${med.color} text-white border-transparent scale-102 ring-4 ring-emerald-500/20`
-                          : "bg-white text-slate-800 border-slate-200 hover:border-emerald-400 hover:scale-101"
+                          ? `bg-gradient-to-br ${med.color} text-white border-transparent scale-102 ring-4 ring-indigo-500/20`
+                          : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:scale-101"
                       }`}
                     >
                       <div className="space-y-4">
@@ -542,7 +589,7 @@ function HomeworkPage() {
                           className={`size-14 rounded-2xl flex items-center justify-center font-bold ${
                             isSelected
                               ? "bg-white/20 text-white"
-                              : "bg-emerald-50 text-emerald-700"
+                              : "bg-indigo-50 text-indigo-700"
                           }`}
                         >
                           <Languages className="size-7" />
@@ -551,7 +598,7 @@ function HomeworkPage() {
                           <h3 className="text-2xl font-black">{med.labelMr}</h3>
                           <p
                             className={`text-sm font-semibold mt-1 ${
-                              isSelected ? "text-emerald-100" : "text-slate-500"
+                              isSelected ? "text-indigo-100" : "text-slate-500"
                             }`}
                           >
                             {med.labelEn}
@@ -584,7 +631,7 @@ function HomeworkPage() {
                     इयत्ता निवडा (Select Class)
                   </h2>
                   <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                    माध्यम: <span className="text-emerald-600 font-bold">{currentMediumObj?.labelMr}</span>
+                    माध्यम: <span className="text-indigo-600 font-bold">{currentMediumObj?.labelMr}</span>
                   </p>
                 </div>
                 <button
@@ -611,7 +658,7 @@ function HomeworkPage() {
                       className={`p-6 rounded-3xl border-2 text-center transition-all duration-300 cursor-pointer flex flex-col items-center justify-center gap-3 shadow-sm hover:shadow-lg ${
                         isSelected
                           ? `bg-gradient-to-br ${color.bg} text-white border-transparent scale-103 shadow-md`
-                          : "bg-white text-slate-800 border-slate-200 hover:border-emerald-400 hover:scale-101"
+                          : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:scale-101"
                       }`}
                     >
                       <div
@@ -689,13 +736,13 @@ function HomeworkPage() {
                       key={idx}
                       onClick={() => {
                         setSelectedSubject(subjName);
-                        setActiveHomework(null);
+                        setActivePaper(null);
                         setStep("workspace");
                       }}
                       className={`p-6 rounded-3xl border text-left transition-all duration-300 cursor-pointer flex flex-col justify-between gap-4 group shadow-sm hover:shadow-lg ${
                         isSelected
-                          ? "bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-emerald-600 scale-102"
-                          : "bg-white text-slate-800 border-slate-200 hover:border-emerald-400 hover:scale-101"
+                          ? "bg-gradient-to-br from-indigo-700 to-purple-800 text-white border-indigo-700 scale-102"
+                          : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:scale-101"
                       }`}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -703,7 +750,7 @@ function HomeworkPage() {
                           className={`size-12 rounded-2xl flex items-center justify-center font-bold ${
                             isSelected
                               ? "bg-white/20 text-white"
-                              : "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors"
+                              : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
                           }`}
                         >
                           <Icon className="size-6" />
@@ -723,15 +770,15 @@ function HomeworkPage() {
                         <h3 className="text-lg font-black">{subjName}</h3>
                         <p
                           className={`text-xs font-semibold mt-0.5 ${
-                            isSelected ? "text-emerald-100" : "text-slate-500"
+                            isSelected ? "text-indigo-200" : "text-slate-500"
                           }`}
                         >
                           {currentClassObj?.mr} ({currentMediumObj?.labelMr})
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between pt-3 border-t border-slate-100 font-bold text-xs text-emerald-600 group-hover:text-emerald-700">
-                        <span>गृहपाठ पहा व संपादित करा</span>
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100 font-bold text-xs text-indigo-600 group-hover:text-indigo-700">
+                        <span>प्रश्नपत्रिका पहा व संपादित करा</span>
                         <span>→</span>
                       </div>
                     </button>
@@ -750,7 +797,7 @@ function HomeworkPage() {
             </motion.div>
           )}
 
-          {/* STEP 4: HOMEWORK WORKSPACE */}
+          {/* STEP 4: QUESTION PAPER WORKSPACE */}
           {step === "workspace" && (
             <motion.div
               key="step-workspace"
@@ -763,33 +810,33 @@ function HomeworkPage() {
               <div className="no-print bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-extrabold">
+                    <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-extrabold">
                       {currentMediumObj?.labelMr}
                     </span>
-                    <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-extrabold">
+                    <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-xs font-extrabold">
                       {currentClassObj?.mr}
                     </span>
-                    <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-extrabold">
+                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-extrabold">
                       {selectedSubject}
                     </span>
                   </div>
                   <h2 className="text-xl font-black text-slate-900">
-                    {activeHomework ? activeHomework.title : `${selectedSubject} - गृहपाठ सूची (Homework)`}
+                    {activePaper ? activePaper.title : `${selectedSubject} - प्रश्नपत्रिका सूची`}
                   </h2>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {activeHomework && (
+                  {activePaper && (
                     <button
-                      onClick={() => setActiveHomework(null)}
-                      className="px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-emerald-200"
+                      onClick={() => setActivePaper(null)}
+                      className="px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-indigo-200"
                     >
-                      <ArrowLeft className="size-4" /> गृहपाठ यादीवर परत जा
+                      <ArrowLeft className="size-4" /> प्रश्नपत्रिका यादीवर परत जा
                     </button>
                   )}
                   <button
                     onClick={() => {
-                      setActiveHomework(null);
+                      setActivePaper(null);
                       setStep("subject");
                     }}
                     className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200"
@@ -799,13 +846,13 @@ function HomeworkPage() {
                 </div>
               </div>
 
-              {/* IF AN ACTIVE HOMEWORK IS OPEN: RENDER EDITABLE DOCUMENT SHEET */}
-              {activeHomework ? (
+              {/* IF AN ACTIVE PAPER IS SELECTED: RENDER EDITABLE DOCUMENT SHEET */}
+              {activePaper ? (
                 <div className="space-y-6">
                   {/* Action Bar (Save, Print, Reset, Toggle) */}
                   <div className="no-print bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 sticky top-16 z-20">
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200">
                         <Edit3 className="size-3.5" /> सर्व मजकूर थेट संपादित करा (Click any text to edit)
                       </span>
                     </div>
@@ -820,7 +867,7 @@ function HomeworkPage() {
 
                       <button
                         onClick={handlePrint}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer"
+                        className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Printer className="size-4" /> प्रिंट / PDF जतन करा
                       </button>
@@ -828,7 +875,7 @@ function HomeworkPage() {
                       <button
                         onClick={handleResetToOriginal}
                         className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer border border-slate-200"
-                        title="मूळ गृहपाठ पूर्ववत करा"
+                        title="मूळ प्रश्नपत्रिका पूर्ववत करा"
                       >
                         <RotateCcw className="size-3.5" /> पूर्ववत (Reset)
                       </button>
@@ -844,13 +891,13 @@ function HomeworkPage() {
 
                   {/* LOADING CONTENT STATE */}
                   {isFetchingContent && (
-                    <div className="no-print bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold text-emerald-800">
-                      <Loader2 className="size-4 animate-spin text-emerald-600" />
-                      <span>फाईलमधून गृहपाठ मजकूर वाचत आहे, कृपया प्रतीक्षा करा...</span>
+                    <div className="no-print bg-blue-50 border border-blue-200 p-4 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold text-blue-800">
+                      <Loader2 className="size-4 animate-spin text-blue-600" />
+                      <span>फाईलमधून प्रश्नपत्रिका मजकूर वाचत आहे, कृपया प्रतीक्षा करा...</span>
                     </div>
                   )}
 
-                  {/* PRINTABLE OFFICIAL HOMEWORK SHEET */}
+                  {/* PRINTABLE OFFICIAL QUESTION PAPER SHEET */}
                   <div
                     id="printable-paper"
                     className="bg-white rounded-2xl border-2 border-slate-800 p-6 sm:p-10 shadow-lg text-slate-900 font-sans max-w-4xl mx-auto space-y-6"
@@ -863,7 +910,7 @@ function HomeworkPage() {
                         value={schoolName}
                         onChange={(e) => setSchoolName(e.target.value)}
                         placeholder="शाळेचे नाव प्रविष्ट करा..."
-                        className="w-full text-center text-xl sm:text-2xl font-black text-slate-900 border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
+                        className="w-full text-center text-xl sm:text-2xl font-black text-slate-900 border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent"
                       />
 
                       <div className="flex items-center justify-center gap-3 sm:gap-6 flex-wrap text-xs sm:text-sm font-bold text-slate-700">
@@ -872,36 +919,42 @@ function HomeworkPage() {
                           value={kendra}
                           onChange={(e) => setKendra(e.target.value)}
                           placeholder="केंद्र: ..."
-                          className="text-center border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
+                          className="text-center border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent"
                         />
                         <input
                           type="text"
                           value={taluka}
                           onChange={(e) => setTaluka(e.target.value)}
                           placeholder="ता. ... जि. ..."
-                          className="text-center border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
+                          className="text-center border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent"
                         />
                         <input
                           type="text"
                           value={udise}
                           onChange={(e) => setUdise(e.target.value)}
                           placeholder="UDISE: ..."
-                          className="text-center border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
+                          className="text-center border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent"
                         />
                       </div>
 
-                      {/* Homework Title Banner */}
+                      {/* Exam Title Banner */}
                       <div className="pt-2">
                         <input
                           type="text"
-                          value={hwTitle}
-                          onChange={(e) => setHwTitle(e.target.value)}
-                          className="w-full text-center text-lg sm:text-xl font-black uppercase tracking-wide text-slate-900 border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
+                          value={examName}
+                          onChange={(e) => setExamName(e.target.value)}
+                          className="w-full text-center text-lg sm:text-xl font-extrabold uppercase tracking-wide text-slate-900 border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent"
+                        />
+                        <input
+                          type="text"
+                          value={paperTitle}
+                          onChange={(e) => setPaperTitle(e.target.value)}
+                          className="w-full text-center text-sm sm:text-base font-bold text-slate-800 border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent mt-0.5"
                         />
                       </div>
                     </div>
 
-                    {/* 2. Homework Meta Information (Subject, Class, Date, Due Date) */}
+                    {/* 2. Paper Meta Information (Subject, Class, Marks, Time) */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-2 border-b-2 border-slate-800 text-xs sm:text-sm font-bold">
                       <div>
                         इयत्ता: <span className="font-extrabold">{currentClassObj?.mr}</span> ({currentMediumObj?.labelMr})
@@ -909,16 +962,21 @@ function HomeworkPage() {
                       <div>
                         विषय: <span className="font-extrabold">{selectedSubject}</span>
                       </div>
-                      <div>
-                        दिनांक: {new Date(activeHomework.uploadedAt).toLocaleDateString("mr-IN")}
-                      </div>
-                      <div className="text-right">
+                      <div className="flex items-center gap-1">
+                        गुण:
                         <input
                           type="text"
-                          value={dueDate}
-                          placeholder="अंतिम तारीख..."
-                          onChange={(e) => setDueDate(e.target.value)}
-                          className="w-full text-right font-extrabold border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
+                          value={totalMarks}
+                          onChange={(e) => setTotalMarks(e.target.value)}
+                          className="w-20 font-extrabold border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1 justify-end">
+                        <input
+                          type="text"
+                          value={examTime}
+                          onChange={(e) => setExamTime(e.target.value)}
+                          className="w-24 text-right font-extrabold border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent"
                         />
                       </div>
                     </div>
@@ -935,64 +993,75 @@ function HomeworkPage() {
 
                     {/* 3. Instructions */}
                     <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
-                      <div className="font-bold text-slate-800">गृहपाठ सूचना:</div>
+                      <div className="font-bold text-slate-800">सामान्य सूचना:</div>
                       <textarea
                         rows={2}
                         value={instructions}
                         onChange={(e) => setInstructions(e.target.value)}
-                        className="w-full text-xs font-medium text-slate-700 bg-transparent focus:outline-none border-b border-transparent focus:border-emerald-400 resize-none leading-relaxed"
+                        className="w-full text-xs font-medium text-slate-700 bg-transparent focus:outline-none border-b border-transparent focus:border-indigo-400 resize-none leading-relaxed"
                       />
                     </div>
 
-                    {/* 4. Homework Content & Questions Section */}
+                    {/* 4. Questions Section */}
                     {isFullTextMode ? (
                       /* FULL TEXT EDIT MODE */
                       <div className="space-y-2">
                         <label className="text-xs font-bold text-slate-700">
-                          संपूर्ण गृहपाठ मजकूर संपादन (Full Text Editor):
+                          संपूर्ण प्रश्नपत्रिका मजकूर संपादन (Full Text Editor):
                         </label>
                         <textarea
-                          rows={20}
+                          rows={22}
                           value={rawContentText}
                           onChange={(e) => {
                             setRawContentText(e.target.value);
-                            setQuestions(parseHomeworkQuestions(e.target.value));
+                            setQuestions(parseQuestionsFromRawText(e.target.value));
                           }}
-                          className="w-full p-4 border border-slate-300 rounded-xl text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="w-full p-4 border border-slate-300 rounded-xl text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
                     ) : (
                       /* STRUCTURED QUESTIONS LIST (EACH EDITABLE IN-PLACE) */
                       <div className="space-y-6 pt-2">
-                        {questions.map((q) => (
+                        {questions.map((q, idx) => (
                           <div
                             key={q.id}
-                            className="group relative p-3 rounded-xl border border-transparent hover:border-emerald-200 transition-all space-y-2"
+                            className="group relative p-3 rounded-xl border border-transparent hover:border-indigo-200 transition-all space-y-2"
                           >
-                            {/* Question Title & Actions */}
+                            {/* Question Header & Marks */}
                             <div className="flex items-start justify-between gap-3">
-                              <input
-                                type="text"
-                                value={q.qTitle}
-                                onChange={(e) => handleUpdateQuestion(q.id, "qTitle", e.target.value)}
-                                className="w-full font-black text-sm sm:text-base text-slate-900 border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveQuestion(q.id)}
-                                className="no-print opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-600 transition-all cursor-pointer shrink-0"
-                                title="प्रश्न हटवा"
-                              >
-                                <Trash2 className="size-3.5" />
-                              </button>
+                              <div className="flex items-center gap-2 flex-1">
+                                <input
+                                  type="text"
+                                  value={q.qTitle}
+                                  onChange={(e) => handleUpdateQuestion(q.id, "qTitle", e.target.value)}
+                                  className="w-full font-black text-sm sm:text-base text-slate-900 border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent"
+                                />
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <input
+                                  type="text"
+                                  value={q.marks}
+                                  placeholder="गुण"
+                                  onChange={(e) => handleUpdateQuestion(q.id, "marks", e.target.value)}
+                                  className="w-20 text-right font-black text-xs sm:text-sm text-slate-800 border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveQuestion(q.id)}
+                                  className="no-print opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-600 transition-all cursor-pointer"
+                                  title="प्रश्न हटवा"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              </div>
                             </div>
 
-                            {/* Question Body */}
+                            {/* Question Body / Sub-questions */}
                             <textarea
                               rows={Math.max(2, (q.body.match(/\n/g) || []).length + 1)}
                               value={q.body}
                               onChange={(e) => handleUpdateQuestion(q.id, "body", e.target.value)}
-                              className="w-full text-xs sm:text-sm font-medium text-slate-800 leading-relaxed border border-transparent hover:border-slate-200 focus:border-emerald-400 rounded-lg p-2 focus:outline-none bg-transparent resize-y"
+                              className="w-full text-xs sm:text-sm font-medium text-slate-800 leading-relaxed border border-transparent hover:border-slate-200 focus:border-indigo-400 rounded-lg p-2 focus:outline-none bg-transparent resize-y"
                             />
                           </div>
                         ))}
@@ -1002,9 +1071,9 @@ function HomeworkPage() {
                           <button
                             type="button"
                             onClick={handleAddQuestion}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-dashed border-emerald-400 bg-emerald-50/50 hover:bg-emerald-50 text-emerald-700 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-dashed border-indigo-400 bg-indigo-50/50 hover:bg-indigo-50 text-indigo-700 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                           >
-                            <Plus className="size-4" /> नवीन प्रश्न / स्वाध्याय जोडा (Add Question)
+                            <Plus className="size-4" /> नवीन प्रश्न जोडा (Add Question)
                           </button>
                         </div>
                       </div>
@@ -1016,71 +1085,98 @@ function HomeworkPage() {
                         <div className="h-8 border-b border-dotted border-slate-400 w-36"></div>
                         <input
                           type="text"
-                          value={teacherName}
-                          onChange={(e) => setTeacherName(e.target.value)}
-                          className="font-bold border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
+                          value={teacherSign}
+                          onChange={(e) => setTeacherSign(e.target.value)}
+                          className="font-bold border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent"
                         />
                       </div>
                       <div className="space-y-1 text-right">
                         <div className="h-8 border-b border-dotted border-slate-400 w-36 ml-auto"></div>
-                        <span>पालकांची स्वाक्षरी</span>
+                        <input
+                          type="text"
+                          value={hmSign}
+                          onChange={(e) => setHmSign(e.target.value)}
+                          className="font-bold text-right border-b border-dashed border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none bg-transparent"
+                        />
                       </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                /* HOMEWORK LIST (WHEN NO HOMEWORK IS ACTIVELY OPEN) */
+                /* QUESTION PAPERS LIST (WHEN NO PAPER IS ACTIVELY OPEN) */
                 <div className="space-y-6">
-                  {/* Search Bar */}
+                  {/* Filters & Search */}
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="text-sm font-bold text-slate-700">
-                      उपलब्ध गृहपाठ: <span className="text-emerald-600 font-black">{currentSubjectHomework.length}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-slate-500">परीक्षा:</span>
+                      <select
+                        value={filterExamType}
+                        onChange={(e) => setFilterExamType(e.target.value)}
+                        className="px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold outline-none focus:border-indigo-500 cursor-pointer text-slate-700 shadow-sm"
+                      >
+                        <option value="all">सर्व परीक्षा (All Exams)</option>
+                        {EXAM_TYPES.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-xs font-bold text-slate-400">|</span>
+                      <span className="text-xs font-bold text-slate-600">
+                        उपलब्ध: <strong className="text-indigo-600 font-black">{currentSubjectPapers.length}</strong>
+                      </span>
                     </div>
+
                     <div className="relative w-full sm:w-72">
                       <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="गृहपाठ शोधा..."
+                        placeholder="प्रश्नपत्रिका शोधा..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-emerald-500"
+                        className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-indigo-500 shadow-sm"
                       />
                     </div>
                   </div>
 
-                  {/* LIST OF HOMEWORK UPLOADED BY ADMIN */}
+                  {/* LIST OF QUESTION PAPERS UPLOADED BY ADMIN */}
                   {loading ? (
                     <div className="bg-white rounded-3xl p-16 text-center border border-slate-200">
-                      <Loader2 className="size-10 animate-spin text-emerald-600 mx-auto mb-3" />
-                      <p className="text-sm font-bold text-slate-600">गृहपाठ लोड होत आहे...</p>
+                      <Loader2 className="size-10 animate-spin text-indigo-600 mx-auto mb-3" />
+                      <p className="text-sm font-bold text-slate-600">प्रश्नपत्रिका लोड होत आहेत...</p>
                     </div>
-                  ) : currentSubjectHomework.length === 0 ? (
+                  ) : currentSubjectPapers.length === 0 ? (
                     <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 space-y-4">
-                      <div className="size-20 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
-                        <BookOpen className="size-10" />
+                      <div className="size-20 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto shadow-inner">
+                        <FileText className="size-10" />
                       </div>
                       <div className="space-y-1">
                         <h3 className="text-lg font-black text-slate-900">
-                          सध्या या विषयासाठी कोणताही गृहपाठ उपलब्ध नाही
+                          सध्या या विषयासाठी कोणतीही प्रश्नपत्रिका उपलब्ध नाही
                         </h3>
                         <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto font-medium">
-                          {currentMediumObj?.labelMr} • {currentClassObj?.mr} • {selectedSubject} विषयासाठी ॲडमिनने गृहपाठ अपलोड केल्यावर तो येथे आपोआप दिसेल.
+                          {currentMediumObj?.labelMr} • {currentClassObj?.mr} • {selectedSubject} विषयासाठी ॲडमिनने प्रश्नपत्रिका अपलोड केल्यावर ती येथे आपोआप दिसेल.
                         </p>
                       </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      {currentSubjectHomework.map((item, idx) => (
+                      {currentSubjectPapers.map((item) => (
                         <div
                           key={item.id}
-                          className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-emerald-400 shadow-sm hover:shadow-lg transition-all space-y-4 flex flex-col justify-between"
+                          className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-indigo-400 shadow-sm hover:shadow-lg transition-all space-y-4 flex flex-col justify-between"
                         >
                           <div className="space-y-3">
                             <div className="flex items-start justify-between gap-3">
-                              <div className="space-y-1 flex-1">
-                                <span className="inline-block px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-wider border border-emerald-200">
-                                  गृहपाठ #{idx + 1}
-                                </span>
+                              <div className="space-y-1.5 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-wider border border-blue-200">
+                                    {item.examTypeLabel || item.examType}
+                                  </span>
+                                  <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-black border border-amber-200">
+                                    एकूण गुण: {item.totalMarks}
+                                  </span>
+                                </div>
                                 <h3 className="font-black text-lg text-slate-900 leading-snug">
                                   {item.title}
                                 </h3>
@@ -1094,28 +1190,23 @@ function HomeworkPage() {
                             )}
 
                             <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500 font-semibold">
-                              {item.dueDate && (
-                                <span className="flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg border border-amber-200">
-                                  <Calendar className="size-3.5" /> अंतिम दिनांक: {item.dueDate}
-                                </span>
-                              )}
                               <span className="flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg">
                                 <Clock className="size-3.5" /> {new Date(item.uploadedAt).toLocaleDateString("mr-IN")}
                               </span>
                             </div>
                           </div>
 
-                          {/* ACTION BUTTON: VIEW & EDIT AS REAL WORKSHEET */}
+                          {/* ACTION BUTTON: VIEW & EDIT AS REAL DOCUMENT */}
                           <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
                             <span className="text-xs font-bold text-slate-500">
-                              {item.fileName ? "दस्तऐवज उपलब्ध" : "स्वाध्याय उपलब्ध"}
+                              {item.fileName ? "दस्तऐवज उपलब्ध" : "प्रश्न उपलब्ध"}
                             </span>
                             <button
-                              onClick={() => handleOpenHomework(item)}
-                              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer"
+                              onClick={() => handleOpenPaper(item)}
+                              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer"
                             >
                               <Edit3 className="size-3.5" />
-                              <span>गृहपाठ पहा व संपादित करा (View & Edit)</span>
+                              <span>प्रश्नपत्रिका पहा व संपादित करा (View & Edit)</span>
                             </button>
                           </div>
                         </div>
