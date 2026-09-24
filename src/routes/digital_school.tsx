@@ -7,7 +7,7 @@ export const Route = createFileRoute("/digital_school")({
 
 function RedirectToDigitalSchool() {
   useEffect(() => {
-    window.location.href = "https://digitalschool.sgkbrainova.com/";
+    window.location.href = "https://digitalschool.sgkbrainova.com/school-register";
   }, []);
 
   return null;

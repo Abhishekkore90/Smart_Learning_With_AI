@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { ModulePaywall } from "@/components/teacher/ModulePaywall";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { ArrowLeft, Languages, Eye, School, CheckCircle2, ChevronRight, Upload, Trash2, FileText, Edit, MapPin, User, Building2, X, Printer, Download, Link2, ExternalLink, ImageIcon, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { showToast as toast } from "@/lib/custom-toast";
@@ -214,7 +214,19 @@ const PhotoUploader = ({
       }
 
       if (opts.length === 0 && initialOpts.length === 0) {
-        opts = [lang === "mr" ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
+        const stdDetail = getStandardDetail(standardId);
+        const rawOpts = stdDetail?.[lang]?.options || [];
+        const levelChar = lang === "mr" ? ["१", "२", "३", "४"][selectedOptionIdx] : ["1", "2", "3", "4"][selectedOptionIdx];
+        const subPoints = rawOpts.filter(o => {
+          const t = o.text.trim();
+          return levelChar ? t.startsWith(levelChar) : false;
+        }).map(o => o.text.trim());
+
+        if (subPoints.length > 0) {
+          opts = subPoints;
+        } else {
+          opts = [lang === "mr" ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
+        }
       } else if (opts.length === 0) {
         opts = initialOpts;
       }
@@ -225,7 +237,17 @@ const PhotoUploader = ({
       loadUserResponses(opts);
     }).catch((err) => {
       console.error("Error loading config from Firestore:", err);
-      const fallbackOpts = initialOpts.length > 0 ? initialOpts : [lang === "mr" ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
+      let fallbackOpts = initialOpts;
+      if (fallbackOpts.length === 0) {
+        const stdDetail = getStandardDetail(standardId);
+        const rawOpts = stdDetail?.[lang]?.options || [];
+        const levelChar = lang === "mr" ? ["१", "२", "३", "४"][selectedOptionIdx] : ["1", "2", "3", "4"][selectedOptionIdx];
+        const subPoints = rawOpts.filter(o => {
+          const t = o.text.trim();
+          return levelChar ? t.startsWith(levelChar) : false;
+        }).map(o => o.text.trim());
+        fallbackOpts = subPoints.length > 0 ? subPoints : [lang === "mr" ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
+      }
       setConfiguredOptions(fallbackOpts);
       loadUserResponses(fallbackOpts);
     });
@@ -5026,9 +5048,13 @@ interface SqaafResponseCardProps {
   idx: number | undefined;
   selectedLang: "mr" | "en";
   selectedOptions: Record<number, number>;
+  udise?: string;
 }
 
-const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafResponseCardProps) => {
+const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions, udise: propUdise }: SqaafResponseCardProps) => {
+  const { profile } = useAuth();
+  const effectiveUdise = propUdise || localStorage.getItem("teacher_udise") || profile?.udise || "";
+
   const [drivePhotos, setDrivePhotos] = useState<{ src: string; label: string }[]>([]);
   const [loadingDrive, setLoadingDrive] = useState(false);
 
@@ -5044,14 +5070,26 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
       ? (selectedLang === "mr" ? "लागू नाही" : "Not applicable")
       : (options[idx]?.text || "—");
 
-  // Local evidence & drive links config
-  const { subOptions, localPhotos, driveLinksList } = useMemo(() => {
-    let subOptions: string[] = [];
-    let localPhotos: { src: string; label: string }[] = [];
-    let driveLinksList: { url: string; label: string }[] = [];
+  // Helper to extract default sub-points for a standard's selected level from detail
+  const getDefaultSubPoints = useCallback((stdNum: number, levelIdx: number, lang: "mr" | "en"): string[] => {
+    const stdDetail = getStandardDetail(stdNum);
+    const rawOpts = stdDetail?.[lang]?.options || [];
+    const levelChar = lang === "mr" ? ["१", "२", "३", "४"][levelIdx] : ["1", "2", "3", "4"][levelIdx];
+    const subPoints = rawOpts.filter(o => {
+      const t = o.text.trim();
+      return levelChar ? t.startsWith(levelChar) : false;
+    }).map(o => o.text.trim());
+    return subPoints.length > 0 ? subPoints : [lang === "mr" ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
+  }, []);
+
+  // Compute initial local sub-options, photos, and drive links synchronously
+  const computeLocalEvidence = useCallback(() => {
+    let subOptionsList: string[] = [];
+    let photosList: { src: string; label: string }[] = [];
+    let driveLinks: { url: string; label: string }[] = [];
 
     if (isSelected && !isNotApplicable) {
-      // Sub options
+      // 1. Configured options
       const savedOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}_${idx}`);
       let parsedOpts: string[] = [];
       if (savedOpts) {
@@ -5063,7 +5101,7 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
         }
       }
       if (parsedOpts.length === 0) {
-        parsedOpts = [selectedLang === "mr" ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
+        parsedOpts = getDefaultSubPoints(num, idx, selectedLang);
       }
       const optsLength = parsedOpts.length;
       const maxScan = Math.max(optsLength, 35);
@@ -5074,7 +5112,7 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
           isChecked = localStorage.getItem(`sqaaf_evidence_checked_${num}_${pIdx}`) === "true";
         }
         if (isChecked && pIdx < optsLength) {
-          subOptions.push(parsedOpts[pIdx]);
+          subOptionsList.push(parsedOpts[pIdx]);
         }
 
         let rawPreview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
@@ -5082,27 +5120,151 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
           rawPreview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
         }
         const preview = sanitizeUrl(rawPreview);
-        if (preview && (preview.startsWith("data:image") || preview.startsWith("https://") || preview.startsWith("http://") || preview.startsWith("/api/") || preview.startsWith("/"))) {
+        if (preview && (preview.startsWith("data:") || preview.startsWith("https://") || preview.startsWith("http://") || preview.startsWith("/api/") || preview.startsWith("/"))) {
           const itemLabel = (pIdx < optsLength && parsedOpts[pIdx])
             ? parsedOpts[pIdx]
             : (localStorage.getItem(`sqaaf_file_name_${num}_${idx}_${pIdx}`) || (selectedLang === "mr" ? "अहवाल पुरावा फोटो" : "Evidence Photo"));
-          localPhotos.push({
+          photosList.push({
             src: preview,
             label: itemLabel
           });
         }
       }
 
-      // Drive Links
+      // Drive links
       const driveLinksKey = `sqaf_drive_links_${num}`;
       const savedDriveLinks = localStorage.getItem(driveLinksKey);
       if (savedDriveLinks) {
-        try { driveLinksList = JSON.parse(savedDriveLinks); } catch { }
+        try { driveLinks = JSON.parse(savedDriveLinks); } catch { }
       }
     }
 
-    return { subOptions, localPhotos, driveLinksList };
-  }, [num, idx, isSelected, isNotApplicable, selectedLang]);
+    return { subOptionsList, photosList, driveLinks };
+  }, [num, idx, isSelected, isNotApplicable, selectedLang, getDefaultSubPoints]);
+
+  const [subOptions, setSubOptions] = useState<string[]>(() => computeLocalEvidence().subOptionsList);
+  const [localPhotos, setLocalPhotos] = useState<{ src: string; label: string }[]>(() => computeLocalEvidence().photosList);
+  const [driveLinksList, setDriveLinksList] = useState<{ url: string; label: string }[]>(() => computeLocalEvidence().driveLinks);
+
+  // Sync state when props or selection changes
+  useEffect(() => {
+    const local = computeLocalEvidence();
+    setSubOptions(local.subOptionsList);
+    setLocalPhotos(local.photosList);
+    setDriveLinksList(local.driveLinks);
+  }, [computeLocalEvidence]);
+
+  // Load configured options and user responses from Firestore in background
+  useEffect(() => {
+    if (!isSelected || isNotApplicable || idx === undefined) return;
+
+    let isMounted = true;
+    const fetchCloudEvidence = async () => {
+      try {
+        // 1. Fetch config from Firestore if not in localStorage or to ensure latest
+        let currentOpts: string[] = [];
+        const savedOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}_${idx}`);
+        if (savedOpts) {
+          try { currentOpts = JSON.parse(savedOpts); } catch {}
+        }
+
+        const configDocId = `${num}_${idx}`;
+        const configRef = doc(db, "sqaaf_evidence_configs", configDocId);
+        const configSnap = await getDoc(configRef);
+        if (configSnap.exists()) {
+          const cData = configSnap.data();
+          if (cData && Array.isArray(cData.options) && cData.options.length > 0) {
+            currentOpts = cData.options;
+            localStorage.setItem(`sqaaf_evidence_options_config_${num}_${idx}`, JSON.stringify(currentOpts));
+          }
+        }
+
+        if (currentOpts.length === 0) {
+          currentOpts = getDefaultSubPoints(num, idx, selectedLang);
+        }
+
+        // 2. Fetch user responses from Firestore if effectiveUdise is available
+        let checkedMap: Record<number, boolean> = {};
+        let previewsMap: Record<number, string> = {};
+        let namesMap: Record<number, string> = {};
+
+        // Seed with current local values first
+        currentOpts.forEach((_, pIdx) => {
+          const localChecked = localStorage.getItem(`sqaaf_checked_${num}_${idx}_${pIdx}`);
+          if (localChecked !== null) checkedMap[pIdx] = localChecked === "true";
+          const localPrev = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
+          if (localPrev) previewsMap[pIdx] = localPrev;
+          const localName = localStorage.getItem(`sqaaf_file_name_${num}_${idx}_${pIdx}`);
+          if (localName) namesMap[pIdx] = localName;
+        });
+
+        if (effectiveUdise) {
+          const respDocId = `${effectiveUdise}_${num}_${idx}`;
+          const respRef = doc(db, "sqaaf_evidence_responses", respDocId);
+          const respSnap = await getDoc(respRef);
+          if (respSnap.exists()) {
+            const rData = respSnap.data();
+            if (rData?.checkedStates) {
+              Object.entries(rData.checkedStates).forEach(([k, v]) => {
+                const kNum = Number(k);
+                checkedMap[kNum] = v === true;
+                localStorage.setItem(`sqaaf_checked_${num}_${idx}_${kNum}`, v ? "true" : "false");
+              });
+            }
+            if (rData?.filePreviews) {
+              Object.entries(rData.filePreviews).forEach(([k, v]) => {
+                const kNum = Number(k);
+                if (typeof v === "string" && v) {
+                  previewsMap[kNum] = sanitizeUrl(v);
+                  localStorage.setItem(`sqaaf_file_preview_${num}_${idx}_${kNum}`, v);
+                }
+              });
+            }
+            if (rData?.fileNames) {
+              Object.entries(rData.fileNames).forEach(([k, v]) => {
+                const kNum = Number(k);
+                if (typeof v === "string" && v) {
+                  namesMap[kNum] = v;
+                  localStorage.setItem(`sqaaf_file_name_${num}_${idx}_${kNum}`, v);
+                }
+              });
+            }
+          }
+        }
+
+        // 3. Assemble subOptions and localPhotos
+        const subOptsRes: string[] = [];
+        const photosRes: { src: string; label: string }[] = [];
+
+        currentOpts.forEach((optText, pIdx) => {
+          if (checkedMap[pIdx]) {
+            subOptsRes.push(optText);
+          }
+          const prev = previewsMap[pIdx];
+          if (prev && (prev.startsWith("data:") || prev.startsWith("https://") || prev.startsWith("http://") || prev.startsWith("/api/") || prev.startsWith("/"))) {
+            photosRes.push({
+              src: prev,
+              label: optText || namesMap[pIdx] || (selectedLang === "mr" ? "अहवाल पुरावा फोटो" : "Evidence Photo")
+            });
+          }
+        });
+
+        if (isMounted) {
+          setSubOptions(subOptsRes);
+          if (photosRes.length > 0) {
+            setLocalPhotos(photosRes);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading cloud evidence for standard", num, err);
+      }
+    };
+
+    fetchCloudEvidence();
+    return () => {
+      isMounted = false;
+    };
+  }, [num, idx, isSelected, isNotApplicable, effectiveUdise, selectedLang, getDefaultSubPoints]);
 
   // Load Google Drive photos asynchronously
   useEffect(() => {
@@ -5203,17 +5365,35 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
               {selectedLang === "mr" ? "अहवाल पुरावे फोटो" : "Evidence Photos"}
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {localPhotos.map((photo, index) => (
-                <div key={index} className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/80 flex flex-col items-center justify-center shadow-sm hover:shadow transition-shadow">
-                  <div className="w-full h-32 flex items-center justify-center bg-white rounded-lg p-1 border border-slate-100 overflow-hidden">
-                    <img
-                      src={photo.src}
-                      alt={`Evidence ${index + 1}`}
-                      className="max-h-full max-w-full object-contain rounded-md"
-                    />
+              {localPhotos.map((photo, index) => {
+                const isPdf = photo.src.includes(".pdf") || photo.src.startsWith("data:application/pdf");
+                return (
+                  <div key={index} className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/80 flex flex-col items-center justify-between shadow-sm hover:shadow transition-shadow">
+                    {isPdf ? (
+                      <a
+                        href={photo.src}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full h-32 flex flex-col items-center justify-center bg-white rounded-lg p-2 border border-slate-100 hover:bg-slate-50 transition-colors text-center cursor-pointer"
+                        title={photo.label}
+                      >
+                        <FileText className="size-8 text-rose-500 mb-1" />
+                        <span className="text-[11px] font-bold text-slate-800 line-clamp-2 px-1">{photo.label || "PDF Document"}</span>
+                        <span className="text-[10px] font-black text-indigo-600 mt-1 uppercase tracking-wider">{selectedLang === "mr" ? "उघडा (PDF)" : "Open PDF"}</span>
+                      </a>
+                    ) : (
+                      <div className="w-full h-32 flex items-center justify-center bg-white rounded-lg p-1 border border-slate-100 overflow-hidden cursor-pointer" onClick={() => window.open(photo.src, "_blank")} title={photo.label}>
+                        <img
+                          src={photo.src}
+                          alt={`Evidence ${index + 1}`}
+                          className="max-h-full max-w-full object-contain rounded-md hover:scale-105 transition-transform"
+                        />
+                      </div>
+                    )}
+                    <span className="text-[10px] font-bold text-slate-600 mt-1.5 line-clamp-1 text-center w-full px-1">{photo.label}</span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -5454,7 +5634,10 @@ function TeacherSqaafPage() {
             localStorage.setItem(`sqaaf_selected_options_${academicYear}`, JSON.stringify(data.selectedOptions));
             localStorage.setItem("sqaaf_selected_options", JSON.stringify(data.selectedOptions));
           } else {
-            setSelectedOptions({});
+            const localSaved = localStorage.getItem(`sqaaf_selected_options_${academicYear}`) || localStorage.getItem("sqaaf_selected_options");
+            if (localSaved) {
+              try { setSelectedOptions(JSON.parse(localSaved)); } catch {}
+            }
           }
           if (data.completedStandards && Array.isArray(data.completedStandards)) {
             const setStds = new Set<number>(data.completedStandards);
@@ -5462,14 +5645,20 @@ function TeacherSqaafPage() {
             localStorage.setItem(`sqaaf_completed_standards_${academicYear}`, JSON.stringify(Array.from(setStds)));
             localStorage.setItem("sqaaf_completed_standards", JSON.stringify(Array.from(setStds)));
           } else {
-            setCompletedStandards(new Set());
+            const localSaved = localStorage.getItem(`sqaaf_completed_standards_${academicYear}`) || localStorage.getItem("sqaaf_completed_standards");
+            if (localSaved) {
+              try { setCompletedStandards(new Set(JSON.parse(localSaved))); } catch {}
+            }
           }
           if (data.externalOptions) {
             setExternalOptions(data.externalOptions);
             localStorage.setItem(`sqaaf_external_options_${academicYear}`, JSON.stringify(data.externalOptions));
             localStorage.setItem("sqaaf_external_options", JSON.stringify(data.externalOptions));
           } else {
-            setExternalOptions({});
+            const localSaved = localStorage.getItem(`sqaaf_external_options_${academicYear}`) || localStorage.getItem("sqaaf_external_options");
+            if (localSaved) {
+              try { setExternalOptions(JSON.parse(localSaved)); } catch {}
+            }
           }
           if (data.schoolInfo) {
             if (data.schoolInfo.schoolName) setInfoSchoolName(data.schoolInfo.schoolName);
@@ -5995,6 +6184,9 @@ function TeacherSqaafPage() {
     const updated = { ...selectedOptions, [standardId]: optionIdx };
     setSelectedOptions(updated);
     localStorage.setItem("sqaaf_selected_options", JSON.stringify(updated));
+    if (academicYear) {
+      localStorage.setItem(`sqaaf_selected_options_${academicYear}`, JSON.stringify(updated));
+    }
 
     // Also mark the standard as completed
     const updatedCompleted = new Set(completedStandards);
@@ -6002,9 +6194,12 @@ function TeacherSqaafPage() {
       updatedCompleted.add(standardId);
       setCompletedStandards(updatedCompleted);
       localStorage.setItem("sqaaf_completed_standards", JSON.stringify(Array.from(updatedCompleted)));
+      if (academicYear) {
+        localStorage.setItem(`sqaaf_completed_standards_${academicYear}`, JSON.stringify(Array.from(updatedCompleted)));
+      }
     }
 
-    saveSqaafDataToCloud(updated, updatedCompleted, externalOptions);
+    saveSqaafDataToCloud(updated, updatedCompleted, externalOptions, undefined, academicYear);
 
     toast.success(selectedLang === "mr" ? `पर्याय निवडला.` : `Option selected.`);
   };
@@ -6059,23 +6254,36 @@ function TeacherSqaafPage() {
       const district = schoolInfo?.district || infoDistrict || profile?.district || profile?.jilha || uni.jilha || "";
 
       // Read selected options
-      const savedSelectedOptions = localStorage.getItem("sqaaf_selected_options");
+      const savedSelectedOptions = localStorage.getItem(`sqaaf_selected_options_${academicYear}`) || localStorage.getItem("sqaaf_selected_options");
       let selectedOptionsMap: Record<string, number> = {};
       if (savedSelectedOptions) {
         try { selectedOptionsMap = JSON.parse(savedSelectedOptions); } catch { }
+      }
+      if (selectedOptions && Object.keys(selectedOptions).length > 0) {
+        Object.entries(selectedOptions).forEach(([k, v]) => {
+          selectedOptionsMap[k] = v;
+        });
       }
 
       const isMr = pdfLang === "mr";
 
       let html = "";
-
+      let responsesHeaderHtml = "";
+      let responsesCards: string[] = [];
+      let responsesSummaryTotalsHtml = "";
 
       if (currentFormat === "responses") {
         // ── "School Responses" card-based portrait report ──
         const answeredStandards = await Promise.all(
           Array.from({ length: 128 }, async (_, i) => {
             const num = i + 1;
-            const idx = selectedOptionsMap[num.toString()] !== undefined ? selectedOptionsMap[num.toString()] : undefined;
+            const idx = selectedOptionsMap[num.toString()] !== undefined
+              ? selectedOptionsMap[num.toString()]
+              : (selectedOptionsMap as any)[num] !== undefined
+                ? (selectedOptionsMap as any)[num]
+                : selectedOptions[num] !== undefined
+                  ? selectedOptions[num]
+                  : (selectedOptions as any)?.[num.toString()];
             const detail = getStandardDetail(num);
             const langData = detail?.[pdfLang];
             const orangeDesc = langData?.orangeDesc || (isMr ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`);
@@ -6109,15 +6317,61 @@ function TeacherSqaafPage() {
                   try { parsedOpts = JSON.parse(oldOpts); } catch { }
                 }
               }
+
+              // Fetch config from Firestore if missing from localStorage
               if (parsedOpts.length === 0) {
-                parsedOpts = [isMr ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
+                try {
+                  const docSnap = await getDoc(doc(db, "sqaaf_evidence_configs", `${num}_${idx}`));
+                  if (docSnap.exists() && Array.isArray(docSnap.data()?.options) && docSnap.data().options.length > 0) {
+                    parsedOpts = docSnap.data().options;
+                    localStorage.setItem(`sqaaf_evidence_options_config_${num}_${idx}`, JSON.stringify(parsedOpts));
+                  }
+                } catch (e) {}
+              }
+
+              // Fallback to real sub-points from detail
+              if (parsedOpts.length === 0) {
+                const rawOpts = detail?.[pdfLang]?.options || [];
+                const levelChar = isMr ? ["१", "२", "३", "४"][idx] : ["1", "2", "3", "4"][idx];
+                const subPoints = rawOpts.filter(o => {
+                  const t = o.text.trim();
+                  return levelChar ? t.startsWith(levelChar) : false;
+                }).map(o => o.text.trim());
+                if (subPoints.length > 0) {
+                  parsedOpts = subPoints;
+                } else {
+                  parsedOpts = [isMr ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
+                }
               }
               let optsLength = parsedOpts.length;
+
+              // Check user responses from Firestore only if not already in localStorage
+              let dbCheckedStates: Record<number, boolean> = {};
+              let dbFilePreviews: Record<number, string> = {};
+              let dbFileNames: Record<number, string> = {};
+              const hasLocalSubData = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_0`) !== null ||
+                                      localStorage.getItem(`sqaaf_checked_${num}_${idx}_0`) !== null;
+              if (udise && !hasLocalSubData) {
+                try {
+                  const fetchPromise = getDoc(doc(db, "sqaaf_evidence_responses", `${udise}_${num}_${idx}`));
+                  const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej("timeout"), 300));
+                  const respSnap: any = await Promise.race([fetchPromise, timeoutPromise]);
+                  if (respSnap?.exists && respSnap.exists()) {
+                    const rData = respSnap.data();
+                    if (rData?.checkedStates) dbCheckedStates = rData.checkedStates;
+                    if (rData?.filePreviews) dbFilePreviews = rData.filePreviews;
+                    if (rData?.fileNames) dbFileNames = rData.fileNames;
+                  }
+                } catch (e) {}
+              }
 
               let checkedOptions: { title: string }[] = [];
               let localPhotos: { src: string; label: string }[] = [];
               for (let pIdx = 0; pIdx < optsLength; pIdx++) {
                 let isChecked = localStorage.getItem(`sqaaf_checked_${num}_${idx}_${pIdx}`) === "true";
+                if (!isChecked && dbCheckedStates[pIdx] !== undefined) {
+                  isChecked = dbCheckedStates[pIdx] === true;
+                }
                 if (!isChecked && idx === 0) {
                   isChecked = localStorage.getItem(`sqaaf_evidence_checked_${num}_${pIdx}`) === "true";
                 }
@@ -6130,15 +6384,15 @@ function TeacherSqaafPage() {
                 }
 
                 // Collect photos from any sub-option (checked or unchecked)
-                let rawPreview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
+                let rawPreview: string | null = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`) || dbFilePreviews[pIdx] || null;
                 if (!rawPreview && idx === 0) {
                   rawPreview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
                 }
                 const preview = sanitizeUrl(rawPreview);
-                if (preview && (preview.startsWith("data:image") || preview.startsWith("https://") || preview.startsWith("http://") || preview.startsWith("/api/") || preview.startsWith("/"))) {
+                if (preview && (preview.startsWith("data:") || preview.startsWith("https://") || preview.startsWith("http://") || preview.startsWith("/api/") || preview.startsWith("/"))) {
                   localPhotos.push({
                     src: preview,
-                    label: parsedOpts[pIdx] || ""
+                    label: parsedOpts[pIdx] || dbFileNames[pIdx] || localStorage.getItem(`sqaaf_file_name_${num}_${idx}_${pIdx}`) || (isMr ? "अहवाल पुरावा फोटो" : "Evidence Photo")
                   });
                 }
               }
@@ -6172,25 +6426,50 @@ function TeacherSqaafPage() {
               const drivePhotos: { src: string; label: string }[] = [];
               for (const link of driveLinksList) {
                 if (link.url) {
-                  const items = await fetchGoogleDriveImages(link.url);
-                  for (const item of items) {
+                  const trimmed = link.url.trim();
+                  const fileIdMatch = trimmed.match(/(?:file\/d\/|id=)([a-zA-Z0-9_-]{25,})/);
+                  if (fileIdMatch && !trimmed.includes("/folders/") && !trimmed.includes("/drive/folders/")) {
                     drivePhotos.push({
-                      src: item.src,
+                      src: `https://lh3.googleusercontent.com/d/${fileIdMatch[1]}`,
                       label: link.label || (isMr ? "ड्राइव्ह फोटो" : "Drive Photo")
                     });
+                  } else {
+                    try {
+                      const itemsPromise = fetchGoogleDriveImages(link.url);
+                      const timeoutPromise = new Promise<{ src: string }[]>((_, rej) => setTimeout(() => rej("timeout"), 400));
+                      const items = await Promise.race([itemsPromise, timeoutPromise]);
+                      for (const item of items) {
+                        drivePhotos.push({
+                          src: item.src,
+                          label: link.label || (isMr ? "ड्राइव्ह फोटो" : "Drive Photo")
+                        });
+                      }
+                    } catch {}
                   }
                 }
               }
 
               const allPhotos = [...localPhotos, ...drivePhotos];
               if (allPhotos.length > 0) {
-                const imagesHtml = allPhotos.map(p => `
+                const imagesHtml = allPhotos.map(p => {
+                  const isPdf = p.src.includes(".pdf") || p.src.startsWith("data:application/pdf");
+                  return `
                   <div style="width: 32%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px; background-color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; text-align: center; margin-bottom: 10px;">
-                    <div style="width: 100%; height: 105px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; padding: 4px; box-sizing: border-box;">
-                      <img src="${p.src}" style="max-height: 98px; max-width: 100%; object-fit: contain; border-radius: 4px;" />
-                    </div>
+                    ${isPdf ? `
+                      <div style="width: 100%; height: 105px; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px; box-sizing: border-box;">
+                        <span style="font-size: 26px; line-height: 1; margin-bottom: 4px;">📄</span>
+                        <span style="font-size: 10px; font-weight: 900; color: #e11d48; text-transform: uppercase;">PDF DOCUMENT</span>
+                        <span style="font-size: 8.5px; font-weight: 700; color: #475569; margin-top: 2px; max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.label}</span>
+                      </div>
+                    ` : `
+                      <div style="width: 100%; height: 105px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; padding: 4px; box-sizing: border-box;">
+                        <img src="${p.src}" crossorigin="anonymous" onerror="this.style.display='none'" style="max-height: 98px; max-width: 100%; object-fit: contain; border-radius: 4px;" />
+                      </div>
+                    `}
+                    <div style="font-size: 8.5px; font-weight: 700; color: #475569; margin-top: 4px; max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.label}</div>
                   </div>
-                `).join("");
+                `;
+                }).join("");
 
                 photosHtml = `
                   <div style="margin-top: 10px; border-top: 1px dashed #cbd5e1; padding-top: 8px; page-break-inside: avoid; break-inside: avoid;">
@@ -6210,7 +6489,7 @@ function TeacherSqaafPage() {
         );
 
         const responseCards = answeredStandards.map(s => `
-          <div style="background: #fff; border: 1px solid #cbd5e1; padding: 16px; page-break-inside: avoid; break-inside: avoid; margin-bottom: 12px; display: block;">
+          <div class="response-card" style="background: #fff; border: 1px solid #cbd5e1; padding: 16px; page-break-inside: avoid !important; break-inside: avoid !important; margin-bottom: 12px; display: block;">
             
             <!-- 1. Standard (Manak) Header & Description -->
             <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-bottom: 6px;">
@@ -6249,7 +6528,7 @@ function TeacherSqaafPage() {
             <!-- 4 & 5. Uploaded Photos & Drive Photos -->
             ${s.photosHtml || ""}
           </div>
-        `).join("");
+        `);
 
         const totalAnswered = answeredStandards.filter(s => s.isSelected).length;
 
@@ -6479,8 +6758,8 @@ function TeacherSqaafPage() {
         const overallSelfPct = totalPossibleMarks > 0 ? Math.round((obtainedMarks_ / totalPossibleMarks) * 100) : 0;
         const overallExtPct = overallExtTot > 0 ? Math.round((overallExtObt / overallExtTot) * 100) : 0;
 
-        html = `
-          <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 10px;">
+        responsesHeaderHtml = `
+          <div style="font-family: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; color: #0f172a; padding: 10px 14px; margin-bottom: 10px;">
             <!-- Header -->
             <div style="border-bottom: 2.5px solid #fdba74; padding-bottom: 12px; margin-bottom: 18px; text-align: center;">
               <div>
@@ -6545,13 +6824,14 @@ function TeacherSqaafPage() {
                 <div style="font-size: 20px; font-weight: 900; color: #14532d;">${totalAnswered} <span style="font-size: 12px; opacity: 0.8; font-weight: bold;">/ 128</span></div>
               </div>
             </div>
+          </div>
+        `;
 
-            <!-- Response Cards -->
-            ${responseCards}
+        responsesCards = responseCards;
 
-            <!-- Summary Totals Chart -->
-            <div style="page-break-before: always; height: 1px;"></div>
-            <div style="margin-top: 20px; padding-top: 10px;">
+        responsesSummaryTotalsHtml = `
+          <div style="font-family: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; color: #0f172a; padding: 10px 14px;">
+            <div style="margin-top: 10px; padding-top: 10px;">
               <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid black; font-size: 10px; font-family: 'Noto Sans Devanagari', Arial, sans-serif;">
                 <colgroup>
                   <col style="width: 8%;">
@@ -6645,16 +6925,17 @@ function TeacherSqaafPage() {
               <div style="margin-top: 15px; padding: 6px 12px; page-break-inside: avoid; display: flex; justify-content: flex-end; align-items: flex-end;">
                 <div style="display: flex; gap: 30px;">
                   <div style="text-align: center;">
-                    <div style="height: 70px;"></div>
+                    <div style="height: 60px;"></div>
                     <div style="width: 200px; border-bottom: 2px solid #334155; margin-bottom: 6px; height: 0px;"></div>
                     <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"}">${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}</div>
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         `;
+
+        html = responsesHeaderHtml + responsesCards.join("") + responsesSummaryTotalsHtml;
 
       } else {
         // ── Original "Table Report" landscape A3 format (unchanged) ──
@@ -7115,7 +7396,7 @@ function TeacherSqaafPage() {
         const { default: html2canvas } = await import("html2canvas");
         const { default: jsPDF } = await import("jspdf");
 
-        const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+        const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
 
         const savedCompletedStds = localStorage.getItem("sqaaf_completed_standards");
         let completedStdsSet = new Set<number>();
@@ -7164,7 +7445,9 @@ function TeacherSqaafPage() {
         const renderContainer = document.createElement("div");
         renderContainer.style.position = "fixed";
         renderContainer.style.top = "0";
-        renderContainer.style.left = "-9999px";
+        renderContainer.style.left = "0";
+        renderContainer.style.zIndex = "-999";
+        renderContainer.style.pointerEvents = "none";
         renderContainer.style.width = `${A4_WIDTH_PX}px`;
         renderContainer.style.backgroundColor = "white";
         document.body.appendChild(renderContainer);
@@ -7176,6 +7459,10 @@ function TeacherSqaafPage() {
           page.style.padding = "20px 24px"; // Compact margin to keep everything on 1 page
           page.style.boxSizing = "border-box";
           page.style.backgroundColor = "white";
+          page.style.fontFamily = "'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+          (page.style as any).webkitFontSmoothing = "antialiased";
+          (page.style as any).mozOsxFontSmoothing = "grayscale";
+          (page.style as any).textRendering = "geometricPrecision";
           renderContainer.appendChild(page);
           return page;
         };
@@ -7183,7 +7470,7 @@ function TeacherSqaafPage() {
         let currentPage = createNewPageContainer();
 
         const headerHtml = `
-          <div style="font-family: sans-serif; margin-bottom: 30px; text-align: center;">
+          <div style="font-family: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; margin-bottom: 30px; text-align: center;">
             <div style="color: #0f172a; font-size: 34px; font-weight: 900; margin-top: 8px; text-align: center;">
               ${isMr ? "SQAAF स्वयं मूल्यांकन अहवाल" : "SQAAF Self Evaluation Report"}
             </div>
@@ -7259,8 +7546,14 @@ function TeacherSqaafPage() {
 
         let pageCount = 0;
         const saveCurrentPageToPdf = async () => {
-          const canvas = await html2canvas(renderContainer, { scale: 1.5, useCORS: true, logging: false });
-          const imgData = canvas.toDataURL("image/jpeg", 0.95);
+          const canvas = await html2canvas(renderContainer, {
+            scale: 1.6,
+            useCORS: true,
+            logging: false,
+            imageTimeout: 400,
+            backgroundColor: "#ffffff"
+          });
+          const imgData = canvas.toDataURL("image/jpeg", 0.85);
           if (pageCount > 0) doc.addPage();
           const pdfWidth = 297;
           let pdfHeight = (canvas.height * pdfWidth) / canvas.width;
@@ -7415,7 +7708,9 @@ function TeacherSqaafPage() {
           currentPage.appendChild(sigDiv);
           await saveCurrentPageToPdf();
         }
-        document.body.removeChild(renderContainer);
+        if (document.body.contains(renderContainer)) {
+          document.body.removeChild(renderContainer);
+        }
 
         const filename = `SQAAF_Report_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
@@ -7430,9 +7725,6 @@ function TeacherSqaafPage() {
         }
 
       } else {
-        const { default: html2pdf } = await import("html2pdf.js");
-        const container = document.createElement("div");
-
         let finalHtml = html;
 
         if (currentFormat === "summary") {
@@ -7647,6 +7939,10 @@ function TeacherSqaafPage() {
                         <span style="font-weight: 900; color: #475569;">शाळा प्राप्त गुण:</span>
                         <span style="float: right; font-weight: 900; color: #0f172a; font-size: 12px;">${obtainedMarks_}</span>
                       </div>
+                      <div style="font-size: 11px;">
+                        <span style="font-weight: 900; color: #475569;">टक्केवारी:</span>
+                        <span style="float: right; font-weight: 900; color: #0369a1; font-size: 12px;">${totalApplicable > 0 ? Number(((obtainedMarks_ / (totalApplicable * 4)) * 100).toFixed(2)) : 0}%</span>
+                      </div>
                       <div style="border-top: 1.5px solid #e2e8f0; padding-top: 4px; margin-top: 2px; font-size: 11.5px;">
                         <span style="font-weight: 900; color: #475569;">प्राप्त श्रेणी:</span>
                         <span style="float: right; font-weight: 900; font-size: 15px; color: #16a34a;">${getGrade(overallSelfPct)}</span>
@@ -7659,112 +7955,226 @@ function TeacherSqaafPage() {
           `;
         }
 
-        // For summary, we use an off-screen DOM wrapper approach.
-        // The container is static so html2canvas renders it correctly, while the parent wrapper hides it offscreen.
-        if (currentFormat === "summary") {
-          const wrapper = document.createElement("div");
-          wrapper.style.position = "fixed";
-          wrapper.style.top = "0";
-          wrapper.style.left = "-9999px";
-          wrapper.style.width = "1040px";
-          wrapper.style.height = "0";
-          wrapper.style.overflow = "hidden";
+        if (currentFormat === "responses") {
+          const { default: html2canvas } = await import("html2canvas");
+          const { default: jsPDF } = await import("jspdf");
 
-          container.innerHTML = finalHtml;
-          container.style.position = "static";
-          container.style.width = "1040px";
-          container.style.margin = "0 auto";
-          container.style.padding = "4px 8px";
-          container.style.boxSizing = "border-box";
-          container.style.backgroundColor = "white";
-          
-          wrapper.appendChild(container);
-          document.body.appendChild(wrapper);
-          
-          const pdfOptions = {
-            margin: [4, 6, 4, 6],
-            filename: `SQAAF_Summary_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
-            image: { type: "jpeg", quality: 0.95 },
-            html2canvas: { 
-              scale: 1.5, 
-              useCORS: true, 
-              logging: false,
-              windowWidth: 1040
-            },
-            jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: false },
-            pagebreak: { mode: ["css", "legacy"] },
+          const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+
+          const A4_WIDTH_PX = 800;
+          const A4_HEIGHT_PX = 1130;
+
+          const renderContainer = document.createElement("div");
+          renderContainer.style.position = "fixed";
+          renderContainer.style.top = "0";
+          renderContainer.style.left = "0";
+          renderContainer.style.zIndex = "-999";
+          renderContainer.style.pointerEvents = "none";
+          renderContainer.style.width = `${A4_WIDTH_PX}px`;
+          renderContainer.style.backgroundColor = "#ffffff";
+          document.body.appendChild(renderContainer);
+
+          const createNewPageContainer = () => {
+            renderContainer.innerHTML = "";
+            const page = document.createElement("div");
+            page.style.width = `${A4_WIDTH_PX}px`;
+            page.style.minHeight = `${A4_HEIGHT_PX}px`;
+            page.style.padding = "20px 24px";
+            page.style.boxSizing = "border-box";
+            page.style.backgroundColor = "#ffffff";
+            page.style.color = "#0f172a";
+            page.style.fontFamily = "'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+            (page.style as any).webkitFontSmoothing = "antialiased";
+            (page.style as any).mozOsxFontSmoothing = "grayscale";
+            (page.style as any).textRendering = "geometricPrecision";
+            renderContainer.appendChild(page);
+            return page;
           };
 
-          if (action === "download") {
-            await html2pdf().set(pdfOptions).from(container).save();
-            document.body.removeChild(wrapper);
-            if (toastId) toast.dismiss(toastId);
-            toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
-          } else if (action === "view") {
-            html2pdf().set(pdfOptions).from(container).output('bloburl').then((url: any) => {
-              setPreviewPdfUrl(url);
-              document.body.removeChild(wrapper);
-              if (toastId) toast.dismiss(toastId);
-            }).catch((err: any) => {
-              console.error("PDF View Error:", err);
-              if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
-              if (toastId) toast.dismiss(toastId);
-              toast.error(pdfLang === "mr" ? "PDF उघडताना त्रुटी आली." : "Error opening PDF.");
+          let pageCount = 0;
+          const saveCurrentPageToPdf = async () => {
+            // Fast check for images in renderContainer with 150ms timeout
+            const imgs = Array.from(renderContainer.querySelectorAll("img"));
+            if (imgs.length > 0) {
+              await Promise.all(imgs.map((img: HTMLImageElement) => {
+                if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+                return new Promise<void>((res) => {
+                  img.onload = () => res();
+                  img.onerror = () => { img.style.display = "none"; res(); };
+                  setTimeout(res, 150);
+                });
+              }));
+            }
+
+            const canvas = await html2canvas(renderContainer, {
+              scale: 1.75,
+              useCORS: true,
+              logging: false,
+              windowWidth: A4_WIDTH_PX,
+              scrollX: 0,
+              scrollY: 0,
+              imageTimeout: 400,
+              backgroundColor: "#ffffff"
             });
+
+            const imgData = canvas.toDataURL("image/jpeg", 0.82);
+            if (pageCount > 0) doc.addPage();
+            const pdfWidth = 210;
+            const pdfHeight = 297;
+            let renderedHeightMm = (canvas.height * pdfWidth) / canvas.width;
+            if (renderedHeightMm > pdfHeight) {
+              const fitWidth = (pdfWidth * pdfHeight) / renderedHeightMm;
+              const leftOffset = (pdfWidth - fitWidth) / 2;
+              doc.addImage(imgData, "JPEG", leftOffset, 0, fitWidth, pdfHeight, undefined, "FAST");
+            } else {
+              doc.addImage(imgData, "JPEG", 0, 0, pdfWidth, renderedHeightMm, undefined, "FAST");
+            }
+            pageCount++;
+          };
+
+          try {
+            let currentPage = createNewPageContainer();
+            let isFirstPage = true;
+
+            // Header on Page 1
+            const headerWrapper = document.createElement("div");
+            headerWrapper.innerHTML = responsesHeaderHtml;
+            currentPage.appendChild(headerWrapper);
+
+            const appendRunningHeader = (page: HTMLElement) => {
+              const runningHdr = document.createElement("div");
+              runningHdr.style.cssText = "display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; font-size: 10px; font-weight: 700; color: #64748b;";
+              runningHdr.innerHTML = `<span>${isMr ? "SQAAF शाळा प्रतिसाद अहवाल" : "SQAAF School Responses Report"}</span><span style="font-weight: 900; color: #0f172a;">${schoolName}</span>`;
+              page.appendChild(runningHdr);
+            };
+
+            for (let i = 0; i < responsesCards.length; i++) {
+              const temp = document.createElement("div");
+              temp.innerHTML = responsesCards[i];
+              const cardEl = temp.firstElementChild as HTMLElement || temp;
+
+              currentPage.appendChild(cardEl);
+
+              const minChildren = isFirstPage ? 2 : 2;
+              if (currentPage.offsetHeight > A4_HEIGHT_PX && currentPage.children.length > minChildren) {
+                currentPage.removeChild(cardEl);
+                await saveCurrentPageToPdf();
+                currentPage = createNewPageContainer();
+                isFirstPage = false;
+                appendRunningHeader(currentPage);
+                currentPage.appendChild(cardEl);
+              }
+            }
+
+            if (currentPage.children.length > 0) {
+              await saveCurrentPageToPdf();
+            }
+
+            // Summary Totals Table & Headmaster Signature Page
+            currentPage = createNewPageContainer();
+            appendRunningHeader(currentPage);
+            const summaryWrapper = document.createElement("div");
+            summaryWrapper.innerHTML = responsesSummaryTotalsHtml;
+            currentPage.appendChild(summaryWrapper);
+            await saveCurrentPageToPdf();
+
+            const filename = `SQAAF_Responses_${(schoolName || "School").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+            if (action === "download") {
+              doc.save(filename);
+              if (toastId) toast.dismiss(toastId);
+              toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
+            } else {
+              const blobUrl = URL.createObjectURL(doc.output("blob"));
+              setPreviewPdfUrl(blobUrl);
+              if (toastId) toast.dismiss(toastId);
+            }
+          } finally {
+            if (document.body.contains(renderContainer)) {
+              document.body.removeChild(renderContainer);
+            }
           }
-          return;
-        }
 
-        // For responses, we also use an off-screen DOM wrapper approach.
-        const wrapper = document.createElement("div");
-        wrapper.style.position = "fixed";
-        wrapper.style.top = "0";
-        wrapper.style.left = "-9999px";
-        wrapper.style.width = "1040px";
-        wrapper.style.height = "0";
-        wrapper.style.overflow = "hidden";
-
-        container.innerHTML = finalHtml;
-        container.style.position = "static";
-        container.style.width = "1040px";
-        container.style.margin = "0 auto";
-        container.style.padding = "12px 15px";
-        container.style.boxSizing = "border-box";
-        container.style.backgroundColor = "white";
-        
-        wrapper.appendChild(container);
-        document.body.appendChild(wrapper);
-
-        const pdfOptions = {
-          margin: [8, 8, 8, 8],
-          filename: `SQAAF_Responses_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
-          image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { 
-            scale: 1.5, 
-            useCORS: true, 
-            logging: false,
-            windowWidth: 1040
-          },
-          jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: false },
-          pagebreak: { mode: ["css", "legacy"], before: ".html2pdf__page-break" },
-        };
-
-        if (action === "download") {
-          await html2pdf().set(pdfOptions).from(container).save();
-          document.body.removeChild(wrapper);
-          if (toastId) toast.dismiss(toastId);
-          toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
         } else {
-          html2pdf().set(pdfOptions).from(container).output('bloburl').then((url: any) => {
-            setPreviewPdfUrl(url);
-            document.body.removeChild(wrapper);
-            if (toastId) toast.dismiss(toastId);
-          }).catch((err: any) => {
-            console.error("PDF View Error:", err);
-            if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
-            if (toastId) toast.dismiss(toastId);
-            toast.error(pdfLang === "mr" ? "PDF उघडताना त्रुटी आली." : "Error opening PDF.");
-          });
+          // currentFormat === "summary"
+          const { default: html2canvas } = await import("html2canvas");
+          const { default: jsPDF } = await import("jspdf");
+
+          const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
+
+          const A4_WIDTH_PX = 1122;
+          const A4_HEIGHT_PX = 793;
+
+          const renderContainer = document.createElement("div");
+          renderContainer.style.position = "fixed";
+          renderContainer.style.top = "0";
+          renderContainer.style.left = "0";
+          renderContainer.style.zIndex = "-999";
+          renderContainer.style.pointerEvents = "none";
+          renderContainer.style.width = `${A4_WIDTH_PX}px`;
+          renderContainer.style.backgroundColor = "#ffffff";
+          renderContainer.style.fontFamily = "'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+          (renderContainer.style as any).webkitFontSmoothing = "antialiased";
+          (renderContainer.style as any).mozOsxFontSmoothing = "grayscale";
+          (renderContainer.style as any).textRendering = "geometricPrecision";
+          document.body.appendChild(renderContainer);
+
+          try {
+            renderContainer.innerHTML = finalHtml;
+            renderContainer.style.padding = "16px 20px";
+            renderContainer.style.boxSizing = "border-box";
+
+            const imgs = Array.from(renderContainer.querySelectorAll("img"));
+            if (imgs.length > 0) {
+              await Promise.all(imgs.map((img: HTMLImageElement) => {
+                if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+                return new Promise<void>((res) => {
+                  img.onload = () => res();
+                  img.onerror = () => { img.style.display = "none"; res(); };
+                  setTimeout(res, 150);
+                });
+              }));
+            }
+
+            const canvas = await html2canvas(renderContainer, {
+              scale: 1.6,
+              useCORS: true,
+              logging: false,
+              windowWidth: A4_WIDTH_PX,
+              scrollX: 0,
+              scrollY: 0,
+              imageTimeout: 400,
+              backgroundColor: "#ffffff"
+            });
+
+            const imgData = canvas.toDataURL("image/jpeg", 0.85);
+            const pdfWidth = 297;
+            const pdfHeight = 210;
+            let renderedHeightMm = (canvas.height * pdfWidth) / canvas.width;
+            if (renderedHeightMm > pdfHeight) {
+              const fitWidth = (pdfWidth * pdfHeight) / renderedHeightMm;
+              const leftOffset = (pdfWidth - fitWidth) / 2;
+              doc.addImage(imgData, "JPEG", leftOffset, 2, fitWidth, pdfHeight - 4, undefined, "FAST");
+            } else {
+              doc.addImage(imgData, "JPEG", 0, 2, pdfWidth, renderedHeightMm, undefined, "FAST");
+            }
+
+            const filename = `SQAAF_Summary_${(schoolName || "School").replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+            if (action === "download") {
+              doc.save(filename);
+              if (toastId) toast.dismiss(toastId);
+              toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
+            } else {
+              const blobUrl = URL.createObjectURL(doc.output("blob"));
+              setPreviewPdfUrl(blobUrl);
+              if (toastId) toast.dismiss(toastId);
+            }
+          } finally {
+            if (document.body.contains(renderContainer)) {
+              document.body.removeChild(renderContainer);
+            }
+          }
         }
       }
     } catch (err: any) {
@@ -9279,7 +9689,9 @@ function TeacherSqaafPage() {
                     {(() => {
                       const answeredEntries = Array.from({ length: 128 }, (_, i) => {
                         const num = i + 1;
-                        const idx = selectedOptions[num];
+                        const idx = selectedOptions[num] !== undefined
+                          ? selectedOptions[num]
+                          : (selectedOptions as any)?.[num.toString()];
                         return { num, idx };
                       });
 
@@ -9290,6 +9702,7 @@ function TeacherSqaafPage() {
                           idx={idx}
                           selectedLang={selectedLang}
                           selectedOptions={selectedOptions}
+                          udise={infoUdise || profile?.udise}
                         />
                       ));
                     })()}
@@ -9878,9 +10291,22 @@ function TeacherSqaafPage() {
                           <span className="font-semibold text-slate-700">एकूण शक्य गुण:</span>
                           <span className="text-xl font-bold bg-slate-100 px-3 py-1 rounded-md">{manualData.reduce((sum, row) => sum + Number(row.app || 0), 0) * 4}</span>
                         </div>
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="flex justify-between items-center mb-4">
                           <span className="font-semibold text-slate-700">शाळा प्राप्त गुण:</span>
                           <span className="w-24 px-3 py-1 bg-amber-50 border-2 border-amber-300 rounded-lg text-xl font-bold text-center shadow-inner">{manualObtainedMarks}</span>
+                        </div>
+                        <div className="flex justify-between items-center mb-6">
+                          <span className="font-semibold text-slate-700">टक्केवारी:</span>
+                          <span className="w-24 px-3 py-1 bg-blue-50 border-2 border-blue-200 rounded-lg text-xl font-bold text-center shadow-inner text-blue-700">
+                            {(() => {
+                              const totalApp = manualData.reduce((sum, row) => sum + Number(row.app || 0), 0);
+                              const totalPoss = totalApp * 4;
+                              const obt = Number(manualObtainedMarks || 0);
+                              if (totalPoss === 0) return "0%";
+                              const pct = (obt / totalPoss) * 100;
+                              return `${Number(pct.toFixed(2))}%`;
+                            })()}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center pt-4 border-t-2 border-slate-100">
                           <span className="font-bold text-slate-700">प्राप्त श्रेणी:</span>
