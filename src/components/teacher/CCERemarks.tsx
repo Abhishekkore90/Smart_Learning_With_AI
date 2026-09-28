@@ -1100,9 +1100,10 @@ export function CCERemarks({
             const currentSelected: string[] = Array.isArray(studentRemarks[subKey])
               ? studentRemarks[subKey]
               : [];
-            const masterList: string[] = Array.isArray(customClassRemarks[subKey])
+            const masterList: string[] = (Array.isArray(customClassRemarks[subKey])
               ? customClassRemarks[subKey]
-              : [];
+              : []
+            ).filter((itemText) => !/^C-\d+/i.test(itemText.trim()));
 
             // Filter master list based on live search query inside expanded panel
             const filteredMasterList = masterList.filter((itemText) => {

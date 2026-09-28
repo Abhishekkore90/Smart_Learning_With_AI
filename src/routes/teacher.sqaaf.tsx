@@ -6544,24 +6544,6 @@ function TeacherSqaafPage() {
         }
 
         const completedCount_ = completedStdsSet.size;
-        let obtainedMarks_ = 0;
-        let totalPossibleMarks = 0;
-        for (let i = 1; i <= 128; i++) {
-          const selectedIdx = selectedOptionsMap[i.toString()];
-
-          if (!completedStdsSet.has(i)) {
-            totalPossibleMarks += 4;
-          } else {
-            if (selectedIdx !== undefined && selectedIdx !== null) {
-              if (selectedIdx >= 0 && selectedIdx <= 3) {
-                obtainedMarks_ += (selectedIdx + 1);
-                totalPossibleMarks += 4;
-              }
-            } else {
-              totalPossibleMarks += 4;
-            }
-          }
-        }
 
         const domainsDataLegacy = [
           { id: 1, nameMr: "क्षेत्र १ : अभ्यासक्रम,अध्यापनशास्त्र आणि मूल्यांकन", start: 1, end: 44 },
@@ -6574,6 +6556,7 @@ function TeacherSqaafPage() {
 
         let overallExtObt = 0, overallExtTot = 0;
         let totalApplicable = 0;
+        let overallSelfObt = 0;
         const savedExternalOptions = localStorage.getItem("sqaaf_external_options");
         let externalOptionsMap: Record<string, number> = {};
         if (savedExternalOptions) {
@@ -6625,6 +6608,7 @@ function TeacherSqaafPage() {
 
           overallExtObt += extObt;
           totalApplicable += appCount;
+          overallSelfObt += selfObt;
 
           const formatRanges = (nums: number[]) => {
             if (nums.length === 0) return "";
@@ -6755,6 +6739,8 @@ function TeacherSqaafPage() {
           return "C";
         };
 
+        const obtainedMarks_ = overallSelfObt;
+        const totalPossibleMarks = totalApplicable * 4;
         const overallSelfPct = totalPossibleMarks > 0 ? Math.round((obtainedMarks_ / totalPossibleMarks) * 100) : 0;
         const overallExtPct = overallExtTot > 0 ? Math.round((overallExtObt / overallExtTot) * 100) : 0;
 
@@ -6849,6 +6835,23 @@ function TeacherSqaafPage() {
                   <col style="width: 6%;">
                 </colgroup>
                 <thead>
+                  <tr>
+                    <th colspan="13" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 11px; font-weight: 900; background-color: #f8fafc; line-height: 1.3;">
+                      SQAAF - क्षेत्र,उपक्षेत्र,आणि मानके / लहान गट - पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६ वी ते ८ वी )
+                    </th>
+                  </tr>
+                  <tr>
+                    <th colspan="13" style="border: 1px solid black; padding: 4px 4px; text-align: center; font-size: 8.5px; font-weight: bold; background-color: #f8fafc; line-height: 1.35; font-family: 'Noto Sans Devanagari', Arial, sans-serif;">
+                      ${schoolName ? `<span style="white-space: nowrap;"><span style="font-weight: 900;">${isMr ? "शाळेचे नाव -" : "School -"}</span> ${schoolName}</span> &nbsp;&nbsp;&nbsp;` : ""}
+                      ${udise ? `<span style="white-space: nowrap;"><span style="font-weight: 900;">${isMr ? "यू-डायस -" : "UDISE -"}</span> ${udise}</span> &nbsp;&nbsp;&nbsp;` : ""}
+                      ${headmaster ? `<span style="white-space: nowrap;"><span style="font-weight: 900;">${isMr ? "मुख्याध्यापक -" : "Headmaster -"}</span> ${headmaster}</span> &nbsp;&nbsp;&nbsp;` : ""}
+                      ${address ? `<span style="white-space: nowrap;"><span style="font-weight: 900;">${isMr ? "पत्ता -" : "Address -"}</span> ${address}</span> &nbsp;&nbsp;&nbsp;` : ""}
+                      ${centerName ? `<span style="white-space: nowrap;"><span style="font-weight: 900;">${isMr ? "केंद्र -" : "Center -"}</span> ${centerName}</span> &nbsp;&nbsp;&nbsp;` : ""}
+                      ${taluka ? `<span style="white-space: nowrap;"><span style="font-weight: 900;">${isMr ? "ता." : "Tal."}</span> ${taluka}</span> &nbsp;&nbsp;&nbsp;` : ""}
+                      ${district ? `<span style="white-space: nowrap;"><span style="font-weight: 900;">${isMr ? "जि." : "Dist."}</span> ${district}</span> &nbsp;&nbsp;&nbsp;` : ""}
+                      <span style="white-space: nowrap;"><span style="font-weight: 900;">${isMr ? "सन -" : "Year -"}</span> ${isMr ? toMarathiYear(academicYear || "2024-25") : (academicYear || "2024-25")}</span>
+                    </th>
+                  </tr>
                   <tr>
                     <th rowspan="2" style="border: 1px solid black; padding: 4px;">मानक क्र.</th>
                     <th rowspan="2" style="border: 1px solid black; padding: 4px;">लागू मानके</th>
@@ -7018,34 +7021,6 @@ function TeacherSqaafPage() {
         }
 
         const completedCount_ = completedStdsSet.size;
-        let obtainedMarks_ = 0;
-        let totalPossibleMarks = 0;
-        let notApplicableCount_ = 0;
-        for (let i = 1; i <= 128; i++) {
-          const selectedIdx = selectedOptionsMap[i.toString()];
-
-          if (!completedStdsSet.has(i)) {
-            totalPossibleMarks += 4;
-          } else {
-            if (selectedIdx !== undefined && selectedIdx !== null) {
-              const opts = getGroupedOptions(i, pdfLang);
-              const optText = opts[selectedIdx]?.text?.trim() || "";
-              const isNotApplicable = optText === "लागू नाही" || optText === "Not applicable" || selectedIdx === opts.length - 1;
-              if (isNotApplicable) {
-                notApplicableCount_++;
-              }
-              if (selectedIdx >= 0 && selectedIdx <= 3 && !isNotApplicable) {
-                obtainedMarks_ += (selectedIdx + 1);
-                totalPossibleMarks += 4;
-              } else {
-                totalPossibleMarks += 4;
-              }
-            } else {
-              totalPossibleMarks += 4;
-            }
-          }
-        }
-        const applicableCount_ = 128 - notApplicableCount_;
 
         const domainsDataLegacy = [
           { id: 1, nameMr: "क्षेत्र १ : अभ्यासक्रम,अध्यापनशास्त्र आणि मूल्यांकन", start: 1, end: 44 },
@@ -7058,6 +7033,7 @@ function TeacherSqaafPage() {
 
         let overallExtObt = 0, overallExtTot = 0;
         let totalApplicable = 0;
+        let overallSelfObt = 0;
 
         const domainRowsLegacyHtml = domainsDataLegacy.map(dom => {
           let selfL1 = 0, selfL2 = 0, selfL3 = 0, selfL4 = 0;
@@ -7105,6 +7081,7 @@ function TeacherSqaafPage() {
             }
           }
 
+          overallSelfObt += selfObt;
           totalApplicable += appCount;
 
           const formatRanges = (nums: number[]) => {
@@ -7145,6 +7122,11 @@ function TeacherSqaafPage() {
             </tr>
           `;
         }).join("");
+
+        const obtainedMarks_ = overallSelfObt;
+        const totalPossibleMarks = totalApplicable * 4;
+        const applicableCount_ = totalApplicable;
+        const notApplicableCount_ = 128 - totalApplicable;
 
         const getGrade = (pct: number) => {
           if (pct >= 91) return "A+";
@@ -7411,33 +7393,28 @@ function TeacherSqaafPage() {
 
         const completedCount = completedStdsSet.size;
         let obtainedMarks = 0;
-        let totalPossible = 0;
         let notApplicableCount = 0;
+        let applicableCount = 0;
         for (let i = 1; i <= 128; i++) {
           const selectedIdx = selectedOptionsMap[i.toString()];
 
-          if (!completedStdsSet.has(i)) {
-            totalPossible += 4;
-          } else {
-            if (selectedIdx !== undefined && selectedIdx !== null) {
-              const opts = getGroupedOptions(i, pdfLang);
-              const optText = opts[selectedIdx]?.text?.trim() || "";
-              const isNotApplicable = optText === "लागू नाही" || optText === "Not applicable" || selectedIdx === opts.length - 1;
-              if (isNotApplicable) {
-                notApplicableCount++;
-              }
-              if (selectedIdx >= 0 && selectedIdx <= 3 && !isNotApplicable) {
-                obtainedMarks += (selectedIdx + 1);
-                totalPossible += 4;
-              } else {
-                totalPossible += 4;
-              }
+          if (selectedIdx !== undefined && selectedIdx !== null) {
+            const opts = getGroupedOptions(i, pdfLang);
+            const optText = opts[selectedIdx]?.text?.trim() || "";
+            const isNotApplicable = selectedIdx > 3 || optText === "लागू नाही" || optText === "Not applicable" || selectedIdx === opts.length - 1;
+            if (isNotApplicable) {
+              notApplicableCount++;
             } else {
-              totalPossible += 4;
+              applicableCount++;
+              if (selectedIdx >= 0 && selectedIdx <= 3) {
+                obtainedMarks += (selectedIdx + 1);
+              }
             }
+          } else if (!completedStdsSet.has(i)) {
+            applicableCount++;
           }
         }
-        const applicableCount = 128 - notApplicableCount;
+        const totalPossible = applicableCount * 4;
 
         const A4_WIDTH_PX = 1122;
         const A4_HEIGHT_PX = 793;
@@ -7750,7 +7727,6 @@ function TeacherSqaafPage() {
 
           let totalApplicable = 0;
           let obtainedMarks_ = 0;
-          let totalPossibleMarks = 0;
 
           let summaryRowsHtml = "";
 
@@ -7773,21 +7749,17 @@ function TeacherSqaafPage() {
                   if (selIdx === 2) selfL3++;
                   if (selIdx === 3) selfL4++;
                   selfObt += (selIdx + 1);
-                  obtainedMarks_ += (selIdx + 1);
-                  totalPossibleMarks += 4;
                 } else if (selIdx > 3) {
                   naStds.push(i);
                 }
               } else if (!completedStdsSet.has(i)) {
                 isApplicable = true;
-                totalPossibleMarks += 4;
-              } else {
-                totalPossibleMarks += 4;
               }
               if (isApplicable) appCount++;
             }
 
             totalApplicable += appCount;
+            obtainedMarks_ += selfObt;
 
             const formatRanges = (nums: number[]) => {
               if (nums.length === 0) return "-";
@@ -7834,6 +7806,7 @@ function TeacherSqaafPage() {
             return "C";
           };
 
+          const totalPossibleMarks = totalApplicable * 4;
           const overallSelfPct = totalPossibleMarks > 0 ? Math.round((obtainedMarks_ / totalPossibleMarks) * 100) : 0;
 
           finalHtml = `
@@ -8345,38 +8318,29 @@ function TeacherSqaafPage() {
 
   const { obtainedMarks, totalMarks, applicableCount, notApplicableCount } = useMemo(() => {
     let obtained = 0;
-    let total = 0;
     let applicable = 0;
     let notApplicable = 0;
     for (let i = 1; i <= 128; i++) {
       const idx = selectedOptions[i];
 
-      if (!completedStandards.has(i)) {
-        total += 4;
-      } else {
-        if (idx !== undefined && idx !== null) {
-          const opts = getGroupedOptions(i, selectedLang);
-          const optText = opts[idx]?.text?.trim() || "";
-          const isNotApplicable = optText === "लागू नाही" || optText === "Not applicable";
+      if (idx !== undefined && idx !== null) {
+        const opts = getGroupedOptions(i, selectedLang);
+        const optText = opts[idx]?.text?.trim() || "";
+        const isNotApplicable = idx > 3 || optText === "लागू नाही" || optText === "Not applicable";
 
-          if (isNotApplicable) {
-            notApplicable++;
-            total += 4;
-          } else {
-            applicable++;
-            // We only add marks if it's one of the 0-3 indices
-            if (idx >= 0 && idx <= 3) {
-              obtained += (idx + 1);
-              total += 4;
-            } else {
-              total += 4;
-            }
-          }
+        if (isNotApplicable) {
+          notApplicable++;
         } else {
-          total += 4;
+          applicable++;
+          if (idx >= 0 && idx <= 3) {
+            obtained += (idx + 1);
+          }
         }
+      } else if (!completedStandards.has(i)) {
+        applicable++;
       }
     }
+    const total = applicable * 4;
     return { obtainedMarks: obtained, totalMarks: total, applicableCount: applicable, notApplicableCount: notApplicable };
   }, [completedStandards, selectedOptions, selectedLang]);
 

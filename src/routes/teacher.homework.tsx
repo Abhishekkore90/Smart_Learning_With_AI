@@ -25,28 +25,20 @@ import {
   AlertCircle,
   Loader2,
   Edit3,
-  Save,
   RotateCcw,
-  Plus,
-  Trash2,
-  School,
   ArrowLeft,
+  Filter,
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-} from "firebase/firestore";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
-import { getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
-import { extractTextFromUrl } from "@/lib/contentExtractor";
+import { subscribeToHomework } from "@/services/homeworkService";
+import type { HomeworkItem } from "@/types/documentEditor";
+import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
+import { DailyHomeworkTemplate } from "@/components/homework/DailyHomeworkTemplate";
 
 export const Route = createFileRoute("/teacher/homework")({
   head: () => ({
@@ -102,128 +94,32 @@ const GRADIENTS = [
   { bg: "from-cyan-500 to-sky-600", light: "bg-cyan-50 text-cyan-700 border-cyan-200" },
 ];
 
-interface HomeworkItem {
-  id: string;
-  medium: string;
-  class: string;
-  subject: string;
-  title: string;
-  description: string;
-  content?: string;
-  dueDate?: string;
-  fileUrl?: string;
-  fileName?: string;
-  fileSize?: number;
-  uploadedAt: string;
-  uploadedBy: "admin";
-}
-
-interface EditableHomeworkQuestion {
-  id: string;
-  qNumber: string;
-  qTitle: string;
-  body: string;
-}
-
-function parseHomeworkQuestions(rawText: string): EditableHomeworkQuestion[] {
-  if (!rawText || !rawText.trim()) return [];
-
-  const lines = rawText.split("\n");
-  const items: EditableHomeworkQuestion[] = [];
-  let currentItem: EditableHomeworkQuestion | null = null;
-  let lineBuffer: string[] = [];
-
-  const isQuestionHeader = (line: string) => {
-    const trimmed = line.trim();
-    return (
-      /^प्र\.\s*\d+/i.test(trimmed) ||
-      /^प्रश्न\s*\d+/i.test(trimmed) ||
-      /^Q\.\s*\d+/i.test(trimmed) ||
-      /^Question\s*\d+/i.test(trimmed) ||
-      /^\d+[\.\)]\s+[^\s]/.test(trimmed)
-    );
-  };
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      if (currentItem) lineBuffer.push("");
-      continue;
-    }
-
-    if (isQuestionHeader(trimmed)) {
-      if (currentItem) {
-        currentItem.body = lineBuffer.join("\n").trim();
-        items.push(currentItem);
-      }
-      currentItem = {
-        id: `hw_q_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        qNumber: trimmed.split(/[\s\.\)]+/)[0] || "प्र.",
-        qTitle: trimmed,
-        body: "",
-      };
-      lineBuffer = [];
-    } else {
-      lineBuffer.push(trimmed);
-    }
-  }
-
-  if (currentItem) {
-    currentItem.body = lineBuffer.join("\n").trim();
-    items.push(currentItem);
-  } else if (lineBuffer.length > 0) {
-    items.push({
-      id: `hw_initial`,
-      qNumber: "प्र. १",
-      qTitle: "खालील स्वाध्याय पूर्ण करा:",
-      body: lineBuffer.join("\n").trim(),
-    });
-  }
-
-  return items;
-}
-
 function HomeworkPage() {
-  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { user, profile, loading: authLoading } = useAuth();
 
-  // Wizard state: "medium" -> "class" -> "subject" -> "workspace"
-  const [step, setStep] = useState<"medium" | "class" | "subject" | "workspace">("medium");
+  // Wizard state: "medium" -> "class" -> "subject" -> "list"
+  const [step, setStep] = useState<"medium" | "class" | "subject" | "list">("medium");
 
   const [selectedMedium, setSelectedMedium] = useState<string>("marathi");
-  const [selectedClass, setSelectedClass] = useState<string>("5th");
+  const [selectedClass, setSelectedClass] = useState<string>("1st");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [filterDate, setFilterDate] = useState<string>("");
 
-  // Search filter
-  const [searchTerm, setSearchTerm] = useState("");
-
-  // Admin Uploaded Homework list
+  // Homework List state
   const [homeworkList, setHomeworkList] = useState<HomeworkItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Active Homework for Viewing / Editing Sheet
+  // Active opened homework
   const [activeHomework, setActiveHomework] = useState<HomeworkItem | null>(null);
-  const [isFetchingContent, setIsFetchingContent] = useState(false);
+  const [previewTab, setPreviewTab] = useState<"doc" | "template">("doc");
 
-  // Editable Sheet State
-  const [schoolName, setSchoolName] = useState("");
-  const [kendra, setKendra] = useState("");
-  const [taluka, setTaluka] = useState("");
-  const [udise, setUdise] = useState("");
-  const [hwTitle, setHwTitle] = useState("");
-  const [teacherName, setTeacherName] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [instructions, setInstructions] = useState(
-    "सूचना: सर्व विद्यार्थ्यांनी खालील गृहपाठ आपल्या वहीत सुंदर हस्ताक्षरात लिहून पूर्ण करावा."
-  );
-  const [questions, setQuestions] = useState<EditableHomeworkQuestion[]>([]);
-  const [rawContentText, setRawContentText] = useState("");
-  const [isFullTextMode, setIsFullTextMode] = useState(false);
-
+  // Auth guard
   useEffect(() => {
     if (!authLoading) {
       if (sessionStorage.getItem("is_super_admin")) {
-        // Super Admin is allowed
+        // Super Admin allowed
       } else if (!user || profile?.role !== "teacher") {
         navigate({
           to: "/login",
@@ -233,27 +129,11 @@ function HomeworkPage() {
     }
   }, [user, profile, authLoading, navigate]);
 
-  // Load School Profile on mount
-  useEffect(() => {
-    const p = getUnifiedSchoolProfile();
-    setSchoolName(p.schoolName || "जिल्हा परिषद प्राथमिक शाळा");
-    setKendra(p.kendra || p.centerName ? `केंद्र: ${p.kendra || p.centerName}` : "");
-    setTaluka(p.taluka ? `ता. ${p.taluka}` : "");
-    setUdise(p.udise ? `UDISE: ${p.udise}` : "");
-    setTeacherName(p.teacherName ? `विषय शिक्षक: ${p.teacherName}` : "विषय शिक्षक");
-  }, []);
-
-  // Real-time listener for admin_homework
+  // Real-time listener from canonical admin_homework
   useEffect(() => {
     setLoading(true);
-    const q = query(collection(db, "admin_homework"), orderBy("uploadedAt", "desc"));
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const items = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        })) as HomeworkItem[];
+    const unsub = subscribeToHomework(
+      (items) => {
         setHomeworkList(items);
         setLoading(false);
       },
@@ -262,10 +142,10 @@ function HomeworkPage() {
         setLoading(false);
       }
     );
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
-  // Compute available subjects for selected class & medium
+  // Compute available subjects
   const availableSubjects = useMemo(() => {
     if (!selectedClass || !selectedMedium) return [];
     return getDefaultSubjectsForClass(selectedClass, selectedMedium);
@@ -274,146 +154,22 @@ function HomeworkPage() {
   const currentClassObj = CLASS_OPTIONS.find((c) => c.id === selectedClass);
   const currentMediumObj = MEDIUM_OPTIONS.find((m) => m.id === selectedMedium);
 
-  // Filter ONLY what admin uploaded for selected medium, class, and subject
-  const currentSubjectHomework = useMemo(() => {
+  // Filter ONLY what matches selected medium, class, subject, date, search
+  const filteredHomework = useMemo(() => {
     return homeworkList.filter((item) => {
       const matchMedium = item.medium === selectedMedium;
       const matchClass = item.class === selectedClass;
       const matchSubject =
         !selectedSubject ||
         item.subject?.trim().toLowerCase() === selectedSubject.trim().toLowerCase();
+      const matchDate = !filterDate || item.homeworkDate === filterDate;
       const matchSearch =
         !searchTerm ||
         item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchMedium && matchClass && matchSubject && matchSearch;
+      return matchMedium && matchClass && matchSubject && matchDate && matchSearch;
     });
-  }, [homeworkList, selectedMedium, selectedClass, selectedSubject, searchTerm]);
-
-  // Open homework into editable document view
-  const handleOpenHomework = async (item: HomeworkItem) => {
-    setActiveHomework(item);
-    setHwTitle(item.title || `${selectedSubject} गृहपाठ`);
-    setDueDate(item.dueDate ? `पूर्ण करण्याची तारीख: ${item.dueDate}` : "");
-
-    // Check if teacher saved edits locally
-    const savedCustomKey = `custom_hw_v2_${item.id}`;
-    const cachedCustom = localStorage.getItem(savedCustomKey);
-
-    if (cachedCustom) {
-      try {
-        const parsed = JSON.parse(cachedCustom);
-        if (parsed.schoolName) setSchoolName(parsed.schoolName);
-        if (parsed.kendra) setKendra(parsed.kendra);
-        if (parsed.taluka) setTaluka(parsed.taluka);
-        if (parsed.udise) setUdise(parsed.udise);
-        if (parsed.hwTitle) setHwTitle(parsed.hwTitle);
-        if (parsed.teacherName) setTeacherName(parsed.teacherName);
-        if (parsed.dueDate) setDueDate(parsed.dueDate);
-        if (parsed.instructions) setInstructions(parsed.instructions);
-        if (parsed.questions && Array.isArray(parsed.questions)) {
-          setQuestions(parsed.questions);
-          setRawContentText(parsed.rawContentText || "");
-          toast.success("आपण संपादित केलेला गृहपाठ लोड केला!");
-          return;
-        }
-      } catch (e) {
-        console.warn("Failed to parse cached custom homework:", e);
-      }
-    }
-
-    let contentText = item.content || "";
-
-    if (!contentText.trim() && item.fileUrl) {
-      try {
-        setIsFetchingContent(true);
-        toast.info("फाईलमधून गृहपाठ मजकूर वाचत आहे...");
-        contentText = await extractTextFromUrl(item.fileUrl, item.fileName);
-      } catch (e) {
-        console.warn("Could not extract text from fileUrl:", e);
-      } finally {
-        setIsFetchingContent(false);
-      }
-    }
-
-    if (!contentText.trim()) {
-      contentText = item.description || "खालील स्वाध्याय पूर्ण करा:";
-    }
-
-    setRawContentText(contentText);
-    setQuestions(parseHomeworkQuestions(contentText));
-  };
-
-  // Save edits locally
-  const handleSaveEdits = () => {
-    if (!activeHomework) return;
-    const saveObj = {
-      schoolName,
-      kendra,
-      taluka,
-      udise,
-      hwTitle,
-      teacherName,
-      dueDate,
-      instructions,
-      questions,
-      rawContentText,
-      savedAt: new Date().toISOString(),
-    };
-    localStorage.setItem(`custom_hw_v2_${activeHomework.id}`, JSON.stringify(saveObj));
-    toast.success("गृहपाठातील सर्व बदल यशस्वीरीत्या सेव्ह झाले!");
-  };
-
-  // Reset to original admin content
-  const handleResetToOriginal = async () => {
-    if (!activeHomework) return;
-    if (!confirm("तुम्हाला खात्री आहे का मूळ गृहपाठ पूर्ववत करायचा आहे?")) return;
-    localStorage.removeItem(`custom_hw_v2_${activeHomework.id}`);
-
-    let contentText = activeHomework.content || "";
-    if (!contentText.trim() && activeHomework.fileUrl) {
-      try {
-        setIsFetchingContent(true);
-        contentText = await extractTextFromUrl(activeHomework.fileUrl, activeHomework.fileName);
-      } catch (e) {} finally {
-        setIsFetchingContent(false);
-      }
-    }
-    if (!contentText.trim()) contentText = activeHomework.description || "";
-    setRawContentText(contentText);
-    setQuestions(parseHomeworkQuestions(contentText));
-    setHwTitle(activeHomework.title);
-    setDueDate(activeHomework.dueDate ? `पूर्ण करण्याची तारीख: ${activeHomework.dueDate}` : "");
-    toast.success("मूळ गृहपाठ पूर्ववत केला गेला!");
-  };
-
-  // Add question
-  const handleAddQuestion = () => {
-    const newQ: EditableHomeworkQuestion = {
-      id: `hw_q_${Date.now()}`,
-      qNumber: `प्र. ${questions.length + 1}`,
-      qTitle: `खालील प्रश्न सोडवा:`,
-      body: "१) ........................................\n२) ........................................",
-    };
-    setQuestions([...questions, newQ]);
-  };
-
-  // Remove question
-  const handleRemoveQuestion = (id: string) => {
-    setQuestions(questions.filter((q) => q.id !== id));
-  };
-
-  // Update question
-  const handleUpdateQuestion = (id: string, field: keyof EditableHomeworkQuestion, val: string) => {
-    setQuestions(
-      questions.map((q) => (q.id === id ? { ...q, [field]: val } : q))
-    );
-  };
-
-  // Print sheet
-  const handlePrint = () => {
-    window.print();
-  };
+  }, [homeworkList, selectedMedium, selectedClass, selectedSubject, filterDate, searchTerm]);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
@@ -423,710 +179,424 @@ function HomeworkPage() {
       </div>
 
       <main className="pt-20 pb-16 px-3 sm:px-6 max-w-7xl mx-auto space-y-6">
-        {/* Module Title Banner (Hidden in print) */}
+        {/* Banner */}
         <div className="no-print bg-gradient-to-r from-teal-700 via-emerald-800 to-indigo-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 size-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-200 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-                <BookOpen className="size-3.5" /> गृहपाठ पोर्टल व संपादन
+                <BookOpen className="size-3.5" /> दैनिक गृहपाठ पोर्टल (Daily Homework)
               </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-                Homework / गृहपाठ
+                गृहपाठ व्यवस्थापन (Homework Viewer & Editor)
               </h1>
               <p className="text-xs sm:text-sm text-emerald-100 max-w-2xl font-medium">
-                इयत्ता पहिली ते आठवी मराठी व सेमी माध्यमासाठी गृहपाठ प्रत्यक्ष मजकुरासह पहा, शाळेचे नाव व मजकूर संपादित करा व प्रिंट काढा.
+                इयत्ता १ ली ते ८ वी मराठी व सेमी माध्यमासाठी तारीखनिहाय गृहपाठ पहा, मूळ डिझाइन सुरक्षित ठेवून मजकूर संपादित करा, प्रिंट काढा किंवा PDF डाउनलोड करा.
               </p>
             </div>
 
-            {/* Stepper indicators */}
-            <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/15 text-xs font-bold">
-              <button
-                onClick={() => {
-                  setActiveHomework(null);
-                  setStep("medium");
-                }}
-                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                  step === "medium"
-                    ? "bg-white text-emerald-900 shadow-sm"
-                    : "text-emerald-100 hover:text-white"
-                }`}
-              >
-                १. माध्यम
-              </button>
-              <ChevronRight className="size-3 text-white/50" />
-              <button
-                onClick={() => {
-                  if (step !== "medium") {
-                    setActiveHomework(null);
-                    setStep("class");
-                  }
-                }}
-                disabled={step === "medium"}
-                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                  step === "class"
-                    ? "bg-white text-emerald-900 shadow-sm"
-                    : "text-emerald-100 hover:text-white disabled:opacity-40"
-                }`}
-              >
-                २. इयत्ता
-              </button>
-              <ChevronRight className="size-3 text-white/50" />
-              <button
-                onClick={() => {
-                  if (step === "workspace") {
-                    setActiveHomework(null);
-                    setStep("subject");
-                  }
-                }}
-                disabled={step === "medium" || step === "class"}
-                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                  step === "subject"
-                    ? "bg-white text-emerald-900 shadow-sm"
-                    : "text-emerald-100 hover:text-white disabled:opacity-40"
-                }`}
-              >
-                ३. विषय
-              </button>
-              <ChevronRight className="size-3 text-white/50" />
-              <span
-                className={`px-3 py-1.5 rounded-xl transition-all ${
-                  step === "workspace"
-                    ? "bg-white text-emerald-900 shadow-sm"
-                    : "text-emerald-100 opacity-40"
-                }`}
-              >
-                ४. गृहपाठ
-              </span>
-            </div>
+            {/* Stepper Wizard Bar */}
+            {!activeHomework && (
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/15 text-xs font-bold">
+                <button
+                  onClick={() => setStep("medium")}
+                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                    step === "medium"
+                      ? "bg-white text-emerald-900 shadow-md font-black"
+                      : "text-white/80 hover:text-white"
+                  }`}
+                >
+                  १. माध्यम
+                </button>
+                <ChevronRight className="size-3.5 text-white/40" />
+                <button
+                  onClick={() => setStep("class")}
+                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                    step === "class"
+                      ? "bg-white text-emerald-900 shadow-md font-black"
+                      : "text-white/80 hover:text-white"
+                  }`}
+                >
+                  २. इयत्ता
+                </button>
+                <ChevronRight className="size-3.5 text-white/40" />
+                <button
+                  onClick={() => setStep("subject")}
+                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                    step === "subject"
+                      ? "bg-white text-emerald-900 shadow-md font-black"
+                      : "text-white/80 hover:text-white"
+                  }`}
+                >
+                  ३. विषय
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* STEP 1: SELECT MEDIUM */}
-        <AnimatePresence mode="wait">
-          {step === "medium" && (
-            <motion.div
-              key="step-medium"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              className="space-y-6 no-print"
-            >
-              <div className="text-center space-y-1">
-                <h2 className="text-2xl font-black text-slate-900">
-                  माध्यम निवडा (Select Medium)
-                </h2>
-                <p className="text-xs text-slate-500 font-semibold">
-                  कृपया गृहपाठ पाहण्यासाठी प्रथम माध्यम निवडा
-                </p>
-              </div>
+        {/* ACTIVE DOCUMENT VIEWER / TEMPLATE MODE */}
+        {activeHomework ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex-wrap">
+              <button
+                onClick={() => setActiveHomework(null)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                <ArrowLeft className="size-4" />
+                <span>गृहपाठ यादी (Back to List)</span>
+              </button>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                {MEDIUM_OPTIONS.map((med) => {
-                  const isSelected = selectedMedium === med.id;
-                  return (
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200">
+                {activeHomework.fileUrl && (
+                  <button
+                    onClick={() => setPreviewTab("doc")}
+                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                      previewTab === "doc"
+                        ? "bg-teal-700 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    मूळ दस्तऐवज (Document)
+                  </button>
+                )}
+                <button
+                  onClick={() => setPreviewTab("template")}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    previewTab === "template"
+                      ? "bg-teal-700 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  दैनिक कार्यपुस्तिका (Worksheet)
+                </button>
+              </div>
+            </div>
+
+            {previewTab === "doc" && activeHomework.fileUrl ? (
+              <DocumentEditorViewer
+                documentId={activeHomework.id}
+                fileUrl={activeHomework.fileUrl}
+                fileName={activeHomework.fileName}
+                documentType="homework"
+                title={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate || "दैनिक"})`}
+                userId={user?.uid || "guest_teacher"}
+                userRole={profile?.role || "teacher"}
+                userName={profile?.fullName || "शिक्षक"}
+                canEdit={true}
+                onBack={() => setActiveHomework(null)}
+                metadataBadge={
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                    <span>दिनांक: {activeHomework.homeworkDate}</span>
+                    <span>•</span>
+                    <span>इयत्ता: {activeHomework.class}</span>
+                    <span>•</span>
+                    <span>विषय: {activeHomework.subject}</span>
+                  </div>
+                }
+              />
+            ) : (
+              <DailyHomeworkTemplate
+                homework={activeHomework}
+                userId={user?.uid || "guest_teacher"}
+                userRole={profile?.role || "teacher"}
+                userName={profile?.fullName || "शिक्षक"}
+                canEdit={true}
+                onBack={() => setActiveHomework(null)}
+              />
+            )}
+          </div>
+        ) : (
+          /* STEPPING SELECTION WORKFLOW */
+          <div>
+            {/* STEP 1: MEDIUM */}
+            {step === "medium" && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-800">
+                    पायरी १: माध्यम निवडा (Select Medium)
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {MEDIUM_OPTIONS.map((med) => (
                     <button
                       key={med.id}
                       onClick={() => {
                         setSelectedMedium(med.id);
                         setStep("class");
                       }}
-                      className={`relative p-8 rounded-3xl text-left transition-all duration-300 border-2 cursor-pointer shadow-md hover:shadow-xl ${
-                        isSelected
-                          ? `bg-gradient-to-br ${med.color} text-white border-transparent scale-102 ring-4 ring-emerald-500/20`
-                          : "bg-white text-slate-800 border-slate-200 hover:border-emerald-400 hover:scale-101"
+                      className={`p-8 rounded-3xl text-left transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-xl relative overflow-hidden ${
+                        selectedMedium === med.id
+                          ? "bg-gradient-to-br " + med.color + " text-white border-transparent scale-102"
+                          : "bg-white text-slate-800 border-slate-200 hover:border-amber-400"
                       }`}
                     >
-                      <div className="space-y-4">
-                        <div
-                          className={`size-14 rounded-2xl flex items-center justify-center font-bold ${
-                            isSelected
-                              ? "bg-white/20 text-white"
-                              : "bg-emerald-50 text-emerald-700"
-                          }`}
-                        >
-                          <Languages className="size-7" />
-                        </div>
-                        <div>
-                          <h3 className="text-2xl font-black">{med.labelMr}</h3>
-                          <p
-                            className={`text-sm font-semibold mt-1 ${
-                              isSelected ? "text-emerald-100" : "text-slate-500"
-                            }`}
-                          >
-                            {med.labelEn}
-                          </p>
-                        </div>
-                        <div className="pt-2 flex items-center gap-2 text-xs font-black uppercase tracking-wider">
-                          <span>निवडा & पुढे जा</span>
-                          <ChevronRight className="size-4" />
-                        </div>
+                      <Languages className={`size-10 mb-4 ${selectedMedium === med.id ? "text-white" : "text-amber-600"}`} />
+                      <div className="text-2xl font-black">{med.labelMr}</div>
+                      <div className={`text-sm font-semibold mt-1 ${selectedMedium === med.id ? "text-white/80" : "text-slate-400"}`}>
+                        {med.labelEn}
                       </div>
                     </button>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 2: SELECT CLASS */}
-          {step === "class" && (
-            <motion.div
-              key="step-class"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              className="space-y-6 no-print"
-            >
-              <div className="flex items-center justify-between flex-wrap gap-3 max-w-5xl mx-auto">
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900">
-                    इयत्ता निवडा (Select Class)
-                  </h2>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                    माध्यम: <span className="text-emerald-600 font-bold">{currentMediumObj?.labelMr}</span>
-                  </p>
+                  ))}
                 </div>
-                <button
-                  onClick={() => setStep("medium")}
-                  className="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-                >
-                  <ChevronLeft className="size-4" /> माध्यम बदला (Change Medium)
-                </button>
-              </div>
+              </motion.div>
+            )}
 
-              {/* Grid of Classes 1st to 8th */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-5xl mx-auto">
-                {CLASS_OPTIONS.map((cls, idx) => {
-                  const isSelected = selectedClass === cls.id;
-                  const color = GRADIENTS[idx % GRADIENTS.length];
-                  return (
-                    <button
-                      key={cls.id}
-                      onClick={() => {
-                        setSelectedClass(cls.id);
-                        setSelectedSubject("");
-                        setStep("subject");
-                      }}
-                      className={`p-6 rounded-3xl border-2 text-center transition-all duration-300 cursor-pointer flex flex-col items-center justify-center gap-3 shadow-sm hover:shadow-lg ${
-                        isSelected
-                          ? `bg-gradient-to-br ${color.bg} text-white border-transparent scale-103 shadow-md`
-                          : "bg-white text-slate-800 border-slate-200 hover:border-emerald-400 hover:scale-101"
-                      }`}
-                    >
-                      <div
-                        className={`size-14 rounded-2xl flex items-center justify-center ${
-                          isSelected
-                            ? "bg-white/20 text-white"
-                            : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        <GraduationCap className="size-7" />
-                      </div>
-                      <div>
-                        <div className="font-black text-lg leading-tight">
-                          {cls.mr}
-                        </div>
-                        <div
-                          className={`text-xs font-semibold mt-0.5 ${
-                            isSelected ? "text-white/80" : "text-slate-400"
-                          }`}
-                        >
-                          {cls.en}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex justify-center pt-2">
-                <button
-                  onClick={() => setStep("medium")}
-                  className="px-6 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
-                >
-                  <ChevronLeft className="size-4" /> मागे जा (Back to Medium)
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 3: SELECT SUBJECT */}
-          {step === "subject" && (
-            <motion.div
-              key="step-subject"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              className="space-y-6 no-print"
-            >
-              <div className="flex items-center justify-between flex-wrap gap-3 max-w-5xl mx-auto">
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900">
-                    विषय निवडा (Select Subject)
-                  </h2>
-                  <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                    {currentMediumObj?.labelMr} • {currentClassObj?.mr}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setStep("class")}
-                  className="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-                >
-                  <ChevronLeft className="size-4" /> इयत्ता बदला (Change Class)
-                </button>
-              </div>
-
-              {/* Grid of Subjects */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
-                {availableSubjects.map((subjName, idx) => {
-                  const Icon = getSubjectIcon(subjName);
-                  const isSelected = selectedSubject === subjName;
-                  const color = GRADIENTS[idx % GRADIENTS.length];
-
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setSelectedSubject(subjName);
-                        setActiveHomework(null);
-                        setStep("workspace");
-                      }}
-                      className={`p-6 rounded-3xl border text-left transition-all duration-300 cursor-pointer flex flex-col justify-between gap-4 group shadow-sm hover:shadow-lg ${
-                        isSelected
-                          ? "bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-emerald-600 scale-102"
-                          : "bg-white text-slate-800 border-slate-200 hover:border-emerald-400 hover:scale-101"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div
-                          className={`size-12 rounded-2xl flex items-center justify-center font-bold ${
-                            isSelected
-                              ? "bg-white/20 text-white"
-                              : "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors"
-                          }`}
-                        >
-                          <Icon className="size-6" />
-                        </div>
-                        <span
-                          className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                            isSelected
-                              ? "bg-white/20 text-white"
-                              : color.light
-                          }`}
-                        >
-                          विषय {idx + 1}
-                        </span>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-black">{subjName}</h3>
-                        <p
-                          className={`text-xs font-semibold mt-0.5 ${
-                            isSelected ? "text-emerald-100" : "text-slate-500"
-                          }`}
-                        >
-                          {currentClassObj?.mr} ({currentMediumObj?.labelMr})
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-3 border-t border-slate-100 font-bold text-xs text-emerald-600 group-hover:text-emerald-700">
-                        <span>गृहपाठ पहा व संपादित करा</span>
-                        <span>→</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex justify-center pt-2">
-                <button
-                  onClick={() => setStep("class")}
-                  className="px-6 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
-                >
-                  <ChevronLeft className="size-4" /> मागे जा (Back to Class)
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 4: HOMEWORK WORKSPACE */}
-          {step === "workspace" && (
-            <motion.div
-              key="step-workspace"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              className="space-y-6"
-            >
-              {/* Active Selection Summary Bar (Hidden during print) */}
-              <div className="no-print bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-extrabold">
-                      {currentMediumObj?.labelMr}
-                    </span>
-                    <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-extrabold">
-                      {currentClassObj?.mr}
-                    </span>
-                    <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-extrabold">
-                      {selectedSubject}
-                    </span>
+            {/* STEP 2: CLASS */}
+            {step === "class" && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-800">
+                      पायरी २: इयत्ता निवडा (Select Class)
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500 font-medium">
+                      माध्यम: <span className="font-bold text-amber-700">{currentMediumObj?.labelMr}</span>
+                    </p>
                   </div>
-                  <h2 className="text-xl font-black text-slate-900">
-                    {activeHomework ? activeHomework.title : `${selectedSubject} - गृहपाठ सूची (Homework)`}
-                  </h2>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {activeHomework && (
-                    <button
-                      onClick={() => setActiveHomework(null)}
-                      className="px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-emerald-200"
-                    >
-                      <ArrowLeft className="size-4" /> गृहपाठ यादीवर परत जा
-                    </button>
-                  )}
                   <button
-                    onClick={() => {
-                      setActiveHomework(null);
-                      setStep("subject");
-                    }}
-                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border border-slate-200"
+                    onClick={() => setStep("medium")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 cursor-pointer"
                   >
-                    <ChevronLeft className="size-4" /> विषय बदला
+                    <ChevronLeft className="size-4" /> माध्यम बदला
                   </button>
                 </div>
-              </div>
 
-              {/* IF AN ACTIVE HOMEWORK IS OPEN: RENDER EDITABLE DOCUMENT SHEET */}
-              {activeHomework ? (
-                <div className="space-y-6">
-                  {/* Action Bar (Save, Print, Reset, Toggle) */}
-                  <div className="no-print bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 sticky top-16 z-20">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
-                        <Edit3 className="size-3.5" /> सर्व मजकूर थेट संपादित करा (Click any text to edit)
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {CLASS_OPTIONS.map((cls, idx) => {
+                    const isSelected = selectedClass === cls.id;
+                    const grad = GRADIENTS[idx % GRADIENTS.length];
+                    return (
                       <button
-                        onClick={handleSaveEdits}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer"
+                        key={cls.id}
+                        onClick={() => {
+                          setSelectedClass(cls.id);
+                          setSelectedSubject("");
+                          setStep("subject");
+                        }}
+                        className={`p-6 rounded-2xl text-center transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-lg ${
+                          isSelected
+                            ? "bg-gradient-to-br " + grad.bg + " text-white border-transparent scale-102"
+                            : "bg-white text-slate-800 border-slate-200 hover:border-amber-400 hover:bg-amber-50/20"
+                        }`}
                       >
-                        <Save className="size-4" /> बदल सेव्ह करा (Save)
-                      </button>
-
-                      <button
-                        onClick={handlePrint}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer"
-                      >
-                        <Printer className="size-4" /> प्रिंट / PDF जतन करा
-                      </button>
-
-                      <button
-                        onClick={handleResetToOriginal}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer border border-slate-200"
-                        title="मूळ गृहपाठ पूर्ववत करा"
-                      >
-                        <RotateCcw className="size-3.5" /> पूर्ववत (Reset)
-                      </button>
-
-                      <button
-                        onClick={() => setIsFullTextMode(!isFullTextMode)}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer border border-slate-200"
-                      >
-                        {isFullTextMode ? "प्रश्ननिहाय व्ह्यू" : "एकत्रित मजकूर संपादन"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* LOADING CONTENT STATE */}
-                  {isFetchingContent && (
-                    <div className="no-print bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold text-emerald-800">
-                      <Loader2 className="size-4 animate-spin text-emerald-600" />
-                      <span>फाईलमधून गृहपाठ मजकूर वाचत आहे, कृपया प्रतीक्षा करा...</span>
-                    </div>
-                  )}
-
-                  {/* PRINTABLE OFFICIAL HOMEWORK SHEET */}
-                  <div
-                    id="printable-paper"
-                    className="bg-white rounded-2xl border-2 border-slate-800 p-6 sm:p-10 shadow-lg text-slate-900 font-sans max-w-4xl mx-auto space-y-6"
-                    style={{ minHeight: "297mm" }}
-                  >
-                    {/* 1. Official School Header */}
-                    <div className="border-b-2 border-slate-800 pb-4 text-center space-y-2">
-                      <input
-                        type="text"
-                        value={schoolName}
-                        onChange={(e) => setSchoolName(e.target.value)}
-                        placeholder="शाळेचे नाव प्रविष्ट करा..."
-                        className="w-full text-center text-xl sm:text-2xl font-black text-slate-900 border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
-                      />
-
-                      <div className="flex items-center justify-center gap-3 sm:gap-6 flex-wrap text-xs sm:text-sm font-bold text-slate-700">
-                        <input
-                          type="text"
-                          value={kendra}
-                          onChange={(e) => setKendra(e.target.value)}
-                          placeholder="केंद्र: ..."
-                          className="text-center border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
-                        />
-                        <input
-                          type="text"
-                          value={taluka}
-                          onChange={(e) => setTaluka(e.target.value)}
-                          placeholder="ता. ... जि. ..."
-                          className="text-center border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
-                        />
-                        <input
-                          type="text"
-                          value={udise}
-                          onChange={(e) => setUdise(e.target.value)}
-                          placeholder="UDISE: ..."
-                          className="text-center border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
-                        />
-                      </div>
-
-                      {/* Homework Title Banner */}
-                      <div className="pt-2">
-                        <input
-                          type="text"
-                          value={hwTitle}
-                          onChange={(e) => setHwTitle(e.target.value)}
-                          className="w-full text-center text-lg sm:text-xl font-black uppercase tracking-wide text-slate-900 border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
-                        />
-                      </div>
-                    </div>
-
-                    {/* 2. Homework Meta Information (Subject, Class, Date, Due Date) */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-2 border-b-2 border-slate-800 text-xs sm:text-sm font-bold">
-                      <div>
-                        इयत्ता: <span className="font-extrabold">{currentClassObj?.mr}</span> ({currentMediumObj?.labelMr})
-                      </div>
-                      <div>
-                        विषय: <span className="font-extrabold">{selectedSubject}</span>
-                      </div>
-                      <div>
-                        दिनांक: {new Date(activeHomework.uploadedAt).toLocaleDateString("mr-IN")}
-                      </div>
-                      <div className="text-right">
-                        <input
-                          type="text"
-                          value={dueDate}
-                          placeholder="अंतिम तारीख..."
-                          onChange={(e) => setDueDate(e.target.value)}
-                          className="w-full text-right font-extrabold border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Student Name & Roll No Line */}
-                    <div className="flex items-center justify-between gap-4 py-2 border-b border-slate-300 text-xs sm:text-sm font-bold">
-                      <div className="flex-1">
-                        विद्यार्थ्याचे नाव: <span className="border-b border-dotted border-slate-400 inline-block w-4/5">&nbsp;</span>
-                      </div>
-                      <div className="w-32 text-right">
-                        हजेरी क्र.: <span className="border-b border-dotted border-slate-400 inline-block w-16">&nbsp;</span>
-                      </div>
-                    </div>
-
-                    {/* 3. Instructions */}
-                    <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
-                      <div className="font-bold text-slate-800">गृहपाठ सूचना:</div>
-                      <textarea
-                        rows={2}
-                        value={instructions}
-                        onChange={(e) => setInstructions(e.target.value)}
-                        className="w-full text-xs font-medium text-slate-700 bg-transparent focus:outline-none border-b border-transparent focus:border-emerald-400 resize-none leading-relaxed"
-                      />
-                    </div>
-
-                    {/* 4. Homework Content & Questions Section */}
-                    {isFullTextMode ? (
-                      /* FULL TEXT EDIT MODE */
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-700">
-                          संपूर्ण गृहपाठ मजकूर संपादन (Full Text Editor):
-                        </label>
-                        <textarea
-                          rows={20}
-                          value={rawContentText}
-                          onChange={(e) => {
-                            setRawContentText(e.target.value);
-                            setQuestions(parseHomeworkQuestions(e.target.value));
-                          }}
-                          className="w-full p-4 border border-slate-300 rounded-xl text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        />
-                      </div>
-                    ) : (
-                      /* STRUCTURED QUESTIONS LIST (EACH EDITABLE IN-PLACE) */
-                      <div className="space-y-6 pt-2">
-                        {questions.map((q) => (
-                          <div
-                            key={q.id}
-                            className="group relative p-3 rounded-xl border border-transparent hover:border-emerald-200 transition-all space-y-2"
-                          >
-                            {/* Question Title & Actions */}
-                            <div className="flex items-start justify-between gap-3">
-                              <input
-                                type="text"
-                                value={q.qTitle}
-                                onChange={(e) => handleUpdateQuestion(q.id, "qTitle", e.target.value)}
-                                className="w-full font-black text-sm sm:text-base text-slate-900 border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveQuestion(q.id)}
-                                className="no-print opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-600 transition-all cursor-pointer shrink-0"
-                                title="प्रश्न हटवा"
-                              >
-                                <Trash2 className="size-3.5" />
-                              </button>
-                            </div>
-
-                            {/* Question Body */}
-                            <textarea
-                              rows={Math.max(2, (q.body.match(/\n/g) || []).length + 1)}
-                              value={q.body}
-                              onChange={(e) => handleUpdateQuestion(q.id, "body", e.target.value)}
-                              className="w-full text-xs sm:text-sm font-medium text-slate-800 leading-relaxed border border-transparent hover:border-slate-200 focus:border-emerald-400 rounded-lg p-2 focus:outline-none bg-transparent resize-y"
-                            />
-                          </div>
-                        ))}
-
-                        {/* Add New Question Button (Hidden in print) */}
-                        <div className="no-print pt-2 flex justify-center">
-                          <button
-                            type="button"
-                            onClick={handleAddQuestion}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-dashed border-emerald-400 bg-emerald-50/50 hover:bg-emerald-50 text-emerald-700 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-                          >
-                            <Plus className="size-4" /> नवीन प्रश्न / स्वाध्याय जोडा (Add Question)
-                          </button>
+                        <GraduationCap className={`size-8 mx-auto mb-2 ${isSelected ? "text-white" : "text-amber-600"}`} />
+                        <div className="font-black text-base sm:text-lg">{cls.mr}</div>
+                        <div className={`text-xs font-semibold ${isSelected ? "text-white/80" : "text-slate-400"}`}>
+                          {cls.en}
                         </div>
-                      </div>
-                    )}
-
-                    {/* 5. Signatures Footer */}
-                    <div className="pt-12 flex items-center justify-between text-xs sm:text-sm font-bold border-t border-slate-300">
-                      <div className="space-y-1 text-left">
-                        <div className="h-8 border-b border-dotted border-slate-400 w-36"></div>
-                        <input
-                          type="text"
-                          value={teacherName}
-                          onChange={(e) => setTeacherName(e.target.value)}
-                          className="font-bold border-b border-dashed border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none bg-transparent"
-                        />
-                      </div>
-                      <div className="space-y-1 text-right">
-                        <div className="h-8 border-b border-dotted border-slate-400 w-36 ml-auto"></div>
-                        <span>पालकांची स्वाक्षरी</span>
-                      </div>
-                    </div>
-                  </div>
+                      </button>
+                    );
+                  })}
                 </div>
-              ) : (
-                /* HOMEWORK LIST (WHEN NO HOMEWORK IS ACTIVELY OPEN) */
-                <div className="space-y-6">
-                  {/* Search Bar */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="text-sm font-bold text-slate-700">
-                      उपलब्ध गृहपाठ: <span className="text-emerald-600 font-black">{currentSubjectHomework.length}</span>
+              </motion.div>
+            )}
+
+            {/* STEP 3: SUBJECT */}
+            {step === "subject" && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-800">
+                      पायरी ३: विषय निवडा (Select Subject)
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500 font-medium">
+                      {currentMediumObj?.labelMr} • {currentClassObj?.mr}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setStep("class")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                  >
+                    <ChevronLeft className="size-4" /> इयत्ता बदला
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {availableSubjects.map((subj, idx) => {
+                    const IconComponent = getSubjectIcon(subj);
+                    const isSelected = selectedSubject === subj;
+                    const grad = GRADIENTS[idx % GRADIENTS.length];
+                    return (
+                      <button
+                        key={subj}
+                        onClick={() => {
+                          setSelectedSubject(subj);
+                          setStep("list");
+                        }}
+                        className={`p-5 rounded-2xl text-left transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-lg flex items-center gap-4 ${
+                          isSelected
+                            ? "bg-gradient-to-r " + grad.bg + " text-white border-transparent scale-102"
+                            : "bg-white text-slate-800 border-slate-200 hover:border-amber-400 hover:bg-amber-50/20"
+                        }`}
+                      >
+                        <div className={`size-12 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? "bg-white/20" : "bg-amber-100 text-amber-700"}`}>
+                          <IconComponent className="size-6" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-black text-base truncate">{subj}</div>
+                          <div className={`text-xs font-semibold ${isSelected ? "text-white/80" : "text-slate-400"}`}>
+                            गृहपाठ पाहण्यासाठी क्लिक करा
+                          </div>
+                        </div>
+                        <ChevronRight className="size-5 shrink-0 opacity-60" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+
+            {/* STEP 4: HOMEWORK LIST */}
+            {step === "list" && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                {/* Context Header & Filter Bar */}
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
+                    <span className="px-3 py-1 rounded-lg bg-amber-100 text-amber-800 font-bold">
+                      {currentMediumObj?.labelMr}
+                    </span>
+                    <span className="text-slate-400">/</span>
+                    <span className="px-3 py-1 rounded-lg bg-orange-100 text-orange-800 font-bold">
+                      {currentClassObj?.mr}
+                    </span>
+                    <span className="text-slate-400">/</span>
+                    <span className="px-3 py-1 rounded-lg bg-indigo-100 text-indigo-800 font-bold">
+                      विषय: {selectedSubject}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+                    {/* Date Picker Filter */}
+                    <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
+                      <Calendar className="size-3.5 text-amber-600" />
+                      <span className="text-slate-500 font-medium">दिनांक:</span>
+                      <input
+                        type="date"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                        className="bg-transparent border-none outline-none font-bold text-slate-800 cursor-pointer"
+                      />
+                      {filterDate && (
+                        <button
+                          onClick={() => setFilterDate("")}
+                          className="text-slate-400 hover:text-red-500 ml-1 font-bold"
+                          title="तारीख फिल्टर काढा"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
-                    <div className="relative w-full sm:w-72">
+
+                    {/* Search Input */}
+                    <div className="relative flex-1 sm:w-56">
                       <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="गृहपाठ शोधा..."
+                        placeholder="शोध करा..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-emerald-500"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:bg-white focus:border-amber-500"
                       />
                     </div>
+
+                    <button
+                      onClick={() => setStep("subject")}
+                      className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                    >
+                      विषय बदला
+                    </button>
                   </div>
+                </div>
 
-                  {/* LIST OF HOMEWORK UPLOADED BY ADMIN */}
-                  {loading ? (
-                    <div className="bg-white rounded-3xl p-16 text-center border border-slate-200">
-                      <Loader2 className="size-10 animate-spin text-emerald-600 mx-auto mb-3" />
-                      <p className="text-sm font-bold text-slate-600">गृहपाठ लोड होत आहे...</p>
+                {/* List Cards */}
+                {loading ? (
+                  <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
+                    <Loader2 className="size-8 animate-spin text-amber-600 mx-auto mb-2" />
+                    <p className="text-xs font-bold text-slate-500">गृहपाठ लोड होत आहे...</p>
+                  </div>
+                ) : filteredHomework.length === 0 ? (
+                  <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-3">
+                    <div className="size-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+                      <BookOpen className="size-8" />
                     </div>
-                  ) : currentSubjectHomework.length === 0 ? (
-                    <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 space-y-4">
-                      <div className="size-20 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
-                        <BookOpen className="size-10" />
-                      </div>
-                      <div className="space-y-1">
-                        <h3 className="text-lg font-black text-slate-900">
-                          सध्या या विषयासाठी कोणताही गृहपाठ उपलब्ध नाही
-                        </h3>
-                        <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto font-medium">
-                          {currentMediumObj?.labelMr} • {currentClassObj?.mr} • {selectedSubject} विषयासाठी ॲडमिनने गृहपाठ अपलोड केल्यावर तो येथे आपोआप दिसेल.
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      {currentSubjectHomework.map((item, idx) => (
-                        <div
-                          key={item.id}
-                          className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-emerald-400 shadow-sm hover:shadow-lg transition-all space-y-4 flex flex-col justify-between"
-                        >
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="space-y-1 flex-1">
-                                <span className="inline-block px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-wider border border-emerald-200">
-                                  गृहपाठ #{idx + 1}
-                                </span>
-                                <h3 className="font-black text-lg text-slate-900 leading-snug">
-                                  {item.title}
-                                </h3>
-                              </div>
-                            </div>
-
-                            {item.description && (
-                              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs text-slate-700 leading-relaxed font-medium line-clamp-3">
-                                {item.description}
-                              </div>
-                            )}
-
-                            <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500 font-semibold">
-                              {item.dueDate && (
-                                <span className="flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg border border-amber-200">
-                                  <Calendar className="size-3.5" /> अंतिम दिनांक: {item.dueDate}
-                                </span>
-                              )}
-                              <span className="flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg">
-                                <Clock className="size-3.5" /> {new Date(item.uploadedAt).toLocaleDateString("mr-IN")}
+                    <h4 className="text-base font-bold text-slate-800">
+                      {filterDate ? `दिनांक ${filterDate} साठी कोणताही गृहपाठ सापडला नाही` : "कोणताही गृहपाठ उपलब्ध नाही"}
+                    </h4>
+                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                      {filterDate
+                        ? "इतर तारीख निवडा किंवा फिल्टर काढून सर्व गृहपाठ तपासा."
+                        : `${currentMediumObj?.labelMr} • ${currentClassObj?.mr} • ${selectedSubject} विषयासाठी ॲडमिनने अद्याप गृहपाठ अपलोड केलेला नाही.`}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredHomework.map((hw) => (
+                      <div
+                        key={hw.id}
+                        className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-amber-400 shadow-sm hover:shadow-lg transition-all space-y-4 flex flex-col justify-between"
+                      >
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
+                              <Calendar className="size-3" />
+                              दिनांक: {hw.homeworkDate}
+                            </span>
+                            {hw.dueDate && (
+                              <span className="text-[11px] font-semibold text-slate-500">
+                                पूर्ण करण्याची तारीख: {hw.dueDate}
                               </span>
-                            </div>
+                            )}
                           </div>
 
-                          {/* ACTION BUTTON: VIEW & EDIT AS REAL WORKSHEET */}
-                          <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-                            <span className="text-xs font-bold text-slate-500">
-                              {item.fileName ? "दस्तऐवज उपलब्ध" : "स्वाध्याय उपलब्ध"}
+                          <h3 className="text-lg font-black text-slate-900 leading-snug">
+                            {hw.title}
+                          </h3>
+
+                          {hw.description && (
+                            <p className="text-xs text-slate-600 font-medium line-clamp-3 leading-relaxed">
+                              {hw.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Interactive Buttons */}
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 truncate">
+                            <FileText className="size-4 text-amber-600 shrink-0" />
+                            <span className="truncate">
+                              {hw.fileName || (hw.variables ? "दैनिक कार्यपुस्तिका" : "स्वाध्याय दस्तऐवज")}
                             </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
                             <button
-                              onClick={() => handleOpenHomework(item)}
-                              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer"
+                              onClick={() => setActiveHomework(hw)}
+                              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
                             >
-                              <Edit3 className="size-3.5" />
-                              <span>गृहपाठ पहा व संपादित करा (View & Edit)</span>
+                              <Eye className="size-3.5" />
+                              <span>पहा व संपादन करा</span>
                             </button>
+                            {hw.fileUrl && (
+                              <a
+                                href={hw.fileUrl}
+                                download={hw.fileName || "homework.pdf"}
+                                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all"
+                                title="मूळ फाईल डाउनलोड"
+                              >
+                                <Download className="size-4" />
+                              </a>
+                            )}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );

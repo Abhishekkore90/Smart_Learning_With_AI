@@ -1,3 +1,4 @@
+
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
 
@@ -35,7 +36,10 @@ export async function uploadFileWithProgress(
     throw new Error(`File size exceeds maximum allowed limit of ${sizeMb}MB.`);
   }
 
-  const cleanFolder = folderPath.replace(/^\/+|\/+$/g, "");
+  const cleanFolder = folderPath
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/[^a-zA-Z0-9/_-]/g, "_")
+    .replace(/_+/g, "_");
   const timestamp = Date.now();
   const uniqueId = Math.random().toString(36).substring(2, 9) + "_" + timestamp;
   const cleanFileName = `${uniqueId}_${file.name.replace(/[^\u0900-\u097Fa-zA-Z0-9.\-_]/g, "_").replace(/_+/g, "_")}`;
@@ -85,11 +89,11 @@ export async function uploadFileWithProgress(
     }
   }
 
-  // Final Fallback: Use lightweight Blob URL so memory usage stays minimal and browser never crashes
+  // Final Fallback: Use persistent Base64 Data URL so it survives reloads and never dies
   try {
-    const blobUrl = URL.createObjectURL(file);
+    const dataUrl = await fileToDataUrl(file);
     return {
-      url: blobUrl,
+      url: dataUrl,
       storageProvider: "firebase",
       fileName: file.name,
       sizeBytes: file.size,
@@ -176,7 +180,7 @@ function uploadToBunny(
     };
 
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    
+
     // On localhost, direct URL will always fail CORS. Use proxyUrl immediately to avoid 15s timeout.
     if (isLocalhost) {
       executeRequest(proxyUrl);
@@ -215,7 +219,7 @@ function uploadToFirebase(
     timer = setTimeout(() => {
       try {
         uploadTask.cancel();
-      } catch (e) {}
+      } catch (e) { }
       reject(new Error("Firebase Storage upload request timed out."));
     }, 60000);
 

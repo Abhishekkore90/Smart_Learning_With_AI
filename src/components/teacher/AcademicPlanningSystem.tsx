@@ -47,7 +47,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { processRazorpayPayment } from "@/lib/razorpayService";
-import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { getDefaultSubjectsForClass, detectRecordMedium, isRecordSemi, areSubjectsEquivalent } from "@/data/cceSubjects";
 import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorage";
 import { uploadFileWithProgress } from "@/lib/upload";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
@@ -55,6 +55,7 @@ import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
 import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord, formatMarathiClassName } from "@/lib/smartPlanningParser";
 import { extractSubjectSectionsFromExcel, normalizeSubjectName } from "@/lib/smartSubjectSplitter";
 import { PlanningTableRenderer } from "@/components/teacher/PlanningTableRenderer";
+import { getUnifiedSchoolProfile, saveUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 import * as XLSX from "xlsx";
 
 // Helper to identify subject change / section header rows in raw Excel data
@@ -582,6 +583,7 @@ export interface UserSchoolProfile {
   schoolName: string;
   kendraName: string;
   talukaName: string;
+  districtName?: string;
   udiseNumber: string;
   teacherName: string;
   headMasterName: string;
@@ -800,6 +802,7 @@ export function AcademicPlanningSystem({
     schoolName: "",
     kendraName: "",
     talukaName: "",
+    districtName: "",
     udiseNumber: "",
     teacherName: "",
     headMasterName: "",
@@ -810,6 +813,7 @@ export function AcademicPlanningSystem({
     schoolName: "",
     kendraName: "",
     talukaName: "",
+    districtName: "",
     udiseNumber: "",
     teacherName: "",
     headMasterName: "",
@@ -818,17 +822,34 @@ export function AcademicPlanningSystem({
   useEffect(() => {
     const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
     const storageKey = `user_planning_school_profile_${effectiveUserId}`;
+    const unified = getUnifiedSchoolProfile();
+
+    const applyProfile = (data: Partial<UserSchoolProfile>) => {
+      const merged: UserSchoolProfile = {
+        schoolName: data.schoolName || unified.schoolName || "",
+        kendraName: data.kendraName || unified.kendra || unified.centerName || "",
+        talukaName: data.talukaName || unified.taluka || "",
+        districtName: data.districtName || unified.jilha || unified.district || "",
+        udiseNumber: data.udiseNumber || unified.udise || "",
+        teacherName: data.teacherName || unified.teacherName || "",
+        headMasterName: data.headMasterName || unified.headmaster || "",
+      };
+      setSchoolProfile(merged);
+      setSchoolFormData(merged);
+      if (!merged.schoolName) setShowSchoolForm(true);
+      return merged;
+    };
 
     const cached = localStorage.getItem(storageKey);
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        setSchoolProfile(parsed);
-        setSchoolFormData(parsed);
-        if (!parsed.schoolName) setShowSchoolForm(true);
-      } catch (e) {}
+        applyProfile(parsed);
+      } catch (e) {
+        applyProfile({});
+      }
     } else {
-      setShowSchoolForm(true);
+      applyProfile({});
     }
 
     const fetchSchoolProfile = async () => {
@@ -838,10 +859,8 @@ export function AcademicPlanningSystem({
           const snap = await getDoc(docRef);
           if (snap.exists()) {
             const data = snap.data() as UserSchoolProfile;
-            setSchoolProfile(data);
-            setSchoolFormData(data);
-            localStorage.setItem(storageKey, JSON.stringify(data));
-            if (!data.schoolName) setShowSchoolForm(true);
+            const merged = applyProfile(data);
+            localStorage.setItem(storageKey, JSON.stringify(merged));
           }
         } catch (err) {
           console.warn("Planning school profile fetch notice:", err);
@@ -850,6 +869,20 @@ export function AcademicPlanningSystem({
     };
 
     fetchSchoolProfile();
+
+    const handleProfileUpdate = () => {
+      const updatedUnified = getUnifiedSchoolProfile();
+      setSchoolProfile((prev) => ({
+        ...prev,
+        districtName: prev.districtName || updatedUnified.jilha || updatedUnified.district || "",
+        schoolName: prev.schoolName || updatedUnified.schoolName || "",
+        kendraName: prev.kendraName || updatedUnified.kendra || "",
+        talukaName: prev.talukaName || updatedUnified.taluka || "",
+        udiseNumber: prev.udiseNumber || updatedUnified.udise || "",
+      }));
+    };
+    window.addEventListener("schoolProfileUpdated", handleProfileUpdate);
+    return () => window.removeEventListener("schoolProfileUpdated", handleProfileUpdate);
   }, [user?.uid]);
 
   const handleSaveSchoolProfile = async () => {
@@ -859,6 +892,18 @@ export function AcademicPlanningSystem({
       const storageKey = `user_planning_school_profile_${effectiveUserId}`;
 
       localStorage.setItem(storageKey, JSON.stringify(schoolFormData));
+
+      saveUnifiedSchoolProfile({
+        schoolName: schoolFormData.schoolName,
+        kendra: schoolFormData.kendraName,
+        centerName: schoolFormData.kendraName,
+        taluka: schoolFormData.talukaName,
+        jilha: schoolFormData.districtName,
+        district: schoolFormData.districtName,
+        udise: schoolFormData.udiseNumber,
+        teacherName: schoolFormData.teacherName,
+        headmaster: schoolFormData.headMasterName,
+      });
 
       if (db && effectiveUserId && effectiveUserId !== "guest_teacher") {
         try {
@@ -887,6 +932,7 @@ export function AcademicPlanningSystem({
   // Upload Modal State
   const [uploadModalOpen, setUploadModalOpen] = useState<boolean>(false);
   const [uploadingType, setUploadingType] = useState<"annual" | "monthly" | "question_bank">("annual");
+  const [uploadingMedium, setUploadingMedium] = useState<string>("marathi");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
 
@@ -898,6 +944,7 @@ export function AcademicPlanningSystem({
   const [showAllFilesModal, setShowAllFilesModal] = useState<boolean>(false);
   const [allFilesSearchQuery, setAllFilesSearchQuery] = useState<string>("");
   const [allFilesTypeFilter, setAllFilesTypeFilter] = useState<"all" | "annual" | "monthly" | "question_bank">("all");
+  const [allFilesMediumFilter, setAllFilesMediumFilter] = useState<"all" | "marathi" | "semi">("all");
   const [allFilesClassFilter, setAllFilesClassFilter] = useState<string>("all");
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
 
@@ -1500,9 +1547,8 @@ export function AcademicPlanningSystem({
   const matchMediumId = (m1?: string, m2?: string): boolean => {
     const s1 = (m1 || "marathi").trim().toLowerCase();
     const s2 = (m2 || "marathi").trim().toLowerCase();
-    if (s1 === s2) return true;
-    const isSemi1 = s1.includes("semi") || s1.includes("सेमी");
-    const isSemi2 = s2.includes("semi") || s2.includes("सेमी");
+    const isSemi1 = s1 === "semi" || s1.includes("semi") || s1.includes("सेमी") || s1 === "english";
+    const isSemi2 = s2 === "semi" || s2.includes("semi") || s2.includes("सेमी") || s2 === "english";
     return isSemi1 === isSemi2;
   };
 
@@ -1511,7 +1557,9 @@ export function AcademicPlanningSystem({
     const clean1 = (s1 || "all").trim().toLowerCase();
     const clean2 = (s2 || "all").trim().toLowerCase();
     if (clean1 === clean2) return true;
-    if (clean1 === "all" || clean2 === "all") return true;
+    if (clean1 === "all" || clean2 === "all") return false;
+
+    if (areSubjectsEquivalent(clean1, clean2)) return true;
 
     const norm1 = normalizeSubjectName(clean1);
     const norm2 = normalizeSubjectName(clean2);
@@ -1536,7 +1584,8 @@ export function AcademicPlanningSystem({
     yearStr?: string
   ) => {
     const year = (yearStr || selectedAcademicYear || "2026-27").trim();
-    const med = (medId || selectedMedium || "marathi").trim().toLowerCase();
+    const rawMed = (medId || selectedMedium || "marathi").trim().toLowerCase();
+    const med = (rawMed.includes("semi") || rawMed.includes("सेमी") || rawMed === "english") ? "semi" : "marathi";
     const cls = (clsId || selectedClass || "1st").trim().toLowerCase();
     const type = (pType || selectedPlanningType || "annual").trim().toLowerCase();
     const rawSubj = subjName !== undefined ? subjName : (selectedSubject || "all");
@@ -1545,7 +1594,7 @@ export function AcademicPlanningSystem({
     return `${year}_${med}_${cls}_${type}_${subj}`;
   };
 
-  // Reusable helper to lookup planning file record from state with unified multi-class matching
+  // Reusable helper to lookup planning file record from state with strict medium isolation
   const getPlanningFile = (
     pType: "annual" | "monthly" | "question_bank" = selectedPlanningType,
     subjName?: string,
@@ -1554,51 +1603,96 @@ export function AcademicPlanningSystem({
     yearStr?: string
   ): PlanningFileRecord | undefined => {
     const targetCls = clsId || selectedClass || "1st";
-    const targetMed = medId || selectedMedium || "marathi";
+    const targetMed = (medId || selectedMedium || "marathi").trim().toLowerCase();
+    const isTargetSemi = targetMed === "semi" || targetMed.includes("semi") || targetMed.includes("सेमी") || targetMed === "english";
+    const expectedMed: "semi" | "marathi" = isTargetSemi ? "semi" : "marathi";
     const rawSubj = subjName !== undefined ? subjName : (selectedSubject || "all");
     const targetType = pType || selectedPlanningType || "annual";
 
-    const fileKey = getFileRecordKey(targetType, rawSubj, targetCls, targetMed, yearStr);
+    const fileKey = getFileRecordKey(targetType, rawSubj, targetCls, expectedMed, yearStr);
     let fileRecord: PlanningFileRecord | undefined = planningFiles[fileKey];
-    if (fileRecord) return fileRecord;
+    if (fileRecord && detectRecordMedium(fileRecord) === expectedMed) return fileRecord;
 
     // Fallback check for legacy record keys (e.g. classId_mediumId_subjectId_planningType)
     const cls = targetCls.trim().toLowerCase();
-    const med = targetMed.trim().toLowerCase();
     const subj = (rawSubj || "all").trim().toLowerCase();
     const type = targetType.trim().toLowerCase();
 
-    const legacyKey1 = `${cls}_${med}_${subj}_${type}`;
-    const legacyKey2 = `${cls}_${med}_${subj}`;
+    const legacyKey1 = `${cls}_${expectedMed}_${subj}_${type}`;
+    const legacyKey2 = `${cls}_${expectedMed}_${subj}`;
     fileRecord = planningFiles[legacyKey1] || planningFiles[legacyKey2];
-    if (fileRecord) return fileRecord;
+    if (fileRecord && detectRecordMedium(fileRecord) === expectedMed) return fileRecord;
 
-    // Fallback search across all files in planningFiles with flexible class & subject normalization
+    // Fallback search across all files in planningFiles with strict medium isolation
     const allFiles = Object.values(planningFiles);
     fileRecord = allFiles.find((f) => {
       if (!f) return false;
+      // STRICT MEDIUM ISOLATION: A file MUST strictly match the target medium!
+      if (detectRecordMedium(f) !== expectedMed) return false;
+
       const fType = (f.planningType || "").trim().toLowerCase();
       if (fType !== type) return false;
       if (!matchClassId(f.classId, targetCls)) return false;
-      if (!matchMediumId(f.mediumId, targetMed)) return false;
 
       if (subj !== "all") {
-        return matchSubjectId(f.subjectId, rawSubj);
+        return (
+          matchSubjectId(f.subjectId, rawSubj) ||
+          areSubjectsEquivalent(f.subjectId || "", rawSubj) ||
+          (f.fileName && areSubjectsEquivalent(f.fileName, rawSubj))
+        );
       }
       return f.subjectId === "all" || !f.subjectId;
     });
     if (fileRecord) return fileRecord;
 
+    // For Question Bank: if looking for "all" and no exact "all" file exists,
+    // find any question bank file uploaded for this class and medium so the user can access and view it
+    if (type === "question_bank" && subj === "all") {
+      fileRecord = allFiles.find((f) => {
+        if (!f) return false;
+        if (detectRecordMedium(f) !== expectedMed) return false;
+        const fType = (f.planningType || "").trim().toLowerCase();
+        if (fType !== "question_bank") return false;
+        return matchClassId(f.classId, targetCls);
+      });
+      if (fileRecord) return fileRecord;
+    }
+
     // If searching for a specific subject and no separate subject file is uploaded,
-    // fallback to class-wide combined file ("all") so the user can access and extract that subject
+    // fallback to class-wide combined file ("all") for the SAME medium ONLY if that file is truly general
+    // (i.e. not titled specifically for a different subject like 'Marathi' when searching for 'Maths')
     if (subj !== "all") {
       fileRecord = allFiles.find((f) => {
         if (!f) return false;
+        // STRICT MEDIUM ISOLATION:
+        if (detectRecordMedium(f) !== expectedMed) return false;
+
         const fType = (f.planningType || "").trim().toLowerCase();
         if (fType !== type) return false;
         if (!matchClassId(f.classId, targetCls)) return false;
-        if (!matchMediumId(f.mediumId, targetMed)) return false;
-        return f.subjectId === "all" || !f.subjectId || f.id.endsWith("_all");
+
+        // If file specifically matches target subject by name or alias, accept it!
+        if (
+          areSubjectsEquivalent(f.subjectId || "", rawSubj) ||
+          (f.fileName && areSubjectsEquivalent(f.fileName, rawSubj))
+        ) {
+          return true;
+        }
+
+        // If file name explicitly mentions ANOTHER known subject, DO NOT use as fallback
+        if (f.fileName) {
+          const otherKnownSubjects = ["मराठी", "गणित", "इंग्रजी", "हिंदी", "विज्ञान", "परिसर अभ्यास", "social sciences", "कला", "कार्यानुभव", "शारीरिक शिक्षण"];
+          const matchesOther = otherKnownSubjects.some(
+            (os) => !areSubjectsEquivalent(os, rawSubj) && areSubjectsEquivalent(f.fileName, os)
+          );
+          if (matchesOther) return false;
+        }
+
+        return (
+          f.subjectId === "all" ||
+          !f.subjectId ||
+          f.id.endsWith("_all")
+        );
       });
       if (fileRecord) return fileRecord;
     }
@@ -1654,12 +1748,13 @@ export function AcademicPlanningSystem({
 
     try {
       const normYear = (selectedAcademicYear || "2026-27").trim();
-      const normMed = (selectedMedium || "marathi").trim().toLowerCase();
+      const rawUploadMed = (uploadingMedium || selectedMedium || "marathi").trim().toLowerCase();
+      const normMed = (rawUploadMed.includes("semi") || rawUploadMed.includes("सेमी") || rawUploadMed === "english") ? "semi" : "marathi";
       const normCls = (selectedClass || "1st").trim().toLowerCase();
       const normType = (uploadingType || selectedPlanningType || "annual").trim().toLowerCase();
       const normSubj = (selectedSubject || "all").trim().toLowerCase();
 
-      const recordKey = getFileRecordKey(uploadingType, selectedSubject || "all");
+      const recordKey = getFileRecordKey(uploadingType, selectedSubject || "all", normCls, normMed, normYear);
       const ext = selectedFile.name.split(".").pop()?.toLowerCase() || "pdf";
 
       const originalSizeMb = (selectedFile.size / (1024 * 1024)).toFixed(2);
@@ -1678,6 +1773,7 @@ export function AcademicPlanningSystem({
 
       // 1. Store binary Blob in local IndexedDB for instant zero-latency view
       await saveFileToIndexedDB(recordKey, finalFileBlob);
+      await saveFileToIndexedDB(`plan_${normMed}_${normCls}_${normSubj}`, finalFileBlob);
 
       // 2. Upload file directly via uploadFileWithProgress (tries Bunny Storage CDN, then Firebase Storage)
       toast.info("⚡ सर्व्हरवर फाईल अपलोड होत आहे...");
@@ -1750,7 +1846,7 @@ export function AcademicPlanningSystem({
         id: recordKey,
         academicYear: normYear,
         classId: selectedClass,
-        mediumId: selectedMedium,
+        mediumId: normMed,
         subjectId: selectedSubject || "all",
         planningType: uploadingType,
         fileName: selectedFile.name,
@@ -1912,10 +2008,14 @@ export function AcademicPlanningSystem({
   // Filtered files for the "All Files Management" modal
   const filteredUploadedFiles = React.useMemo(() => {
     return allUploadedFilesList.filter((f) => {
+      const recMed = detectRecordMedium(f);
+      if (allFilesMediumFilter !== "all" && recMed !== allFilesMediumFilter) {
+        return false;
+      }
       if (allFilesTypeFilter !== "all" && f.planningType !== allFilesTypeFilter) {
         return false;
       }
-      if (allFilesClassFilter !== "all" && f.classId !== allFilesClassFilter) {
+      if (allFilesClassFilter !== "all" && !matchClassId(f.classId, allFilesClassFilter)) {
         return false;
       }
       if (allFilesSearchQuery.trim()) {
@@ -1923,12 +2023,12 @@ export function AcademicPlanningSystem({
         const matchName = (f.fileName || "").toLowerCase().includes(q);
         const matchSubj = (f.subjectId || "").toLowerCase().includes(q);
         const matchClass = (f.classId || "").toLowerCase().includes(q);
-        const matchMedium = (f.mediumId || "").toLowerCase().includes(q);
+        const matchMedium = recMed.includes(q) || (f.mediumId || "").toLowerCase().includes(q);
         return matchName || matchSubj || matchClass || matchMedium;
       }
       return true;
     });
-  }, [allUploadedFilesList, allFilesTypeFilter, allFilesClassFilter, allFilesSearchQuery]);
+  }, [allUploadedFilesList, allFilesMediumFilter, allFilesTypeFilter, allFilesClassFilter, allFilesSearchQuery]);
 
   // Helper to trigger VIEW preview (checks IndexedDB for persistent blob across page refreshes)
   const handleViewFile = async (rec: PlanningFileRecord) => {
@@ -1965,8 +2065,10 @@ export function AcademicPlanningSystem({
     );
 
     const recAny = rec as any;
+    const detectedMed = detectRecordMedium(rec);
     let enrichedRec = {
       ...rec,
+      mediumId: rec.mediumId || detectedMed,
       planningType: rec.planningType || (selectedPlanningType === "monthly" ? "monthly" : "annual"),
       category: recAny?.category || (selectedPlanningType === "monthly" ? "masik_niyojan" : "varshik_niyojan"),
       fileUrl: targetUrl,
@@ -2525,6 +2627,7 @@ export function AcademicPlanningSystem({
                               onClick={() => {
                                 setSelectedSubject("all");
                                 setUploadingType("annual");
+                                setUploadingMedium(selectedMedium || "marathi");
                                 setUploadModalOpen(true);
                               }}
                               className="w-full py-2.5 px-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1"
@@ -2594,103 +2697,40 @@ export function AcademicPlanningSystem({
                     </div>
                   </div>
 
-                  {/* 3. Question Bank Card (Unified with Class-wide & Subject-wise action) */}
-                  {(() => {
-                    const qbFile = getPlanningFile("question_bank", "all");
-                    return (
-                      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 text-white rounded-[2.5rem] p-7 border border-slate-700/50 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl transition-all">
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div className="size-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
-                              <FolderOpen className="size-7 text-amber-300" />
-                            </div>
-                            {qbFile ? (
-                              <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                                <CheckCircle2 className="size-3" /> Available
-                              </span>
-                            ) : (
-                              <span className="px-3 py-1 rounded-full bg-purple-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
-                                इयत्ता {selectedClass}
-                              </span>
-                            )}
-                          </div>
-
-                          <div>
-                            <h3 className="text-2xl font-black">Question Bank</h3>
-                            <p className="text-xs font-semibold text-slate-300 mt-1">
-                              (प्रश्नपेढी दालन - इयत्ता {selectedClass})
-                            </p>
-                            <p className="text-xs text-slate-200 mt-3 leading-relaxed font-medium">
-                              {qbFile
-                                ? `फाईल: ${qbFile.fileName} (${qbFile.fileSize})`
-                                : `सर्व विषयांचे घटकनिहाय प्रश्न संच व सराव प्रश्नपत्रिका पहा किंवा डाऊनलोड करा`}
-                            </p>
-                          </div>
+                  {/* 3. Question Bank Card (विषयनिहाय - Sub-selection) */}
+                  <div
+                    onClick={() => {
+                      setSelectedPlanningType("question_bank");
+                      setStep("subject");
+                    }}
+                    className="bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 text-white rounded-[2.5rem] p-7 border border-indigo-500/30 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl hover:scale-102 transition-all cursor-pointer"
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="size-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
+                          <FolderOpen className="size-7 text-amber-300" />
                         </div>
-
-                        <div className="pt-3 border-t border-white/15 space-y-2">
-                          {qbFile ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewFile(qbFile);
-                              }}
-                              className="w-full py-3 px-4 rounded-xl bg-white text-indigo-950 hover:bg-amber-300 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95"
-                            >
-                              <Eye className="size-4 text-indigo-700" /> VIEW QUESTION BANK (पहा)
-                            </button>
-                          ) : null}
-
-                          <button
-                            onClick={() => {
-                              setSelectedPlanningType("question_bank");
-                              setStep("subject");
-                            }}
-                            className="w-full py-2.5 px-4 rounded-xl bg-purple-600/50 hover:bg-purple-600 text-white text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer border border-purple-400/30 active:scale-95"
-                          >
-                            <span>विषयनिहाय प्रश्नपेढी निवडा</span>
-                            <span>→</span>
-                          </button>
-
-                          {/* Admin Upload / Replace Question Bank File */}
-                          {mode === "admin" && (
-                            <button
-                              onClick={() => {
-                                setSelectedSubject("all");
-                                setUploadingType("question_bank");
-                                setUploadModalOpen(true);
-                              }}
-                              className="w-full py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1"
-                            >
-                              <Upload className="size-4" />
-                              {qbFile ? `REPLACE ${selectedClass} QUESTION BANK` : `UPLOAD ${selectedClass} QUESTION BANK`}
-                            </button>
-                          )}
-
-                          {/* Admin Remove Question Bank File */}
-                          {qbFile && mode === "admin" && (
-                            <button
-                              type="button"
-                              disabled={deletingFileId === qbFile.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteFile(qbFile);
-                              }}
-                              className="w-full py-2 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 disabled:opacity-50"
-                              title="ही फाईल कायमस्वरूपी हटवा (Remove File)"
-                            >
-                              {deletingFileId === qbFile.id ? (
-                                <Loader2 className="size-4 animate-spin text-rose-300" />
-                              ) : (
-                                <Trash2 className="size-4 text-rose-300" />
-                              )}
-                              <span>REMOVE FILE (फाईल हटवा)</span>
-                            </button>
-                          )}
-                        </div>
+                        <span className="px-3 py-1 rounded-full bg-purple-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
+                          विषयनिहाय
+                        </span>
                       </div>
-                    );
-                  })()}
+
+                      <div>
+                        <h3 className="text-2xl font-black">Question Bank</h3>
+                        <p className="text-xs font-semibold text-purple-200 mt-1">
+                          (प्रश्नपेढी दालन - विषयानुसार)
+                        </p>
+                        <p className="text-xs text-slate-200 mt-3 leading-relaxed">
+                          मराठी, गणित, इंग्रजी इत्यादी सर्व विषयांचे घटकनिहाय प्रश्न संच, सराव प्रश्न व मॉडेल उत्तरपत्रिका पाहण्यासाठी
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-white/15 flex items-center justify-between font-black text-xs text-amber-300 group-hover:text-white transition-colors">
+                      <span>विषय निवडा व प्रश्नपेढी पहा</span>
+                      <span>→</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-center pt-4">
@@ -2720,7 +2760,9 @@ export function AcademicPlanningSystem({
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                    Select Subject & Access Files / विषय व नियोजन फाईल्स
+                    {selectedPlanningType === "question_bank"
+                      ? "Select Subject & Access Question Bank / विषय निवडा व प्रश्नपेढी पहा"
+                      : "Select Subject & Access Files / विषय व नियोजन फाईल्स"}
                   </h2>
                   <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mt-0.5">
                     MEDIUM: {selectedMedium === "semi" ? "Semi-English" : "Marathi"} | CLASS: {selectedClass} | TYPE: {selectedPlanningType === "annual" ? "वार्षिक नियोजन (Annual)" : selectedPlanningType === "monthly" ? "मासिक नियोजन (Monthly)" : "प्रश्नपेढी (Question Bank)"}
@@ -2788,10 +2830,13 @@ export function AcademicPlanningSystem({
                           }}
                           className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95"
                         >
-                          <Eye className="size-4 text-amber-300" /> VIEW PDF
+                          <Eye className="size-4 text-amber-300" />
+                          {selectedPlanningType === "question_bank"
+                            ? "VIEW QUESTION BANK (पहा)"
+                            : selectedPlanningType === "monthly"
+                              ? "VIEW MONTHLY (पहा)"
+                              : "VIEW PDF"}
                         </button>
-
-
 
                         {/* Admin Upload / Replace Button */}
                         {mode === "admin" && (
@@ -2799,12 +2844,15 @@ export function AcademicPlanningSystem({
                             onClick={() => {
                               setSelectedSubject(subjName);
                               setUploadingType(selectedPlanningType);
+                              setUploadingMedium(selectedMedium || "marathi");
                               setUploadModalOpen(true);
                             }}
                             className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1"
                           >
                             <Upload className="size-4" />
-                            {fileRec ? "REPLACE FILE (बदला)" : "UPLOAD FILE (अपलोड करा)"}
+                            {fileRec
+                              ? `REPLACE ${subjName} ${selectedPlanningType === "question_bank" ? "QUESTION BANK" : "FILE"} (बदला)`
+                              : `UPLOAD ${subjName} ${selectedPlanningType === "question_bank" ? "QUESTION BANK" : "FILE"} (अपलोड करा)`}
                           </button>
                         )}
 
@@ -2888,7 +2936,7 @@ export function AcademicPlanningSystem({
                       : uploadingType === "monthly"
                         ? "मासिक नियोजन"
                         : "प्रश्नपेढी"}{" "}
-                    | {selectedClass} | {selectedMedium === "semi" ? "सेमी" : "मराठी"} | {selectedSubject}
+                    | {selectedClass} | {uploadingMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी माध्यम"} | {selectedSubject}
                   </p>
                 </div>
               </div>
@@ -2899,6 +2947,37 @@ export function AcademicPlanningSystem({
               >
                 <X className="size-5" />
               </button>
+            </div>
+
+            {/* Medium Selector */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-black uppercase text-slate-700 tracking-wider">
+                माध्यम निवडा (Choose Medium):
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setUploadingMedium("marathi")}
+                  className={`py-2 px-3 rounded-xl text-xs font-black border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    uploadingMedium === "marathi"
+                      ? "bg-amber-500 text-white border-amber-600 shadow-sm"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  मराठी माध्यम
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUploadingMedium("semi")}
+                  className={`py-2 px-3 rounded-xl text-xs font-black border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    uploadingMedium === "semi"
+                      ? "bg-teal-600 text-white border-teal-700 shadow-sm"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
+                >
+                  सेमी-इंग्रजी माध्यम
+                </button>
+              </div>
             </div>
 
 
@@ -3214,6 +3293,27 @@ export function AcademicPlanningSystem({
                 />
               </div>
 
+              {/* Medium Filter Tabs */}
+              <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl shrink-0 overflow-x-auto">
+                {[
+                  { id: "all", label: "सर्व माध्यम" },
+                  { id: "marathi", label: "मराठी" },
+                  { id: "semi", label: "सेमी" },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setAllFilesMediumFilter(m.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      allFilesMediumFilter === m.id
+                        ? "bg-white text-indigo-950 shadow-xs font-black"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
               {/* Type Filter Tabs */}
               <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl shrink-0 overflow-x-auto">
                 {[
@@ -3265,7 +3365,8 @@ export function AcademicPlanningSystem({
                 <div className="grid grid-cols-1 gap-3">
                   {filteredUploadedFiles.map((file) => {
                     const classLabel = CLASS_OPTIONS.find((c) => c.id === file.classId)?.mr || `इयत्ता ${file.classId}`;
-                    const medLabel = file.mediumId === "semi" ? "सेमी-इंग्रजी" : "मराठी माध्यम";
+                    const recMed = detectRecordMedium(file);
+                    const medLabel = recMed === "semi" ? "सेमी-इंग्रजी" : "मराठी माध्यम";
                     const isDeleting = deletingFileId === file.id;
 
                     const typeBadgeColor =
@@ -3296,8 +3397,11 @@ export function AcademicPlanningSystem({
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${typeBadgeColor}`}>
                                 {typeLabel}
                               </span>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${recMed === "semi" ? "bg-teal-50 text-teal-800 border-teal-300" : "bg-amber-50 text-amber-800 border-amber-300"}`}>
+                                {medLabel}
+                              </span>
                               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700 border border-slate-200">
-                                {classLabel} ({medLabel})
+                                {classLabel}
                               </span>
                               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
                                 विषय: {file.subjectId === "all" ? "सर्व विषय (All)" : file.subjectId}
@@ -3986,7 +4090,18 @@ export function AcademicPlanningSystem({
                   type="text"
                   value={schoolFormData.talukaName}
                   onChange={(e) => setSchoolFormData({ ...schoolFormData, talukaName: e.target.value })}
-                  placeholder="उदा. ठाणे"
+                  placeholder="उदा. तासगाव"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">जिल्हा (District):</label>
+                <input
+                  type="text"
+                  value={schoolFormData.districtName || ""}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, districtName: e.target.value })}
+                  placeholder="उदा. सांगली"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                 />
               </div>
@@ -3997,7 +4112,7 @@ export function AcademicPlanningSystem({
                   type="text"
                   value={schoolFormData.udiseNumber}
                   onChange={(e) => setSchoolFormData({ ...schoolFormData, udiseNumber: e.target.value })}
-                  placeholder="उदा. 27240100101"
+                  placeholder="उदा. 27350800701"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                 />
               </div>

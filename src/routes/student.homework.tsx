@@ -15,20 +15,24 @@ import {
   Globe,
   ScrollText,
   Users,
-  MessageCircle,
+  Eye,
+  Download,
+  Printer,
   ChevronRight,
-  MapPin,
-  Star,
-  ArrowRight,
-  Trophy,
-  Trash2,
+  Loader2,
+  FileText,
+  Check,
+  X,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { StudentHeader } from "@/components/student/StudentHeader";
-import { db } from "@/lib/firebase";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
+import { subscribeToHomework } from "@/services/homeworkService";
+import type { HomeworkItem } from "@/types/documentEditor";
+import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
+import { DailyHomeworkTemplate } from "@/components/homework/DailyHomeworkTemplate";
+import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 
 export const Route = createFileRoute("/student/homework")({
   component: StudentHomeworkPage,
@@ -39,14 +43,20 @@ const CLASSES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
 function StudentHomeworkPage() {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();
-  const [selectedClass, setSelectedClass] = useState("1st");
-  const [homeworkList, setHomeworkList] = useState<any[]>([]);
 
-  // Table state
+  const [selectedMedium, setSelectedMedium] = useState("marathi");
+  const [selectedClass, setSelectedClass] = useState("1st");
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [filterDate, setFilterDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [entriesPerPage, setEntriesPerPage] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
+
+  const [homeworkList, setHomeworkList] = useState<HomeworkItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+
+  // Active viewing/editing homework
+  const [activeHomework, setActiveHomework] = useState<HomeworkItem | null>(null);
+  const [previewTab, setPreviewTab] = useState<"doc" | "template">("doc");
 
   useEffect(() => {
     if (!authLoading) {
@@ -61,275 +71,341 @@ function StudentHomeworkPage() {
       }
     }
     setMounted(true);
-    const q = query(collection(db, "homework"), orderBy("postedAt", "desc"));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setHomeworkList(data);
-    });
+    // Canonical real-time listener from admin_homework (with fallback)
+    const unsub = subscribeToHomework(
+      (items) => {
+        setHomeworkList(items);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching homework:", error);
+        setLoading(false);
+      }
+    );
 
-    return () => unsubscribe();
-  }, []);
+    return () => unsub();
+  }, [user, profile, authLoading, navigate]);
 
+  // Compute available subjects for selected class & medium
+  const availableSubjects = useMemo(() => {
+    return getDefaultSubjectsForClass(selectedClass, selectedMedium);
+  }, [selectedClass, selectedMedium]);
+
+  // Filter homework by medium, class, subject, date, and search
   const filteredData = useMemo(() => {
     return homeworkList.filter((hw) => {
       const matchClass = hw.class === selectedClass;
+      const matchMedium = !hw.medium || hw.medium === selectedMedium;
+      const matchSubject =
+        !selectedSubject ||
+        hw.subject?.trim().toLowerCase() === selectedSubject.trim().toLowerCase();
+      const matchDate = !filterDate || hw.homeworkDate === filterDate;
       const matchSearch =
-        hw.text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        hw.subjectName?.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchClass && matchSearch;
+        !searchTerm ||
+        hw.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        hw.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        hw.subject?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchClass && matchMedium && matchSubject && matchDate && matchSearch;
     });
-  }, [homeworkList, selectedClass, searchTerm]);
-
-  const totalEntries = filteredData.length;
-  const totalPages = Math.ceil(totalEntries / entriesPerPage);
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * entriesPerPage,
-    currentPage * entriesPerPage,
-  );
+  }, [homeworkList, selectedClass, selectedMedium, selectedSubject, filterDate, searchTerm]);
 
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-white">
-      <StudentHeader />
-      <StudentSidebar />
+    <div className="min-h-screen bg-slate-50/50">
+      <div className="no-print">
+        <StudentHeader />
+        <StudentSidebar />
+      </div>
 
-      <main className="lg:pl-64 pt-16 min-h-screen bg-slate-50/50">
-        <div className="p-6 md:p-10 space-y-10 max-w-7xl mx-auto">
-          {/* Synchronized LMS Style Table Section */}
-          <div className="bg-white rounded-[3rem] shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-10 md:p-12 pb-6 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div>
-                <h1 className="text-4xl font-black text-slate-900 tracking-tighter italic">
-                  My Class Homeworks
-                </h1>
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="text-slate-400 font-black text-[10px] uppercase tracking-[0.3em]">
-                    Class:
-                  </span>
-                  <select
-                    value={selectedClass}
-                    onChange={(e) => setSelectedClass(e.target.value)}
-                    className="bg-slate-50 border-none text-[10px] font-black uppercase tracking-widest text-indigo-600 outline-none cursor-pointer"
+      <main className="lg:pl-64 pt-16 min-h-screen">
+        <div className="p-4 sm:p-8 space-y-8 max-w-7xl mx-auto">
+          {/* Active Homework Document Viewer */}
+          {activeHomework ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
+                <button
+                  onClick={() => setActiveHomework(null)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  <ArrowLeft className="size-4" />
+                  <span>सर्व गृहपाठांची यादी (Back to Homework List)</span>
+                </button>
+
+                {/* View Switcher: Document View vs Worksheet Template */}
+                <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+                  {activeHomework.fileUrl && (
+                    <button
+                      onClick={() => setPreviewTab("doc")}
+                      className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                        previewTab === "doc"
+                          ? "bg-amber-600 text-white shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      मूळ दस्तऐवज (Document View)
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setPreviewTab("template")}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      previewTab === "template"
+                        ? "bg-amber-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
                   >
-                    {CLASSES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-slate-400 font-black text-[10px] uppercase tracking-[0.3em]">
-                    | Status: Synchronized
-                  </span>
+                    दैनिक कार्यपुस्तिका (Worksheet Template)
+                  </button>
                 </div>
               </div>
-              <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-100 self-start">
-                <button className="px-6 py-2 bg-white text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm">
-                  Current
-                </button>
-                <button className="px-6 py-2 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest">
-                  Archive
-                </button>
-              </div>
+
+              {previewTab === "doc" && activeHomework.fileUrl ? (
+                <DocumentEditorViewer
+                  documentId={activeHomework.id}
+                  fileUrl={activeHomework.fileUrl}
+                  fileName={activeHomework.fileName}
+                  documentType="homework"
+                  title={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate})`}
+                  userId={user?.uid || "student_user"}
+                  userRole={profile?.role || "student"}
+                  userName={profile?.fullName || "विद्यार्थी"}
+                  canEdit={true}
+                  onBack={() => setActiveHomework(null)}
+                  metadataBadge={
+                    <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                      <span>दिनांक: {activeHomework.homeworkDate}</span>
+                      <span>•</span>
+                      <span>इयत्ता: {activeHomework.class}</span>
+                      <span>•</span>
+                      <span>विषय: {activeHomework.subject}</span>
+                    </div>
+                  }
+                />
+              ) : (
+                <DailyHomeworkTemplate
+                  homework={activeHomework}
+                  userId={user?.uid || "student_user"}
+                  userRole={profile?.role || "student"}
+                  userName={profile?.fullName || "विद्यार्थी"}
+                  canEdit={true}
+                  onBack={() => setActiveHomework(null)}
+                />
+              )}
             </div>
-
-            <div className="p-8 md:p-12">
-              {/* Table Controls */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Show
-                  <select
-                    className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 outline-none text-slate-900"
-                    value={entriesPerPage}
-                    onChange={(e) => setEntriesPerPage(Number(e.target.value))}
-                  >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                  </select>
-                  entries
+          ) : (
+            /* Homework Table & Controls */
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+              {/* Header Banner */}
+              <div className="p-8 sm:p-10 pb-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold mb-2">
+                    <BookOpen className="size-3.5" /> दैनंदिन गृहपाठ प्रणाली
+                  </div>
+                  <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                    माझा गृहपाठ (My Class Homework)
+                  </h1>
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    शिक्षकांनी व ॲडमिनने अपलोड केलेला दैनंदिन स्वाध्याय येथे तपासा व सोडवा.
+                  </p>
                 </div>
-                <div className="relative">
-                  <Search
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
-                    size={16}
-                  />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="bg-slate-50/50 border border-slate-100 rounded-2xl pl-12 pr-6 py-3 text-[11px] font-black uppercase tracking-widest outline-none focus:bg-white focus:border-indigo-500 transition-all w-72"
-                    placeholder="SEARCH TASKS..."
-                  />
+
+                {/* Medium Switcher */}
+                <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 self-start">
+                  <button
+                    onClick={() => setSelectedMedium("marathi")}
+                    className={`px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      selectedMedium === "marathi"
+                        ? "bg-white text-indigo-700 shadow-sm"
+                        : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    मराठी माध्यम
+                  </button>
+                  <button
+                    onClick={() => setSelectedMedium("semi")}
+                    className={`px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      selectedMedium === "semi"
+                        ? "bg-white text-indigo-700 shadow-sm"
+                        : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    सेमी माध्यम
+                  </button>
                 </div>
               </div>
 
-              {/* Identical LMS Table UI */}
-              <div className="overflow-x-auto rounded-[2rem] border border-slate-100">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-900 border-b border-slate-800">
-                      <th className="px-6 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center w-16">
-                        Sr.No.
-                      </th>
-                      <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-white flex items-center gap-2">
-                        Due <Clock size={14} className="text-slate-400" />
-                      </th>
-                      <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-white">
-                        Assignment Brief
-                      </th>
-                      <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-white text-center">
-                        Time Limit
-                      </th>
-                      <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-white text-center">
-                        Attempts
-                      </th>
-                      <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-white text-center">
-                        Gradebook Score
-                      </th>
-                      <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-white text-right">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {paginatedData.length > 0 ? (
-                      paginatedData.map((hw, idx) => (
-                        <tr
-                          key={hw.id}
-                          className={`${idx % 2 === 0 ? "bg-white" : "bg-indigo-50/20"} hover:bg-indigo-50/50 transition-colors group`}
+              {/* Filtering Controls */}
+              <div className="p-6 sm:p-10 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* Class Filter */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                      इयत्ता (Class)
+                    </label>
+                    <select
+                      value={selectedClass}
+                      onChange={(e) => setSelectedClass(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 cursor-pointer"
+                    >
+                      {CLASSES.map((c) => (
+                        <option key={c} value={c}>
+                          इयत्ता {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Subject Filter */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                      विषय (Subject)
+                    </label>
+                    <select
+                      value={selectedSubject}
+                      onChange={(e) => setSelectedSubject(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 cursor-pointer"
+                    >
+                      <option value="">सर्व विषय (All Subjects)</option>
+                      {availableSubjects.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Date Filter */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                      दिनांक (Date)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 cursor-pointer"
+                      />
+                      {filterDate && (
+                        <button
+                          onClick={() => setFilterDate("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 text-xs font-bold"
+                          title="तारीख काढा"
                         >
-                          <td className="px-6 py-6 text-center">
-                            <span className="text-[10px] font-black text-slate-400">
-                              {(currentPage - 1) * entriesPerPage + idx + 1}
-                            </span>
-                          </td>
-                          <td className="px-8 py-6">
-                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest leading-relaxed">
-                              {hw.dueDate}
-                              <br />
-                              <span className="text-slate-400">1:00pm</span>
-                            </p>
-                          </td>
-                          <td className="px-8 py-6">
-                            <div className="flex items-center gap-4">
-                              <div className="size-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs shadow-sm">
-                                H
-                              </div>
-                              <Link
-                                to="."
-                                className="text-sm font-black text-indigo-600 hover:underline decoration-2 underline-offset-4 italic"
-                              >
-                                {hw.text}
-                              </Link>
-                            </div>
-                          </td>
-                          <td className="px-8 py-6 text-center">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                              {hw.timeLimit || "Untimed"}
-                            </span>
-                          </td>
-                          <td className="px-8 py-6 text-center">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                              {hw.attempts || "0/1"}
-                            </span>
-                          </td>
-                          <td className="px-8 py-6 text-right">
-                            <button className="text-[10px] font-black text-indigo-600 hover:underline underline-offset-2 uppercase tracking-widest">
-                              {hw.score !== "-"
-                                ? `SEE SCORE (${hw.score})`
-                                : "SEE SCORE"}
-                            </button>
-                          </td>
-                          <td className="px-8 py-6 text-right">
-                            <button className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl">
-                              View Task
-                            </button>
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Search Filter */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                      शोध (Search)
+                    </label>
+                    <div className="relative">
+                      <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="गृहपाठ शोधा..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table of Assignments */}
+                <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-xs">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-900 border-b border-slate-800 text-white text-[11px] font-black uppercase tracking-wider">
+                        <th className="px-6 py-4 text-center w-16">क्र.</th>
+                        <th className="px-6 py-4">गृहपाठ दिनांक</th>
+                        <th className="px-6 py-4">विषय</th>
+                        <th className="px-6 py-4">गृहपाठ शीर्षक / स्वाध्याय</th>
+                        <th className="px-6 py-4 text-center">अंतिम मुदत</th>
+                        <th className="px-6 py-4 text-center">प्रकार</th>
+                        <th className="px-6 py-4 text-right">कृती</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {loading ? (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-16 text-center text-slate-400">
+                            <Loader2 className="size-8 animate-spin mx-auto mb-2 text-indigo-600" />
+                            गृहपाठ लोड होत आहे...
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="px-8 py-24 text-center text-slate-300 font-black uppercase tracking-[0.4em] text-xs italic"
-                        >
-                          No Assignments Found For {selectedClass}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Table Footer / Pagination */}
-              <div className="mt-12 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  Showing{" "}
-                  {Math.min(
-                    (currentPage - 1) * entriesPerPage + 1,
-                    totalEntries,
-                  )}{" "}
-                  to {Math.min(currentPage * entriesPerPage, totalEntries)} of{" "}
-                  {totalEntries} entries
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((prev) => prev - 1)}
-                    className="px-8 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-400 hover:text-indigo-600 hover:border-indigo-200 disabled:opacity-50 transition-all uppercase tracking-widest"
-                  >
-                    Previous
-                  </button>
-                  <div className="flex items-center gap-2">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                      (p) => (
-                        <button
-                          key={p}
-                          onClick={() => setCurrentPage(p)}
-                          className={`size-10 rounded-xl text-[10px] font-black transition-all ${currentPage === p ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100" : "bg-slate-50 text-slate-400 hover:bg-slate-100"}`}
-                        >
-                          {p}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                  <button
-                    disabled={currentPage === totalPages || totalPages === 0}
-                    onClick={() => setCurrentPage((prev) => prev + 1)}
-                    className="px-8 py-3 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-400 hover:text-indigo-600 hover:border-indigo-200 disabled:opacity-50 transition-all uppercase tracking-widest"
-                  >
-                    Next
-                  </button>
+                      ) : filteredData.length > 0 ? (
+                        filteredData.map((hw, idx) => (
+                          <tr
+                            key={hw.id}
+                            className={`hover:bg-indigo-50/30 transition-colors ${
+                              idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"
+                            }`}
+                          >
+                            <td className="px-6 py-5 text-center font-bold text-slate-400">
+                              {idx + 1}
+                            </td>
+                            <td className="px-6 py-5">
+                              <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                                <Calendar className="size-3.5 text-indigo-600" />
+                                {hw.homeworkDate}
+                              </span>
+                            </td>
+                            <td className="px-6 py-5 font-bold text-indigo-700">
+                              {hw.subject}
+                            </td>
+                            <td className="px-6 py-5">
+                              <div className="font-bold text-slate-900 max-w-md line-clamp-1">
+                                {hw.title}
+                              </div>
+                              {hw.description && (
+                                <div className="text-[11px] text-slate-500 line-clamp-1 mt-0.5 font-medium">
+                                  {hw.description}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-5 text-center text-slate-600 font-semibold">
+                              {hw.dueDate || "दैनिक"}
+                            </td>
+                            <td className="px-6 py-5 text-center">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                {hw.documentType === "pdf" ? "PDF स्वाध्याय" : hw.variables ? "कार्यपुस्तिका" : "मजकूर"}
+                              </span>
+                            </td>
+                            <td className="px-6 py-5 text-right">
+                              <button
+                                onClick={() => {
+                                  setActiveHomework(hw);
+                                  setPreviewTab(hw.fileUrl ? "doc" : "template");
+                                }}
+                                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-md active:scale-95 cursor-pointer text-xs"
+                              >
+                                स्वाध्याय सोडवा (View Task)
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            className="px-6 py-20 text-center text-slate-400 font-semibold"
+                          >
+                            इयत्ता {selectedClass} साठी कोणताही गृहपाठ सापडला नाही.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Institutional Banner */}
-          <div className="p-10 bg-slate-900 rounded-[3rem] text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl">
-            <div className="flex items-center gap-6">
-              <div className="size-16 rounded-2xl bg-white/10 flex items-center justify-center text-indigo-300">
-                <BookOpen className="size-8" />
-              </div>
-              <div>
-                <h4 className="text-xl font-black italic tracking-tight">
-                  Sync Status: Active
-                </h4>
-                <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                  Your local assignment database is up to date with teacher
-                  postings.
-                </p>
-              </div>
-            </div>
-            <button className="px-10 py-5 bg-white text-slate-950 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:scale-105 transition-all shadow-xl">
-              Report Discrepancy
-            </button>
-          </div>
+          )}
         </div>
       </main>
     </div>

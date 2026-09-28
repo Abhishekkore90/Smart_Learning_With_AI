@@ -15,6 +15,7 @@ export interface PlanningHeaderMetadata {
 export interface PlanningDocumentRecord {
   id: string;
   category?: PlanningCategory;
+  mediumId?: string; // "marathi" | "semi"
   classId?: string; // "1" to "8"
   subjectId?: string; // "मराठी", "इंग्रजी", "गणित", etc.
   month?: string; // e.g. "जून २०२६"
@@ -46,7 +47,7 @@ export const DEFAULT_HEADERS: Record<PlanningCategory, string[]> = {
     "शिक्षक स्वाक्षरी",
   ],
   masik_niyojan: [
-    "दिनांक",
+    "दिवस",
     "पाठ / घटक / उपघटक",
     "अध्ययन निष्पत्ती",
     "अध्ययन मुद्दे / पाठ्यांश उद्देश",

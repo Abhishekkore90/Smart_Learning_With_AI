@@ -31,6 +31,8 @@ import {
   ArrowLeft,
   ExternalLink,
   Award,
+  Edit3,
+  X,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -48,6 +50,9 @@ import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { uploadFileWithProgress } from "@/lib/upload";
 import { extractTextFromFile } from "@/lib/contentExtractor";
+import type { QuestionPaperItem } from "@/types/documentEditor";
+import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
+import { QuestionPaperTemplate } from "@/components/questionPaper/QuestionPaperTemplate";
 
 export const Route = createFileRoute("/admin/question-paper")({
   head: () => ({
@@ -113,24 +118,6 @@ const GRADIENTS = [
   { bg: "from-cyan-500 to-sky-600", light: "bg-cyan-50 text-cyan-700 border-cyan-200" },
 ];
 
-interface QuestionPaperItem {
-  id: string;
-  medium: string;
-  class: string;
-  subject: string;
-  examType: string;
-  examTypeLabel: string;
-  totalMarks: string;
-  title: string;
-  description: string;
-  content?: string;
-  fileUrl?: string;
-  fileName?: string;
-  fileSize?: number;
-  uploadedAt: string;
-  uploadedBy: "admin";
-}
-
 function AdminQuestionPaperPage() {
   const navigate = useNavigate();
 
@@ -146,12 +133,13 @@ function AdminQuestionPaperPage() {
   const [step, setStep] = useState<"medium" | "class" | "subject" | "workspace">("medium");
 
   const [selectedMedium, setSelectedMedium] = useState<string>("marathi");
-  const [selectedClass, setSelectedClass] = useState<string>("5th");
+  const [selectedClass, setSelectedClass] = useState<string>("1st");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
 
   // Question Paper form state
   const [examType, setExamType] = useState<string>(EXAM_TYPES[0].id);
   const [totalMarks, setTotalMarks] = useState<string>("२०");
+  const [academicYear, setAcademicYear] = useState<string>("2026-27");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
@@ -160,6 +148,10 @@ function AdminQuestionPaperPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Active viewing/previewing question paper
+  const [activePreviewPaper, setActivePreviewPaper] = useState<QuestionPaperItem | null>(null);
+  const [previewTab, setPreviewTab] = useState<"doc" | "template">("doc");
 
   // Auto extract text from file
   const handleFileChange = async (file: File | null) => {
@@ -171,7 +163,7 @@ function AdminQuestionPaperPage() {
       const extractedText = await extractTextFromFile(file);
       if (extractedText && extractedText.trim()) {
         setContent(extractedText.trim());
-        toast.success("प्रश्नपत्रिकेचा मजकूर यशस्वीरित्या गोळा केला गेला! खाली तपासा.");
+        toast.success("प्रश्नपत्रिकेचा मजकूर यशस्वीरित्या गोळा केला गेला!");
       }
     } catch (err: any) {
       console.warn("Extraction warning:", err);
@@ -227,7 +219,8 @@ function AdminQuestionPaperPage() {
       const matchSearch =
         !searchTerm ||
         item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchTerm.toLowerCase());
+        item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.subject?.toLowerCase().includes(searchTerm.toLowerCase());
       return matchMedium && matchClass && matchSubject && matchExam && matchSearch;
     });
   }, [paperList, selectedMedium, selectedClass, selectedSubject, filterExamType, searchTerm]);
@@ -235,6 +228,8 @@ function AdminQuestionPaperPage() {
   // Upload & publish question paper
   const handleSavePaper = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isUploading) return; // Prevent double submit
+
     if (!title.trim()) {
       toast.error("कृपया प्रश्नपत्रिकेचे शीर्षक प्रविष्ट करा.");
       return;
@@ -249,6 +244,7 @@ function AdminQuestionPaperPage() {
       let fileUrl = "";
       let fileName = "";
       let fileSize = 0;
+      let fileType = "";
 
       if (selectedFile) {
         setUploadProgress(10);
@@ -259,9 +255,16 @@ function AdminQuestionPaperPage() {
         fileUrl = uploadResult.url;
         fileName = uploadResult.fileName;
         fileSize = uploadResult.sizeBytes;
+        fileType = selectedFile.type || (fileName.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
       }
 
       const examTypeObj = EXAM_TYPES.find((t) => t.id === examType);
+
+      const isPdfFile =
+        fileType === "application/pdf" ||
+        fileName.toLowerCase().endsWith(".pdf") ||
+        fileUrl.toLowerCase().includes(".pdf") ||
+        fileUrl.startsWith("data:application/pdf");
 
       await addDoc(collection(db, "admin_question_papers"), {
         medium: selectedMedium,
@@ -270,17 +273,22 @@ function AdminQuestionPaperPage() {
         examType,
         examTypeLabel: examTypeObj?.label || examType,
         totalMarks,
+        academicYear,
         title: title.trim(),
         description: description.trim(),
         content: content.trim() || description.trim(),
         fileUrl: fileUrl || null,
         fileName: fileName || null,
+        fileType: fileType || null,
         fileSize: fileSize || null,
+        documentType: isPdfFile ? "pdf" : "image",
+        createdAt: new Date().toISOString(),
         uploadedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         uploadedBy: "admin",
       });
 
-      toast.success("प्रश्नपत्रिका यशस्वीरित्या अपलोड झाली!");
+      toast.success("प्रश्नपत्रिका यशस्वीरित्या प्रकाशित झाली!");
       setTitle("");
       setDescription("");
       setContent("");
@@ -323,10 +331,10 @@ function AdminQuestionPaperPage() {
                 <FileText className="size-3.5" /> सुपर ॲडमिन पॅनेल
               </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-                प्रश्नपत्रिका व्यवस्थापक (Question Paper Uploader)
+                प्रश्नपत्रिका व्यवस्थापक (Question Paper Manager)
               </h1>
               <p className="text-xs sm:text-sm text-blue-100 max-w-2xl font-medium">
-                इयत्ता १ ली ते ८ वी मराठी व सेमी माध्यमासाठी घटक चाचणी, प्रथम व द्वितीय सत्र परीक्षा आणि सराव प्रश्नपत्रिका PDF फाईल्स अपलोड करा. ॲडमिनने अपलोड केलेल्या प्रश्नपत्रिका थेट शिक्षकांना व विद्यार्थ्यांना दिसतील.
+                इयत्ता १ ली ते ८ वी मराठी व सेमी माध्यमासाठी घटक चाचणी व सत्र परीक्षा प्रश्नपत्रिका PDF फाईल्स अपलोड करा. मूळ डिझाइन, चित्रे व फॉन्ट अचूकतेने प्रदर्शित होतात.
               </p>
             </div>
             <Link
@@ -337,6 +345,90 @@ function AdminQuestionPaperPage() {
             </Link>
           </div>
         </div>
+
+        {/* Modal: Document Viewer Preview if active */}
+        <AnimatePresence>
+          {activePreviewPaper && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md p-4 sm:p-8 overflow-y-auto flex items-center justify-center"
+            >
+              <div className="w-full max-w-5xl bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col max-h-[92vh]">
+                <div className="flex items-center justify-between p-4 bg-slate-950 border-b border-slate-800 text-white flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="size-5 text-indigo-400" />
+                    <span className="font-bold text-sm sm:text-base truncate">
+                      {activePreviewPaper.title} • {activePreviewPaper.class} ({activePreviewPaper.examTypeLabel})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* View Switcher: Document vs Template */}
+                    <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs">
+                      {activePreviewPaper.fileUrl && (
+                        <button
+                          onClick={() => setPreviewTab("doc")}
+                          className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                            previewTab === "doc"
+                              ? "bg-indigo-600 text-white shadow-xs"
+                              : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          मूळ दस्तऐवज (Document)
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setPreviewTab("template")}
+                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                          previewTab === "template"
+                            ? "bg-indigo-600 text-white shadow-xs"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        चाचणी पत्रिका साचा (Template)
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={() => setActivePreviewPaper(null)}
+                      className="p-1.5 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer"
+                    >
+                      <X className="size-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
+                  {previewTab === "doc" && activePreviewPaper.fileUrl ? (
+                    <DocumentEditorViewer
+                      documentId={activePreviewPaper.id}
+                      fileUrl={activePreviewPaper.fileUrl}
+                      fileName={activePreviewPaper.fileName}
+                      documentType="question_paper"
+                      title={activePreviewPaper.title}
+                      userId="admin"
+                      userRole="admin"
+                      userName="Super Admin"
+                      canEdit={true}
+                      onBack={() => setActivePreviewPaper(null)}
+                    />
+                  ) : (
+                    <QuestionPaperTemplate
+                      paper={activePreviewPaper}
+                      userId="admin"
+                      userRole="admin"
+                      userName="Super Admin"
+                      canEdit={true}
+                      onBack={() => setActivePreviewPaper(null)}
+                    />
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Stepper Wizard Bar */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
@@ -384,83 +476,54 @@ function AdminQuestionPaperPage() {
             <ChevronRight className="size-4 text-slate-400 shrink-0" />
 
             <button
-              onClick={() => {
-                if (selectedSubject) setStep("workspace");
-                else toast.info("कृपया आधी विषय निवडा.");
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
+              disabled={!selectedSubject}
+              onClick={() => setStep("workspace")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer disabled:opacity-40 ${
                 step === "workspace"
                   ? "bg-blue-600 text-white shadow-md"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
               <span className="size-5 rounded-full bg-white/20 flex items-center justify-center text-xs">४</span>
-              <span>अपलोड व व्यवस्थापन (Upload)</span>
+              <span>प्रश्नपत्रिका अपलोड व यादी</span>
             </button>
           </div>
         </div>
 
         {/* STEP 1: MEDIUM SELECTION */}
         {step === "medium" && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <div className="text-center space-y-1">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-800">
-                पायरी १: माध्यम निवडा (Select Medium)
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                ज्या माध्यमासाठी प्रश्नपत्रिका अपलोड करायची आहे ते माध्यम निवडा.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-              {MEDIUM_OPTIONS.map((med) => {
-                const isSelected = selectedMedium === med.id;
-                return (
-                  <button
-                    key={med.id}
-                    onClick={() => {
-                      setSelectedMedium(med.id);
-                      setStep("class");
-                    }}
-                    className={`relative p-8 rounded-3xl text-left transition-all duration-300 border-2 cursor-pointer shadow-md hover:shadow-xl ${
-                      isSelected
-                        ? "bg-gradient-to-br " + med.color + " text-white border-transparent scale-102"
-                        : "bg-white text-slate-800 border-slate-200 hover:border-blue-400 hover:bg-blue-50/30"
-                    }`}
-                  >
-                    <div className="space-y-3">
-                      <div className={`size-14 rounded-2xl flex items-center justify-center ${isSelected ? "bg-white/20" : "bg-blue-100 text-blue-700"}`}>
-                        <Languages className="size-7" />
-                      </div>
-                      <div>
-                        <h3 className="text-2xl font-black">{med.labelMr}</h3>
-                        <p className={`text-sm font-semibold ${isSelected ? "text-white/80" : "text-slate-500"}`}>
-                          {med.labelEn}
-                        </p>
-                      </div>
-                      <div className="pt-2 flex items-center gap-2 text-xs font-black uppercase tracking-wider">
-                        <span>निवडा & पुढील पायरीवर जा</span>
-                        <ChevronRight className="size-4" />
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-800">
+              पायरी १: माध्यम निवडा (Select Medium)
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {MEDIUM_OPTIONS.map((med) => (
+                <button
+                  key={med.id}
+                  onClick={() => {
+                    setSelectedMedium(med.id);
+                    setStep("class");
+                  }}
+                  className={`p-8 rounded-3xl text-left transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-xl relative overflow-hidden ${
+                    selectedMedium === med.id
+                      ? "bg-gradient-to-br " + med.color + " text-white border-transparent scale-102"
+                      : "bg-white text-slate-800 border-slate-200 hover:border-blue-400"
+                  }`}
+                >
+                  <Languages className={`size-10 mb-4 ${selectedMedium === med.id ? "text-white" : "text-blue-600"}`} />
+                  <div className="text-2xl font-black">{med.labelMr}</div>
+                  <div className={`text-sm font-semibold mt-1 ${selectedMedium === med.id ? "text-white/80" : "text-slate-400"}`}>
+                    {med.labelEn}
+                  </div>
+                </button>
+              ))}
             </div>
           </motion.div>
         )}
 
         {/* STEP 2: CLASS SELECTION */}
         {step === "class" && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-slate-800">
@@ -510,11 +573,7 @@ function AdminQuestionPaperPage() {
 
         {/* STEP 3: SUBJECT SELECTION */}
         {step === "subject" && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <h2 className="text-xl sm:text-2xl font-black text-slate-800">
@@ -556,7 +615,7 @@ function AdminQuestionPaperPage() {
                     <div className="flex-1 min-w-0">
                       <div className="font-black text-base truncate">{subj}</div>
                       <div className={`text-xs font-semibold ${isSelected ? "text-white/80" : "text-slate-400"}`}>
-                        प्रश्नपत्रिका अपलोड करण्यासाठी क्लिक करा
+                        प्रश्नपत्रिका जोडण्यासाठी क्लिक करा
                       </div>
                     </div>
                     <ChevronRight className="size-5 shrink-0 opacity-60" />
@@ -567,13 +626,9 @@ function AdminQuestionPaperPage() {
           </motion.div>
         )}
 
-        {/* STEP 4: WORKSPACE (UPLOAD FORM + UPLOADED LIST) */}
+        {/* STEP 4: WORKSPACE */}
         {step === "workspace" && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
-          >
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
             {/* Context breadcrumb & Switcher */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
@@ -605,17 +660,16 @@ function AdminQuestionPaperPage() {
                 </div>
                 <div>
                   <h3 className="text-lg sm:text-xl font-black text-slate-800">
-                    नवीन प्रश्नपत्रिका अपलोड करा (Upload Question Paper)
+                    नवीन प्रश्नपत्रिका प्रकाशित करा (Publish Question Paper)
                   </h3>
                   <p className="text-xs text-slate-500">
-                    {selectedSubject} विषयासाठी परीक्षा प्रकार, एकूण गुण, शीर्षक व PDF फाईल जोडा.
+                    {selectedSubject} विषयासाठी परीक्षा प्रकार निवडा व मूळ PDF फाईल जोडा.
                   </p>
                 </div>
               </div>
 
               <form onSubmit={handleSavePaper} className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  {/* Exam Type */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                   <div className="space-y-1.5">
                     <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
                       परीक्षा प्रकार (Exam Type) <span className="text-red-500">*</span>
@@ -623,7 +677,7 @@ function AdminQuestionPaperPage() {
                     <select
                       value={examType}
                       onChange={(e) => setExamType(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none bg-white cursor-pointer"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none transition-all cursor-pointer bg-white"
                     >
                       {EXAM_TYPES.map((t) => (
                         <option key={t.id} value={t.id}>
@@ -633,7 +687,6 @@ function AdminQuestionPaperPage() {
                     </select>
                   </div>
 
-                  {/* Total Marks */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
                       एकूण गुण (Total Marks) <span className="text-red-500">*</span>
@@ -641,7 +694,7 @@ function AdminQuestionPaperPage() {
                     <select
                       value={totalMarks}
                       onChange={(e) => setTotalMarks(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none bg-white cursor-pointer"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none transition-all cursor-pointer bg-white"
                     >
                       {MARKS_OPTIONS.map((m) => (
                         <option key={m} value={m}>
@@ -651,59 +704,57 @@ function AdminQuestionPaperPage() {
                     </select>
                   </div>
 
-                  {/* Title */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                      प्रश्नपत्रिका शीर्षक (Title) <span className="text-red-500">*</span>
+                      शैक्षणिक वर्ष (Academic Year)
                     </label>
                     <input
                       type="text"
-                      required
-                      placeholder="उदा. प्रथम सत्र परीक्षा - २०२६"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      value={academicYear}
+                      onChange={(e) => setAcademicYear(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none transition-all"
+                      placeholder="उदा. 2026-27"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                    तपशील / घटक व्याप्ती (Instructions / Syllabus Covered) (पर्यायी)
+                    प्रश्नपत्रिकेचे शीर्षक (Paper Title) <span className="text-red-500">*</span>
                   </label>
-                  <textarea
-                    rows={2}
-                    placeholder="उदा. घटक क्र. १ ते ५ वरील आधारित चाचणी प्रश्नपत्रिका..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none transition-all resize-y"
+                  <input
+                    type="text"
+                    required
+                    placeholder="उदा. घटक चाचणी १ — भाषा (Formative Evaluation Test 1)"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none transition-all"
                   />
                 </div>
 
-                {/* File Attachment */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                    प्रश्नपत्रिका PDF फाईल जोडा (Attach PDF or Document)
+                    प्रश्नपत्रिका PDF / फाईल जोडा (Attach Original Document - चित्रे व डिझाइन सुरक्षित राहील) <span className="text-red-500">*</span>
                   </label>
                   <div className="flex items-center gap-3">
                     <input
                       type="file"
                       ref={fileInputRef}
-                      accept=".pdf,.doc,.docx,.txt"
+                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
                       onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
                       className="hidden"
-                      id="paper-file-input"
+                      id="qp-file-input"
                     />
                     <label
-                      htmlFor="paper-file-input"
+                      htmlFor="qp-file-input"
                       className="flex items-center gap-2 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-300 cursor-pointer transition-all active:scale-95"
                     >
                       <FileUp className="size-4 text-blue-600" />
-                      <span>{selectedFile ? "फाईल बदला" : "प्रश्नपत्रिका फाईल निवडा (PDF/Word/Text)"}</span>
+                      <span>{selectedFile ? "फाईल बदला" : "फाईल निवडा (PDF/PNG/JPG)"}</span>
                     </label>
                     {isExtracting && (
                       <span className="text-xs font-bold text-blue-700 flex items-center gap-1.5 animate-pulse bg-blue-50 px-3 py-2 rounded-xl border border-blue-200">
-                        <Loader2 className="size-3.5 animate-spin" /> मजकूर काढत आहे...
+                        <Loader2 className="size-3.5 animate-spin" /> मजकूर मिळवत आहे...
                       </span>
                     )}
                     {selectedFile && !isExtracting && (
@@ -726,41 +777,17 @@ function AdminQuestionPaperPage() {
                   </div>
                 </div>
 
-                {/* Content / Questions Textarea (Editable, auto-filled from file) */}
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                      प्रश्नपत्रिका मजकूर व प्रश्न (Question Paper Content & Questions - विद्यार्थ्यांसाठी दर्शविला जाणारा मजकूर)
-                    </label>
-                    {content && (
-                      <button
-                        type="button"
-                        onClick={() => setContent("")}
-                        className="text-[11px] text-red-500 hover:underline font-bold"
-                      >
-                        मजकूर पुसा
-                      </button>
-                    )}
-                  </div>
+                  <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                    तपशील / सूचना (Instructions / Description)
+                  </label>
                   <textarea
-                    rows={8}
-                    placeholder="उदा.
-सूचना: सर्व प्रश्न सोडविणे अनिवार्य आहे. उजव्या बाजूचे अंक पूर्ण गुण दर्शवितात.
-
-प्र. १ (अ) खालील रिकाम्या जागा भरा: (५ गुण)
-१) काटकोनाचे माप ................. अंश असते.
-२) वर्तुळाच्या केंद्रातून जाणाऱ्या जीवेला ................. म्हणतात.
-
-प्र. २ (अ) खालील उदाहरणे सोडवा: (१० गुण)
-१) ५४३२ + २९८७ = किती?
-२) २५ × १२ = किती?"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-xs sm:text-sm font-medium outline-none transition-all font-mono leading-relaxed bg-blue-50/20"
+                    rows={2}
+                    placeholder="उदा. वेळ: १ तास. सर्व प्रश्न सोडविणे आवश्यक आहे..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none transition-all resize-y"
                   />
-                  <p className="text-[11px] text-slate-500">
-                    टीप: PDF/Word फाईल निवडल्यास त्यातील प्रश्न व मजकूर येथे आपोआप येईल. आपण येथे आवश्यकतेनुसार प्रश्न दुरुस्त करू शकता किंवा अधिक प्रश्न जोडू शकता.
-                  </p>
                 </div>
 
                 {/* Progress bar */}
@@ -772,7 +799,7 @@ function AdminQuestionPaperPage() {
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                       <div
-                        className="bg-blue-600 h-full transition-all duration-300"
+                        className="bg-blue-500 h-full transition-all duration-300"
                         style={{ width: `${uploadProgress}%` }}
                       />
                     </div>
@@ -783,7 +810,7 @@ function AdminQuestionPaperPage() {
                 <button
                   type="submit"
                   disabled={isUploading}
-                  className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider shadow-lg shadow-blue-500/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                  className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider shadow-lg shadow-blue-500/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
                   {isUploading ? (
                     <>
@@ -793,7 +820,7 @@ function AdminQuestionPaperPage() {
                   ) : (
                     <>
                       <PlusCircle className="size-4" />
-                      <span>प्रश्नपत्रिका अपलोड करा (Publish Question Paper)</span>
+                      <span>प्रश्नपत्रिका प्रकाशित करा (Publish Question Paper)</span>
                     </>
                   )}
                 </button>
@@ -805,10 +832,10 @@ function AdminQuestionPaperPage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg sm:text-xl font-black text-slate-800">
-                    अपलोड केलेल्या प्रश्नपत्रिका ({filteredPapers.length})
+                    प्रकाशित प्रश्नपत्रिका ({filteredPapers.length})
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    या वर्गाच्या व विषयाच्या शिक्षकांना व विद्यार्थ्यांना दिसणाऱ्या प्रश्नपत्रिका.
+                    या वर्गाच्या व विषयाच्या शिक्षकांना दिसणाऱ्या प्रश्नपत्रिका.
                   </p>
                 </div>
                 {/* Search & Exam Type Filter */}
@@ -848,7 +875,7 @@ function AdminQuestionPaperPage() {
                   <div className="size-16 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
                     <FileText className="size-8" />
                   </div>
-                  <h4 className="text-base font-bold text-slate-800">कोणतीही प्रश्नपत्रिका अपलोड केलेली नाही</h4>
+                  <h4 className="text-base font-bold text-slate-800">कोणतीही प्रश्नपत्रिका प्रकाशित केलेली नाही</h4>
                   <p className="text-xs text-slate-500 max-w-md mx-auto">
                     {currentMediumObj?.labelMr} • {currentClassObj?.mr} • {selectedSubject} विषयासाठी वरील फॉर्ममधून पहिली प्रश्नपत्रिका अपलोड करा.
                   </p>
@@ -867,7 +894,7 @@ function AdminQuestionPaperPage() {
                               <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-wider border border-blue-200">
                                 {item.examTypeLabel || item.examType}
                               </span>
-                              <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-black border border-amber-200">
+                              <span className="px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-black border border-amber-200">
                                 एकूण गुण: {item.totalMarks}
                               </span>
                             </div>
@@ -892,37 +919,38 @@ function AdminQuestionPaperPage() {
 
                         <div className="flex items-center gap-2 flex-wrap text-[11px] font-semibold text-slate-500 pt-1">
                           <span className="flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
-                            <Clock className="size-3" /> {new Date(item.uploadedAt).toLocaleDateString("mr-IN")}
+                            <Clock className="size-3" /> प्रकाशित: {new Date(item.uploadedAt).toLocaleDateString("mr-IN")}
                           </span>
                         </div>
                       </div>
 
                       {/* File attachment preview & action */}
-                      {item.fileUrl && (
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 truncate">
-                            <FileText className="size-4 text-blue-600 shrink-0" />
-                            <span className="truncate">{item.fileName || "प्रश्नपत्रिका PDF"}</span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <a
-                              href={item.fileUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold transition-all"
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 truncate">
+                          <FileText className="size-4 text-blue-600 shrink-0" />
+                          <span className="truncate">{item.fileName || "प्रश्नपत्रिका PDF"}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {item.fileUrl && (
+                            <button
+                              onClick={() => setActivePreviewPaper(item)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
                             >
-                              <Eye className="size-3.5" /> पहा
-                            </a>
+                              <Eye className="size-3.5" /> पहा व संपादन
+                            </button>
+                          )}
+                          {item.fileUrl && (
                             <a
                               href={item.fileUrl}
                               download={item.fileName || "question-paper.pdf"}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all"
+                              className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all"
+                              title="डाउनलोड"
                             >
                               <Download className="size-3.5" />
                             </a>
-                          </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   ))}
                 </div>
