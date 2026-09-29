@@ -222,8 +222,9 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   const finalTaluka = taluka || unifiedProfile.taluka || "";
   const finalDistrict = district || unifiedProfile.jilha || "";
 
+  const hasUpperData = (upperEnrolled > 0) || (upperCookedDays > 0) || (upperBeneficiarySum > 0) || !!certPatUpper || !!certUpperCookedDays || !!certBeneficiaryUpper;
   const showPrimary = subTab === "1-5" || subTab === "1-8";
-  const showUpper = subTab === "6-8" || subTab === "1-8";
+  const showUpper = subTab === "6-8" || (subTab === "1-8" && hasUpperData);
 
   const totalPrimaryGrant = primaryCenterGrant + primaryStateGrant;
   const totalUpperGrant = upperCenterGrant + upperStateGrant;
