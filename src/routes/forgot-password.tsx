@@ -18,6 +18,7 @@ import {
   where,
   getDocs,
   doc,
+  getDoc,
   updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -63,32 +64,59 @@ function ForgotPasswordPage() {
 
       // If input is UDISE or USID (no @ sign)
       if (!cleanInput.includes("@")) {
-        // Query teachers collection
+        // 1. Query 'teachers' collection by udise (string)
         const qTeacher = query(
           collection(db, "teachers"),
           where("udise", "==", cleanInput)
         );
-        const snapTeacher = await getDocs(qTeacher);
+        let snap = await getDocs(qTeacher);
 
-        if (!snapTeacher.empty) {
-          resolvedEmail = snapTeacher.docs[0].data().email;
-          targetDocRef = doc(db, "teachers", snapTeacher.docs[0].id);
+        // 2. Query 'teachers' by numeric udise
+        if (snap.empty && !isNaN(Number(cleanInput))) {
+          snap = await getDocs(query(collection(db, "teachers"), where("udise", "==", Number(cleanInput))));
+        }
+
+        // 3. Query 'users' by string udise
+        if (snap.empty) {
+          snap = await getDocs(query(collection(db, "users"), where("udise", "==", cleanInput)));
+        }
+
+        // 4. Query 'users' by numeric udise
+        if (snap.empty && !isNaN(Number(cleanInput))) {
+          snap = await getDocs(query(collection(db, "users"), where("udise", "==", Number(cleanInput))));
+        }
+
+        // 5. Query by udiseNumber
+        if (snap.empty) {
+          snap = await getDocs(query(collection(db, "teachers"), where("udiseNumber", "==", cleanInput)));
+        }
+
+        // 6. Query 'users' by usid
+        if (snap.empty) {
+          snap = await getDocs(query(collection(db, "users"), where("usid", "==", cleanInput)));
+        }
+
+        if (!snap.empty && snap.docs[0].data()?.email) {
+          resolvedEmail = snap.docs[0].data().email;
+          targetDocRef = doc(db, snap.docs[0].ref.parent.id, snap.docs[0].id);
         } else {
-          // Query users collection
-          const qUser = query(
-            collection(db, "users"),
-            where("usid", "==", cleanInput)
-          );
-          const snapUser = await getDocs(qUser);
-          if (!snapUser.empty) {
-            resolvedEmail = snapUser.docs[0].data().email;
-            targetDocRef = doc(db, "users", snapUser.docs[0].id);
+          // 7. Check direct doc ID
+          const tDoc = await getDoc(doc(db, "teachers", cleanInput));
+          if (tDoc.exists() && tDoc.data()?.email) {
+            resolvedEmail = tDoc.data()?.email;
+            targetDocRef = doc(db, "teachers", cleanInput);
           } else {
-            throw new Error(
-              lang === "mr"
-                ? "दिलेल्या UDISE / USID कोडशी संबंधित कोणताही युजर आढळला नाही."
-                : "No account found matching this identifier code."
-            );
+            const uDoc = await getDoc(doc(db, "users", cleanInput));
+            if (uDoc.exists() && uDoc.data()?.email) {
+              resolvedEmail = uDoc.data()?.email;
+              targetDocRef = doc(db, "users", cleanInput);
+            } else {
+              throw new Error(
+                lang === "mr"
+                  ? "दिलेल्या UDISE / USID कोडशी संबंधित कोणताही युजर आढळला नाही."
+                  : "No account found matching this identifier code."
+              );
+            }
           }
         }
       } else {

@@ -431,12 +431,58 @@ async function loadImageDocumentModel(
       const width = img.naturalWidth || 800;
       const height = img.naturalHeight || 1130;
 
+      // Pre-seed clean editable header blocks for scanned image/photos if no text blocks exist
+      const defaultHeaderBlocks: DocumentTextBlock[] = [
+        {
+          id: `hdr_${Date.now()}_1`,
+          text: "शाळेचे नाव: जिल्हा परिषद प्राथमिक शाळा",
+          x: 6,
+          y: 3,
+          width: 58,
+          height: 3.5,
+          fontSize: 14,
+          fontWeight: "700",
+          color: "#0f172a",
+          fontFamily: "Noto Sans Devanagari, sans-serif",
+          editable: true,
+          isCustom: true,
+        },
+        {
+          id: `hdr_${Date.now()}_2`,
+          text: `दिनांक: ${new Date().toLocaleDateString("mr-IN")}`,
+          x: 68,
+          y: 3,
+          width: 26,
+          height: 3.5,
+          fontSize: 13,
+          fontWeight: "600",
+          color: "#0f172a",
+          fontFamily: "Noto Sans Devanagari, sans-serif",
+          editable: true,
+          isCustom: true,
+        },
+        {
+          id: `hdr_${Date.now()}_3`,
+          text: "विद्यार्थ्याचे नाव: _________________________  हजेरी क्र: ____",
+          x: 6,
+          y: 7.2,
+          width: 88,
+          height: 3.5,
+          fontSize: 13,
+          fontWeight: "600",
+          color: "#0f172a",
+          fontFamily: "Noto Sans Devanagari, sans-serif",
+          editable: true,
+          isCustom: true,
+        },
+      ];
+
       const page: DocumentPage = {
         pageNumber: 1,
         width,
         height,
         backgroundUrl: imgUrl,
-        textBlocks: [],
+        textBlocks: defaultHeaderBlocks,
         isScanned: true,
       };
 
@@ -465,12 +511,57 @@ async function loadImageDocumentModel(
           const width = fallbackImg.naturalWidth || 800;
           const height = fallbackImg.naturalHeight || 1130;
 
+          const defaultHeaderBlocks: DocumentTextBlock[] = [
+            {
+              id: `hdr_${Date.now()}_1`,
+              text: "शाळेचे नाव: जिल्हा परिषद प्राथमिक शाळा",
+              x: 6,
+              y: 3,
+              width: 58,
+              height: 3.5,
+              fontSize: 14,
+              fontWeight: "700",
+              color: "#0f172a",
+              fontFamily: "Noto Sans Devanagari, sans-serif",
+              editable: true,
+              isCustom: true,
+            },
+            {
+              id: `hdr_${Date.now()}_2`,
+              text: `दिनांक: ${new Date().toLocaleDateString("mr-IN")}`,
+              x: 68,
+              y: 3,
+              width: 26,
+              height: 3.5,
+              fontSize: 13,
+              fontWeight: "600",
+              color: "#0f172a",
+              fontFamily: "Noto Sans Devanagari, sans-serif",
+              editable: true,
+              isCustom: true,
+            },
+            {
+              id: `hdr_${Date.now()}_3`,
+              text: "विद्यार्थ्याचे नाव: _________________________  हजेरी क्र: ____",
+              x: 6,
+              y: 7.2,
+              width: 88,
+              height: 3.5,
+              fontSize: 13,
+              fontWeight: "600",
+              color: "#0f172a",
+              fontFamily: "Noto Sans Devanagari, sans-serif",
+              editable: true,
+              isCustom: true,
+            },
+          ];
+
           const page: DocumentPage = {
             pageNumber: 1,
             width,
             height,
             backgroundUrl: originalUrl,
-            textBlocks: [],
+            textBlocks: defaultHeaderBlocks,
             isScanned: true,
           };
 
@@ -787,22 +878,28 @@ export function printDocument(model: DocumentModel): void {
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let currentLine = "";
+  if (!text) return [];
+  const paragraphs = text.split("\n");
+  const allLines: string[] = [];
 
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const testWidth = ctx.measureText(testLine).width;
-    if (testWidth > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
+  for (const paragraph of paragraphs) {
+    const words = paragraph.split(" ");
+    let currentLine = "";
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const testWidth = ctx.measureText(testLine).width;
+      if (testWidth > maxWidth && currentLine) {
+        allLines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
     }
+    if (currentLine) allLines.push(currentLine);
+    else if (paragraphs.length > 1) allLines.push(""); // Preserve empty paragraph breaks
   }
-  if (currentLine) lines.push(currentLine);
-  return lines;
+  return allLines;
 }
 
 function escapeHtml(str: string): string {

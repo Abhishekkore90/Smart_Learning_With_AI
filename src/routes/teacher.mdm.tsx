@@ -49,16 +49,13 @@ import { useLanguage } from "@/hooks/use-language";
 import { DICTIONARY } from "@/lib/translations";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
-import html2pdf from "html2pdf.js";
+// Import html2pdf dynamically in client side
 import { PinGate } from "@/components/teacher/PinGate";
 
-const getHtml2PdfEngine = () => {
-  let fn = html2pdf as any;
-  if (fn && fn.default) fn = fn.default;
-  if (typeof fn !== "function" && typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
-    fn = (window as any).html2pdf;
-  }
-  return fn;
+const getHtml2PdfEngine = async () => {
+  if (typeof window === "undefined") return null;
+  const html2pdf = (await import("html2pdf.js")).default;
+  return html2pdf;
 };
 import MDMCertificate from "@/components/teacher/MDMCertificate";
 import {
@@ -383,7 +380,7 @@ function TeacherMDMPage() {
     setGlobalClassSection(val);
     setMonthlySubTab(val);
     setAnnualSubTab(val);
-    setStockDemandCategory(val === "6-8" ? "6 To 8" : "1 To 5");
+    setStockDemandClass(val === "6-8" ? "6 To 8" : "1 To 5");
     setStockClass(val === "6-8" ? "6 To 8" : "1 To 5");
     setRegisterClass(val === "6-8" ? "6 To 8" : "1 To 5");
   };
@@ -406,8 +403,8 @@ function TeacherMDMPage() {
   const [stockDemandMonth, setStockDemandMonth] = useState<string>("सप्टेंबर");
   const [stockDemandYear, setStockDemandYear] = useState<string>("2026-27");
   const [stockDemandPatSankhya, setStockDemandPatSankhya] = useState<string>("");
-  const [stockDemandCategory, setStockDemandCategory] = useState<"1 To 5" | "6 To 8">("1 To 5");
-  const [stockDemandWorkingDays, setStockDemandWorkingDays] = useState<string>("21");
+  const [stockDemandClass, setStockDemandClass] = useState<"1 To 5" | "6 To 8">("1 To 5");
+  const [stockDemandWorkingDays, setStockDemandWorkingDays] = useState<string>("");
   const [monthlyMdmReportType, setMonthlyMdmReportType] = useState<string>("daily_tandul_register");
   const [monthlyMdmReportSelectedMonth, setMonthlyMdmReportSelectedMonth] = useState<string>("जून");
   const [monthlyMdmReportYear, setMonthlyMdmReportYear] = useState<string>("2026/27");
@@ -511,12 +508,6 @@ function TeacherMDMPage() {
     }
   };
 
-  useEffect(() => {
-    if (stockDemandMonth && stockDemandYear) {
-      const computedDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
-      setStockDemandWorkingDays(computedDays.toString());
-    }
-  }, [stockDemandMonth, stockDemandYear]);
 
   const [isMonthlyReportGenerating, setIsMonthlyReportGenerating] = useState(false);
   const [isMonthlyReportGenerated, setIsMonthlyReportGenerated] = useState(false);
@@ -527,7 +518,7 @@ function TeacherMDMPage() {
     if (!container) return;
     setIsExporting(true);
     try {
-      const html2pdfFn = getHtml2PdfEngine();
+      const html2pdfFn = await getHtml2PdfEngine();
       if (typeof html2pdfFn !== "function") {
         throw new Error("html2pdf library is not loaded properly.");
       }
@@ -885,7 +876,7 @@ function TeacherMDMPage() {
     let toastId: string | undefined;
     try {
       toastId = toast.loading("PDF डाऊनलोड होत आहे...");
-      const html2pdfFn = getHtml2PdfEngine();
+      const html2pdfFn = await getHtml2PdfEngine();
       if (typeof html2pdfFn !== "function") {
         throw new Error("html2pdf library is not loaded properly.");
       }
@@ -1448,7 +1439,7 @@ function TeacherMDMPage() {
     if (!element) return;
     setIsExporting(true);
     try {
-      const html2pdfFn = getHtml2PdfEngine();
+      const html2pdfFn = await getHtml2PdfEngine();
       if (typeof html2pdfFn !== "function") {
         throw new Error("html2pdf library is not loaded properly.");
       }
@@ -1508,7 +1499,7 @@ function TeacherMDMPage() {
     if (!element) return;
     setIsExporting(true);
     try {
-      const html2pdfFn = getHtml2PdfEngine();
+      const html2pdfFn = await getHtml2PdfEngine();
       if (typeof html2pdfFn !== "function") {
         throw new Error("html2pdf library is not loaded properly.");
       }
@@ -1568,7 +1559,7 @@ function TeacherMDMPage() {
     if (!element) return;
     setIsExporting(true);
     try {
-      const html2pdfFn = getHtml2PdfEngine();
+      const html2pdfFn = await getHtml2PdfEngine();
       if (typeof html2pdfFn !== "function") {
         throw new Error("html2pdf library is not loaded properly.");
       }
@@ -2770,15 +2761,28 @@ function TeacherMDMPage() {
   };
 
   const getRecipeItemRate = (itemName: string, classStr: string): number => {
+    const isPrimary = classStr === "1 To 5";
+    const itemKey = getItemKeyFromName(itemName);
     const rule = quantityRules.find(
-      (r) => r.item.toLowerCase() === itemName.toLowerCase(),
+      (r) => r.item.toLowerCase() === itemName.toLowerCase() || r.item.toLowerCase() === itemKey.toLowerCase(),
     );
     if (rule) {
       const qtyStr = classStr === "6 To 8" ? rule.qty68 : rule.qty15;
       const qty = Number(qtyStr) || 0;
-      return qty >= 1 ? qty / 1000 : qty;
+      if (qty > 0) return qty >= 1 ? qty / 1000 : qty;
     }
-    return 0.05;
+    
+    // Fallback rates if rule not specified
+    let qKg = 0;
+    if (itemKey === "Rice") qKg = isPrimary ? 0.100 : 0.150;
+    else if (itemKey === "Masurdal" || itemKey === "Mugdal" || itemKey === "Turdal" || itemKey === "Matki" || itemKey === "Cowpea" || itemKey === "Gram" || itemKey === "Pease" || itemKey === "Soyabean Wadi") qKg = isPrimary ? 0.020 : 0.030;
+    else if (itemKey === "Moong") qKg = isPrimary ? 0.010 : 0.015;
+    else if (itemKey === "Chili" || itemKey === "Turmeric" || itemKey === "Onion Garlic Masala" || itemKey === "Garam Masala" || itemKey === "Cumin" || itemKey === "Mustard") qKg = isPrimary ? 0.0004 : 0.0006;
+    else if (itemKey === "Salt") qKg = isPrimary ? 0.004 : 0.006;
+    else if (itemKey === "Oil") qKg = isPrimary ? 0.0054 : 0.0082;
+    else if (itemKey === "Vegetables") qKg = 0.050;
+
+    return qKg;
   };
 
   const getRecipeItemsByName = (recipeName: string): Record<string, boolean> => {
@@ -3077,7 +3081,6 @@ function TeacherMDMPage() {
   const [incomingClass, setIncomingClass] = useState("1 To 5");
   const [monthlyReportClass, setMonthlyReportClass] = useState<"1 To 5" | "6 To 8">("1 To 5");
   const [calClass, setCalClass] = useState<"1 To 5" | "6 To 8">("1 To 5");
-  const [stockDemandClass, setStockDemandClass] = useState<"1 To 5" | "6 To 8">("1 To 5");
   const [incomingDate, setIncomingDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
@@ -5092,16 +5095,66 @@ function TeacherMDMPage() {
     return `${prevYear}_${MONTHS[prevIdx]}_${classStr}`;
   };
 
+  // Returns kg used for an item on a specific date based on register and quantity rules
+  const getUsedForDate = (
+    dateISO: string,
+    classStr: string,
+    itemName: string
+  ): number => {
+    const isPrimary = classStr === "1 To 5";
+    const itemKey = getItemKeyFromName(itemName);
+    if (initialStockDate && dateISO < initialStockDate && !dateISO.startsWith(initialStockDate.substring(0, 7))) return 0;
+    const daily = getDailyDataForMonthDate(dateISO, classStr as "1 To 5" | "6 To 8");
+
+    if (daily.isHoliday || !daily.beneficiary || daily.beneficiary <= 0) return 0;
+    const bene = daily.beneficiary;
+
+    // Determine active selected items for this day
+    const recipeSelection = getRecipeItemsById(daily.menu);
+    const activeSelected: Record<string, boolean> = { ...recipeSelection };
+
+    // Check if this item was used
+    let wasSelected = !!activeSelected[itemName] || !!activeSelected[itemKey];
+
+    if (!wasSelected) return 0;
+
+    // Find quantity rule
+    const rule = quantityRules.find(
+      (r) =>
+        r.item.toLowerCase() === itemName.toLowerCase() ||
+        r.item.toLowerCase() === itemKey.toLowerCase(),
+    );
+
+    let qKg = 0;
+    if (rule) {
+      const qtyStr = isPrimary ? rule.qty15 : rule.qty68;
+      const qty = Number(qtyStr) || 0;
+      qKg = qty >= 1 ? qty / 1000 : qty;
+    }
+
+    if (qKg <= 0) {
+      // Fallback rates if rule not specified
+      if (itemKey === "Rice") qKg = isPrimary ? 0.100 : 0.150;
+      else if (itemKey === "Masurdal" || itemKey === "Mugdal" || itemKey === "Turdal" || itemKey === "Matki" || itemKey === "Cowpea" || itemKey === "Gram" || itemKey === "Pease" || itemKey === "Soyabean Wadi") qKg = isPrimary ? 0.020 : 0.030;
+      else if (itemKey === "Moong") qKg = isPrimary ? 0.010 : 0.015;
+      else if (itemKey === "Chili" || itemKey === "Turmeric" || itemKey === "Onion Garlic Masala" || itemKey === "Garam Masala" || itemKey === "Cumin" || itemKey === "Mustard") qKg = isPrimary ? 0.0004 : 0.0006;
+      else if (itemKey === "Salt") qKg = isPrimary ? 0.004 : 0.006;
+      else if (itemKey === "Oil") qKg = isPrimary ? 0.0054 : 0.0082;
+      else if (itemKey === "Vegetables") qKg = 0.050;
+    }
+
+    return qKg > 0 ? qKg * bene : 0;
+  };
+
   // Returns total kg consumed for an item in a given month from Daily Register logs
   const getUsedForMonth = (
     monthName: string,
     yearStr: string,
     classStr: string,
     itemName: string,
+    maxDateStr?: string
   ): number => {
     let totalUsed = 0;
-    const isPrimary = classStr === "1 To 5";
-    const itemKey = getItemKeyFromName(itemName);
 
     const monthMap: { [k: string]: number } = {
       "January": 1, "February": 2, "March": 3, "April": 4,
@@ -5118,76 +5171,9 @@ function TeacherMDMPage() {
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateISO = `${year}-${String(monthNum).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      if (initialStockDate && dateISO < initialStockDate && !dateISO.startsWith(initialStockDate.substring(0, 7))) continue;
-      const daily = getDailyDataForMonthDate(dateISO, classStr as "1 To 5" | "6 To 8");
-
-      if (daily.isHoliday || !daily.beneficiary || daily.beneficiary <= 0) continue;
-
-      const bene = daily.beneficiary;
-
-      // Determine active selected items for this day
-      const recipeSelection = getRecipeItemsById(daily.menu);
-      const activeSelected: Record<string, boolean> = { ...recipeSelection };
-      if (daily.selectedItems) {
-        Object.keys(daily.selectedItems).forEach((k) => {
-          if (daily.selectedItems[k]) {
-            activeSelected[k] = true;
-          }
-        });
-      }
-
-      // Check if this item was used
-      let wasSelected =
-        !!activeSelected[itemName] ||
-        !!activeSelected[itemKey] ||
-        (daily.selectedItems ? (!!daily.selectedItems[itemName] || !!daily.selectedItems[itemKey]) : false);
-
-      if (!wasSelected && daily.selectedItems) {
-        Object.keys(daily.selectedItems).forEach((selKey) => {
-          if (daily.selectedItems[selKey]) {
-            const resolvedKey = getItemKeyFromName(selKey);
-            if (
-              resolvedKey === itemKey ||
-              resolvedKey === itemName ||
-              selKey.toLowerCase() === itemName.toLowerCase() ||
-              selKey.toLowerCase() === itemKey.toLowerCase()
-            ) {
-              wasSelected = true;
-            }
-          }
-        });
-      }
-
-      if (!wasSelected) continue;
-
-      // Find quantity rule
-      const rule = quantityRules.find(
-        (r) =>
-          r.item.toLowerCase() === itemName.toLowerCase() ||
-          r.item.toLowerCase() === itemKey.toLowerCase(),
-      );
-
-      let qKg = 0;
-      if (rule) {
-        const qtyStr = isPrimary ? rule.qty15 : rule.qty68;
-        const qty = Number(qtyStr) || 0;
-        qKg = qty >= 1 ? qty / 1000 : qty;
-      }
-
-      if (qKg <= 0) {
-        // Fallback rates if rule not specified
-        if (itemKey === "Rice") qKg = isPrimary ? 0.100 : 0.150;
-        else if (itemKey === "Masurdal" || itemKey === "Mugdal" || itemKey === "Turdal" || itemKey === "Matki" || itemKey === "Cowpea" || itemKey === "Gram" || itemKey === "Pease" || itemKey === "Soyabean Wadi") qKg = isPrimary ? 0.020 : 0.030;
-        else if (itemKey === "Moong") qKg = isPrimary ? 0.010 : 0.015;
-        else if (itemKey === "Chili" || itemKey === "Turmeric" || itemKey === "Onion Garlic Masala" || itemKey === "Garam Masala" || itemKey === "Cumin" || itemKey === "Mustard") qKg = isPrimary ? 0.0004 : 0.0006;
-        else if (itemKey === "Salt") qKg = isPrimary ? 0.004 : 0.006;
-        else if (itemKey === "Oil") qKg = isPrimary ? 0.0054 : 0.0082;
-        else if (itemKey === "Vegetables") qKg = 0.050;
-      }
-
-      if (qKg > 0) {
-        totalUsed += qKg * bene;
-      }
+      if (maxDateStr && dateISO > maxDateStr.trim()) continue;
+      
+      totalUsed += getUsedForDate(dateISO, classStr, itemName);
     }
 
     return Number(totalUsed.toFixed(6));
@@ -5345,52 +5331,7 @@ function TeacherMDMPage() {
     const prevDamaged = getDamagedForMonth(itemName, prevMonth, Number(prevYear) || 2026);
 
     // 4. Calculate Used for previous month from daily register
-    let prevUsed = 0;
-    const isPrevPrimary = prevClass === "1 To 5";
-    Object.keys(customRegisterRecords || {}).forEach((dateStr) => {
-      const parts = dateStr.split("-");
-      if (parts.length !== 3) return;
-      const recYear = parts[0];
-      const monthIndex = parseInt(parts[1], 10) - 1;
-      const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-      ];
-      if (monthIndex < 0 || monthIndex > 11) return;
-      const recMonth = monthNames[monthIndex];
-
-      if (
-        recYear !== prevYear ||
-        recMonth.toLowerCase() !== prevMonth.toLowerCase()
-      )
-        return;
-
-      const record = customRegisterRecords[dateStr];
-      if (!record) return;
-      const classRecord = record[prevClass] || (prevClass === "1 To 5" ? record : null);
-      if (!classRecord) return;
-      const bene = Number(classRecord.beneficiary) || 0;
-      if (bene === 0) return;
-
-      const selectedItems = classRecord.selectedItems || getSelectedItemsForRegisterDate(dateStr, prevClass);
-      const wasSelected = selectedItems
-        ? !!selectedItems[itemName]
-        : false;
-      if (!wasSelected) return;
-
-      const rule = quantityRules.find(
-        (r) => r.item.toLowerCase() === itemName.toLowerCase(),
-      );
-      if (!rule) return;
-
-      const qtyStr = isPrevPrimary ? rule.qty15 : rule.qty68;
-      const qty = Number(qtyStr) || 0;
-      if (qty <= 0) return;
-
-      const qtyKg = qty >= 1 ? qty / 1000 : qty;
-      prevUsed += qtyKg * bene;
-    });
-    prevUsed = roundStock(prevUsed);
+    const prevUsed = roundStock(getUsedForMonth(prevMonth, prevYear, prevClass, itemName));
 
     // Closing stock at the end of previous month = Opening + Received + Loksahabhag - Used - Damaged
     const closing = prevOpening + prevReceived + prevLok - prevUsed - prevDamaged;
@@ -5523,6 +5464,41 @@ function TeacherMDMPage() {
     const incomingData = incomingRecords[recordKey] || {};
     const isPrimary = stockClass === "1 To 5";
 
+    // Pre-calculate cooked days and beneficiaries for the month/class
+    let globalCookedDays = 0;
+    let globalBenefSum = 0;
+    Object.keys(registerRecords || {}).forEach((dateStr) => {
+      const parts = dateStr.split("-");
+      if (parts.length !== 3) return;
+      const recYear = parts[0];
+      const monthIndex = parseInt(parts[1], 10) - 1;
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      if (monthIndex < 0 || monthIndex > 11) return;
+      const recMonth = monthNames[monthIndex];
+
+      if (
+        recYear !== stockYear ||
+        recMonth.toLowerCase() !== stockMonth.toLowerCase()
+      )
+        return;
+
+      if (stockAsOnDate && dateStr.trim() > stockAsOnDate.trim()) return;
+
+      const record = registerRecords[dateStr];
+      if (!record) return;
+      const classRecord = record[stockClass] || (stockClass === "1 To 5" ? record : null);
+      if (!classRecord) return;
+      const bene = Number(classRecord.beneficiary) || 0;
+
+      if (bene > 0) {
+        globalCookedDays++;
+        globalBenefSum += bene;
+      }
+    });
+
     setStockRecords((prevRecords) => {
       const updated = prevRecords.map((item) => {
         // ── 1. Received this month (from Incoming Entry + Loksahabhag tabs + incRecords) ────────────────
@@ -5566,68 +5542,10 @@ function TeacherMDMPage() {
         ));
 
         // ── 3. Used this month (from Daily Register + Quantity Rules + Menu) ─
-        let totalUsedKg = 0;
-        let cookedDays = 0;
-        let benefSum = 0;
-        const seenDates = new Set<string>();
-
-        Object.keys(registerRecords || {}).forEach((dateStr) => {
-          const parts = dateStr.split("-");
-          if (parts.length !== 3) return;
-          const recYear = parts[0];
-          const monthIndex = parseInt(parts[1], 10) - 1;
-          const monthNames = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-          ];
-          if (monthIndex < 0 || monthIndex > 11) return;
-          const recMonth = monthNames[monthIndex];
-
-          if (
-            recYear !== stockYear ||
-            recMonth.toLowerCase() !== stockMonth.toLowerCase()
-          )
-            return;
-
-          // Date cutoff filter: ignore register entries after stockAsOnDate
-          if (stockAsOnDate && dateStr.trim() > stockAsOnDate.trim()) return;
-
-          const record = registerRecords[dateStr];
-          if (!record) return;
-          const classRecord = record[stockClass] || (stockClass === "1 To 5" ? record : null);
-          if (!classRecord) return;
-          const bene = Number(classRecord.beneficiary) || 0;
-
-          // Count cooked days & total beneficiaries (once per date)
-          if (bene > 0 && !seenDates.has(dateStr)) {
-            seenDates.add(dateStr);
-            cookedDays++;
-            benefSum += bene;
-          }
-
-          // Only count this item if it was used this day
-          const selectedItems = classRecord.selectedItems || getSelectedItemsForRegisterDate(dateStr, stockClass);
-          const wasSelected = selectedItems
-            ? !!selectedItems[item.item]
-            : false;
-          if (!wasSelected || bene === 0) return;
-
-          const rule = quantityRules.find(
-            (r) => r.item.toLowerCase() === item.item.toLowerCase(),
-          );
-          if (!rule) return;
-
-          const qtyStr = isPrimary ? rule.qty15 : rule.qty68;
-          const qty = Number(qtyStr) || 0;
-          if (qty <= 0) return;
-
-          // qty >= 1 means value is stored in grams → convert to kg
-          const qtyKg = qty >= 1 ? qty / 1000 : qty;
-          totalUsedKg += qtyKg * bene;
-        });
-
+        const totalUsedKg = getUsedForMonth(stockMonth, stockYear, stockClass, item.item, stockAsOnDate);
         const used = roundStock(totalUsedKg);
-        const beneficiary = benefSum; // total beneficiaries this month
+        const beneficiary = globalBenefSum; // total beneficiaries this month
+        const cookedDays = globalCookedDays;
 
         return {
           ...item,
@@ -6481,7 +6399,7 @@ function TeacherMDMPage() {
           (r) => r.item.toLowerCase() === contentName.toLowerCase(),
         );
         const totalGoods = stockItem
-          ? Number(stockItem.prev) + Number(stockItem.received)
+          ? Number(stockItem.prev) + Number(stockItem.received) + Number(stockItem.lokQty || 0) - Number(stockItem.damaged || 0)
           : 0;
         const remaining = stockItem ? totalGoods - Number(stockItem.used) : 0;
 
@@ -7297,10 +7215,16 @@ function TeacherMDMPage() {
       }
     });
 
+    const lokQty = getLokForMonth(itemName, month, year);
+    const damaged = getDamagedForMonth(itemName, month, year);
+
     return {
       item: itemName,
       prev,
       received: incomingQty,
+      incomingQty: incomingQty,
+      lokQty,
+      damaged,
       used,
       cookedDays,
       beneficiary,
@@ -7315,6 +7239,7 @@ function TeacherMDMPage() {
     let totalEnrolled = 0;
     let totalBeneficiary = 0;
     let workingDays = 0;
+    let latestDateStr = "";
 
     Object.entries(registerRecords).forEach(([dateStr, record]) => {
       const parts = dateStr.split("-");
@@ -7350,7 +7275,12 @@ function TeacherMDMPage() {
             }
           }
 
-          if (enrolled > totalEnrolled) totalEnrolled = enrolled;
+          if (dateStr > latestDateStr && enrolled > 0) {
+            totalEnrolled = enrolled;
+            latestDateStr = dateStr;
+          } else if (latestDateStr === "" && enrolled > 0) {
+            totalEnrolled = enrolled;
+          }
           totalBeneficiary += beneficiary;
           workingDays++;
         }
@@ -7598,7 +7528,7 @@ function TeacherMDMPage() {
     return "शून्य रुपये फक्त";
   };
 
-  const getDamagedForMonth = (itemName: string, month: string, year: number, maxDateStr?: string) => {
+  function getDamagedForMonth(itemName: string, month: string, year: number, maxDateStr?: string) {
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const mIdx = monthNames.findIndex(m => m.toLowerCase() === month.toLowerCase());
     if (mIdx === -1) return 0;
@@ -7622,7 +7552,7 @@ function TeacherMDMPage() {
     return total;
   };
 
-  const getLokForMonth = (itemName: string, month: string, year: number, maxDateStr?: string) => {
+  function getLokForMonth(itemName: string, month: string, year: number, maxDateStr?: string, day?: number) {
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const mIdx = monthNames.findIndex(m => m.toLowerCase() === month.toLowerCase());
     if (mIdx === -1) return 0;
@@ -7635,7 +7565,9 @@ function TeacherMDMPage() {
       if (parts.length === 3) {
         const recYear = parseInt(parts[0], 10);
         const recMonthIdx = parseInt(parts[1], 10) - 1;
+        const recDay = parseInt(parts[2], 10);
         if (recYear === year && recMonthIdx === mIdx) {
+          if (day !== undefined && recDay !== day) return;
           const recKey = getItemKeyFromName(rec.item);
           if ((recKey && recKey === targetKey) || rec.item.toLowerCase().trim() === itemName.toLowerCase().trim()) {
             total += parseFloat(rec.qty) || 0;
@@ -7644,7 +7576,7 @@ function TeacherMDMPage() {
       }
     });
     return total;
-  };
+  }
 
   const getDailyDataForMonthDate = (dateISO: string, classSection: "1 To 5" | "6 To 8" = "1 To 5") => {
     const regRecord = registerRecords ? registerRecords[dateISO] : undefined;
@@ -7726,6 +7658,92 @@ function TeacherMDMPage() {
   ];
 
   // ---- End Dynamic Report Helpers ----
+
+  // Pre-fill Demand Report Data
+  useEffect(() => {
+    const mEngDemand = MARATHI_TO_ENGLISH_MONTHS[stockDemandMonth] || "September";
+    const yPartsD = (stockDemandYear || "2026-27").split("-");
+    const sYearD = parseInt(yPartsD[0], 10) || 2026;
+    const mIdxD = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].indexOf(mEngDemand);
+    const actualYearD = (mIdxD >= 0 && mIdxD <= 2) ? sYearD + 1 : sYearD;
+
+    const rDataDemand = getRegisterDataForMonth(mEngDemand, actualYearD, stockDemandClass);
+    const stDataDemand = getStockDataForItem("Rice", mEngDemand, actualYearD, stockDemandClass);
+    
+    let maxEnrolled = 0;
+    let latestDateD = "";
+    Object.entries(registerRecords || {}).forEach(([dateStr, rec]: [string, any]) => {
+      const parts = dateStr.split('-');
+      if (parts.length === 3 && parseInt(parts[0], 10) === actualYearD && parseInt(parts[1], 10) === (mIdxD + 1)) {
+        const subRec = rec[stockDemandClass] || (stockDemandClass === "1 To 5" ? rec : null);
+        if (subRec && subRec.enrolled) {
+          const val = parseInt(subRec.enrolled, 10);
+          if (!isNaN(val) && val > 0 && dateStr > latestDateD) {
+            maxEnrolled = val;
+            latestDateD = dateStr;
+          } else if (latestDateD === "" && !isNaN(val) && val > 0) {
+            maxEnrolled = val;
+          }
+        }
+      }
+    });
+
+    const profPatD = stockDemandClass === "6 To 8" ? (Number(profile?.patUpper) || Number(profile?.pat6to8) || 0) : (Number(profile?.patPrimary) || Number(profile?.pat1to5) || Number(profile?.totalPat) || 0);
+    const calculatedPatD = rDataDemand?.enrolled || maxEnrolled || getDynamicPatSankhya(profile, stockDemandClass) || profPatD || 0;
+    const baseWDaysD = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
+    const calculatedWDaysD = (stDataDemand && stDataDemand.cookedDays > 0) ? stDataDemand.cookedDays : baseWDaysD;
+
+    setStockDemandPatSankhya(calculatedPatD.toString());
+    setStockDemandWorkingDays(calculatedWDaysD.toString());
+  }, [stockDemandMonth, stockDemandYear, stockDemandClass, registerRecords, profile]);
+
+  // Monthly Report Calculations (accessible in JSX)
+  const mEngMonthly = MARATHI_TO_ENGLISH_MONTHS[monthlyMdmReportSelectedMonth] || "June";
+  const yPartsM = (monthlyMdmReportYear || "2026/27").split("/");
+  const sYearM = parseInt(yPartsM[0], 10) || 2026;
+  const mIdxM = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].indexOf(mEngMonthly);
+  const actualYearM = (mIdxM >= 0 && mIdxM <= 2) ? sYearM + 1 : sYearM;
+
+  // Pre-fill Monthly Report Data
+  useEffect(() => {
+
+    const rDataMonthly = getRegisterDataForMonth(mEngMonthly, actualYearM, monthlyReportClass);
+    const stDataMonthly = getStockDataForItem("Rice", mEngMonthly, actualYearM, monthlyReportClass);
+
+    let maxEnrolledM = 0;
+    let totalCookedDaysM = 0;
+    let latestDateM = "";
+    Object.keys(registerRecords || {}).forEach((dateStr) => {
+      const rec = registerRecords[dateStr];
+      const parts = dateStr.split('-');
+      if (parts.length === 3 && parseInt(parts[0], 10) === actualYearM && parseInt(parts[1], 10) === (mIdxM + 1)) {
+        const subRec = rec[monthlyReportClass] || (monthlyReportClass === "1 To 5" ? rec : null);
+        if (subRec) {
+           if (subRec.enrolled) {
+             const val = parseInt(subRec.enrolled, 10);
+             if (!isNaN(val) && val > 0 && dateStr > latestDateM) {
+               maxEnrolledM = val;
+               latestDateM = dateStr;
+             } else if (latestDateM === "" && !isNaN(val) && val > 0) {
+               maxEnrolledM = val;
+             }
+           }
+           if (subRec.cookedDays === 1 || subRec.riceUsed) {
+             totalCookedDaysM++;
+           }
+        }
+      }
+    });
+
+    const profPatM = monthlyReportClass === "6 To 8" ? (Number(profile?.patUpper) || Number(profile?.pat6to8) || 0) : (Number(profile?.patPrimary) || Number(profile?.pat1to5) || Number(profile?.totalPat) || 0);
+    const calculatedPatM = rDataMonthly?.enrolled || maxEnrolledM || getDynamicPatSankhya(profile, monthlyReportClass) || profPatM || 0;
+    const baseWDaysM = calculateMonthWorkingDays(monthlyMdmReportSelectedMonth, monthlyMdmReportYear.replace('/', '-'));
+    const calculatedWDaysM = (stDataMonthly && stDataMonthly.cookedDays > 0) ? stDataMonthly.cookedDays : (totalCookedDaysM > 0 ? totalCookedDaysM : baseWDaysM);
+
+    setMonthlyReportPatSankhya(calculatedPatM.toString());
+    setMonthlyReportWorkingDays(calculatedWDaysM.toString());
+  }, [monthlyMdmReportSelectedMonth, monthlyMdmReportYear, monthlyReportClass, registerRecords, profile]);
+
 
   if (authLoading || !user) {
     return (
@@ -11697,14 +11715,6 @@ function TeacherMDMPage() {
 
                                   const recipeSelection = getRecipeItemsById(rawMenu);
                                   const activeSelected: Record<string, boolean> = dayOfWeek === 0 ? {} : { ...recipeSelection };
-                                  const savedItems = classData?.selectedItems || getSelectedItemsForRegisterDate(fullDateKey, registerClass);
-                                  if (savedItems && dayOfWeek !== 0) {
-                                    Object.keys(savedItems).forEach((k) => {
-                                      if (savedItems[k]) {
-                                        activeSelected[k] = true;
-                                      }
-                                    });
-                                  }
 
                                   const calcKg = (itemKey: string, fallbackQty = 0.02, decimals = 2) => {
                                     if (beneNum <= 0 || dayOfWeek === 0) return "—";
@@ -12845,15 +12855,13 @@ function TeacherMDMPage() {
                               </thead>
                               <tbody>
                                 {REPORT_ITEMS.slice(0, 18).map((repItem, idx) => {
-                                  // Find matching item record from stockRecords
-                                  const itemRec = stockRecords.find(
-                                    (r) => r.item.toLowerCase() === repItem.key.toLowerCase() || getItemKeyFromName(r.item).toLowerCase() === getItemKeyFromName(repItem.key).toLowerCase()
-                                  );
+                                  // Find matching item dynamically for the selected report month/year
+                                  const itemRec = getStockDataForItem(repItem.key, mEngMonthly, actualYearM, monthlyReportClass);
 
-                                  const prevStock = roundStock(itemRec ? itemRec.prev : 0);
-                                  const recQty = roundStock(itemRec ? (itemRec.incomingQty || 0) : 0);
-                                  const lokQty = roundStock(itemRec ? (itemRec.lokQty || 0) : 0);
-                                  const damagedQty = roundStock(itemRec ? (itemRec.damaged || 0) : 0);
+                                  const prevStock = roundStock(itemRec.prev || 0);
+                                  const recQty = roundStock(itemRec.incomingQty || itemRec.received || 0);
+                                  const lokQty = roundStock(itemRec.lokQty || 0);
+                                  const damagedQty = roundStock(itemRec.damaged || 0);
 
                                   // Total Available Stock before cooking = (Opening + Received + Loksahabhag - Damaged)
                                   const totalAvail = Math.max(0, roundStock(prevStock + recQty + lokQty - damagedQty));
@@ -13270,9 +13278,7 @@ function TeacherMDMPage() {
                                         ),
                                       },
                                     ].map((rowDef, rIdx) => {
-                                      const s = stockRecords.find(
-                                        (n) => n.item === rowDef.itemKey,
-                                      );
+                                      const s = getStockDataForItem(rowDef.itemKey, mEngMonthly, actualYearM, monthlyReportClass);
                                       const usedVal = s ? s.used : 0;
                                       return (
                                         <tr
@@ -13529,12 +13535,21 @@ function TeacherMDMPage() {
                           const regEnrolled = regData?.enrolled || 0;
 
                           let latestEnrolled = 0;
-                          Object.values(registerRecords || {}).forEach((rec: any) => {
+                          let latestDateStr = "";
+                          Object.entries(registerRecords || {}).forEach(([dateStr, rec]: [string, any]) => {
                             if (!rec) return;
-                            const subRec = rec[stockDemandClass] || (stockDemandClass === "1 To 5" ? rec : null);
-                            if (subRec && subRec.enrolled) {
-                              const val = parseInt(subRec.enrolled, 10);
-                              if (!isNaN(val) && val > latestEnrolled) latestEnrolled = val;
+                            const parts = dateStr.split('-');
+                            if (parts.length === 3 && parseInt(parts[0], 10) === actualYear && parseInt(parts[1], 10) === (mIdx + 1)) {
+                              const subRec = rec[stockDemandClass] || (stockDemandClass === "1 To 5" ? rec : null);
+                              if (subRec && subRec.enrolled) {
+                                const val = parseInt(subRec.enrolled, 10);
+                                if (!isNaN(val) && val > 0 && dateStr > latestDateStr) {
+                                  latestEnrolled = val;
+                                  latestDateStr = dateStr;
+                                } else if (latestDateStr === "" && !isNaN(val) && val > 0) {
+                                  latestEnrolled = val;
+                                }
+                              }
                             }
                           });
 
@@ -13542,8 +13557,14 @@ function TeacherMDMPage() {
                           const profP68 = Number(profile?.patUpper) || Number(profile?.pat6to8) || 0;
                           const profPat = stockDemandClass === "6 To 8" ? profP68 : profP15;
 
-                          const pat = parseFloat(stockDemandPatSankhya) || regEnrolled || latestEnrolled || profPat || 0;
-                          const calculatedWDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
+                          const riceData = getStockDataForItem("Rice", monthEng, actualYear, stockDemandClass);
+                          const regEnrolledForDemand = getRegisterDataForMonth(monthEng, actualYear, stockDemandClass)?.enrolled || 0;
+
+                          const pat = parseFloat(stockDemandPatSankhya) || regEnrolledForDemand || latestEnrolled || profPat || 0;
+                          
+                          const baseCalculatedWDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
+                          const calculatedWDays = (riceData && riceData.cookedDays > 0) ? riceData.cookedDays : baseCalculatedWDays;
+                          
                           const parsedWDays = parseFloat(stockDemandWorkingDays);
                           const wDays = !isNaN(parsedWDays) && stockDemandWorkingDays !== "" ? parsedWDays : calculatedWDays;
 
@@ -13599,12 +13620,21 @@ function TeacherMDMPage() {
                                 const regEnrolled = regData?.enrolled || 0;
 
                                 let latestEnrolled = 0;
-                                Object.values(registerRecords || {}).forEach((rec: any) => {
+                                let latestDateStr2 = "";
+                                Object.entries(registerRecords || {}).forEach(([dateStr, rec]: [string, any]) => {
                                   if (!rec) return;
-                                  const subRec = rec[stockDemandClass] || (stockDemandClass === "1 To 5" ? rec : null);
-                                  if (subRec && subRec.enrolled) {
-                                    const val = parseInt(subRec.enrolled, 10);
-                                    if (!isNaN(val) && val > latestEnrolled) latestEnrolled = val;
+                                  const parts = dateStr.split('-');
+                                  if (parts.length === 3 && parseInt(parts[0], 10) === actualYear && parseInt(parts[1], 10) === (mIdx + 1)) {
+                                    const subRec = rec[stockDemandClass] || (stockDemandClass === "1 To 5" ? rec : null);
+                                    if (subRec && subRec.enrolled) {
+                                      const val = parseInt(subRec.enrolled, 10);
+                                      if (!isNaN(val) && val > 0 && dateStr > latestDateStr2) {
+                                        latestEnrolled = val;
+                                        latestDateStr2 = dateStr;
+                                      } else if (latestDateStr2 === "" && !isNaN(val) && val > 0) {
+                                        latestEnrolled = val;
+                                      }
+                                    }
                                   }
                                 });
 
@@ -13612,8 +13642,14 @@ function TeacherMDMPage() {
                                 const profP68 = Number(profile?.patUpper) || Number(profile?.pat6to8) || 0;
                                 const profPat = stockDemandClass === "6 To 8" ? profP68 : profP15;
 
-                                const pat = parseFloat(stockDemandPatSankhya) || regEnrolled || latestEnrolled || profPat || 0;
-                                const calculatedWDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
+                                const riceData = getStockDataForItem("Rice", monthEng, actualYear, stockDemandClass);
+                                const regEnrolledForDemand = getRegisterDataForMonth(monthEng, actualYear, stockDemandClass)?.enrolled || 0;
+
+                                const pat = parseFloat(stockDemandPatSankhya) || regEnrolledForDemand || latestEnrolled || profPat || 0;
+                                
+                                const baseCalculatedWDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
+                                const calculatedWDays = (riceData && riceData.cookedDays > 0) ? riceData.cookedDays : baseCalculatedWDays;
+
                                 const parsedWDays = parseFloat(stockDemandWorkingDays);
                                 const wDays = !isNaN(parsedWDays) && stockDemandWorkingDays !== "" ? parsedWDays : calculatedWDays;
                                 const isUpper = stockDemandClass === "6 To 8";
@@ -13644,14 +13680,13 @@ function TeacherMDMPage() {
                                 ];
 
                                 return itemsDef.map((it, idx) => {
-                                  const stock = getOpeningStock(monthEng, stockDemandYear.split('-')[0], stockDemandCategory, it.key);
-                                  const rule = quantityRules.find(r => r.item.toLowerCase() === it.key.toLowerCase());
-                                  const defaultQty = isUpper ? it.qtyU : it.qtyP;
-                                  const qVal = rule ? (isUpper ? (parseFloat(rule.qty68) || defaultQty) : (parseFloat(rule.qty15) || defaultQty)) : defaultQty;
-                                  const unitQty = qVal >= 1 ? qVal / 1000 : qVal;
+                                  const stock = getOpeningStock(monthEng, stockDemandYear.split('-')[0], stockDemandClass, it.key);
+                                  const unitQty = getRecipeItemRate(it.key, stockDemandClass);
 
-                                  const expUsed = unitQty * pat * wDays;
-                                  const reqMonth = unitQty * pat * wDays;
+                                  const itemData = getStockDataForItem(it.key, monthEng, actualYear, stockDemandClass);
+                                  const isRegisterActive = riceData && riceData.cookedDays > 0;
+                                  const expUsed = isRegisterActive ? itemData.used : (unitQty * pat * wDays);
+                                  const reqMonth = expUsed;
                                   const expBal = stock - expUsed;
                                   const finalDemand = Math.max(0, expUsed - stock);
 
@@ -14096,12 +14131,15 @@ function TeacherMDMPage() {
                             }
 
                             const dayIncomingRice = getIncomingForItem("Rice", engMonthNames[monthNum], year, monthlyReportClass, day);
-                            if (dayIncomingRice > 0 && !riceReceivedDateStr) {
+                            const dayLokRice = getLokForMonth("Rice", engMonthNames[monthNum], year, undefined, day);
+                            const totalPraptRice = dayIncomingRice + dayLokRice;
+                            
+                            if (totalPraptRice > 0 && !riceReceivedDateStr) {
                               riceReceivedDateStr = dateFormatted;
                             }
 
                             const magilShillak = currentRiceBalance;
-                            const prapt = dayIncomingRice || 0;
+                            const prapt = totalPraptRice || 0;
                             const ekunTandul = magilShillak + prapt;
 
                             let bene = 0;
@@ -14114,10 +14152,7 @@ function TeacherMDMPage() {
                                 totalRiceDistributedDays++;
                                 const riceRule = quantityRules.find((r) => r.item.toLowerCase() === "rice");
                                 const defaultQty = monthlyReportClass === "6 To 8" ? "0.150" : "0.100";
-                                const riceQtyStr = riceRule ? (monthlyReportClass === "6 To 8" ? (riceRule.qty68 || defaultQty) : (riceRule.qty15 || defaultQty)) : defaultQty;
-                                const ricePerStudent = parseFloat(riceQtyStr) || (monthlyReportClass === "6 To 8" ? 0.150 : 0.100);
-                                const riceRateKg = ricePerStudent;
-                                kharch = bene * riceRateKg;
+                                kharch = getUsedForDate(dateISO, monthlyReportClass, "Rice");
                                 totalBeneficiaries += bene;
                                 totalRiceConsumed += kharch;
                               }
@@ -14142,12 +14177,21 @@ function TeacherMDMPage() {
                           }
 
                           let maxEnrolledInMonth = 0;
-                          Object.values(registerRecords || {}).forEach((rec: any) => {
+                          let latestDateStr3 = "";
+                          Object.entries(registerRecords || {}).forEach(([dateStr, rec]: [string, any]) => {
                             if (!rec) return;
-                            const subRec = rec[monthlyReportClass] || (monthlyReportClass === "1 To 5" ? rec : null);
-                            if (subRec && subRec.enrolled) {
-                              const val = parseInt(subRec.enrolled, 10);
-                              if (!isNaN(val) && val > maxEnrolledInMonth) maxEnrolledInMonth = val;
+                            const parts = dateStr.split('-');
+                            if (parts.length === 3 && parseInt(parts[0], 10) === year && parseInt(parts[1], 10) === monthNum) {
+                              const subRec = rec[monthlyReportClass] || (monthlyReportClass === "1 To 5" ? rec : null);
+                              if (subRec && subRec.enrolled) {
+                                const val = parseInt(subRec.enrolled, 10);
+                                if (!isNaN(val) && val > 0 && dateStr > latestDateStr3) {
+                                  maxEnrolledInMonth = val;
+                                  latestDateStr3 = dateStr;
+                                } else if (latestDateStr3 === "" && !isNaN(val) && val > 0) {
+                                  maxEnrolledInMonth = val;
+                                }
+                              }
                             }
                           });
 
@@ -14432,21 +14476,14 @@ function TeacherMDMPage() {
                                     <tbody>
                                       {days.map(({ day, weekday, isSunday, daily }, rowIdx) => {
                                         const bene = daily.beneficiary;
+                                        const perStudentRate = monthlyReportClass === "6 To 8" ? (parseFloat(upperRate) || 8.17) : (parseFloat(primaryRate) || 5.45);
                                         if (bene > 0) {
                                           monthlyTotalTat += bene;
-                                          const perStudentRate = monthlyReportClass === "6 To 8" ? (parseFloat(upperRate) || 8.17) : (parseFloat(primaryRate) || 5.45);
                                           monthlyTotalGrant += bene * perStudentRate;
                                         }
 
                                         const recipeSelection = getRecipeItemsById(daily.menu);
                                         const activeSelected: Record<string, boolean> = (isSunday || daily.isHoliday) ? {} : { ...recipeSelection };
-                                        if (daily.selectedItems && !isSunday && !daily.isHoliday) {
-                                          Object.keys(daily.selectedItems).forEach((k) => {
-                                            if (daily.selectedItems[k]) {
-                                              activeSelected[k] = true;
-                                            }
-                                          });
-                                        }
 
                                         return (
                                           <tr key={day} className={`border-b border-slate-700 h-[42px] text-xs ${isSunday || daily.isHoliday ? "bg-red-50/70" : rowIdx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
@@ -14460,12 +14497,8 @@ function TeacherMDMPage() {
                                               if (daily.isHoliday || bene === 0) return <td key={itemKey} className="border-r border-slate-700 px-1 py-1 align-middle"></td>;
                                               const wasSelected = !!activeSelected[itemKey];
                                               if (!wasSelected) return <td key={itemKey} className="border-r border-slate-700 px-1 py-1 align-middle"></td>;
-                                              const rule = quantityRules.find(r => r.item.toLowerCase() === itemKey.toLowerCase());
-                                              const defaultQtyStr = itemKey === "Rice" ? (monthlyReportClass === "6 To 8" ? "0.150" : "0.100") : "0.02";
-                                              const qStr = rule ? (monthlyReportClass === "6 To 8" ? (rule.qty68 || defaultQtyStr) : (rule.qty15 || defaultQtyStr)) : defaultQtyStr;
-                                              const qVal = parseFloat(qStr) || 0;
-                                              const qKg = qVal >= 1 ? qVal / 1000 : qVal;
-                                              const usedKg = qKg * bene;
+                                              const fullDateKey = `${year}-${String(monthNum).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                                              const usedKg = getUsedForDate(fullDateKey, monthlyReportClass, itemKey);
                                               if (itemKey === "Rice") monthlyTotalRiceUsed += usedKg;
                                               monthlyItemTotals[itemKey] = (monthlyItemTotals[itemKey] || 0) + usedKg;
                                               return (
@@ -14478,7 +14511,7 @@ function TeacherMDMPage() {
                                               {daily.isHoliday || bene === 0 || (!daily.purakAhar && !daily.purakAharDetails) ? "" : (daily.purakAharDetails || "अंडी/केळी")}
                                             </td>
                                             <td className="border-r border-slate-700 px-1 py-1 text-xs font-bold align-middle">
-                                              {daily.isHoliday || bene === 0 ? "" : (bene * (parseFloat(primaryRate) || 5.45)).toFixed(2)}
+                                              {daily.isHoliday || bene === 0 ? "" : (bene * perStudentRate).toFixed(2)}
                                             </td>
                                           </tr>
                                         );
@@ -14619,7 +14652,7 @@ function TeacherMDMPage() {
                           const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, monthlyReportClass);
                           const prevTandul = riceData.prev;
                           const recTandul = riceData.received;
-                          const usnaTandul = 0;
+                          const usnaTandul = getLokForMonth("Rice", engMonthNames[monthNum], year);
                           const totalTandul = prevTandul + recTandul + usnaTandul;
                           const shijvunTandul = riceData.used;
                           const usnaParatTandul = 0;
@@ -14857,10 +14890,12 @@ function TeacherMDMPage() {
                           const items = B_FORM_ITEMS.map((def, idx) => {
                             const prev = getOpeningStock(engMonthNames[monthNum], year.toString(), monthlyReportClass, def.key);
                             const rec = getIncomingForItem(def.key, engMonthNames[monthNum], year, monthlyReportClass);
+                            const borrowed = getLokForMonth(def.key, engMonthNames[monthNum], year);
+                            const totalRec = rec + borrowed;
                             const used = getUsedForMonth(engMonthNames[monthNum], year.toString(), monthlyReportClass, def.key);
                             const perStudentRiceDemand = monthlyReportClass === "6 To 8" ? 0.03 : 0.02;
-                            const demand = Math.max(0, (enrolledPat * perStudentRiceDemand * 20) - (prev + rec - used));
-                            return { sr: idx + 1, key: def.key, name: def.nameMr, prev, rec, used, demand: parseFloat(demand.toFixed(2)) };
+                            const demand = Math.max(0, (enrolledPat * perStudentRiceDemand * 20) - (prev + totalRec - used));
+                            return { sr: idx + 1, key: def.key, name: def.nameMr, prev, rec: totalRec, used, demand: parseFloat(demand.toFixed(2)) };
                           });
 
                           const rateVal = monthlyReportClass === "6 To 8" ? (parseFloat(upperRate) || 8.17) : (parseFloat(primaryRate) || 5.45);
@@ -15467,9 +15502,10 @@ function TeacherMDMPage() {
                                 const targetKey = getItemKeyFromName(itemKey);
                                 const stockData = getStockDataForItem(targetKey, monthlyReportMonth || "April", calcYear, cls);
                                 const opening = stockData?.prev || 0;
-                                const received = stockData?.received || 0;
+                                const originalReceived = stockData?.received || 0;
                                 const borrowed = getLokForMonth(itemKey, monthlyReportMonth || "April", calcYear);
-                                const total = opening + received + borrowed;
+                                const received = originalReceived + borrowed;
+                                const total = opening + received;
                                 const spent = stockData?.used || 0;
                                 const spoiled = getDamagedForMonth(itemKey, monthlyReportMonth || "April", calcYear);
                                 const closing = total - spent - spoiled;
@@ -15603,16 +15639,16 @@ function TeacherMDMPage() {
                                       <div className="w-full flex-1 flex flex-col overflow-x-auto my-1">
                                         <table className="b-form-main-table w-full min-w-[1600px] border-collapse border border-black text-center text-xs font-sans table-fixed flex-1 h-full">
                                           <colgroup>
-                                            <col style={{ width: "2.8%" }} />
-                                            <col style={{ width: "13.6%" }} />
+                                            <col style={{ width: "1.8%" }} />
+                                            <col style={{ width: "14.6%" }} />
                                             {B_FORM_ITEMS.map((item) => (
                                               <col key={item.key} style={{ width: "4.64%" }} />
                                             ))}
                                           </colgroup>
                                           <thead>
                                             <tr className="font-bold border-b border-black">
-                                              <th className="border border-black p-1 bg-slate-100 font-extrabold align-middle text-center" rowSpan={3}>अ. क्र.</th>
-                                              <th className="border border-black p-1 text-left pl-1.5 bg-slate-100 font-extrabold align-middle" rowSpan={3}>तपशील</th>
+                                              <th className="border border-black p-1 bg-slate-100 font-extrabold align-middle text-center" style={{ width: "2%", minWidth: "2%", maxWidth: "2%" }} rowSpan={3}>अ. क्र.</th>
+                                              <th className="border border-black p-1 text-left pl-1.5 bg-slate-100 font-extrabold align-middle" style={{ width: "14%", minWidth: "14%", maxWidth: "14%" }} rowSpan={3}>तपशील</th>
                                               <th className="border border-black p-1 bg-slate-100 font-extrabold" colSpan={18}>
                                                 एकूण खर्च झालेल्या तांदूळ व धान्यादी मालाचा तपशील
                                               </th>
@@ -15825,9 +15861,11 @@ function TeacherMDMPage() {
 
                                   const prev = currentStock;
                                   const incomingQty = d === 1 ? getIncomingForItem("Rice", monthlyReportMonth || "April", calcYear, cls) : 0;
-                                  const total = prev + incomingQty;
+                                  const lokQty = getLokForMonth("Rice", monthlyReportMonth || "April", calcYear, undefined, d);
+                                  const totalPraptQty = incomingQty + lokQty;
+                                  const total = prev + totalPraptQty;
 
-                                  const used = beneficiary > 0 ? beneficiary * ratePerStudent : 0;
+                                  const used = getUsedForDate(dateRecordKey, cls, "Rice");
                                   const closing = total - used;
                                   currentStock = closing;
 
@@ -15839,7 +15877,7 @@ function TeacherMDMPage() {
                                       <td className="border border-black p-0.5 py-2.5 font-black text-center">{dateStrFormatted}</td>
                                       <td className="border border-black p-0.5 py-2.5 text-center font-black">{enrolled > 0 ? enrolled : ""}</td>
                                       <td className="border border-black p-0.5 py-2.5 font-mono text-center font-black">{prev.toFixed(4)}</td>
-                                      <td className="border border-black p-0.5 py-2.5 font-mono text-center font-black">{incomingQty > 0 ? incomingQty.toFixed(4) : ""}</td>
+                                      <td className="border border-black p-0.5 py-2.5 font-mono text-center font-black">{totalPraptQty > 0 ? totalPraptQty.toFixed(4) : ""}</td>
                                       <td className="border border-black p-0.5 py-2.5 font-mono font-black text-center">{total.toFixed(4)}</td>
                                       <td className="border border-black p-0.5 py-2.5 font-black text-center">{beneficiary > 0 ? beneficiary : ""}</td>
                                       <td className="border border-black p-0.5 py-2.5 font-mono text-center font-black">{used > 0 ? used.toFixed(4) : ""}</td>
@@ -16156,14 +16194,16 @@ function TeacherMDMPage() {
                                                             {part.items.map((it) => {
                                                               const prev = itemStocks[it.key];
                                                               const recQty = d === 1 ? getIncomingForItem(it.key, monthlyReportMonth || "April", calcYear, cls) : 0;
-                                                              const total = prev + recQty;
+                                                              const lokQty = getLokForMonth(it.key, monthlyReportMonth || "April", calcYear, undefined, d);
+                                                              const totalRecQty = recQty + lokQty;
+                                                              const total = prev + totalRecQty;
                                                               const isItemSelected = classRec?.selectedItems ? !!classRec.selectedItems[it.key] : false;
-                                                              const used = (beneficiary > 0 && isItemSelected) ? beneficiary * it.rate : 0;
+                                                              const used = getUsedForDate(dateRecordKey, cls, it.key);
                                                               const closing = total - used;
                                                               itemStocks[it.key] = closing;
 
                                                               itemTotals[it.key].prevSum += prev;
-                                                              itemTotals[it.key].recSum += recQty;
+                                                              itemTotals[it.key].recSum += totalRecQty;
                                                               itemTotals[it.key].totalSum += total;
                                                               itemTotals[it.key].usedSum += used;
                                                               itemTotals[it.key].closing = closing;
@@ -16171,7 +16211,7 @@ function TeacherMDMPage() {
                                                               return (
                                                                 <React.Fragment key={it.key}>
                                                                   <td className="border border-black p-1 py-1.5 font-mono">{prev.toFixed(4)}</td>
-                                                                  <td className="border border-black p-1 py-1.5 font-mono">{recQty > 0 ? recQty.toFixed(4) : ""}</td>
+                                                                  <td className="border border-black p-1 py-1.5 font-mono">{totalRecQty > 0 ? totalRecQty.toFixed(4) : ""}</td>
                                                                   <td className="border border-black p-1 py-1.5 font-mono font-bold">{total.toFixed(4)}</td>
                                                                   <td className="border border-black p-1 py-1.5 font-mono">{used > 0 ? used.toFixed(4) : ""}</td>
                                                                   <td className={`border border-black p-1 py-1.5 font-mono font-bold ${closing < 0 ? "text-red-600 bg-red-50 font-extrabold" : "text-emerald-800"}`}>{closing.toFixed(4)}</td>
@@ -17095,3 +17135,6 @@ function TeacherMDMPage() {
     </div>
   );
 }
+
+
+

@@ -221,22 +221,22 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
   };
 
   return (
-    <div className="bg-slate-100 min-h-screen p-3 sm:p-6 space-y-5 font-sans">
+    <div className="bg-white min-h-screen p-3 sm:p-6 space-y-5 font-sans">
       {/* ── 1. EXACT HEADER METADATA BANNER ───────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 text-white rounded-3xl p-6 shadow-xl border border-indigo-500/30 space-y-4">
+      <div className="bg-white text-slate-950 rounded-3xl p-6 shadow-sm border-2 border-slate-900 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="px-3.5 py-1 rounded-full bg-amber-400 text-slate-950 text-xs font-black uppercase tracking-wider">
+              <span className="px-3.5 py-1 rounded-full bg-white text-slate-950 text-xs font-black uppercase tracking-wider border border-slate-400">
                 {metadata.form_number}
               </span>
-              <span className="px-3.5 py-1 rounded-full bg-white/15 text-amber-300 text-xs font-bold border border-white/10">
+              <span className="px-3.5 py-1 rounded-full bg-white text-slate-800 text-xs font-bold border border-slate-400">
                 {metadata.academic_year}
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-              <BookOpen className="size-8 text-amber-300 shrink-0" />
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight flex items-center gap-3">
+              <BookOpen className="size-8 text-slate-900 shrink-0" />
               <span>
                 {metadata.standard_class} &nbsp;|&nbsp; {metadata.subject}
               </span>
@@ -247,7 +247,7 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setShowPdfModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black transition-all flex items-center gap-2 shadow-md cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all flex items-center gap-2 shadow-sm cursor-pointer border border-slate-700"
             >
               <ExternalLink className="size-4" />
               <span>👁️ PDF प्रीव्ह्यू उघडा (View PDF Preview)</span>
@@ -255,9 +255,9 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
             <button
               onClick={handleDownloadPdfTable}
               disabled={downloading}
-              className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+              className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all flex items-center gap-2 shadow-sm cursor-pointer disabled:opacity-50 border border-slate-700"
             >
-              {downloading ? <Loader2 className="size-4 animate-spin" /> : <FileDown className="size-4 text-slate-950" />}
+              {downloading ? <Loader2 className="size-4 animate-spin" /> : <FileDown className="size-4 text-white" />}
               <span>PDF तक्ता डाऊनलोड (Download PDF)</span>
             </button>
           </div>
@@ -265,7 +265,7 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
       </div>
 
       {/* ── 2. SEARCH & FILTER BAR ────────────────────────────────────────────── */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white p-4 rounded-2xl border-2 border-slate-300 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="size-4 text-slate-400 absolute left-3.5 top-3" />
           <input
@@ -273,7 +273,7 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="प्रश्न किंवा कोड शोधा (Search questions or outcome code)..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-500 bg-white"
           />
         </div>
 
@@ -282,7 +282,7 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
           <select
             value={selectedUnit}
             onChange={(e) => setSelectedUnit(e.target.value)}
-            className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-700"
+            className="px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-500 bg-white text-slate-900"
           >
             <option value="ALL">सर्व घटक (All Units)</option>
             {allUnits.map((u, i) => (
@@ -296,7 +296,7 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
           <select
             value={selectedObjective}
             onChange={(e) => setSelectedObjective(e.target.value)}
-            className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 text-slate-700"
+            className="px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-slate-500 bg-white text-slate-900"
           >
             <option value="ALL">सर्व उद्दिष्टे (All Objectives)</option>
             {allObjectives.map((o, i) => (
@@ -309,20 +309,20 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
       </div>
 
       {/* ── 3. EXACT 9-COLUMN EDUCATIONAL TABLE CONTAINER ────────────────────── */}
-      <div ref={containerRef} className="bg-white rounded-3xl border-2 border-slate-300 shadow-xl overflow-x-auto p-2">
-        <table className="w-full border-collapse border border-slate-400 text-xs font-sans">
-          {/* 9 COLUMNS HEADER (Exact reference titles & light yellow bg #fef3c7) */}
+      <div ref={containerRef} className="bg-white rounded-3xl border-2 border-slate-900 shadow-sm overflow-x-auto p-2">
+        <table className="w-full border-collapse border border-slate-400 text-xs font-sans bg-white">
+          {/* 9 COLUMNS HEADER (Exact reference titles & clean white bg) */}
           <thead>
-            <tr className="bg-amber-100 text-slate-900 font-black border-b-2 border-slate-900 text-center" style={{ backgroundColor: "#fef3c7" }}>
-              <th className="p-3 border border-slate-400 font-extrabold w-[6%]" style={{ width: "6%" }}>{headers[0]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[12%]" style={{ width: "12%" }}>{headers[1]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold text-left w-[38%]" style={{ width: "38%" }}>{headers[2]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[5%]" style={{ width: "5%" }}>{headers[3]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[9%]" style={{ width: "9%" }}>{headers[4]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[10%]" style={{ width: "10%" }}>{headers[5]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[8%]" style={{ width: "8%" }}>{headers[6]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[7%]" style={{ width: "7%" }}>{headers[7]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[5%]" style={{ width: "5%" }}>{headers[8]}</th>
+            <tr className="bg-white text-slate-950 font-black border-b-2 border-slate-900 text-center" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
+              <th className="p-3 border border-slate-400 font-extrabold w-[6%] bg-white text-black" style={{ width: "6%" }}>{headers[0]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[12%] bg-white text-black" style={{ width: "12%" }}>{headers[1]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold text-left w-[38%] bg-white text-black" style={{ width: "38%" }}>{headers[2]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[5%] bg-white text-black" style={{ width: "5%" }}>{headers[3]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[9%] bg-white text-black" style={{ width: "9%" }}>{headers[4]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[10%] bg-white text-black" style={{ width: "10%" }}>{headers[5]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[8%] bg-white text-black" style={{ width: "8%" }}>{headers[6]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[7%] bg-white text-black" style={{ width: "7%" }}>{headers[7]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[5%] bg-white text-black" style={{ width: "5%" }}>{headers[8]}</th>
             </tr>
           </thead>
 
@@ -332,8 +332,8 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
               filteredGroups.map((g, gIdx) => (
                 <React.Fragment key={gIdx}>
                   {/* Main Parent Instruction Header Row - Clean Plain Banner */}
-                  <tr className="bg-indigo-950 text-white font-bold border-b border-indigo-900" style={{ backgroundColor: "#1e1b4b", color: "#ffffff" }}>
-                    <td className="p-3 border border-indigo-900 font-black text-amber-300 text-xs" colSpan={9}>
+                  <tr className="bg-white text-black font-bold border-b border-slate-400" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
+                    <td className="p-3 border border-slate-400 font-black text-black text-xs bg-white" colSpan={9}>
                       📌 {g!.main_instruction}
                     </td>
                   </tr>
@@ -346,10 +346,10 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
                       return (
                         <tr
                           key={sqIdx}
-                          className="bg-indigo-950 text-white font-bold border-b border-indigo-900"
-                          style={{ backgroundColor: "#1e1b4b", color: "#ffffff" }}
+                          className="bg-white text-black font-bold border-b border-slate-400"
+                          style={{ backgroundColor: "#ffffff", color: "#000000" }}
                         >
-                          <td className="p-3 border border-indigo-900 font-black text-amber-300 text-xs text-left" colSpan={9}>
+                          <td className="p-3 border border-slate-400 font-black text-black text-xs text-left bg-white" colSpan={9}>
                             📌 {sq.question_text}
                           </td>
                         </tr>
@@ -357,32 +357,32 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
                     }
 
                     return (
-                      <tr key={sqIdx} className="border-b border-slate-300 hover:bg-amber-50/30 transition-colors">
-                        <td className="p-2.5 border border-slate-300 text-center font-bold text-slate-800 bg-slate-50">
+                      <tr key={sqIdx} className="border-b border-slate-300 hover:bg-slate-50 transition-colors bg-white">
+                        <td className="p-2.5 border border-slate-300 text-center font-bold text-black bg-white">
                           {sq.sub_question_index || sq.sub_index || sq.sub_question_no}
                         </td>
-                        <td className="p-2.5 border border-slate-300 text-center text-slate-700 font-medium bg-slate-50/70">
+                        <td className="p-2.5 border border-slate-300 text-center text-slate-800 font-medium bg-white">
                           {g!.unit_chapter}
                         </td>
-                        <td className="p-2.5 border border-slate-300 text-slate-900 font-semibold leading-relaxed whitespace-pre-wrap">
+                        <td className="p-2.5 border border-slate-300 text-black font-semibold leading-relaxed whitespace-pre-wrap bg-white">
                           {sq.question_text}
                         </td>
-                        <td className="p-2.5 border border-slate-300 text-center font-black text-indigo-900">
+                        <td className="p-2.5 border border-slate-300 text-center font-black text-black bg-white">
                           {sq.marks}
                         </td>
-                        <td className="p-2.5 border border-slate-300 text-center text-slate-800 font-bold bg-purple-50/40">
+                        <td className="p-2.5 border border-slate-300 text-center text-black font-bold bg-white">
                           {sq.evaluation_type}
                         </td>
-                        <td className="p-2.5 border border-slate-300 text-center text-slate-800 font-bold bg-blue-50/40">
+                        <td className="p-2.5 border border-slate-300 text-center text-black font-bold bg-white">
                           {sq.question_type}
                         </td>
-                        <td className="p-2.5 border border-slate-300 text-center font-bold text-emerald-900 bg-emerald-50/40">
+                        <td className="p-2.5 border border-slate-300 text-center font-bold text-black bg-white">
                           {sq.objective}
                         </td>
-                        <td className="p-2.5 border border-slate-300 text-center text-slate-700 text-[11px] leading-tight">
+                        <td className="p-2.5 border border-slate-300 text-center text-slate-800 text-[11px] leading-tight bg-white">
                           {sq.skill_feature || g!.skill_feature}
                         </td>
-                        <td className="p-2.5 border border-slate-300 text-center font-mono font-bold text-slate-900 bg-amber-50/40">
+                        <td className="p-2.5 border border-slate-300 text-center font-mono font-bold text-black bg-white">
                           {sq.learning_outcome_code}
                         </td>
                       </tr>
@@ -391,8 +391,8 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
 
                   {/* EXPLICIT LAYOUT SPACING / BLANK SEPARATOR ROW AFTER EACH GROUP */}
                   {g!.layout_spacing?.is_blank_spacer && (
-                    <tr className="h-5 bg-slate-100/80 border-t-2 border-b-2 border-slate-300" style={{ height: g!.layout_spacing.padding_bottom || "20px" }}>
-                      <td colSpan={9} className="h-5 text-center text-[10px] text-slate-400 font-bold bg-slate-200/50 tracking-widest select-none">
+                    <tr className="h-5 bg-white border-t-2 border-b-2 border-slate-300" style={{ height: g!.layout_spacing.padding_bottom || "20px" }}>
+                      <td colSpan={9} className="h-5 text-center text-[10px] text-slate-400 font-bold bg-white tracking-widest select-none">
                         ✦ ✦ ✦
                       </td>
                     </tr>
@@ -401,7 +401,7 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
               ))
             ) : (
               <tr>
-                <td colSpan={9} className="p-12 text-center text-slate-500 font-bold">
+                <td colSpan={9} className="p-12 text-center text-slate-500 font-bold bg-white">
                   कोणतेही प्रश्न सापडले नाहीत. कृपया शोध किंवा फिल्टर बदलून पहा.
                 </td>
               </tr>
@@ -422,7 +422,7 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
           <div className="flex items-center justify-between bg-slate-900 px-6 py-3 rounded-2xl border border-slate-800 text-white shadow-xl">
             <div className="flex items-center gap-3">
               <span className="text-xl">📄</span>
-              <h2 className="text-base font-extrabold text-amber-300">
+              <h2 className="text-base font-extrabold text-white">
                 {metadata.standard_class} | {metadata.subject} — ऑनलाईन PDF प्रीव्ह्यू (PDF Preview)
               </h2>
             </div>
@@ -430,20 +430,20 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
               <button
                 onClick={handleDownloadPdfTable}
                 disabled={downloading}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-950 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
               >
                 <FileDown className="size-4" />
                 <span>डाऊनलोड (Download PDF)</span>
               </button>
               <button
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-md border border-slate-700"
               >
                 <span>🖨️ प्रिंंट (Print)</span>
               </button>
               <button
                 onClick={() => setShowPdfModal(false)}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md border border-slate-700"
               >
                 ✖ बंद करा (Close)
               </button>

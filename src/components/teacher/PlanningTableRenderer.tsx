@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   PlanningDocumentRecord,
+  PlanningCategory,
   DEFAULT_HEADERS,
   formatMarathiClassName,
 } from "@/lib/smartPlanningParser";
@@ -110,21 +111,19 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [parsedWorkbook, setParsedWorkbook] = useState<AnnualPlanningWorkbook | null>(null);
-  const initialFilter = record?.subjectId && record.subjectId !== "all" ? record.subjectId : "all";
-  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>(initialFilter); // "all" or specific subject
+  // Directly open all subjects, all months, and all lessons by default
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>("all");
   const [loadingWorkbook, setLoadingWorkbook] = useState<boolean>(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
   const [questionBankSheets, setQuestionBankSheets] = useState<ParsedSheet[]>([]);
   const [selectedQuestionBankLesson, setSelectedQuestionBankLesson] = useState<string>("all");
 
-  // Keep selectedSubjectFilter in sync if record changes
+  // Keep selectedSubjectFilter defaulting to "all" whenever a document opens or switches
   useEffect(() => {
-    if (record?.subjectId && record.subjectId !== "all") {
-      setSelectedSubjectFilter(record.subjectId);
-    } else {
-      setSelectedSubjectFilter("all");
-    }
-  }, [record?.id, record?.subjectId]);
+    setSelectedSubjectFilter("all");
+    setSelectedQuestionBankLesson("all");
+    setSearchQuery("");
+  }, [record?.id, fileUrl]);
 
   // Inline Table Editing State & User-Specific Storage
   const [isInlineEditing, setIsInlineEditing] = useState<boolean>(false);
@@ -134,39 +133,64 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
   const printContainerRef = useRef<HTMLDivElement>(null);
   const activeUrl = fileUrl || record?.fileUrl || null;
-  const activeRecordId = record?.id || (record as any)?.recordKey || `plan_${record?.classId || "1"}_${record?.subjectId || "all"}`;
 
-  // Reliable check for whether this record is Monthly Planning or Annual Planning
-  const isMonthly = useMemo(() => {
+  // Strictly identify the current section type: "question_bank" | "monthly" | "annual"
+  const currentSectionType: "question_bank" | "monthly" | "annual" = useMemo(() => {
     const recAny = record as any;
     const pType = String(recAny?.planningType || recAny?.category || "").toLowerCase().trim();
     const titleStr = String(recAny?.title || recAny?.name || recAny?.fileName || parsedWorkbook?.classTitle || "").toLowerCase().trim();
 
-    if (pType === "annual" || pType === "varshik" || pType === "varshik_niyojan" || titleStr.includes("वार्षिक") || titleStr.includes("annual")) {
-      return false;
-    }
-    if (pType === "monthly" || pType === "masik" || pType === "masik_niyojan" || titleStr.includes("मासिक") || titleStr.includes("monthly")) {
-      return true;
-    }
-    return recAny?.planningType === "monthly" || recAny?.category === "masik_niyojan";
-  }, [record, parsedWorkbook]);
-
-  // Reliable check for whether this record is Question Bank (प्रश्नपेढी)
-  const isQuestionBank = useMemo(() => {
-    const recAny = record as any;
-    const pType = String(recAny?.planningType || recAny?.category || "").toLowerCase().trim();
-    const titleStr = String(recAny?.title || recAny?.name || recAny?.fileName || "").toLowerCase().trim();
-
-    return (
+    // 1. Strict Question Bank Check
+    if (
       pType === "question_bank" ||
       pType === "prashnapedhi" ||
-
+      recAny?.category === "question_bank" ||
+      recAny?.category === "prashnapedhi" ||
       titleStr.includes("प्रश्नपेढी") ||
       titleStr.includes("prashnapedhi") ||
-      titleStr.includes("prashna") ||
-      questionBankSheets.length > 0
-    );
-  }, [record, questionBankSheets]);
+      (titleStr.includes("question") && titleStr.includes("bank"))
+    ) {
+      return "question_bank";
+    }
+
+    // 2. Strict Monthly Planning Check
+    if (
+      pType === "monthly" ||
+      pType === "masik" ||
+      pType === "masik_niyojan" ||
+      recAny?.category === "masik_niyojan" ||
+      titleStr.includes("मासिक") ||
+      titleStr.includes("monthly")
+    ) {
+      return "monthly";
+    }
+
+    // 3. Fallback to Annual Planning
+    return "annual";
+  }, [record, parsedWorkbook]);
+
+  const isQuestionBank = currentSectionType === "question_bank";
+  const isMonthly = currentSectionType === "monthly";
+  const isAnnual = currentSectionType === "annual";
+
+  // Strictly namespaced active record ID so Question Bank and Monthly/Annual Planning never share keys
+  const activeRecordId = useMemo(() => {
+    const recAny = record as any;
+    const baseId = record?.id || recAny?.recordKey;
+    const med = detectRecordMedium(record);
+    const cls = record?.classId || "1st";
+    const subj = record?.subjectId || "all";
+    const year = recAny?.academicYear || "2026-27";
+
+    if (baseId && typeof baseId === "string") {
+      if (baseId.includes(currentSectionType)) {
+        return baseId;
+      }
+      return `${currentSectionType}_${baseId}`;
+    }
+
+    return `${year}_${med}_${cls}_${currentSectionType}_${subj}`;
+  }, [record, currentSectionType]);
 
   // Load User-Specific Edit (Persisted in LocalStorage / Firestore for logged in user)
   useEffect(() => {
@@ -176,27 +200,42 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
       const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
 
-      // 1. LocalStorage check (strictly user specific)
+      // 1. LocalStorage check (strictly user and section specific)
+      const primaryKey = `user_edit_${currentSectionType}_${effectiveUserId}_${activeRecordId}`;
+      const fallbackKey = `user_edit_${effectiveUserId}_${activeRecordId}`;
+      const legacyKey = `user_edit_${activeRecordId}`;
+
       const localDataStr =
-        localStorage.getItem(`user_edit_${effectiveUserId}_${activeRecordId}`) ||
-        localStorage.getItem(`user_edit_${activeRecordId}`);
+        localStorage.getItem(primaryKey) ||
+        localStorage.getItem(fallbackKey) ||
+        localStorage.getItem(legacyKey);
 
       if (localDataStr) {
         try {
           const parsed = JSON.parse(localDataStr);
-          if (parsed && (parsed.sections || parsed.rawDataRows || parsed.rows || parsed.tableRows)) {
+          const parsedType = String(parsed?.planningType || parsed?.category || "").toLowerCase();
+          const matchesType =
+            (currentSectionType === "question_bank" && (parsedType === "question_bank" || parsedType === "prashnapedhi")) ||
+            (currentSectionType === "monthly" && (parsedType === "monthly" || parsedType === "masik_niyojan")) ||
+            (currentSectionType === "annual" && (parsedType === "annual" || parsedType === "varshik_niyojan"));
+
+          if (parsed && matchesType && (parsed.sections || parsed.rawDataRows || parsed.rows || parsed.tableRows || parsed.sheets)) {
             const adminTime = record?.uploadedAt ? new Date(record.uploadedAt).getTime() : 0;
             const userEditTime = parsed.editedAt ? new Date(parsed.editedAt).getTime() : 0;
 
             if (mode !== "admin" && adminTime > userEditTime) {
-              localStorage.removeItem(`user_edit_${effectiveUserId}_${activeRecordId}`);
-              localStorage.removeItem(`user_edit_${activeRecordId}`);
+              localStorage.removeItem(primaryKey);
+              localStorage.removeItem(fallbackKey);
+              localStorage.removeItem(legacyKey);
               setSavedUserEditRecord(null);
               return;
             }
 
             if (isMounted) setSavedUserEditRecord(parsed);
             return;
+          } else if (parsed && !matchesType) {
+            // Edit belongs to a DIFFERENT section! Never load it here.
+            setSavedUserEditRecord(null);
           }
         } catch (e) { }
       }
@@ -204,10 +243,25 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       // 2. Firestore check for user-specific custom edit
       if (db) {
         try {
-          const docRef = doc(db, "academic_plannings_user_edits", `${effectiveUserId}_${activeRecordId}`);
-          const snap = await getDoc(docRef);
+          const docRef = doc(db, "academic_plannings_user_edits", `${currentSectionType}_${effectiveUserId}_${activeRecordId}`);
+          let snap = await getDoc(docRef);
+          if (!snap.exists()) {
+            const legacyDocRef = doc(db, "academic_plannings_user_edits", `${effectiveUserId}_${activeRecordId}`);
+            snap = await getDoc(legacyDocRef);
+          }
           if (snap.exists() && isMounted) {
             const data = snap.data() as PlanningDocumentRecord;
+            const dataType = String(data?.planningType || (data as any)?.category || "").toLowerCase();
+            const matchesType =
+              (currentSectionType === "question_bank" && (dataType === "question_bank" || dataType === "prashnapedhi")) ||
+              (currentSectionType === "monthly" && (dataType === "monthly" || dataType === "masik_niyojan")) ||
+              (currentSectionType === "annual" && (dataType === "annual" || dataType === "varshik_niyojan"));
+
+            if (!matchesType) {
+              setSavedUserEditRecord(null);
+              return;
+            }
+
             const adminTime = record?.uploadedAt ? new Date(record.uploadedAt).getTime() : 0;
             const userEditTime = data.editedAt ? new Date(data.editedAt).getTime() : 0;
 
@@ -218,7 +272,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
             setSavedUserEditRecord(data);
             try {
-              localStorage.setItem(`user_edit_${effectiveUserId}_${activeRecordId}`, JSON.stringify(data));
+              localStorage.setItem(primaryKey, JSON.stringify(data));
             } catch (e) { }
           }
         } catch (e) {
@@ -231,7 +285,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [activeRecordId, user?.uid, record?.uploadedAt]);
+  }, [activeRecordId, currentSectionType, user?.uid, record?.uploadedAt]);
 
   // Extract Subject Sections from Excel when fileUrl is present
   useEffect(() => {
@@ -312,8 +366,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             activeRecordId,
             record?.id,
             (record as any)?.recordKey,
-            `2026-27_${currentMed}_${record?.classId || "1st"}_${record?.planningType || "annual"}_${record?.subjectId || "all"}`,
-            `plan_${currentMed}_${record?.classId || "1st"}_${record?.subjectId || "all"}`
+            `2026-27_${currentMed}_${record?.classId || "1st"}_${currentSectionType}_${record?.subjectId || "all"}`,
+            `plan_${currentMed}_${record?.classId || "1st"}_${currentSectionType}_${record?.subjectId || "all"}`
           ].filter(Boolean) as string[];
 
           for (const key of keysToTry) {
@@ -331,23 +385,33 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           throw new Error("Workbook data could not be retrieved.");
         }
 
-        const isQB =
-          record?.planningType === "question_bank" ||
-          (record as any)?.category === "question_bank" ||
-          String(record?.fileName || "").toLowerCase().includes("prashnapedhi") ||
-          String((record as any)?.title || "").includes("प्रश्नपेढी");
+        // Only treat as Question Bank if record is explicitly Question Bank AND NOT Monthly Planning or Annual Planning
+        const isExplicitQB =
+          !isMonthly &&
+          (record?.planningType === "question_bank" ||
+            (record as any)?.category === "question_bank" ||
+            (record as any)?.planningType === "prashnapedhi" ||
+            (record as any)?.category === "prashnapedhi" ||
+            String(record?.fileName || "").toLowerCase().includes("prashnapedhi") ||
+            String((record as any)?.title || "").includes("प्रश्नपेढी") ||
+            (String(record?.fileName || "").toLowerCase().includes("question") &&
+              String(record?.fileName || "").toLowerCase().includes("bank")));
 
         const parsed = await parseExcelData(buffer, { preserveFormatting: true });
-        const hasQBSheet = parsed.sheets.some(
-          (sheet) =>
-            sheet.sheetName.includes("प्रश्नपेढी") ||
-            sheet.sheetName.toLowerCase().includes("prashna") ||
-            sheet.rows.some((row) =>
-              row.some((cell) => String(cell || "").includes("प्रश्न") && String(cell || "").includes("उत्तर"))
-            )
-        );
 
-        if (isQB || hasQBSheet) {
+        // Never trigger Question Bank sheet interceptor for Monthly Planning or Annual Planning
+        const hasExplicitQBSheet =
+          !isMonthly &&
+          record?.planningType !== "annual" &&
+          (record as any)?.category !== "varshik_niyojan" &&
+          parsed.sheets.some(
+            (sheet) =>
+              sheet.sheetName.includes("प्रश्नपेढी") ||
+              sheet.sheetName.toLowerCase().includes("prashnapedhi") ||
+              (sheet.sheetName.toLowerCase().includes("question") && sheet.sheetName.toLowerCase().includes("bank"))
+          );
+
+        if (isExplicitQB || hasExplicitQBSheet) {
           if (!parsed.sheets.length) throw new Error("Question Bank workbook has no readable sheets.");
           if (isMounted) {
             setQuestionBankSheets(parsed.sheets.filter((sheet) => sheet.rows.some((row) => row.some(Boolean))));
@@ -372,7 +436,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [activeUrl, activeRecordId, record?.id]);
+  }, [activeUrl, activeRecordId, record?.id, currentSectionType]);
 
   // All subject sections extracted from Excel or stored record
   const allSectionsAvailable = useMemo<SubjectSection[]>(() => {
@@ -404,17 +468,29 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       return Object.values(splitMap);
     };
 
-    // 1. If user or admin has saved customized edit data, ALWAYS PREFER IT FIRST!
+    // 1. If user or admin has saved customized edit data, verify section type match before using
     if (savedUserEditRecord) {
       const recAny = savedUserEditRecord as any;
-      if (recAny.sections && Array.isArray(recAny.sections) && recAny.sections.length > 0) {
+      const savedType = String(recAny.planningType || recAny.category || "").toLowerCase();
+      const matchesType =
+        (currentSectionType === "question_bank" && (savedType === "question_bank" || savedType === "prashnapedhi")) ||
+        (currentSectionType === "monthly" && (savedType === "monthly" || savedType === "masik_niyojan")) ||
+        (currentSectionType === "annual" && (savedType === "annual" || savedType === "varshik_niyojan"));
+
+      if (matchesType && recAny.sections && Array.isArray(recAny.sections) && recAny.sections.length > 0) {
         return recAny.sections;
       }
     }
 
     if (record) {
       const recAny = record as any;
-      if (recAny.sections && Array.isArray(recAny.sections) && recAny.sections.length > 0) {
+      const recType = String(recAny.planningType || recAny.category || "").toLowerCase();
+      const matchesType =
+        (currentSectionType === "question_bank" && (recType === "question_bank" || recType === "prashnapedhi")) ||
+        (currentSectionType === "monthly" && (recType === "monthly" || recType === "masik_niyojan")) ||
+        (currentSectionType === "annual" && (recType === "annual" || recType === "varshik_niyojan"));
+
+      if (matchesType && recAny.sections && Array.isArray(recAny.sections) && recAny.sections.length > 0) {
         return recAny.sections;
       }
     }
@@ -493,7 +569,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
   // List of Available Subjects
   const availableSubjectNames = useMemo(() => {
-    if (record?.planningType === "question_bank" && questionBankSheets.length > 0) {
+    if (!isMonthly && (record?.planningType === "question_bank" || isQuestionBank) && questionBankSheets.length > 0) {
       return questionBankSheets.map((s) => s.sheetName);
     }
     if (allSectionsAvailable.length > 0) {
@@ -504,7 +580,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     }
     const currentMed = detectRecordMedium(record);
     return getDefaultSubjectsForClass(record?.classId || "1st", currentMed);
-  }, [record?.planningType, record?.classId, record, questionBankSheets, allSectionsAvailable, parsedWorkbook]);
+  }, [record?.planningType, record?.classId, record, isMonthly, isQuestionBank, questionBankSheets, allSectionsAvailable, parsedWorkbook]);
 
   // Dynamic Selected Medium Display
   const displayMedium = useMemo(() => {
@@ -1189,8 +1265,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     return [
       {
         subjectName: filter,
-        displaySubjectName: `विषय : ${filter}`,
-        headers: DEFAULT_HEADERS.varshik_niyojan,
+        displaySubjectName: isMonthly ? `महिना : ${filter}` : `विषय : ${filter}`,
+        headers: isMonthly ? DEFAULT_HEADERS.masik_niyojan : DEFAULT_HEADERS.varshik_niyojan,
         rows: [],
         startRow: 0,
         endRow: 0,
@@ -1210,9 +1286,12 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     if (!sectionsToEdit || sectionsToEdit.length === 0) {
       sectionsToEdit = availableSubjectNames.map((sName) => ({
         subjectName: sName,
-        displaySubjectName: `विषय : ${sName}`,
-        headers: DEFAULT_HEADERS.varshik_niyojan,
-        rows: [
+        displaySubjectName: isMonthly ? `महिना : ${sName}` : `विषय : ${sName}`,
+        headers: isMonthly ? DEFAULT_HEADERS.masik_niyojan : DEFAULT_HEADERS.varshik_niyojan,
+        rows: isMonthly ? [
+          ["०१ ते ०८ जून", "१. पूर्वतयारी व स्वागत", "संवाद साधणे व पूर्वज्ञान तपासणे", "चित्र वर्णन व संवाद", "विद्यार्थ्यांशी संवाद व गाणी", "तोंडी प्रश्नोत्तर", "चित्र तक्ते"],
+          ["०९ ते १५ जून", "२. मूलभूत क्षमता विकास", "अक्षर व अंक ओळख", "अक्षर ओळख व सराव", "मातीत गिरवणे व लेखन", "प्रात्यक्षिक", "अक्षर कार्ड"],
+        ] : [
           ["जून", "१-२", "१२", "२५", "वर्ग पूर्वतयारी अभ्यासक्रम, सराव व उजळणी", "वाचन, लेखन क्षमता विकास"],
           ["जुलै", "३-६", "२४", "५०", "घटक १ चा सराव व स्वाध्याय", "संकल्पना स्पष्टीकरण"],
         ],
@@ -1239,9 +1318,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       if (targetIdx === -1) {
         const newSec: SubjectSection = {
           subjectName: subjName,
-          displaySubjectName: `विषय : ${subjName}`,
-          headers: DEFAULT_HEADERS.varshik_niyojan,
-          rows: [["", "", "", "", "", ""]],
+          displaySubjectName: isMonthly ? `महिना : ${subjName}` : `विषय : ${subjName}`,
+          headers: isMonthly ? DEFAULT_HEADERS.masik_niyojan : DEFAULT_HEADERS.varshik_niyojan,
+          rows: [isMonthly ? ["", "", "", "", "", "", ""] : ["", "", "", "", "", ""]],
           startRow: 0,
           endRow: 0,
         };
@@ -1251,7 +1330,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
       const sec = { ...next[targetIdx] };
       const rows = [...sec.rows];
-      const row = [...(rows[rIdx] || ["", "", "", "", "", ""])];
+      const emptyRow = isMonthly ? ["", "", "", "", "", "", ""] : ["", "", "", "", "", ""];
+      const row = [...(rows[rIdx] || emptyRow)];
       while (row.length <= cIdx) row.push("");
       row[cIdx] = val;
       rows[rIdx] = row;
@@ -1276,9 +1356,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       if (targetIdx === -1) {
         const newSec: SubjectSection = {
           subjectName: subjName,
-          displaySubjectName: `विषय : ${subjName}`,
-          headers: DEFAULT_HEADERS.varshik_niyojan,
-          rows: [["", "", "", "", "", ""]],
+          displaySubjectName: isMonthly ? `महिना : ${subjName}` : `विषय : ${subjName}`,
+          headers: isMonthly ? DEFAULT_HEADERS.masik_niyojan : DEFAULT_HEADERS.varshik_niyojan,
+          rows: [isMonthly ? ["", "", "", "", "", "", ""] : ["", "", "", "", "", ""]],
           startRow: 0,
           endRow: 0,
         };
@@ -1287,7 +1367,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       }
 
       const sec = { ...next[targetIdx] };
-      const rows = [...sec.rows, ["", "", "", "", "", ""]];
+      const emptyRow = isMonthly ? ["", "", "", "", "", "", ""] : ["", "", "", "", "", ""];
+      const rows = [...sec.rows, emptyRow];
       sec.rows = rows;
       next[targetIdx] = sec;
       return next;
@@ -1318,13 +1399,12 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   };
 
   // Save Edits for Specific User vs Admin Master
-  // Save Edits for Specific User vs Admin Master
   const handleSaveUserEdits = async () => {
     try {
       setIsSavingEdits(true);
       const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
       const currentMed = detectRecordMedium(record);
-      const recordId = activeRecordId || `${currentMed}_${record?.classId || "1st"}_${record?.planningType || "annual"}_${record?.subjectId || "all"}`;
+      const recordId = activeRecordId;
 
       // Use editableSections directly as source of truth for saving
       const sectionsToSave = JSON.parse(JSON.stringify(editableSections.length > 0 ? editableSections : allSectionsAvailable));
@@ -1333,8 +1413,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
       sectionsToSave.forEach((sec: SubjectSection) => {
         if (sec.rows && sec.rows.length > 0) {
-          combinedRows.push([`विषय : ${sec.subjectName}`, "", "", "", "", ""]);
-          combinedRows.push(["महिना", "आठवडा", "कामाचे दिवस", "प्राप्त तासिका", `विषय : ${sec.subjectName}`, "अध्ययन निष्पत्ती"]);
+          combinedRows.push([isMonthly ? `महिना : ${sec.subjectName}` : `विषय : ${sec.subjectName}`, "", "", "", "", ""]);
+          combinedRows.push(isMonthly ? DEFAULT_HEADERS.masik_niyojan : DEFAULT_HEADERS.varshik_niyojan);
           sec.rows.forEach((r) => {
             combinedRows.push([...r]);
             updatedTableRows.push({
@@ -1350,14 +1430,21 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         }
       });
 
+      const targetCategory: PlanningCategory =
+        currentSectionType === "question_bank"
+          ? "prashnapedhi"
+          : currentSectionType === "monthly"
+            ? "masik_niyojan"
+            : "varshik_niyojan";
+
       const updatedRec: PlanningDocumentRecord = {
         ...(record || {}),
         id: recordId,
         mediumId: currentMed,
-        category: record?.category || (isMonthly ? "masik_niyojan" : "varshik_niyojan"),
-        planningType: record?.planningType || (isMonthly ? "monthly" : "annual"),
+        category: targetCategory,
+        planningType: currentSectionType,
         classId: record?.classId || "1",
-        subjectId: record?.subjectId || "मराठी",
+        subjectId: record?.subjectId || (selectedSubjectFilter !== "all" ? selectedSubjectFilter : "मराठी"),
         metadata: record?.metadata || {
           title: "",
           planned_periods: "",
@@ -1377,10 +1464,12 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         editedAt: new Date().toISOString(),
       };
 
-      // Always save to LocalStorage for instant rendering
+      // Always save to LocalStorage with strict section-namespaced key
       try {
+        localStorage.setItem(`user_edit_${currentSectionType}_${effectiveUserId}_${recordId}`, JSON.stringify(updatedRec));
+        localStorage.setItem(`user_edit_${currentSectionType}_${recordId}`, JSON.stringify(updatedRec));
+        // Keep fallback for backwards compatibility
         localStorage.setItem(`user_edit_${effectiveUserId}_${recordId}`, JSON.stringify(updatedRec));
-        localStorage.setItem(`user_edit_${recordId}`, JSON.stringify(updatedRec));
       } catch (e) {
         console.warn("LocalStorage save notice:", e);
       }
@@ -1397,10 +1486,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         }
         toast.success("🎉 ॲडमिन मास्टर फाईल यशस्वीरित्या सेव्ह झाली! सर्व युझर्सना हा बदल दिसेल.");
       } else {
-        // Teacher/User edit is strictly saved for this specific user
+        // Teacher/User edit is strictly saved for this specific user and section
         if (db && recordId) {
           try {
-            const userDocRef = doc(db, "academic_plannings_user_edits", `${effectiveUserId}_${recordId}`);
+            const userDocRef = doc(db, "academic_plannings_user_edits", `${currentSectionType}_${effectiveUserId}_${recordId}`);
             await setDoc(userDocRef, updatedRec, { merge: true });
           } catch (e) {
             console.warn("Firestore user edit save notice:", e);
@@ -1425,11 +1514,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
     if (activeRecordId) {
       try {
+        localStorage.removeItem(`user_edit_${currentSectionType}_${activeRecordId}`);
+        localStorage.removeItem(`user_edit_${currentSectionType}_${effectiveUserId}_${activeRecordId}`);
         localStorage.removeItem(`user_edit_${activeRecordId}`);
         localStorage.removeItem(`user_edit_${effectiveUserId}_${activeRecordId}`);
 
         if (db) {
           try {
+            await deleteDoc(doc(db, "academic_plannings_user_edits", `${currentSectionType}_${effectiveUserId}_${activeRecordId}`));
             await deleteDoc(doc(db, "academic_plannings_user_edits", `${effectiveUserId}_${activeRecordId}`));
           } catch (e) { }
         }
@@ -1540,8 +1632,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
           // Info Banner
           const infoBanner = document.createElement("div");
-          infoBanner.style.backgroundColor = "#0f172a";
-          infoBanner.style.color = "#fef08a";
+          infoBanner.style.backgroundColor = "#ffffff";
+          infoBanner.style.color = "#000000";
+          infoBanner.style.border = "1.5px solid #000000";
           infoBanner.style.padding = "8px 16px";
           infoBanner.style.borderRadius = "10px";
           infoBanner.style.display = "flex";
@@ -1549,8 +1642,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           infoBanner.style.alignItems = "center";
           infoBanner.style.marginBottom = "14px";
           infoBanner.innerHTML = `
-            <span style="font-size: 14px; font-weight: 900;">📋 अभ्यासक्रम व प्रश्नपेढी मार्गदर्शक सूचना (Curriculum Specifications)</span>
-            <span style="font-size: 12px; font-weight: 700; color: #94a3b8;">NEP 2020 / SCF-FS 2024</span>
+            <span style="font-size: 14px; font-weight: 900; color: #000000;">📋 अभ्यासक्रम व प्रश्नपेढी मार्गदर्शक सूचना (Curriculum Specifications)</span>
+            <span style="font-size: 12px; font-weight: 700; color: #475569;">NEP 2020 / SCF-FS 2024</span>
           `;
           infoPage.appendChild(infoBanner);
 
@@ -1558,20 +1651,20 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           const infoTable = document.createElement("table");
           infoTable.style.width = "100%";
           infoTable.style.borderCollapse = "collapse";
-          infoTable.style.border = "2px solid #0f172a";
+          infoTable.style.border = "2px solid #000000";
           infoTable.style.backgroundColor = "#ffffff";
           infoTable.innerHTML = `
             <thead>
-              <tr style="background-color: #0f172a; color: #fef08a;">
-                <th style="padding: 8px 12px; text-align: left; font-size: 13px; font-weight: 900; width: 30%; border: 1px solid #334155;">विषय / घटक</th>
-                <th style="padding: 8px 12px; text-align: left; font-size: 13px; font-weight: 900; width: 70%; border: 1px solid #334155;">तपशीलवार माहिती</th>
+              <tr style="background-color: #ffffff; color: #000000; border-bottom: 2px solid #000000;">
+                <th style="padding: 8px 12px; text-align: left; font-size: 13px; font-weight: 900; width: 30%; border: 1px solid #000000; background-color: #ffffff; color: #000000;">विषय / घटक</th>
+                <th style="padding: 8px 12px; text-align: left; font-size: 13px; font-weight: 900; width: 70%; border: 1px solid #000000; background-color: #ffffff; color: #000000;">तपशीलवार माहिती</th>
               </tr>
             </thead>
             <tbody>
-              ${nonEmptyRows.map((row, rIdx) => `
-                <tr style="background-color: ${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
-                  <td style="padding: 8px 12px; font-size: 12px; font-weight: 800; color: #1e1b4b; border: 1px solid #cbd5e1; vertical-align: top;">${row[0] || ""}</td>
-                  <td style="padding: 8px 12px; font-size: 12px; font-weight: 600; color: #334155; border: 1px solid #cbd5e1; vertical-align: top;">${row[1] || row.slice(1).join(" ") || ""}</td>
+              ${nonEmptyRows.map((row) => `
+                <tr style="background-color: #ffffff;">
+                  <td style="padding: 8px 12px; font-size: 12px; font-weight: 800; color: #000000; border: 1px solid #000000; vertical-align: top;">${row[0] || ""}</td>
+                  <td style="padding: 8px 12px; font-size: 12px; font-weight: 600; color: #000000; border: 1px solid #000000; vertical-align: top;">${row[1] || row.slice(1).join(" ") || ""}</td>
                 </tr>
               `).join("")}
             </tbody>
@@ -1730,17 +1823,17 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           // 1. Top School Header
           if (isFullFirstPage) {
             const masterHeader = document.createElement("div");
-            masterHeader.style.border = "1.5px solid #0f172a";
+            masterHeader.style.border = "1.5px solid #000000";
             masterHeader.style.borderRadius = "8px";
             masterHeader.style.padding = "4px 10px";
-            masterHeader.style.backgroundColor = "#f8fafc";
+            masterHeader.style.backgroundColor = "#ffffff";
             masterHeader.innerHTML = `
-              <div style="text-align: center; border-bottom: 1.5px solid #0f172a; padding-bottom: 2px;">
-                <h2 style="font-size: 16px; font-weight: 900; color: #0f172a; text-transform: uppercase; margin: 0;">
+              <div style="text-align: center; border-bottom: 1.5px solid #000000; padding-bottom: 2px;">
+                <h2 style="font-size: 16px; font-weight: 900; color: #000000; text-transform: uppercase; margin: 0;">
                   ${schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
                 </h2>
               </div>
-              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 10px; font-weight: 700; color: #0f172a; padding-top: 2px;">
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 10px; font-weight: 700; color: #000000; padding-top: 2px;">
                 <div><span style="color: #475569;">केंद्र:</span> <strong>${schoolProfile.kendraName || "—"}</strong></div>
                 <div style="text-align: center;"><span style="color: #475569;">तालुका:</span> <strong>${schoolProfile.talukaName || "—"}</strong></div>
                 <div style="text-align: center;"><span style="color: #475569;">जिल्हा:</span> <strong>${schoolProfile.districtName || "—"}</strong></div>
@@ -1751,18 +1844,19 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
             // Subject Banner
             const banner = document.createElement("div");
-            banner.style.backgroundColor = "#0f172a";
-            banner.style.color = "#fef08a";
+            banner.style.backgroundColor = "#ffffff";
+            banner.style.color = "#000000";
+            banner.style.border = "1.5px solid #000000";
             banner.style.padding = "4px 10px";
             banner.style.borderRadius = "6px";
             banner.style.display = "flex";
             banner.style.justifyContent = "space-between";
             banner.style.alignItems = "center";
             banner.innerHTML = `
-              <span style="font-size: 11.5px; font-weight: 900;">
+              <span style="font-size: 11.5px; font-weight: 900; color: #000000;">
                 📚 इयत्ता: २ री | विषय: ${record?.subjectId || "प्रथम भाषा : मराठी"} | शैक्षणिक वर्ष: २०२६-२७ | संपूर्ण प्रश्नपेढी
               </span>
-              <span style="font-size: 10px; font-weight: 700; color: #cbd5e1;">
+              <span style="font-size: 10px; font-weight: 700; color: #475569;">
                 NEP 2020 / SCF-FS 2024 संलग्नीत
               </span>
             `;
@@ -1770,18 +1864,18 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           } else {
             // Compact Continuous Header on subsequent pages
             const compactHeader = document.createElement("div");
-            compactHeader.style.border = "1.5px solid #0f172a";
+            compactHeader.style.border = "1.5px solid #000000";
             compactHeader.style.borderRadius = "6px";
             compactHeader.style.padding = "3px 10px";
-            compactHeader.style.backgroundColor = "#f8fafc";
+            compactHeader.style.backgroundColor = "#ffffff";
             compactHeader.style.display = "flex";
             compactHeader.style.justifyContent = "space-between";
             compactHeader.style.alignItems = "center";
             compactHeader.innerHTML = `
-              <span style="font-size: 10.5px; font-weight: 900; color: #0f172a;">
+              <span style="font-size: 10.5px; font-weight: 900; color: #000000;">
                 🏫 ${schoolProfile.schoolName || "जिल्हा परिषद शाळा"} | UDISE: ${schoolProfile.udiseNumber || "—"}
               </span>
-              <span style="font-size: 10.5px; font-weight: 900; color: #1e1b4b;">
+              <span style="font-size: 10.5px; font-weight: 900; color: #000000;">
                 इयत्ता २ री | विषय: ${record?.subjectId || "मराठी"} | प्रश्नपेढी (२०२६-२७)
               </span>
               <span style="font-size: 9.5px; font-weight: 800; color: #475569;">
@@ -1793,8 +1887,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
           // 2. Lesson Title Subheader showing the topics on this page
           const lessonBanner = document.createElement("div");
-          lessonBanner.style.backgroundColor = "#e0e7ff";
-          lessonBanner.style.border = "1.5px solid #a5b4fc";
+          lessonBanner.style.backgroundColor = "#ffffff";
+          lessonBanner.style.border = "1.5px solid #000000";
           lessonBanner.style.borderRadius = "6px";
           lessonBanner.style.padding = "3.5px 10px";
           lessonBanner.style.display = "flex";
@@ -1802,10 +1896,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           lessonBanner.style.alignItems = "center";
           lessonBanner.style.gap = "8px";
           lessonBanner.innerHTML = `
-            <div style="font-size: 11px; font-weight: 900; color: #1e1b4b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <div style="font-size: 11px; font-weight: 900; color: #000000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               📖 समाविष्ट पाठ: ${lessonsOnPage.map((lg) => lg.lesson).join("  &nbsp;|&nbsp;  ")}
             </div>
-            <div style="font-size: 9.5px; font-weight: 800; color: #312e81; white-space: nowrap; background-color: #ffffff; padding: 2px 7px; border-radius: 4px; border: 1px solid #c7d2fe;">
+            <div style="font-size: 9.5px; font-weight: 800; color: #000000; white-space: nowrap; background-color: #ffffff; padding: 2px 7px; border-radius: 4px; border: 1px solid #000000;">
               🎯 एकूण प्रश्न: ${totalQuestionsOnPage}
             </div>
           `;
@@ -1816,7 +1910,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           table.className = "pdf-question-bank-table";
           table.style.width = "100%";
           table.style.borderCollapse = "collapse";
-          table.style.border = "2px solid #0f172a";
+          table.style.border = "2px solid #000000";
           table.style.backgroundColor = "#ffffff";
           table.style.tableLayout = "fixed";
 
@@ -1832,77 +1926,77 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               <col style="width: 5%;">
             </colgroup>
             <thead>
-              <tr style="background-color: #0f172a; color: #fef08a;">
-                <th style="border: 1px solid #334155; padding: 3.5px 2px; font-size: 9.5px; font-weight: 900; text-align: center; background-color: #0f172a; color: #fef08a;">${tableHeader[0] || "अ.क्र."}</th>
-                <th style="border: 1px solid #334155; padding: 3.5px 3px; font-size: 9.5px; font-weight: 900; text-align: center; background-color: #0f172a; color: #fef08a;">${tableHeader[1] || "पाठ / घटक"}</th>
-                <th style="border: 1px solid #334155; padding: 3.5px 3px; font-size: 9.5px; font-weight: 900; text-align: center; background-color: #0f172a; color: #fef08a;">${tableHeader[2] || "अध्ययन निष्पत्ती"}</th>
-                <th style="border: 1px solid #334155; padding: 3.5px 5px; font-size: 9.5px; font-weight: 900; text-align: left; background-color: #0f172a; color: #fef08a;">${tableHeader[3] || "प्रश्न"}</th>
-                <th style="border: 1px solid #334155; padding: 3.5px 5px; font-size: 9.5px; font-weight: 900; text-align: left; background-color: #0f172a; color: #fef08a;">${tableHeader[4] || "उत्तर"}</th>
-                <th style="border: 1px solid #334155; padding: 3.5px 2px; font-size: 9px; font-weight: 900; text-align: center; background-color: #0f172a; color: #fef08a;">${tableHeader[5] || "मूल्यमापन"}</th>
-                <th style="border: 1px solid #334155; padding: 3.5px 2px; font-size: 9px; font-weight: 900; text-align: center; background-color: #0f172a; color: #fef08a;">${tableHeader[6] || "प्रकार"}</th>
-                <th style="border: 1px solid #334155; padding: 3.5px 2px; font-size: 9px; font-weight: 900; text-align: center; background-color: #0f172a; color: #fef08a;">${tableHeader[7] || "उद्दिष्ट"}</th>
+              <tr style="background-color: #ffffff; color: #000000; border-bottom: 2px solid #000000;">
+                <th style="border: 1px solid #000000; padding: 3.5px 2px; font-size: 9.5px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[0] || "अ.क्र."}</th>
+                <th style="border: 1px solid #000000; padding: 3.5px 3px; font-size: 9.5px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[1] || "पाठ / घटक"}</th>
+                <th style="border: 1px solid #000000; padding: 3.5px 3px; font-size: 9.5px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[2] || "अध्ययन निष्पत्ती"}</th>
+                <th style="border: 1px solid #000000; padding: 3.5px 5px; font-size: 9.5px; font-weight: 900; text-align: left; background-color: #ffffff; color: #000000;">${tableHeader[3] || "प्रश्न"}</th>
+                <th style="border: 1px solid #000000; padding: 3.5px 5px; font-size: 9.5px; font-weight: 900; text-align: left; background-color: #ffffff; color: #000000;">${tableHeader[4] || "उत्तर"}</th>
+                <th style="border: 1px solid #000000; padding: 3.5px 2px; font-size: 9px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[5] || "मूल्यमापन"}</th>
+                <th style="border: 1px solid #000000; padding: 3.5px 2px; font-size: 9px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[6] || "प्रकार"}</th>
+                <th style="border: 1px solid #000000; padding: 3.5px 2px; font-size: 9px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[7] || "उद्दिष्ट"}</th>
               </tr>
             </thead>
             <tbody>
-              ${lessonsOnPage.map((lg, lgIdx) => {
+              ${lessonsOnPage.map((lg) => {
             const questions = lg.questions;
 
             return questions.map((q, qIdx) => {
               const isFirstRowOfLesson = qIdx === 0;
               const isLastRowOfLesson = qIdx === questions.length - 1;
               const midIdx = Math.floor(questions.length / 2);
-              const rowBg = qIdx % 2 === 0 ? "#ffffff" : "#f8fafc";
+              const rowBg = "#ffffff";
 
-              let evalBadge = `<span style="font-size: 8px; font-weight: 800; color: #334155;">${q.evalType || "—"}</span>`;
+              let evalBadge = `<span style="font-size: 8px; font-weight: 800; color: #000000;">${q.evalType || "—"}</span>`;
               if (q.evalType.includes("तोंडी")) {
-                evalBadge = `<span style="background-color: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; border-radius: 9999px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">तोंडी</span>`;
+                evalBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">तोंडी</span>`;
               } else if (q.evalType.includes("लेखी")) {
-                evalBadge = `<span style="background-color: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; border-radius: 9999px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">लेखी</span>`;
+                evalBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">लेखी</span>`;
               } else if (q.evalType.includes("प्रात्यक्षिक")) {
-                evalBadge = `<span style="background-color: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; border-radius: 9999px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">प्रात्यक्षिक</span>`;
+                evalBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">प्रात्यक्षिक</span>`;
               }
 
-              let qTypeBadge = `<span style="font-size: 8px; font-weight: 800; color: #334155;">${q.qType || "—"}</span>`;
+              let qTypeBadge = `<span style="font-size: 8px; font-weight: 800; color: #000000;">${q.qType || "—"}</span>`;
               if (q.qType.includes("वस्तुनिष्ठ")) {
-                qTypeBadge = `<span style="background-color: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: 9999px; padding: 1px 3px; font-size: 8px; font-weight: 800; display: inline-block;">वस्तुनिष्ठ</span>`;
+                qTypeBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3px; font-size: 8px; font-weight: 800; display: inline-block;">वस्तुनिष्ठ</span>`;
               } else if (q.qType.includes("लघुत्तरी")) {
-                qTypeBadge = `<span style="background-color: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; border-radius: 9999px; padding: 1px 3px; font-size: 8px; font-weight: 800; display: inline-block;">लघुत्तरी</span>`;
+                qTypeBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3px; font-size: 8px; font-weight: 800; display: inline-block;">लघुत्तरी</span>`;
               } else if (q.qType.includes("दीर्घोत्तरी")) {
-                qTypeBadge = `<span style="background-color: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3; border-radius: 9999px; padding: 1px 3px; font-size: 8px; font-weight: 800; display: inline-block;">दीर्घोत्तरी</span>`;
+                qTypeBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3px; font-size: 8px; font-weight: 800; display: inline-block;">दीर्घोत्तरी</span>`;
               }
 
               const objBadge = q.objective
-                ? `<span style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 9999px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">${q.objective}</span>`
+                ? `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">${q.objective}</span>`
                 : "—";
 
               // Strong divider line between topics on the same page
-              const lessonRowBottomBorder = isLastRowOfLesson ? "2px solid #0f172a" : "none";
-              const standardRowBottomBorder = isLastRowOfLesson ? "2px solid #0f172a" : "1px solid #cbd5e1";
+              const lessonRowBottomBorder = isLastRowOfLesson ? "2px solid #000000" : "none";
+              const standardRowBottomBorder = isLastRowOfLesson ? "2px solid #000000" : "1px solid #cbd5e1";
               const lessonTopBorder = isFirstRowOfLesson ? "1px solid #cbd5e1" : "none";
 
               const lessonContent = qIdx === midIdx
-                ? `<div style="font-weight: 900; color: #1e1b4b; text-align: center; line-height: 1.3; padding: 2px; font-size: 10px; word-break: break-word;">${lg.lesson}</div>`
+                ? `<div style="font-weight: 900; color: #000000; text-align: center; line-height: 1.3; padding: 2px; font-size: 10px; word-break: break-word;">${lg.lesson}</div>`
                 : "";
 
               const lessonCellHtml = `
-                    <td class="qb-col-lesson" style="border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; border-top: ${lessonTopBorder}; border-bottom: ${lessonRowBottomBorder}; padding: 2px 3px; font-size: 10px; font-weight: 900; color: #1e1b4b; background-color: #eef2ff; vertical-align: middle; text-align: center; word-break: break-word;">
+                    <td class="qb-col-lesson" style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-top: ${lessonTopBorder}; border-bottom: ${lessonRowBottomBorder}; padding: 2px 3px; font-size: 10px; font-weight: 900; color: #000000; background-color: #ffffff; vertical-align: middle; text-align: center; word-break: break-word;">
                       ${lessonContent}
                     </td>
                   `;
 
               const outcomeContent = qIdx === midIdx
-                ? `<div style="font-weight: 600; color: #334155; text-align: center; line-height: 1.3; padding: 2px; font-size: 9px; word-break: break-word;">${lg.outcome || "—"}</div>`
+                ? `<div style="font-weight: 600; color: #000000; text-align: center; line-height: 1.3; padding: 2px; font-size: 9px; word-break: break-word;">${lg.outcome || "—"}</div>`
                 : "";
 
               const outcomeCellHtml = `
-                    <td class="qb-col-outcome" style="border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; border-top: ${lessonTopBorder}; border-bottom: ${lessonRowBottomBorder}; padding: 2px 3px; font-size: 9px; font-weight: 600; color: #334155; background-color: #f8fafc; vertical-align: middle; text-align: center; word-break: break-word;">
+                    <td class="qb-col-outcome" style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-top: ${lessonTopBorder}; border-bottom: ${lessonRowBottomBorder}; padding: 2px 3px; font-size: 9px; font-weight: 600; color: #000000; background-color: #ffffff; vertical-align: middle; text-align: center; word-break: break-word;">
                       ${outcomeContent}
                     </td>
                   `;
 
               return `
                     <tr style="background-color: ${rowBg};">
-                      <td style="border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; font-size: 9.5px; font-weight: 900; text-align: center; color: #0f172a; vertical-align: middle;">
+                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; font-size: 9.5px; font-weight: 900; text-align: center; color: #000000; vertical-align: middle; background-color: #ffffff;">
                         ${q.srNo}
                       </td>
 
@@ -1910,23 +2004,23 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
                       ${outcomeCellHtml}
 
-                      <td style="border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; border-bottom: ${standardRowBottomBorder}; padding: 2px 4px; font-size: 9.5px; font-weight: 700; color: #020617; line-height: 1.3; vertical-align: middle; word-break: break-word;">
+                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 4px; font-size: 9.5px; font-weight: 700; color: #000000; line-height: 1.3; vertical-align: middle; word-break: break-word; background-color: #ffffff;">
                         ${q.question}
                       </td>
 
-                      <td class="qb-col-answer" style="border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; border-bottom: ${standardRowBottomBorder}; padding: 2px 4px; font-size: 9.5px; font-weight: 600; color: #064e3b; background-color: #f0fdf4; line-height: 1.3; vertical-align: middle; word-break: break-word;">
+                      <td class="qb-col-answer" style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 4px; font-size: 9.5px; font-weight: 600; color: #000000; background-color: #ffffff; line-height: 1.3; vertical-align: middle; word-break: break-word;">
                         ${q.answer}
                       </td>
 
-                      <td style="border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; text-align: center; vertical-align: middle;">
+                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; text-align: center; vertical-align: middle; background-color: #ffffff;">
                         ${evalBadge}
                       </td>
 
-                      <td style="border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; text-align: center; vertical-align: middle;">
+                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; text-align: center; vertical-align: middle; background-color: #ffffff;">
                         ${qTypeBadge}
                       </td>
 
-                      <td style="border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; text-align: center; vertical-align: middle;">
+                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; text-align: center; vertical-align: middle; background-color: #ffffff;">
                         ${objBadge}
                       </td>
                     </tr>
@@ -2041,7 +2135,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   // Generate Multi-Subject / Single-Subject PDF preserving exact web structure & per-subject clean pagebreaks
   const handleDownloadCombinedPdf = async () => {
     // Route Question Bank workbooks directly to dedicated landscape zero-cutting PDF generator
-    if (record?.planningType === "question_bank" || isQuestionBank || questionBankSheets.length > 0) {
+    if (!isMonthly && (record?.planningType === "question_bank" || isQuestionBank)) {
       return handleDownloadQuestionBankPdf();
     }
 
@@ -2356,7 +2450,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         </div>
 
         {/* User Specific Customization Badge */}
-        {savedUserEditRecord && !isInlineEditing && (
+        {savedUserEditRecord && !isInlineEditing && (!isQuestionBank || savedUserEditRecord.planningType === "question_bank") && (
           <div className="flex items-center justify-between bg-amber-50 border border-amber-300/80 px-4 py-2.5 rounded-2xl text-xs font-bold text-amber-900">
             <div className="flex items-center gap-2">
               <UserCheck className="size-4 text-amber-600 shrink-0" />
@@ -2389,7 +2483,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             <button
               onClick={handleDownloadCombinedPdf}
               disabled={isGeneratingPdf}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50"
+              className={`px-4 py-2.5 rounded-xl ${isQuestionBank
+                ? "bg-slate-900 hover:bg-slate-800 text-white border border-slate-700"
+                : "bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white"
+                } text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50`}
             >
               {isGeneratingPdf ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               <span>
@@ -2398,62 +2495,64 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     ? "📥 संपूर्ण प्रश्नपेढी PDF (All Lessons PDF)"
                     : `📥 प्रश्नपेढी PDF (${selectedQuestionBankLesson})`
                   : selectedSubjectFilter === "all"
-                    ? "📥 COMBINED PDF DOWNLOAD"
-                    : `📥 PDF DOWNLOAD (${selectedSubjectFilter})`}
+                    ? (isMonthly ? "📥 संपूर्ण मासिक नियोजन PDF" : "📥 COMBINED PDF DOWNLOAD")
+                    : (isMonthly ? `📥 मासिक नियोजन PDF (${selectedSubjectFilter})` : `📥 PDF DOWNLOAD (${selectedSubjectFilter})`)}
               </span>
             </button>
 
-            {isQuestionBank && selectedQuestionBankLesson !== "all" && (
+            {!isMonthly && isQuestionBank && selectedQuestionBankLesson !== "all" && (
               <button
                 onClick={() => {
                   setSelectedQuestionBankLesson("all");
                   setTimeout(() => handleDownloadQuestionBankPdf(), 50);
                 }}
                 disabled={isGeneratingPdf}
-                className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50 border border-slate-700"
+                className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50 border border-slate-700"
                 title="सर्व २४ पाठांचे एकत्र PDF डाऊनलोड करा"
               >
-                <Download className="size-4 text-amber-300" />
+                <Download className="size-4 text-white" />
                 <span>📥 सर्व २४ पाठ PDF</span>
               </button>
             )}
 
-            {/* SINGLE ONLY SAVE / EDIT CONTROL BAR */}
-            {isInlineEditing ? (
-              <>
-                <button
-                  onClick={handleSaveUserEdits}
-                  disabled={isSavingEdits}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-emerald-600/30 active:scale-95 disabled:opacity-50 border border-emerald-400"
-                >
-                  {isSavingEdits ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                  <span>💾 SAVE (सेव्ह करा)</span>
-                </button>
+            {/* SINGLE ONLY SAVE / EDIT CONTROL BAR - EXCLUSIVELY FOR PLANNING (NOT QUESTION BANK) */}
+            {!isQuestionBank && (
+              isInlineEditing ? (
+                <>
+                  <button
+                    onClick={handleSaveUserEdits}
+                    disabled={isSavingEdits}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-emerald-600/30 active:scale-95 disabled:opacity-50 border border-emerald-400"
+                  >
+                    {isSavingEdits ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                    <span>💾 SAVE (सेव्ह करा)</span>
+                  </button>
 
-                <button
-                  onClick={() => handleAddRow(selectedSubjectFilter === "all" ? "मराठी" : selectedSubjectFilter)}
-                  className="px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer border border-amber-300 active:scale-95"
-                >
-                  <Plus className="size-4" />
-                  <span>➕ ओळ जोडा</span>
-                </button>
+                  <button
+                    onClick={() => handleAddRow(selectedSubjectFilter === "all" ? (isMonthly ? "जून" : "मराठी") : selectedSubjectFilter)}
+                    className="px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer border border-amber-300 active:scale-95"
+                  >
+                    <Plus className="size-4" />
+                    <span>➕ ओळ जोडा</span>
+                  </button>
 
+                  <button
+                    onClick={() => setIsInlineEditing(false)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                  >
+                    <X className="size-4" />
+                    <span>रद्द करा</span>
+                  </button>
+                </>
+              ) : (
                 <button
-                  onClick={() => setIsInlineEditing(false)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                  onClick={handleStartInlineEditing}
+                  className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
                 >
-                  <X className="size-4" />
-                  <span>रद्द करा</span>
+                  <Edit3 className="size-4 text-slate-950" />
+                  <span>✏️ EDIT (संपादन करा)</span>
                 </button>
-              </>
-            ) : (
-              <button
-                onClick={handleStartInlineEditing}
-                className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
-              >
-                <Edit3 className="size-4 text-slate-950" />
-                <span>✏️ EDIT (संपादन करा)</span>
-              </button>
+              )
             )}
 
             {mode === "admin" && onDelete && (
@@ -2482,23 +2581,23 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           </div>
         ) : (
           <>
-            {record?.planningType === "question_bank" ? (
+            {isQuestionBank ? (
               <>
                 <div className="border-b-2 border-slate-900 pb-5 space-y-2 text-center">
                   <h2 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">
-                    {record.fileName || "प्रश्नपेढी"}
+                    {record?.fileName || "प्रश्नपेढी"}
                   </h2>
                   <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-700 flex-wrap">
-                    <span className="bg-slate-100 px-3 py-1 rounded-xl border border-slate-200">
-                      इयत्ता: <strong>{formatMarathiClassName(record.classId || "2nd")}</strong>
+                    <span className="bg-white text-slate-900 px-3 py-1 rounded-xl border border-slate-300">
+                      इयत्ता: <strong>{formatMarathiClassName(record?.classId || "2nd")}</strong>
                     </span>
-                    <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-200">
-                      विषय: <strong>{record.subjectId || "मराठी"}</strong>
+                    <span className="bg-white text-slate-900 px-3 py-1 rounded-xl border border-slate-300">
+                      विषय: <strong>{record?.subjectId || "मराठी"}</strong>
                     </span>
-                    <span className="bg-emerald-50 text-emerald-800 px-3 py-1 rounded-xl border border-emerald-200">
+                    <span className="bg-white text-slate-900 px-3 py-1 rounded-xl border border-slate-300">
                       माध्यम: <strong>{displayMedium}</strong>
                     </span>
-                    <span className="bg-amber-50 text-amber-800 px-3 py-1 rounded-xl border border-amber-200">
+                    <span className="bg-white text-slate-900 px-3 py-1 rounded-xl border border-slate-300">
                       Sheets: <strong>{questionBankSheets.length}</strong>
                     </span>
                   </div>
@@ -2569,22 +2668,22 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                       return (
                         <div key={`${sheet.sheetName}-${sheetIndex}`} className="pdf-subject-section space-y-4 page-break-after">
                           {/* School Info Header Card */}
-                          <div className="pdf-school-header border-2 border-slate-900 rounded-2xl p-5 sm:p-6 bg-slate-50 space-y-3.5 text-sm sm:text-base font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900 relative">
+                          <div className="pdf-school-header border-2 border-slate-900 rounded-2xl p-5 sm:p-6 bg-white space-y-3.5 text-sm sm:text-base font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900 relative">
                             <button
                               type="button"
                               onClick={() => {
                                 setSchoolFormData(schoolProfile);
                                 setIsSchoolModalOpen(true);
                               }}
-                              className="print:hidden absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-white/80 hover:bg-white text-indigo-700 text-xs font-bold border border-indigo-200 shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+                              className="print:hidden absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold border border-slate-300 shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
                               title="शाळा माहिती संपादन करा"
                             >
-                              <Edit3 className="size-3.5 text-indigo-600" />
+                              <Edit3 className="size-3.5 text-slate-700" />
                               <span>बदला</span>
                             </button>
 
                             <div className="text-center border-b-2 border-slate-900 pb-3">
-                              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-indigo-950 uppercase tracking-wide print:text-slate-950">
+                              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-950 uppercase tracking-wide print:text-slate-950">
                                 {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
                               </h2>
                             </div>
@@ -2597,29 +2696,29 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                             </div>
                           </div>
 
-                          <div className="pdf-subject-banner bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
+                          <div className="pdf-subject-banner bg-white text-slate-950 border-2 border-slate-900 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
                             <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
-                              <FileSpreadsheet className="size-4 text-emerald-400" />
+                              <FileSpreadsheet className="size-4 text-slate-900" />
                               <span>{sheet.sheetName} (अभ्यासक्रम संदर्भ व तपशील)</span>
                             </h3>
-                            <span className="text-[11px] font-bold text-slate-300">{rawDataRows.length} नोंदी</span>
+                            <span className="text-[11px] font-bold text-slate-600">{rawDataRows.length} नोंदी</span>
                           </div>
 
                           <div className="bg-white rounded-2xl border-2 border-slate-900 overflow-hidden shadow-sm">
                             <table className="w-full border-collapse text-xs font-sans">
                               <thead>
-                                <tr className="bg-slate-900 text-amber-300" style={{ backgroundColor: "#0f172a", color: "#fef08a" }}>
-                                  <th className="border border-slate-700 p-3 text-left font-black w-1/3">विषय / घटक</th>
-                                  <th className="border border-slate-700 p-3 text-left font-black w-2/3">तपशील व माहिती</th>
+                                <tr className="bg-white text-black border-b-2 border-slate-900" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
+                                  <th className="border border-slate-400 p-3 text-left font-black w-1/3 bg-white text-black" style={{ backgroundColor: "#ffffff", color: "#000000" }}>विषय / घटक</th>
+                                  <th className="border border-slate-400 p-3 text-left font-black w-2/3 bg-white text-black" style={{ backgroundColor: "#ffffff", color: "#000000" }}>तपशील व माहिती</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {rawDataRows.map((row, rIdx) => (
-                                  <tr key={rIdx} className={rIdx % 2 === 0 ? "bg-white" : "bg-slate-50/70"}>
-                                    <td className="border border-slate-300 p-3 font-black text-indigo-950 align-top">
+                                  <tr key={rIdx} className="bg-white">
+                                    <td className="border border-slate-300 p-3 font-black text-black align-top bg-white">
                                       {row[0] || ""}
                                     </td>
-                                    <td className="border border-slate-300 p-3 font-semibold text-slate-900 align-top leading-relaxed">
+                                    <td className="border border-slate-300 p-3 font-semibold text-slate-900 align-top leading-relaxed bg-white">
                                       {row[1] || ""}
                                     </td>
                                   </tr>
@@ -2748,22 +2847,22 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     return (
                       <div key={`${sheet.sheetName}-${sheetIndex}`} className="pdf-subject-section space-y-4 page-break-after">
                         {/* School Info Header Card */}
-                        <div className="pdf-school-header border-2 border-slate-900 rounded-2xl p-5 sm:p-6 bg-slate-50 space-y-3.5 text-sm sm:text-base font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900 relative">
+                        <div className="pdf-school-header border-2 border-slate-900 rounded-2xl p-5 sm:p-6 bg-white space-y-3.5 text-sm sm:text-base font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900 relative">
                           <button
                             type="button"
                             onClick={() => {
                               setSchoolFormData(schoolProfile);
                               setIsSchoolModalOpen(true);
                             }}
-                            className="print:hidden absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-white/80 hover:bg-white text-indigo-700 text-xs font-bold border border-indigo-200 shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+                            className="print:hidden absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold border border-slate-300 shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
                             title="शाळा माहिती संपादन करा"
                           >
-                            <Edit3 className="size-3.5 text-indigo-600" />
+                            <Edit3 className="size-3.5 text-slate-700" />
                             <span>बदला</span>
                           </button>
 
                           <div className="text-center border-b-2 border-slate-900 pb-3">
-                            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-indigo-950 uppercase tracking-wide print:text-slate-950">
+                            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-950 uppercase tracking-wide print:text-slate-950">
                               {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
                             </h2>
                           </div>
@@ -2777,17 +2876,17 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         </div>
 
                         {/* Sheet Banner */}
-                        <div className="pdf-subject-banner bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div className="pdf-subject-banner bg-white text-slate-950 border-2 border-slate-900 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
                           <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
-                            <FileSpreadsheet className="size-4 text-emerald-400" />
+                            <FileSpreadsheet className="size-4 text-slate-900" />
                             <span>{sheet.sheetName}</span>
                           </h3>
-                          <span className="text-[11px] font-bold text-slate-300">{allQuestions.length} एकूण प्रश्न नोंदी</span>
+                          <span className="text-[11px] font-bold text-slate-600">{allQuestions.length} एकूण प्रश्न नोंदी</span>
                         </div>
 
                         {/* Interactive Lesson Filter Bar */}
                         {isStandard8Col && uniqueLessons.length > 0 && (
-                          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-100 p-3.5 rounded-2xl border border-slate-300 print:hidden">
+                          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border-2 border-slate-300 print:hidden">
                             <div className="flex items-center gap-2 flex-wrap flex-1 min-w-[280px]">
                               <label className="text-xs font-black text-slate-800 shrink-0">
                                 पाठ निवडा (Select Lesson):
@@ -2795,7 +2894,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               <select
                                 value={selectedQuestionBankLesson}
                                 onChange={(e) => setSelectedQuestionBankLesson(e.target.value)}
-                                className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs cursor-pointer flex-1 max-w-md"
+                                className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500 shadow-xs cursor-pointer flex-1 max-w-md"
                               >
                                 <option value="all">
                                   सर्व {uniqueLessons.length} पाठ (संपूर्ण {allQuestions.length} प्रश्न)
@@ -2809,14 +2908,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                             </div>
 
                             <div className="flex items-center gap-2 text-xs font-bold text-slate-600 flex-wrap">
-                              <span className="bg-indigo-100 text-indigo-900 px-3 py-1 rounded-xl border border-indigo-200">
+                              <span className="bg-white text-slate-900 px-3 py-1 rounded-xl border border-slate-300">
                                 दाखवलेले प्रश्न: <strong>{filteredQuestions.length}</strong>
                               </span>
                               {selectedQuestionBankLesson !== "all" && (
                                 <button
                                   type="button"
                                   onClick={() => setSelectedQuestionBankLesson("all")}
-                                  className="text-xs text-indigo-600 hover:text-indigo-800 underline font-bold cursor-pointer"
+                                  className="text-xs text-slate-700 hover:text-black underline font-bold cursor-pointer"
                                 >
                                   सर्व पाठ पहा
                                 </button>
@@ -2825,10 +2924,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                 type="button"
                                 disabled={isGeneratingPdf}
                                 onClick={handleDownloadQuestionBankPdf}
-                                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                                className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50 border border-slate-700"
                                 title="या पाठाचे / प्रश्नपेढीचे PDF डाऊनलोड करा"
                               >
-                                {isGeneratingPdf ? <Loader2 className="size-3 animate-spin" /> : <Download className="size-3" />}
+                                {isGeneratingPdf ? <Loader2 className="size-3 animate-spin" /> : <Download className="size-3 text-white" />}
                                 <span>{selectedQuestionBankLesson === "all" ? "संपूर्ण PDF" : "हा पाठ PDF"}</span>
                               </button>
                             </div>
@@ -2836,7 +2935,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         )}
 
                         {headerIndex > 0 && metadataRows.length > 0 && (
-                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1">
+                          <div className="rounded-2xl border border-slate-300 bg-white p-4 space-y-1">
                             {metadataRows.map((row, idx) => (
                               <div key={idx} className="text-sm font-semibold text-slate-800 whitespace-pre-wrap">
                                 {row.filter((cell) => String(cell || "").trim() !== "").join("  |  ")}
@@ -2849,31 +2948,31 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         <div className="overflow-x-auto rounded-2xl border-2 border-slate-900 shadow-sm bg-white">
                           <table className="w-full border-collapse text-xs font-sans bg-white">
                             <thead>
-                              <tr className="bg-slate-900 text-amber-300" style={{ backgroundColor: "#0f172a", color: "#fef08a" }}>
+                              <tr className="bg-white text-black border-b-2 border-slate-900" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
                                 {isStandard8Col ? (
                                   <>
-                                    <th className="border border-slate-700 p-2.5 text-center font-black w-14 shrink-0" style={{ backgroundColor: "#0f172a", color: "#fef08a" }}>
+                                    <th className="border border-slate-400 p-2.5 text-center font-black w-14 shrink-0 bg-white text-black" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
                                       {tableHeader[0] || "अ.क्र."}
                                     </th>
-                                    <th className="border border-slate-700 p-2.5 text-center font-black w-44" style={{ backgroundColor: "#0f172a", color: "#fef08a" }}>
+                                    <th className="border border-slate-400 p-2.5 text-center font-black w-44 bg-white text-black" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
                                       {tableHeader[1] || "पाठ / घटक"}
                                     </th>
-                                    <th className="border border-slate-700 p-2.5 text-center font-black w-56" style={{ backgroundColor: "#0f172a", color: "#fef08a" }}>
+                                    <th className="border border-slate-400 p-2.5 text-center font-black w-56 bg-white text-black" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
                                       {tableHeader[2] || "अध्ययन निष्पत्ती"}
                                     </th>
-                                    <th className="border border-slate-700 p-2.5 text-left font-black min-w-[220px]" style={{ backgroundColor: "#0f172a", color: "#fef08a" }}>
+                                    <th className="border border-slate-400 p-2.5 text-left font-black min-w-[220px] bg-white text-black" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
                                       {tableHeader[3] || "प्रश्न"}
                                     </th>
-                                    <th className="border border-slate-700 p-2.5 text-left font-black min-w-[200px]" style={{ backgroundColor: "#0f172a", color: "#fef08a" }}>
+                                    <th className="border border-slate-400 p-2.5 text-left font-black min-w-[200px] bg-white text-black" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
                                       {tableHeader[4] || "उत्तर"}
                                     </th>
-                                    <th className="border border-slate-700 p-2 text-center font-black w-24" style={{ backgroundColor: "#0f172a", color: "#fef08a" }}>
+                                    <th className="border border-slate-400 p-2 text-center font-black w-24 bg-white text-black" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
                                       {tableHeader[5] || "मूल्यमापन"}
                                     </th>
-                                    <th className="border border-slate-700 p-2 text-center font-black w-24" style={{ backgroundColor: "#0f172a", color: "#fef08a" }}>
+                                    <th className="border border-slate-400 p-2 text-center font-black w-24 bg-white text-black" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
                                       {tableHeader[6] || "प्रकार"}
                                     </th>
-                                    <th className="border border-slate-700 p-2 text-center font-black w-24" style={{ backgroundColor: "#0f172a", color: "#fef08a" }}>
+                                    <th className="border border-slate-400 p-2 text-center font-black w-24 bg-white text-black" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
                                       {tableHeader[7] || "उद्दिष्ट"}
                                     </th>
                                   </>
@@ -2881,8 +2980,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                   tableHeader.map((h, colIndex) => (
                                     <th
                                       key={colIndex}
-                                      className="border border-slate-700 p-2.5 text-center font-black align-top whitespace-pre-wrap min-w-[110px]"
-                                      style={{ backgroundColor: "#0f172a", color: "#fef08a" }}
+                                      className="border border-slate-400 p-2.5 text-center font-black align-top whitespace-pre-wrap min-w-[110px] bg-white text-black"
+                                      style={{ backgroundColor: "#ffffff", color: "#000000" }}
                                     >
                                       {h || `स्तंभ ${colIndex + 1}`}
                                     </th>
@@ -2894,11 +2993,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               {isStandard8Col ? (
                                 filteredQuestions.length > 0 ? (
                                   filteredQuestions.map((q, idx) => {
-                                    const rowBg = idx % 2 === 0 ? "bg-white" : "bg-slate-50/50";
                                     return (
-                                      <tr key={idx} className={`${rowBg} hover:bg-amber-50/40 transition-colors`}>
+                                      <tr key={idx} className="bg-white hover:bg-slate-50 transition-colors">
                                         {/* 1. अनुक्रमांक */}
-                                        <td className="border border-slate-300 p-2 text-center font-extrabold text-slate-800 align-top">
+                                        <td className="border border-slate-300 p-2 text-center font-extrabold text-black align-top bg-white">
                                           {q.srNo}
                                         </td>
 
@@ -2906,10 +3004,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                         {lessonSpans[idx]?.isStart ? (
                                           <td
                                             rowSpan={lessonSpans[idx].span}
-                                            className="border border-slate-300 p-3 font-black text-indigo-950 bg-indigo-50/40 align-middle text-center text-xs sm:text-sm leading-relaxed"
+                                            className="border border-slate-300 p-3 font-black text-black bg-white align-middle text-center text-xs sm:text-sm leading-relaxed"
                                             style={{ verticalAlign: "middle", textAlign: "center" }}
                                           >
-                                            <div className="flex flex-col items-center justify-center text-center p-2 mx-auto font-black text-indigo-950">
+                                            <div className="flex flex-col items-center justify-center text-center p-2 mx-auto font-black text-black">
                                               {q.lesson}
                                             </div>
                                           </td>
@@ -2919,75 +3017,55 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                         {outcomeSpans[idx]?.isStart ? (
                                           <td
                                             rowSpan={outcomeSpans[idx].span}
-                                            className="border border-slate-300 p-3 font-semibold text-slate-700 bg-slate-50/40 align-middle text-center text-xs leading-relaxed"
+                                            className="border border-slate-300 p-3 font-semibold text-black bg-white align-middle text-center text-xs leading-relaxed"
                                             style={{ verticalAlign: "middle", textAlign: "center" }}
                                           >
-                                            <div className="flex flex-col items-center justify-center text-center p-2 mx-auto font-semibold text-slate-700">
+                                            <div className="flex flex-col items-center justify-center text-center p-2 mx-auto font-semibold text-black">
                                               {q.outcome || "—"}
                                             </div>
                                           </td>
                                         ) : null}
 
                                         {/* 4. प्रश्न */}
-                                        <td className="border border-slate-300 p-2.5 text-slate-950 font-bold leading-relaxed align-top">
+                                        <td className="border border-slate-300 p-2.5 text-black font-bold leading-relaxed align-top bg-white">
                                           {q.question}
                                         </td>
 
                                         {/* 5. उत्तर */}
-                                        <td className="border border-slate-300 p-2.5 text-emerald-950 font-medium leading-relaxed bg-emerald-50/20 align-top">
+                                        <td className="border border-slate-300 p-2.5 text-black font-medium leading-relaxed bg-white align-top">
                                           {q.answer}
                                         </td>
 
                                         {/* 6. मूल्यमापन प्रकार */}
-                                        <td className="border border-slate-300 p-2 text-center align-top whitespace-nowrap">
-                                          {q.evalType.includes("तोंडी") ? (
-                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-sky-100 text-sky-800 border border-sky-300">
-                                              तोंडी
-                                            </span>
-                                          ) : q.evalType.includes("लेखी") ? (
-                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-300">
-                                              लेखी
-                                            </span>
-                                          ) : q.evalType.includes("प्रात्यक्षिक") ? (
-                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                              प्रात्यक्षिक
+                                        <td className="border border-slate-300 p-2 text-center align-top whitespace-nowrap bg-white">
+                                          {q.evalType ? (
+                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-black border border-slate-400 inline-block">
+                                              {q.evalType.includes("तोंडी") ? "तोंडी" : q.evalType.includes("लेखी") ? "लेखी" : q.evalType.includes("प्रात्यक्षिक") ? "प्रात्यक्षिक" : q.evalType}
                                             </span>
                                           ) : (
-                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-600">
-                                              {q.evalType || "—"}
-                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-500">—</span>
                                           )}
                                         </td>
 
                                         {/* 7. प्रश्नाचा प्रकार */}
-                                        <td className="border border-slate-300 p-2 text-center align-top whitespace-nowrap">
-                                          {q.qType.includes("वस्तुनिष्ठ") ? (
-                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
-                                              वस्तुनिष्ठ
-                                            </span>
-                                          ) : q.qType.includes("लघुत्तरी") ? (
-                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-800 border border-indigo-300">
-                                              लघुत्तरी
-                                            </span>
-                                          ) : q.qType.includes("दीर्घोत्तरी") ? (
-                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
-                                              दीर्घोत्तरी
+                                        <td className="border border-slate-300 p-2 text-center align-top whitespace-nowrap bg-white">
+                                          {q.qType ? (
+                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-black border border-slate-400 inline-block">
+                                              {q.qType.includes("वस्तुनिष्ठ") ? "वस्तुनिष्ठ" : q.qType.includes("लघुत्तरी") ? "लघुत्तरी" : q.qType.includes("दीर्घोत्तरी") ? "दीर्घोत्तरी" : q.qType}
                                             </span>
                                           ) : (
-                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-600">
-                                              {q.qType || "—"}
-                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-500">—</span>
                                           )}
                                         </td>
 
                                         {/* 8. उद्दिष्ट */}
-                                        <td className="border border-slate-300 p-2 text-center align-top whitespace-nowrap">
+                                        <td className="border border-slate-300 p-2 text-center align-top whitespace-nowrap bg-white">
                                           {q.objective ? (
-                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-800 border border-slate-300">
+                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-black border border-slate-400 inline-block">
                                               {q.objective}
                                             </span>
                                           ) : (
-                                            "—"
+                                            <span className="text-[10px] font-bold text-slate-500">—</span>
                                           )}
                                         </td>
                                       </tr>
@@ -2995,7 +3073,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                   })
                                 ) : (
                                   <tr>
-                                    <td colSpan={8} className="p-8 text-center text-slate-400 font-bold text-sm">
+                                    <td colSpan={8} className="p-8 text-center text-slate-400 font-bold text-sm bg-white">
                                       शोधानुसार किंवा निवडलेल्या पाठासाठी कोणताही प्रश्न सापडला नाही.
                                     </td>
                                   </tr>
@@ -3003,9 +3081,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               ) : (
                                 rawDataRows.length > 0 ? (
                                   rawDataRows.map((row, rowIndex) => (
-                                    <tr key={rowIndex} className={rowIndex % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
+                                    <tr key={rowIndex} className="bg-white">
                                       {row.map((cell, colIndex) => (
-                                        <td key={colIndex} className="border border-slate-300 p-2.5 align-top text-slate-900 leading-relaxed whitespace-pre-wrap min-w-[110px]">
+                                        <td key={colIndex} className="border border-slate-300 p-2.5 align-top text-black bg-white leading-relaxed whitespace-pre-wrap min-w-[110px]">
                                           {cell || ""}
                                         </td>
                                       ))}
@@ -3013,7 +3091,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                   ))
                                 ) : (
                                   <tr>
-                                    <td colSpan={tableHeader.length || 1} className="p-6 text-center text-slate-400 font-bold">
+                                    <td colSpan={tableHeader.length || 1} className="p-6 text-center text-slate-400 font-bold bg-white">
                                       या शीटमध्ये शोधानुसार कोणतीही नोंद सापडली नाही.
                                     </td>
                                   </tr>
@@ -3349,28 +3427,24 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           <div className="overflow-x-auto border border-slate-900 rounded-xl shadow-xs mb-4 pb-1">
                             <table className="w-full min-w-[900px] table-fixed border-collapse border border-slate-900 text-xs font-sans bg-white">
                               <colgroup>
-                                {isMonthly ? (
-                                  <>
-                                    <col style={{ width: "55px" }} />   {/* 0: दिवस */}
-                                    <col style={{ width: "95px" }} />   {/* 1: पाठ / घटक / उपघटक */}
-                                    <col style={{ width: "190px" }} />  {/* 2: अध्ययन निष्पत्ती */}
-                                    <col style={{ width: "125px" }} />  {/* 3: अध्ययन मुद्दे / पाठ्यांश उद्देश */}
-                                    <col style={{ width: "245px" }} />  {/* 4: अध्ययन अनुभवाचे स्वरूप */}
-                                    <col style={{ width: "95px" }} />   {/* 5: साधन तंत्रे */}
-                                    <col style={{ width: "95px" }} />   {/* 6: आवश्यक साहित्य */}
-                                    {isInlineEditing && <col style={{ width: "60px" }} />}
-                                  </>
-                                ) : (
-                                  <>
-                                    <col style={{ width: "80px" }} />
-                                    <col style={{ width: "60px" }} />
-                                    <col style={{ width: "80px" }} />
-                                    <col style={{ width: "80px" }} />
-                                    <col style={{ width: "500px" }} />
-                                    <col style={{ width: "100px" }} />
-                                    {isInlineEditing && <col style={{ width: "60px" }} />}
-                                  </>
-                                )}
+                                {isMonthly ? [
+                                  <col key="m0" style={{ width: "55px" }} />,
+                                  <col key="m1" style={{ width: "95px" }} />,
+                                  <col key="m2" style={{ width: "190px" }} />,
+                                  <col key="m3" style={{ width: "125px" }} />,
+                                  <col key="m4" style={{ width: "245px" }} />,
+                                  <col key="m5" style={{ width: "95px" }} />,
+                                  <col key="m6" style={{ width: "95px" }} />,
+                                  ...(isInlineEditing ? [<col key="mEdit" style={{ width: "60px" }} />] : [])
+                                ] : [
+                                  <col key="a0" style={{ width: "80px" }} />,
+                                  <col key="a1" style={{ width: "60px" }} />,
+                                  <col key="a2" style={{ width: "80px" }} />,
+                                  <col key="a3" style={{ width: "80px" }} />,
+                                  <col key="a4" style={{ width: "500px" }} />,
+                                  <col key="a5" style={{ width: "100px" }} />,
+                                  ...(isInlineEditing ? [<col key="aEdit" style={{ width: "60px" }} />] : [])
+                                ]}
                               </colgroup>
                               <thead>
                                 <tr className="bg-slate-100 text-slate-900 font-black text-center text-xs border-b border-slate-400">

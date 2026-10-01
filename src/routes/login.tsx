@@ -19,7 +19,12 @@ import {
   X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
 import {
   collection,
   query,
@@ -83,6 +88,7 @@ function UnifiedLoginPortal() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Forgot password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -97,13 +103,147 @@ function UnifiedLoginPortal() {
     clearUnlockedPinSections();
   }, []);
 
+  // Helper to find educator / account by Email, UDISE or USID across collections
+  const resolveEmailFromIdentifier = async (rawIdentifier: string): Promise<{ email: string; docRef?: any; data?: any }> => {
+    const cleanId = rawIdentifier.trim();
+    if (!cleanId) {
+      throw new Error(lang === "mr" ? "कृपया ईमेल आयडी किंवा UDISE कोड टाका." : "Please enter your Email or UDISE Code.");
+    }
+
+    if (cleanId.includes("@")) {
+      // Find document by email
+      try {
+        const qTeacherEmail = query(collection(db, "teachers"), where("email", "==", cleanId));
+        const snapTE = await getDocs(qTeacherEmail);
+        if (!snapTE.empty) {
+          return { email: cleanId, docRef: doc(db, "teachers", snapTE.docs[0].id), data: snapTE.docs[0].data() };
+        }
+        const qUserEmail = query(collection(db, "users"), where("email", "==", cleanId));
+        const snapUE = await getDocs(qUserEmail);
+        if (!snapUE.empty) {
+          return { email: cleanId, docRef: doc(db, "users", snapUE.docs[0].id), data: snapUE.docs[0].data() };
+        }
+      } catch (_e) {}
+      return { email: cleanId };
+    }
+
+    // It's a UDISE code or USID - search systematically
+    // 1. Query 'teachers' by udise (string)
+    try {
+      const qTeacher = query(collection(db, "teachers"), where("udise", "==", cleanId));
+      const snapTeacher = await getDocs(qTeacher);
+      if (!snapTeacher.empty && snapTeacher.docs[0].data()?.email) {
+        return {
+          email: snapTeacher.docs[0].data().email.trim(),
+          docRef: doc(db, "teachers", snapTeacher.docs[0].id),
+          data: snapTeacher.docs[0].data()
+        };
+      }
+    } catch (_e) {}
+
+    // 2. Query 'teachers' by udise (numeric) if numeric
+    if (!isNaN(Number(cleanId))) {
+      try {
+        const qTeacherNum = query(collection(db, "teachers"), where("udise", "==", Number(cleanId)));
+        const snapTeacherNum = await getDocs(qTeacherNum);
+        if (!snapTeacherNum.empty && snapTeacherNum.docs[0].data()?.email) {
+          return {
+            email: snapTeacherNum.docs[0].data().email.trim(),
+            docRef: doc(db, "teachers", snapTeacherNum.docs[0].id),
+            data: snapTeacherNum.docs[0].data()
+          };
+        }
+      } catch (_e) {}
+    }
+
+    // 3. Query 'users' by udise (string)
+    try {
+      const qUserUdise = query(collection(db, "users"), where("udise", "==", cleanId));
+      const snapUserUdise = await getDocs(qUserUdise);
+      if (!snapUserUdise.empty && snapUserUdise.docs[0].data()?.email) {
+        return {
+          email: snapUserUdise.docs[0].data().email.trim(),
+          docRef: doc(db, "users", snapUserUdise.docs[0].id),
+          data: snapUserUdise.docs[0].data()
+        };
+      }
+    } catch (_e) {}
+
+    // 4. Query 'users' by udise (numeric)
+    if (!isNaN(Number(cleanId))) {
+      try {
+        const qUserNum = query(collection(db, "users"), where("udise", "==", Number(cleanId)));
+        const snapUserNum = await getDocs(qUserNum);
+        if (!snapUserNum.empty && snapUserNum.docs[0].data()?.email) {
+          return {
+            email: snapUserNum.docs[0].data().email.trim(),
+            docRef: doc(db, "users", snapUserNum.docs[0].id),
+            data: snapUserNum.docs[0].data()
+          };
+        }
+      } catch (_e) {}
+    }
+
+    // 5. Query 'teachers' by udiseNumber
+    try {
+      const qTeacherNumField = query(collection(db, "teachers"), where("udiseNumber", "==", cleanId));
+      const snapUdiseNum = await getDocs(qTeacherNumField);
+      if (!snapUdiseNum.empty && snapUdiseNum.docs[0].data()?.email) {
+        return {
+          email: snapUdiseNum.docs[0].data().email.trim(),
+          docRef: doc(db, "teachers", snapUdiseNum.docs[0].id),
+          data: snapUdiseNum.docs[0].data()
+        };
+      }
+    } catch (_e) {}
+
+    // 6. Query 'users' by usid (student or user identifier)
+    try {
+      const qUsid = query(collection(db, "users"), where("usid", "==", cleanId));
+      const snapUsid = await getDocs(qUsid);
+      if (!snapUsid.empty && snapUsid.docs[0].data()?.email) {
+        return {
+          email: snapUsid.docs[0].data().email.trim(),
+          docRef: doc(db, "users", snapUsid.docs[0].id),
+          data: snapUsid.docs[0].data()
+        };
+      }
+    } catch (_e) {}
+
+    // 7. Check direct doc ID in 'teachers' or 'users'
+    try {
+      const tDoc = await getDoc(doc(db, "teachers", cleanId));
+      if (tDoc.exists() && tDoc.data()?.email) {
+        return {
+          email: tDoc.data().email.trim(),
+          docRef: doc(db, "teachers", cleanId),
+          data: tDoc.data()
+        };
+      }
+      const uDoc = await getDoc(doc(db, "users", cleanId));
+      if (uDoc.exists() && uDoc.data()?.email) {
+        return {
+          email: uDoc.data().email.trim(),
+          docRef: doc(db, "users", cleanId),
+          data: uDoc.data()
+        };
+      }
+    } catch (_e) {}
+
+    throw new Error(
+      lang === "mr"
+        ? "दिलेल्या UDISE कोडशी संबंधित कोणतेही खाते आढळले नाही. कृपया UDISE कोड तपासा किंवा नवीन नोंदणी करा."
+        : "No educator record found with this UDISE code. Please verify your UDISE code or register first."
+    );
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     clearUnlockedPinSections();
     try {
       if (activeRole === "admin") {
-        if (identifier === "superadmin123@gmail.com" && password === "123456") {
+        if (identifier.trim() === "superadmin123@gmail.com" && password === "123456") {
           sessionStorage.setItem("is_super_admin", "true");
           toast.success("Super Admin Authenticated.");
           window.location.href = "/admin";
@@ -113,24 +253,42 @@ function UnifiedLoginPortal() {
         }
       }
 
-      let email = identifier;
+      const { email, data: resolvedData } = await resolveEmailFromIdentifier(identifier);
 
-      if (!identifier.includes("@")) {
-        const q = query(
-          collection(db, "teachers"),
-          where("udise", "==", identifier),
+      let userCredential;
+      try {
+        userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password,
         );
-        const snapshot = await getDocs(q);
-        if (snapshot.empty)
-          throw new Error("No educator record found with this UDISE code.");
-        email = snapshot.docs[0].data().email;
+      } catch (authErr: any) {
+        console.error("Firebase auth error:", authErr);
+        if (
+          authErr?.code === "auth/invalid-credential" ||
+          authErr?.code === "auth/wrong-password"
+        ) {
+          throw new Error(
+            lang === "mr"
+              ? "पासवर्ड चुकीचा आहे. कृपया योग्य पासवर्ड प्रविष्ट करा किंवा 'Sign in with Google' वापरा."
+              : "Incorrect password for this account. If you registered via Google, please click 'Sign in with Google'."
+          );
+        } else if (authErr?.code === "auth/user-not-found") {
+          throw new Error(
+            lang === "mr"
+              ? "या खात्याची नोंदणी सापडली नाही. कृपया नवीन नोंदणी करा."
+              : "Account not registered in authentication system. Please register first."
+          );
+        } else if (authErr?.code === "auth/too-many-requests") {
+          throw new Error(
+            lang === "mr"
+              ? "खूप वेळा चुकीचा प्रयत्न केला आहे. कृपया थोड्या वेळाने प्रयत्न करा किंवा पासवर्ड रिसेट करा."
+              : "Too many failed attempts. Please try again later or reset your password."
+          );
+        }
+        throw authErr;
       }
 
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password,
-      );
       const user = userCredential.user;
 
       let userDoc = await getDoc(doc(db, "teachers", user.uid));
@@ -138,19 +296,21 @@ function UnifiedLoginPortal() {
         userDoc = await getDoc(doc(db, "users", user.uid));
       }
 
-      const userData = userDoc && userDoc.exists() ? userDoc.data() : {};
+      const userData = userDoc && userDoc.exists() ? userDoc.data() : (resolvedData || {});
 
-      if (userData.udise) {
-        localStorage.setItem("teacher_udise", userData.udise);
-        localStorage.setItem("sqaaf_teacher_profile", JSON.stringify({
-          fullName: userData.fullName || user.displayName || "Educator",
-          email: userData.email || user.email,
-          udise: userData.udise,
-          schoolName: userData.schoolName || "",
-          address: userData.address || "",
-          role: "teacher"
-        }));
+      const effectiveUdise = userData.udise || userData.udiseNumber || (identifier.includes("@") ? "" : identifier.trim());
+
+      if (effectiveUdise) {
+        localStorage.setItem("teacher_udise", effectiveUdise);
       }
+      localStorage.setItem("sqaaf_teacher_profile", JSON.stringify({
+        fullName: userData.fullName || user.displayName || "Educator",
+        email: userData.email || user.email || email,
+        udise: effectiveUdise,
+        schoolName: userData.schoolName || "",
+        address: userData.address || "",
+        role: "teacher"
+      }));
 
       // Log every login to Firestore for admin tracking
       try {
@@ -158,7 +318,7 @@ function UnifiedLoginPortal() {
           uid: user.uid,
           email: user.email || email,
           fullName: userData.fullName || user.displayName || "Unknown",
-          udise: userData.udise || "",
+          udise: effectiveUdise || "",
           schoolName: userData.schoolName || "",
           phone: userData.phone || userData.mobile || "",
           lastLoginAt: serverTimestamp(),
@@ -186,6 +346,155 @@ function UnifiedLoginPortal() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    clearUnlockedPinSections();
+    try {
+      if (!auth) {
+        throw new Error("Authentication service is temporarily unavailable.");
+      }
+
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      if (!user) {
+        throw new Error("Google authentication failed. No user record returned.");
+      }
+
+      // Check existing teacher or user record
+      let teacherDoc = await getDoc(doc(db, "teachers", user.uid));
+      let userDoc = await getDoc(doc(db, "users", user.uid));
+
+      let userData: any = teacherDoc.exists()
+        ? teacherDoc.data()
+        : userDoc.exists()
+          ? userDoc.data()
+          : null;
+
+      // If not found by UID, check if an existing record has this email
+      if (!userData && user.email) {
+        try {
+          const qTeacher = query(
+            collection(db, "teachers"),
+            where("email", "==", user.email)
+          );
+          const snapTeacher = await getDocs(qTeacher);
+          if (!snapTeacher.empty) {
+            userData = snapTeacher.docs[0].data();
+          } else {
+            const qUser = query(
+              collection(db, "users"),
+              where("email", "==", user.email)
+            );
+            const snapUser = await getDocs(qUser);
+            if (!snapUser.empty) {
+              userData = snapUser.docs[0].data();
+            }
+          }
+        } catch (_lookupErr) {
+          console.warn("Secondary email lookup note:", _lookupErr);
+        }
+      }
+
+      // If user does not exist yet (brand new signup via Google), create profile
+      if (!userData) {
+        userData = {
+          fullName: user.displayName || "Educator",
+          email: user.email || "",
+          udise: "",
+          schoolName: "",
+          address: "",
+          state: "Maharashtra",
+          board: "Maharashtra ZP Teacher",
+          role: "teacher",
+          createdAt: new Date().toISOString(),
+          photoURL: user.photoURL || "",
+          verified: false,
+        };
+
+        // Persist to teachers and users
+        try {
+          await setDoc(doc(db, "teachers", user.uid), userData, { merge: true });
+          await setDoc(doc(db, "users", user.uid), userData, { merge: true });
+        } catch (_docErr) {
+          console.warn("Firestore user creation note:", _docErr);
+        }
+      } else {
+        // Ensure profile has role and displayName if missing
+        if (!userData.role) userData.role = "teacher";
+        if (!userData.fullName && user.displayName) userData.fullName = user.displayName;
+      }
+
+      // Set localStorage for app-wide persistence
+      if (userData.udise) {
+        localStorage.setItem("teacher_udise", userData.udise);
+      }
+      localStorage.setItem(
+        "sqaaf_teacher_profile",
+        JSON.stringify({
+          fullName: userData.fullName || user.displayName || "Educator",
+          email: userData.email || user.email || "",
+          udise: userData.udise || "",
+          schoolName: userData.schoolName || "",
+          address: userData.address || "",
+          role: userData.role || "teacher",
+        })
+      );
+
+      // Log login session for admin monitoring
+      try {
+        await setDoc(
+          doc(db, "logged_users", user.uid),
+          {
+            uid: user.uid,
+            email: user.email || "",
+            fullName: userData.fullName || user.displayName || "Educator",
+            udise: userData.udise || "",
+            schoolName: userData.schoolName || "",
+            phone: userData.phone || user.phoneNumber || "",
+            lastLoginAt: serverTimestamp(),
+            loginCount: (userData.loginCount || 0) + 1,
+            role: userData.role || "teacher",
+            provider: "google",
+          },
+          { merge: true }
+        );
+      } catch (_e) {
+        // Non-critical
+      }
+
+      toast.success(
+        lang === "mr"
+          ? "Google द्वारे यशस्वीरित्या प्रवेश केला!"
+          : "Signed in with Google successfully!"
+      );
+
+      if (redirect) {
+        window.location.href = redirect;
+      } else {
+        window.location.href = "/teacher";
+      }
+    } catch (error: any) {
+      if (
+        error?.code === "auth/popup-closed-by-user" ||
+        error?.code === "auth/cancelled-popup-request"
+      ) {
+        return;
+      }
+      console.error("Google sign in error:", error);
+      toast.error(
+        error.message ||
+          (lang === "mr"
+            ? "Google प्रमाणीकरण अयशस्वी झाले. कृपया पुन्हा प्रयत्न करा."
+            : "Google sign-in failed. Please try again.")
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanInput = forgotInput.trim();
@@ -201,56 +510,7 @@ function UnifiedLoginPortal() {
     setForgotSuccess(false);
 
     try {
-      let resolvedEmail = cleanInput;
-      let targetDocRef: any = null;
-
-      // If input is UDISE or USID (no @ symbol)
-      if (!cleanInput.includes("@")) {
-        const qTeacher = query(
-          collection(db, "teachers"),
-          where("udise", "==", cleanInput)
-        );
-        const snapTeacher = await getDocs(qTeacher);
-
-        if (!snapTeacher.empty) {
-          resolvedEmail = snapTeacher.docs[0].data().email;
-          targetDocRef = doc(db, "teachers", snapTeacher.docs[0].id);
-        } else {
-          const qUser = query(
-            collection(db, "users"),
-            where("usid", "==", cleanInput)
-          );
-          const snapUser = await getDocs(qUser);
-          if (!snapUser.empty) {
-            resolvedEmail = snapUser.docs[0].data().email;
-            targetDocRef = doc(db, "users", snapUser.docs[0].id);
-          } else {
-            throw new Error(
-              lang === "mr"
-                ? "दिलेल्या UDISE / USID कोडशी संबंधित खाते आढळले नाही."
-                : "No account record found for this identifier code."
-            );
-          }
-        }
-      } else {
-        const qTeacherEmail = query(
-          collection(db, "teachers"),
-          where("email", "==", cleanInput)
-        );
-        const snapTE = await getDocs(qTeacherEmail);
-        if (!snapTE.empty) {
-          targetDocRef = doc(db, "teachers", snapTE.docs[0].id);
-        } else {
-          const qUserEmail = query(
-            collection(db, "users"),
-            where("email", "==", cleanInput)
-          );
-          const snapUE = await getDocs(qUserEmail);
-          if (!snapUE.empty) {
-            targetDocRef = doc(db, "users", snapUE.docs[0].id);
-          }
-        }
-      }
+      const { email: resolvedEmail, docRef: targetDocRef } = await resolveEmailFromIdentifier(cleanInput);
 
       if (!resolvedEmail || !resolvedEmail.includes("@")) {
         throw new Error(
@@ -415,8 +675,9 @@ function UnifiedLoginPortal() {
 
                 {/* Submit Button */}
                 <button
-                  disabled={loading}
-                  className={`w-full h-14 bg-gradient-to-r ${roleConfig.color} text-white font-black rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 mt-6 uppercase text-xs tracking-[0.15em] relative group overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-0.5`}
+                  type="submit"
+                  disabled={loading || googleLoading}
+                  className={`w-full h-14 bg-gradient-to-r ${roleConfig.color} text-white font-black rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 mt-6 uppercase text-xs tracking-[0.15em] relative group overflow-hidden shadow-lg hover:shadow-xl hover:-translate-y-0.5 cursor-pointer`}
                 >
                   <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                   {loading ? (
@@ -425,6 +686,52 @@ function UnifiedLoginPortal() {
                     <>
                       {t.login_submit}{" "}
                       <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+
+                {/* Divider */}
+                <div className="flex items-center my-4 gap-3">
+                  <div className="flex-1 h-px bg-white/15" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    {t.login_or || "OR"}
+                  </span>
+                  <div className="flex-1 h-px bg-white/15" />
+                </div>
+
+                {/* Google Sign In / Sign Up Button */}
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading || googleLoading}
+                  className="w-full h-14 bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 text-white font-black rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 text-xs tracking-wider shadow-md hover:shadow-lg cursor-pointer group relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {googleLoading ? (
+                    <Loader2 className="size-5 animate-spin text-white" />
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                        <path
+                          fill="#4285F4"
+                          d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                        />
+                        <path
+                          fill="#34A853"
+                          d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                        />
+                        <path
+                          fill="#FBBC05"
+                          d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                        />
+                        <path
+                          fill="#EA4335"
+                          d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                        />
+                      </svg>
+                      <span className="font-black uppercase text-[11px] sm:text-xs tracking-wider">
+                        {t.login_google || "Sign in / Sign up with Google"}
+                      </span>
                     </>
                   )}
                 </button>

@@ -4,7 +4,6 @@ import {
   Edit3,
   ZoomIn,
   ZoomOut,
-  Maximize2,
   ChevronLeft,
   ChevronRight,
   Save,
@@ -15,9 +14,14 @@ import {
   Trash2,
   Loader2,
   AlertCircle,
-  CheckCircle2,
   FileText,
-  Move,
+  Building2,
+  Type,
+  Bold,
+  X,
+  Check,
+  Sparkles,
+  HelpCircle,
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import type {
@@ -80,6 +84,21 @@ export function DocumentEditorViewer({
   const [zoomScale, setZoomScale] = useState<number>(1);
   const [currentPageNum, setCurrentPageNum] = useState<number>(1);
   const [activeEditingBlockId, setActiveEditingBlockId] = useState<string | null>(null);
+
+  // Quick School Header Customizer Modal
+  const [showSchoolHeaderModal, setShowSchoolHeaderModal] = useState<boolean>(false);
+  const [schoolNameInput, setSchoolNameInput] = useState<string>(
+    userName ? `जि. प. प्राथमिक शाळा (${userName})` : "जिल्हा परिषद प्राथमिक शाळा"
+  );
+  const [kendraInput, setKendraInput] = useState<string>("केंद्र शाळा");
+  const [studentNameInput, setStudentNameInput] = useState<string>(
+    "विद्यार्थ्याचे नाव: _________________________"
+  );
+  const [rollNoInput, setRollNoInput] = useState<string>("हजेरी क्र: ____");
+  const [examDateInput, setExamDateInput] = useState<string>(
+    new Date().toLocaleDateString("mr-IN")
+  );
+  const [totalMarksInput, setTotalMarksInput] = useState<string>("");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -178,7 +197,6 @@ export function DocumentEditorViewer({
           return {
             ...b,
             text: newText,
-            isCustom: b.isCustom || true,
             isEdited: true,
           } as any;
         }
@@ -189,18 +207,43 @@ export function DocumentEditorViewer({
     });
   };
 
-  // Add custom overlay text block
-  const handleAddCustomBlock = (pageIndex: number) => {
+  // Update specific formatting property of a block (font size, weight, color)
+  const handleUpdateBlockProp = (
+    pageIndex: number,
+    blockId: string,
+    updates: Partial<DocumentTextBlock>
+  ) => {
+    setPagesState((prevPages) => {
+      const nextPages = [...prevPages];
+      const page = { ...nextPages[pageIndex] };
+      page.textBlocks = page.textBlocks.map((b) => {
+        if (b.id === blockId) {
+          return {
+            ...b,
+            ...updates,
+            isEdited: true,
+          } as any;
+        }
+        return b;
+      });
+      nextPages[pageIndex] = page;
+      return nextPages;
+    });
+  };
+
+  // Add custom overlay text block at coordinate or default
+  const handleAddCustomBlockAt = (pageIndex: number, x: number = 10, y: number = 15) => {
+    const newId = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
     setPagesState((prevPages) => {
       const nextPages = [...prevPages];
       const page = { ...nextPages[pageIndex] };
       const newBlock: DocumentTextBlock = {
-        id: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-        text: "येथे नवीन मजकूर प्रविष्ट करा",
-        x: 10,
-        y: 15,
-        width: 40,
-        height: 5,
+        id: newId,
+        text: "येथे मजकूर लिहा",
+        x,
+        y,
+        width: 45,
+        height: 4.5,
         fontSize: 14,
         fontFamily: "Noto Sans Devanagari, sans-serif",
         fontWeight: "600",
@@ -208,14 +251,16 @@ export function DocumentEditorViewer({
         editable: true,
         isCustom: true,
       };
+      (newBlock as any).isEdited = true;
       page.textBlocks = [...page.textBlocks, newBlock];
       nextPages[pageIndex] = page;
       return nextPages;
     });
+    setActiveEditingBlockId(newId);
     toast.success("नवीन मजकूर ब्लॉक जोडला गेला!");
   };
 
-  // Delete text block
+  // Delete text block (custom blocks or revert edited blocks)
   const handleDeleteBlock = (pageIndex: number, blockId: string) => {
     setPagesState((prevPages) => {
       const nextPages = [...prevPages];
@@ -227,6 +272,96 @@ export function DocumentEditorViewer({
     if (activeEditingBlockId === blockId) {
       setActiveEditingBlockId(null);
     }
+  };
+
+  // Revert a single block back to its original admin text
+  const handleRevertBlock = (pageIndex: number, blockId: string) => {
+    if (!docModel) return;
+    const originalPage = docModel.pages[pageIndex];
+    const origBlock = originalPage?.textBlocks.find((b) => b.id === blockId);
+
+    setPagesState((prevPages) => {
+      const nextPages = [...prevPages];
+      const page = { ...nextPages[pageIndex] };
+      if (origBlock) {
+        page.textBlocks = page.textBlocks.map((b) =>
+          b.id === blockId ? { ...origBlock, isEdited: false } : b
+        );
+      } else {
+        page.textBlocks = page.textBlocks.filter((b) => b.id !== blockId);
+      }
+      nextPages[pageIndex] = page;
+      return nextPages;
+    });
+    setActiveEditingBlockId(null);
+    toast.info("मजकूर मूळ स्थितीत परत आणला.");
+  };
+
+  // Apply School Header quickly to Page 1
+  const handleApplySchoolHeader = () => {
+    if (pagesState.length === 0) return;
+    const pageIdx = 0;
+    const headerId1 = "custom_school_name_header";
+    const headerId2 = "custom_student_info_header";
+
+    const line1Text = kendraInput.trim()
+      ? `${schoolNameInput.trim()} • केंद्र: ${kendraInput.trim()}`
+      : schoolNameInput.trim();
+
+    const line2Parts: string[] = [];
+    if (studentNameInput.trim()) line2Parts.push(studentNameInput.trim());
+    if (rollNoInput.trim()) line2Parts.push(rollNoInput.trim());
+    if (examDateInput.trim()) line2Parts.push(`दिनांक: ${examDateInput.trim()}`);
+    if (totalMarksInput.trim()) line2Parts.push(`एकूण गुण: ${totalMarksInput.trim()}`);
+    const line2Text = line2Parts.join("   |   ");
+
+    setPagesState((prevPages) => {
+      const nextPages = [...prevPages];
+      const page = { ...nextPages[pageIdx] };
+      const otherBlocks = page.textBlocks.filter(
+        (b) => b.id !== headerId1 && b.id !== headerId2
+      );
+
+      const block1: DocumentTextBlock = {
+        id: headerId1,
+        text: line1Text,
+        x: 4,
+        y: 2,
+        width: 92,
+        height: 4.5,
+        fontSize: 16,
+        fontWeight: "800",
+        color: "#0f172a",
+        fontFamily: "Noto Sans Devanagari, sans-serif",
+        editable: true,
+        isCustom: true,
+      };
+      (block1 as any).isEdited = true;
+
+      const block2: DocumentTextBlock = {
+        id: headerId2,
+        text: line2Text,
+        x: 4,
+        y: 6.8,
+        width: 92,
+        height: 3.8,
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#1e293b",
+        fontFamily: "Noto Sans Devanagari, sans-serif",
+        editable: true,
+        isCustom: true,
+      };
+      (block2 as any).isEdited = true;
+
+      page.textBlocks = [block1, block2, ...otherBlocks];
+      nextPages[pageIdx] = page;
+      return nextPages;
+    });
+
+    setShowSchoolHeaderModal(false);
+    setMode("edit");
+    toast.success("शाळेचे नाव व तपशील पहिल्या पानावर लागू झाले!");
   };
 
   // Save Edits (User specific)
@@ -334,7 +469,7 @@ export function DocumentEditorViewer({
             : "गृहपाठ लोड होत आहे..."}
         </h3>
         <p className="text-xs text-slate-500 mt-1 max-w-sm">
-          मूळ डिझाइन, चित्रे व फॉन्ट अचूकतेने तयार केले जात आहेत.
+          मूळ डिझाइन, चित्रे व फॉन्ट अचूकतेने तयार केले जात आहेत. (₹0 AI Cost)
         </p>
       </div>
     );
@@ -414,7 +549,10 @@ export function DocumentEditorViewer({
           {canEdit && (
             <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
               <button
-                onClick={() => setMode("view")}
+                onClick={() => {
+                  setMode("view");
+                  setActiveEditingBlockId(null);
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   mode === "view"
                     ? "bg-indigo-600 text-white shadow-sm"
@@ -436,6 +574,18 @@ export function DocumentEditorViewer({
                 <span>संपादित करा (Edit)</span>
               </button>
             </div>
+          )}
+
+          {/* School Header Quick Customizer Button */}
+          {canEdit && (
+            <button
+              onClick={() => setShowSchoolHeaderModal(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              title="शाळेचे नाव व तपशील बदला"
+            >
+              <Building2 className="size-3.5 text-blue-400" />
+              <span className="hidden md:inline">शाळा तपशील (Header)</span>
+            </button>
           )}
 
           {/* Zoom Buttons */}
@@ -511,7 +661,7 @@ export function DocumentEditorViewer({
                 title="मूळ स्वरूपात परत आणा (Reset to original admin document)"
               >
                 <RotateCcw className="size-3.5" />
-                <span className="hidden sm:inline">मूळ कागदपत्र (Reset)</span>
+                <span className="hidden sm:inline">मूळ प्रत (Reset)</span>
               </button>
             )}
 
@@ -542,20 +692,22 @@ export function DocumentEditorViewer({
 
       {/* Mode Sub-banner info */}
       {mode === "edit" && (
-        <div className="bg-amber-600/15 border-b border-amber-500/30 px-6 py-2 flex items-center justify-between text-xs text-amber-200">
+        <div className="bg-amber-600/15 border-b border-amber-500/30 px-6 py-2.5 flex items-center justify-between text-xs text-amber-200 flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <Edit3 className="size-3.5 shrink-0 text-amber-400" />
+            <Edit3 className="size-4 shrink-0 text-amber-400" />
             <span>
-              <strong>संपादन पद्धती (Edit Mode):</strong> मजकुरावर क्लिक करून बदल करा. मूळ डिझाइन व चित्रे सुरक्षित राहतील.
+              <strong>संपादन पद्धती (Edit Mode):</strong> कोणत्याही मजकुरावर क्लिक करून बदल करा, किंवा कागदावर कुठेही क्लिक करून नवीन मजकूर जोडा. मूळ चित्रे व डिझाइन १००% सुरक्षित राहतात.
             </span>
           </div>
-          <button
-            onClick={() => handleAddCustomBlock(currentPageNum - 1)}
-            className="flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold transition-all shadow-sm shrink-0 cursor-pointer"
-          >
-            <Plus className="size-3" />
-            <span>मजकूर जोडा (+ Add Text)</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleAddCustomBlockAt(currentPageNum - 1, 10, 20)}
+              className="flex items-center gap-1 px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold transition-all shadow-sm shrink-0 cursor-pointer"
+            >
+              <Plus className="size-3.5" />
+              <span>मजकूर जोडा (+ Add Text)</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -566,7 +718,6 @@ export function DocumentEditorViewer({
       >
         {pagesState.map((page, pageIdx) => {
           const isLandscape = page.width > page.height;
-          // Calculate responsive display dimensions based on zoomScale
           const baseWidth = isLandscape ? 900 : 720;
           const displayWidth = Math.round(baseWidth * zoomScale);
           const displayHeight = Math.round((page.height / page.width) * displayWidth);
@@ -578,13 +729,29 @@ export function DocumentEditorViewer({
                 if (el) pageRefs.current.set(page.pageNumber, el);
                 else pageRefs.current.delete(page.pageNumber);
               }}
-              className="relative bg-white shadow-2xl rounded-xl overflow-hidden transition-all select-text"
+              onClick={(e) => {
+                // In edit mode: clicking empty page space creates a new text block at that coordinate
+                if (mode !== "edit") return;
+                if ((e.target as HTMLElement).closest(".doc-text-block-item")) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const clickX = ((e.clientX - rect.left) / rect.width) * 100;
+                const clickY = ((e.clientY - rect.top) / rect.height) * 100;
+                handleAddCustomBlockAt(
+                  pageIdx,
+                  Math.max(2, Math.min(85, Math.round(clickX))),
+                  Math.max(1, Math.min(94, Math.round(clickY)))
+                );
+              }}
+              className={`relative bg-white shadow-2xl rounded-xl overflow-hidden transition-all select-text ${
+                mode === "edit" ? "cursor-crosshair ring-2 ring-amber-500/20" : ""
+              }`}
               style={{
                 width: `${displayWidth}px`,
                 height: `${displayHeight}px`,
                 minWidth: `${displayWidth}px`,
                 minHeight: `${displayHeight}px`,
               }}
+              title={mode === "edit" ? "नवीन मजकूर जोडण्यासाठी कुठेही क्लिक करा" : undefined}
             >
               {page.backgroundUrl ? (
                 <img
@@ -596,7 +763,7 @@ export function DocumentEditorViewer({
                 <div className="absolute inset-0 bg-white flex flex-col p-6 pointer-events-none select-none">
                   <div className="border-b-2 border-amber-300 pb-2 mb-4 flex items-center justify-between">
                     <span className="text-xs font-bold text-amber-800">
-                      📝 दैनिक स्वाध्याय कार्यपत्रिका (Daily Homework Worksheet)
+                      📝 {title || "दैनिक स्वाध्याय कार्यपत्रिका"}
                     </span>
                     <span className="text-xs font-semibold text-slate-400">
                       पृष्ठ {page.pageNumber}
@@ -611,98 +778,196 @@ export function DocumentEditorViewer({
               )}
 
               {/* Text Overlays Layer */}
-              <div className="absolute inset-0 w-full h-full z-10">
+              <div className="absolute inset-0 w-full h-full z-10 pointer-events-auto">
                 {page.textBlocks.map((block) => {
                   const isEditing = activeEditingBlockId === block.id && mode === "edit";
-                  const isModified = block.isCustom || (block as any).isEdited;
+                  const isModified = Boolean(block.isCustom || (block as any).isEdited);
+
+                  // FIX FOR DOUBLE / BLURRY TEXT:
+                  // In view mode, if the page has an image background, unedited blocks already exist
+                  // in the background image with 100% sharpness. Do NOT render an overlay span over it!
+                  if (mode === "view" && page.backgroundUrl && !isModified) {
+                    return null;
+                  }
 
                   return (
                     <div
                       key={block.id}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (mode === "edit") {
                           setActiveEditingBlockId(block.id);
                         }
                       }}
-                      className={`absolute transition-all ${
+                      className={`doc-text-block-item absolute transition-all ${
                         mode === "edit"
-                          ? "cursor-text border hover:border-amber-500/80 hover:bg-amber-100/30"
+                          ? isEditing
+                            ? "border-2 border-indigo-600 bg-white shadow-2xl rounded-lg ring-4 ring-indigo-500/20 z-40 p-2"
+                            : isModified
+                            ? "border border-amber-400/90 bg-white hover:border-amber-600 shadow-xs rounded cursor-pointer p-0.5"
+                            : "border border-dashed border-indigo-300/80 hover:border-amber-500 hover:bg-amber-100/40 bg-indigo-50/15 rounded cursor-pointer p-0.5"
+                          : isModified
+                          ? "bg-white z-20"
                           : ""
-                      } ${
-                        isEditing
-                          ? "border-2 border-indigo-600 bg-white/95 shadow-lg rounded-md ring-2 ring-indigo-400/40 z-30"
-                          : isModified && mode === "edit"
-                          ? "border-amber-400 bg-amber-50/70 rounded"
-                          : "border-transparent"
                       }`}
                       style={{
                         left: `${block.x}%`,
                         top: `${block.y}%`,
                         width: isEditing ? "auto" : `${block.width}%`,
                         minWidth: "40px",
-                        maxWidth: "95%",
-                        // Adjust font size proportionally to zoom
-                        fontSize: `${Math.max(10, Math.round(block.fontSize * zoomScale * 0.85))}px`,
+                        maxWidth: "96%",
+                        fontSize: `${Math.max(10, Math.round(block.fontSize * zoomScale * 0.88))}px`,
                         fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif",
                         fontWeight: block.fontWeight || "600",
                         color: block.color || "#0f172a",
-                        lineHeight: 1.25,
-                        padding: isEditing ? "4px 8px" : "1px 2px",
+                        lineHeight: 1.3,
+                        // When modified, solid white backing with slight shadow completely covers original underlying text
                         backgroundColor:
-                          isModified || isEditing ? "rgba(255, 255, 255, 0.95)" : "transparent",
+                          isModified || isEditing ? "#ffffff" : "transparent",
+                        boxShadow:
+                          isModified && !isEditing
+                            ? "0 0 0 1.5px #ffffff"
+                            : undefined,
                       }}
                     >
                       {isEditing ? (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-2 min-w-[260px] max-w-xl">
                           <textarea
                             autoFocus
-                            rows={Math.max(1, block.text.split("\n").length)}
+                            rows={Math.max(2, block.text.split("\n").length)}
                             value={block.text}
                             onChange={(e) =>
                               handleUpdateBlockText(pageIdx, block.id, e.target.value)
                             }
-                            className="w-full min-w-[200px] max-w-lg bg-transparent text-slate-900 border-none outline-none resize-y p-0 font-sans"
+                            className="w-full bg-slate-50 text-slate-900 border border-slate-300 rounded p-1.5 text-xs outline-none focus:bg-white focus:border-indigo-600 resize-y font-sans leading-relaxed"
                             style={{
                               fontSize: "inherit",
                               fontFamily: "inherit",
                               fontWeight: "inherit",
                             }}
                           />
-                          <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200">
-                            <span className="text-[9px] text-slate-400">
-                              मजकूर संपादित करा
-                            </span>
-                            <div className="flex items-center gap-1">
-                              {block.isCustom && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteBlock(pageIdx, block.id);
-                                  }}
-                                  className="p-1 text-red-500 hover:text-red-700 rounded hover:bg-red-50"
-                                  title="हटवा"
-                                >
-                                  <Trash2 className="size-3" />
-                                </button>
-                              )}
+
+                          {/* Quick Styling & Action Bar */}
+                          <div className="flex items-center justify-between gap-1 flex-wrap pt-1 border-t border-slate-200 text-slate-600">
+                            <div className="flex items-center gap-1 text-[11px]">
+                              {/* Font Size A- / A+ */}
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveEditingBlockId(null);
-                                }}
-                                className="px-2 py-0.5 bg-indigo-600 text-white rounded text-[10px] font-bold hover:bg-indigo-700"
+                                onClick={() =>
+                                  handleUpdateBlockProp(pageIdx, block.id, {
+                                    fontSize: Math.max(8, block.fontSize - 2),
+                                  })
+                                }
+                                className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded font-bold"
+                                title="फॉन्ट लहान करा (A-)"
                               >
-                                पूर्ण
+                                A-
+                              </button>
+                              <span className="font-mono text-[10px] text-slate-500">
+                                {block.fontSize}px
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleUpdateBlockProp(pageIdx, block.id, {
+                                    fontSize: Math.min(36, block.fontSize + 2),
+                                  })
+                                }
+                                className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 rounded font-bold"
+                                title="फॉन्ट मोठा करा (A+)"
+                              >
+                                A+
+                              </button>
+
+                              {/* Bold Toggle */}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleUpdateBlockProp(pageIdx, block.id, {
+                                    fontWeight:
+                                      block.fontWeight === "700" || block.fontWeight === "800"
+                                        ? "400"
+                                        : "700",
+                                  })
+                                }
+                                className={`px-1.5 py-0.5 rounded font-black ${
+                                  block.fontWeight === "700" || block.fontWeight === "800"
+                                    ? "bg-indigo-100 text-indigo-700"
+                                    : "bg-slate-100 hover:bg-slate-200"
+                                }`}
+                                title="ठळक मजकूर (Bold)"
+                              >
+                                B
+                              </button>
+
+                              {/* Color Swatches */}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleUpdateBlockProp(pageIdx, block.id, { color: "#0f172a" })
+                                }
+                                className="size-3.5 rounded-full bg-slate-900 border border-slate-400 hover:scale-110 transition-all"
+                                title="काळा रंग"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleUpdateBlockProp(pageIdx, block.id, { color: "#1e3a8a" })
+                                }
+                                className="size-3.5 rounded-full bg-blue-900 border border-slate-400 hover:scale-110 transition-all"
+                                title="निळा रंग"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleUpdateBlockProp(pageIdx, block.id, { color: "#991b1b" })
+                                }
+                                className="size-3.5 rounded-full bg-red-800 border border-slate-400 hover:scale-110 transition-all"
+                                title="लाल रंग"
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              {/* Revert / Delete */}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  block.isCustom
+                                    ? handleDeleteBlock(pageIdx, block.id)
+                                    : handleRevertBlock(pageIdx, block.id)
+                                }
+                                className="px-2 py-0.5 text-rose-600 hover:bg-rose-50 rounded text-[11px] font-semibold flex items-center gap-0.5"
+                                title={block.isCustom ? "ब्लॉक हटवा" : "मूळ मजकुरात परत आणा"}
+                              >
+                                <Trash2 className="size-3" />
+                                <span>{block.isCustom ? "हटवा" : "रद्द"}</span>
+                              </button>
+
+                              {/* Done */}
+                              <button
+                                type="button"
+                                onClick={() => setActiveEditingBlockId(null)}
+                                className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold shadow-xs flex items-center gap-1 cursor-pointer"
+                              >
+                                <Check className="size-3" />
+                                <span>पूर्ण</span>
                               </button>
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <span className="block whitespace-pre-wrap break-words">
-                          {block.text}
-                        </span>
+                        <div className="relative group">
+                          <span className="block whitespace-pre-wrap break-words">
+                            {block.text}
+                          </span>
+                          {/* Indicator dot when edited */}
+                          {mode === "edit" && isModified && (
+                            <span
+                              className="absolute -top-1.5 -right-1.5 size-2 bg-amber-500 rounded-full"
+                              title="बदललेला मजकूर"
+                            />
+                          )}
+                        </div>
                       )}
                     </div>
                   );
@@ -717,6 +982,125 @@ export function DocumentEditorViewer({
           );
         })}
       </div>
+
+      {/* School Header Quick Customizer Modal */}
+      {showSchoolHeaderModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full text-slate-800 shadow-2xl space-y-4 border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-blue-100 text-blue-700">
+                  <Building2 className="size-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900">
+                    शाळेचे नाव व माहिती जोडा (School Header)
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    पहिल्या पानावर आपल्या शाळेचे नाव, केंद्र व विद्यार्थ्याची माहिती जोडा.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSchoolHeaderModal(false)}
+                className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  शाळेचे नाव (School Name):
+                </label>
+                <input
+                  type="text"
+                  value={schoolNameInput}
+                  onChange={(e) => setSchoolNameInput(e.target.value)}
+                  placeholder="उदा. जि. प. प्राथमिक शाळा, पुणे"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">केंद्र (Center):</label>
+                  <input
+                    type="text"
+                    value={kendraInput}
+                    onChange={(e) => setKendraInput(e.target.value)}
+                    placeholder="उदा. केंद्र शाळा"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">दिनांक (Date):</label>
+                  <input
+                    type="text"
+                    value={examDateInput}
+                    onChange={(e) => setExamDateInput(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  विद्यार्थी नाव व हजेरी क्र. ओळ:
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    value={studentNameInput}
+                    onChange={(e) => setStudentNameInput(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
+                  />
+                  <input
+                    type="text"
+                    value={rollNoInput}
+                    onChange={(e) => setRollNoInput(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {documentType === "question_paper" && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    एकूण गुण (Total Marks, optional):
+                  </label>
+                  <input
+                    type="text"
+                    value={totalMarksInput}
+                    onChange={(e) => setTotalMarksInput(e.target.value)}
+                    placeholder="उदा. २०"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSchoolHeaderModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
+              >
+                रद्द करा
+              </button>
+              <button
+                type="button"
+                onClick={handleApplySchoolHeader}
+                className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5"
+              >
+                <Check className="size-4" />
+                <span>लागू करा (Apply to Page 1)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

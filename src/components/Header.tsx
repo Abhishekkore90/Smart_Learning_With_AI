@@ -31,6 +31,8 @@ const TRANSLATIONS = {
     contact: "Contact",
     login: "Login",
     getStarted: "Get Started",
+    profile: "Profile",
+    logout: "Logout",
   },
   mr: {
     explore: "होम",
@@ -40,6 +42,8 @@ const TRANSLATIONS = {
     contact: "संपर्क",
     login: "लॉगिन",
     getStarted: "सुरू करा",
+    profile: "प्रोफाईल",
+    logout: "लॉगआउट",
   },
   hi: {
     explore: "होम",
@@ -49,6 +53,8 @@ const TRANSLATIONS = {
     contact: "संपर्क",
     login: "लॉगिन",
     getStarted: "शुरू करें",
+    profile: "प्रोफ़ाइल",
+    logout: "लॉगआउट",
   },
 };
 
@@ -195,18 +201,26 @@ export function Header() {
           <div className="flex items-center gap-1.5 xs:gap-2.5 z-10">
             <div className="flex items-center gap-1.5 xs:gap-2">
               {user ? (
-                <div className="flex items-center gap-1.5 md:gap-3">
+                <div className="flex items-center gap-1.5 xs:gap-2 md:gap-2.5">
                   <Link
                     to="/profile"
-                    className="size-8.5 md:size-11 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-xs flex items-center justify-center text-slate-700 dark:text-slate-300 hover:border-indigo-500/30 hover:text-indigo-600 transition-all duration-300 group"
+                    className="flex items-center gap-1.5 px-3 md:px-3.5 py-1.5 md:py-2 rounded-full bg-slate-100 hover:bg-slate-200/80 dark:bg-white/10 dark:hover:bg-white/15 border border-slate-200/80 dark:border-white/10 shadow-xs text-slate-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-300 transition-all duration-300 group cursor-pointer"
+                    title={t.profile || "Profile"}
                   >
-                    <User className="size-4 md:size-5 transition-transform group-hover:scale-110" />
+                    <User className="size-3.5 md:size-4 text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-transform group-hover:scale-110" />
+                    <span className="text-[11px] md:text-xs font-black tracking-wide whitespace-nowrap">
+                      {t.profile || "Profile"}
+                    </span>
                   </Link>
                   <button
                     onClick={handleSignOut}
-                    className="hidden sm:flex items-center justify-center size-10 md:size-11 rounded-full bg-red-950/30 border border-red-900/30 text-red-400 hover:bg-red-500 hover:text-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+                    className="flex items-center gap-1.5 px-3 md:px-3.5 py-1.5 md:py-2 rounded-full bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white dark:bg-rose-950/40 dark:hover:bg-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-900/40 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group cursor-pointer"
+                    title={t.logout || "Logout"}
                   >
-                    <LogOut className="size-4.5" />
+                    <LogOut className="size-3.5 md:size-4 text-rose-500 group-hover:text-white dark:text-rose-400 transition-transform group-hover:scale-110" />
+                    <span className="text-[11px] md:text-xs font-black tracking-wide whitespace-nowrap">
+                      {t.logout || "Logout"}
+                    </span>
                   </button>
                 </div>
               ) : null}

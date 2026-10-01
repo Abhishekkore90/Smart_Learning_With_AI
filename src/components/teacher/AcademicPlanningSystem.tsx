@@ -495,6 +495,8 @@ export interface PlanningFileRecord {
   mediumId: string;
   subjectId: string;
   planningType: "annual" | "monthly" | "question_bank";
+  category?: "varshik_niyojan" | "masik_niyojan" | "question_bank" | "prashnapedhi" | string;
+  title?: string;
   fileName: string;
   fileUrl: string;
   fileSize: string;
@@ -1248,7 +1250,12 @@ export function AcademicPlanningSystem({
       };
 
       const devYear = toDevanagariDigits("2026-27");
-      const planTypeStr = selectedPlanningType === "monthly" ? "संपूर्ण_मासिक_नियोजन" : "संपूर्ण_वार्षिक_नियोजन";
+      const planTypeStr =
+        selectedPlanningType === "question_bank"
+          ? "प्रश्नपेढी"
+          : selectedPlanningType === "monthly"
+            ? "संपूर्ण_मासिक_नियोजन"
+            : "संपूर्ण_वार्षिक_नियोजन";
       const classNameMr = formatMarathiClassName(selectedClass);
       const fileNameStr = `इयत्ता_${classNameMr}_${planTypeStr}_${devYear}.pdf`;
 
@@ -1620,8 +1627,18 @@ export function AcademicPlanningSystem({
 
     const legacyKey1 = `${cls}_${expectedMed}_${subj}_${type}`;
     const legacyKey2 = `${cls}_${expectedMed}_${subj}`;
-    fileRecord = planningFiles[legacyKey1] || planningFiles[legacyKey2];
+    fileRecord = planningFiles[legacyKey1];
     if (fileRecord && detectRecordMedium(fileRecord) === expectedMed) return fileRecord;
+
+    const candLegacy2 = planningFiles[legacyKey2];
+    if (candLegacy2 && detectRecordMedium(candLegacy2) === expectedMed) {
+      const cType = (candLegacy2.planningType || (candLegacy2 as any).category || "").trim().toLowerCase();
+      const isQB = cType === "question_bank" || cType === "prashnapedhi" || (candLegacy2.fileName || "").includes("प्रश्नपेढी");
+      const isMo = cType === "monthly" || cType === "masik_niyojan" || (candLegacy2.fileName || "").includes("मासिक");
+      if (type === "monthly" && isMo && !isQB) return candLegacy2;
+      if (type === "question_bank" && isQB && !isMo) return candLegacy2;
+      if (type === "annual" && !isMo && !isQB) return candLegacy2;
+    }
 
     // Fallback search across all files in planningFiles with strict medium isolation
     const allFiles = Object.values(planningFiles);
@@ -1630,8 +1647,14 @@ export function AcademicPlanningSystem({
       // STRICT MEDIUM ISOLATION: A file MUST strictly match the target medium!
       if (detectRecordMedium(f) !== expectedMed) return false;
 
-      const fType = (f.planningType || "").trim().toLowerCase();
-      if (fType !== type) return false;
+      const fType = (f.planningType || (f as any).category || "").trim().toLowerCase();
+      const isQB = fType === "question_bank" || fType === "prashnapedhi" || (f.fileName || "").includes("प्रश्नपेढी");
+      const isMo = fType === "monthly" || fType === "masik_niyojan" || (f.fileName || "").includes("मासिक");
+
+      if (type === "monthly" && (isQB || (!isMo && fType !== "monthly"))) return false;
+      if (type === "question_bank" && (isMo || (!isQB && fType !== "question_bank"))) return false;
+      if (type === "annual" && (isQB || isMo || (fType && fType !== "annual" && fType !== "varshik_niyojan"))) return false;
+
       if (!matchClassId(f.classId, targetCls)) return false;
 
       if (subj !== "all") {
@@ -1651,8 +1674,10 @@ export function AcademicPlanningSystem({
       fileRecord = allFiles.find((f) => {
         if (!f) return false;
         if (detectRecordMedium(f) !== expectedMed) return false;
-        const fType = (f.planningType || "").trim().toLowerCase();
-        if (fType !== "question_bank") return false;
+        const fType = (f.planningType || (f as any).category || "").trim().toLowerCase();
+        const isQB = fType === "question_bank" || fType === "prashnapedhi" || (f.fileName || "").includes("प्रश्नपेढी");
+        const isMo = fType === "monthly" || fType === "masik_niyojan" || (f.fileName || "").includes("मासिक");
+        if (!isQB || isMo) return false;
         return matchClassId(f.classId, targetCls);
       });
       if (fileRecord) return fileRecord;
@@ -1667,8 +1692,13 @@ export function AcademicPlanningSystem({
         // STRICT MEDIUM ISOLATION:
         if (detectRecordMedium(f) !== expectedMed) return false;
 
-        const fType = (f.planningType || "").trim().toLowerCase();
-        if (fType !== type) return false;
+        const fType = (f.planningType || (f as any).category || "").trim().toLowerCase();
+        const isQB = fType === "question_bank" || fType === "prashnapedhi" || (f.fileName || "").includes("प्रश्नपेढी");
+        const isMo = fType === "monthly" || fType === "masik_niyojan" || (f.fileName || "").includes("मासिक");
+
+        if (type === "monthly" && (isQB || (!isMo && fType !== "monthly"))) return false;
+        if (type === "question_bank" && (isMo || (!isQB && fType !== "question_bank"))) return false;
+        if (type === "annual" && (isQB || isMo || (fType && fType !== "annual" && fType !== "varshik_niyojan"))) return false;
         if (!matchClassId(f.classId, targetCls)) return false;
 
         // If file specifically matches target subject by name or alias, accept it!
@@ -1773,7 +1803,7 @@ export function AcademicPlanningSystem({
 
       // 1. Store binary Blob in local IndexedDB for instant zero-latency view
       await saveFileToIndexedDB(recordKey, finalFileBlob);
-      await saveFileToIndexedDB(`plan_${normMed}_${normCls}_${normSubj}`, finalFileBlob);
+      await saveFileToIndexedDB(`plan_${normMed}_${normCls}_${normType}_${normSubj}`, finalFileBlob);
 
       // 2. Upload file directly via uploadFileWithProgress (tries Bunny Storage CDN, then Firebase Storage)
       toast.info("⚡ सर्व्हरवर फाईल अपलोड होत आहे...");
@@ -2066,11 +2096,35 @@ export function AcademicPlanningSystem({
 
     const recAny = rec as any;
     const detectedMed = detectRecordMedium(rec);
+
+    const rawType = String(rec.planningType || recAny?.category || "").toLowerCase();
+    const rawTitle = String(rec.fileName || rec.title || "").toLowerCase();
+    const isQB = rawType === "question_bank" || rawType === "prashnapedhi" || rawTitle.includes("प्रश्नपेढी") || rawTitle.includes("prashnapedhi");
+    const isMo = rawType === "monthly" || rawType === "masik_niyojan" || rawTitle.includes("मासिक") || rawTitle.includes("monthly");
+
+    const targetPlanningType: "annual" | "monthly" | "question_bank" = isQB
+      ? "question_bank"
+      : isMo
+        ? "monthly"
+        : (rec.planningType ||
+          (selectedPlanningType === "monthly"
+            ? "monthly"
+            : selectedPlanningType === "question_bank"
+              ? "question_bank"
+              : "annual"));
+
+    const targetCategory =
+      targetPlanningType === "monthly"
+        ? "masik_niyojan"
+        : targetPlanningType === "question_bank"
+          ? "question_bank"
+          : "varshik_niyojan";
+
     let enrichedRec = {
       ...rec,
       mediumId: rec.mediumId || detectedMed,
-      planningType: rec.planningType || (selectedPlanningType === "monthly" ? "monthly" : "annual"),
-      category: recAny?.category || (selectedPlanningType === "monthly" ? "masik_niyojan" : "varshik_niyojan"),
+      planningType: targetPlanningType,
+      category: targetCategory,
       fileUrl: targetUrl,
       ...(isExcel && { fileType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
     };
@@ -2613,8 +2667,15 @@ export function AcademicPlanningSystem({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (annualFile) handleViewFile(annualFile);
-                              else toast.error(`या इयत्तेसाठी (${selectedClass}) अद्याप वार्षिक नियोजनाची फाईल उपलब्ध नाही.`);
+                              if (annualFile) {
+                                handleViewFile({
+                                  ...annualFile,
+                                  planningType: "annual",
+                                  category: "varshik_niyojan",
+                                });
+                              } else {
+                                toast.error(`या इयत्तेसाठी (${selectedClass}) अद्याप वार्षिक नियोजनाची फाईल उपलब्ध नाही.`);
+                              }
                             }}
                             className="w-full py-3.5 px-4 rounded-xl bg-white text-indigo-950 hover:bg-amber-300 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95"
                           >
@@ -2769,12 +2830,47 @@ export function AcademicPlanningSystem({
                   </p>
                 </div>
 
-                <button
-                  onClick={() => setStep("type")}
-                  className="px-5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border border-slate-200"
-                >
-                  <ChevronLeft className="size-4" /> &lt; BACK (प्रकार निवडीकडे)
-                </button>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {(() => {
+                    const combinedFile = getPlanningFile(selectedPlanningType, "all") || getPlanningFile(selectedPlanningType);
+                    return (
+                      combinedFile && (
+                        <button
+                          onClick={() => {
+                            handleViewFile({
+                              ...combinedFile,
+                              subjectId: "all",
+                              planningType: selectedPlanningType,
+                              category:
+                                selectedPlanningType === "question_bank"
+                                  ? "question_bank"
+                                  : selectedPlanningType === "monthly"
+                                    ? "masik_niyojan"
+                                    : "varshik_niyojan",
+                            });
+                          }}
+                          className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-md active:scale-95"
+                        >
+                          <Eye className="size-4 text-amber-300" />
+                          <span>
+                            {selectedPlanningType === "question_bank"
+                              ? "🌐 संपूर्ण प्रश्नपेढी एकत्र उघडा (View All Lessons)"
+                              : selectedPlanningType === "monthly"
+                                ? "🌐 सर्व महिने एकत्र उघडा (View All Months)"
+                                : "🌐 सर्व विषय एकत्र उघडा (View All Combined)"}
+                          </span>
+                        </button>
+                      )
+                    );
+                  })()}
+
+                  <button
+                    onClick={() => setStep("type")}
+                    className="px-5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border border-slate-200"
+                  >
+                    <ChevronLeft className="size-4" /> &lt; BACK (प्रकार निवडीकडे)
+                  </button>
+                </div>
               </div>
 
               {/* Grid of Subjects with File Actions */}
@@ -2825,8 +2921,21 @@ export function AcademicPlanningSystem({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (fileRec) handleViewFile({ ...fileRec, subjectId: subjName });
-                            else toast.error(`अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
+                            if (fileRec) {
+                              handleViewFile({
+                                ...fileRec,
+                                subjectId: "all",
+                                planningType: selectedPlanningType,
+                                category:
+                                  selectedPlanningType === "question_bank"
+                                    ? "question_bank"
+                                    : selectedPlanningType === "monthly"
+                                      ? "masik_niyojan"
+                                      : "varshik_niyojan",
+                              });
+                            } else {
+                              toast.error(`अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
+                            }
                           }}
                           className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95"
                         >
