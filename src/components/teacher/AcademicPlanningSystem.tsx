@@ -53,7 +53,7 @@ import { uploadFileWithProgress } from "@/lib/upload";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
 import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
 import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord, formatMarathiClassName } from "@/lib/smartPlanningParser";
-import { extractSubjectSectionsFromExcel, normalizeSubjectName } from "@/lib/smartSubjectSplitter";
+import { extractSubjectSectionsFromExcel, normalizeSubjectName, isExamOrAssessmentText, isMarathiMonth, canonicalizeMarathiMonth } from "@/lib/smartSubjectSplitter";
 import { PlanningTableRenderer } from "@/components/teacher/PlanningTableRenderer";
 import { getUnifiedSchoolProfile, saveUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 import * as XLSX from "xlsx";
@@ -463,22 +463,60 @@ const extractExcelData = async (
       else if ((ct.includes("निष्पत्ती") || ct.includes("outcome") || ct.includes("साध्य") || ct.includes("skill")) && colMap.outcomes === -1) colMap.outcomes = cIdx;
     });
 
-    // ── Step 8: Build schema-mapped PlanningTableRow[] with 1:1 positional fallbacks ──
+    // ── Step 8: Build schema-mapped PlanningTableRow[] with 1:1 positional fallbacks & month propagation ──
     const get = (row: string[], idx: number, fallbackIdx: number) => {
       const targetIdx = idx !== -1 ? idx : fallbackIdx;
       return row[targetIdx] ? row[targetIdx] : "";
     };
 
-    const mappedRows: PlanningTableRow[] = rawDataRows.map((row, i) => ({
-      id: `excel_${Date.now()}_${i}`,
-      month: get(row, colMap.month, 0) || `महिना ${i + 1}`,
-      subject: get(row, colMap.subject, -1) || "मराठी",
-      weeks: get(row, colMap.weeks, 1) || "",
-      workingDays: get(row, colMap.workingDays, 2) || "",
-      periods: get(row, colMap.periods, 3) || "",
-      topics: get(row, colMap.topics, 4) || "",
-      outcomes: get(row, colMap.outcomes, 5) || "",
-    }));
+    let runningMonth = "जून";
+    let runningWeeks = "";
+    let runningDays = "";
+    let runningPeriods = "";
+
+    const mappedRows: PlanningTableRow[] = rawDataRows.map((row, i) => {
+      let rawMonth = get(row, colMap.month, 0);
+      let rawWeeks = get(row, colMap.weeks, 1);
+      let rawDays = get(row, colMap.workingDays, 2);
+      let rawPeriods = get(row, colMap.periods, 3);
+      let rawTopic = get(row, colMap.topics, 4);
+      const rawOutcome = get(row, colMap.outcomes, 5);
+
+      // Check if any cell in this row has exam/assessment text (e.g. द्वितीय घटक चाचणी)
+      const foundExam = row.find((c) => isExamOrAssessmentText(c));
+      if (foundExam) {
+        if (!rawTopic || !isExamOrAssessmentText(rawTopic)) {
+          rawTopic = String(foundExam).trim();
+        }
+        if (rawMonth === foundExam) {
+          rawMonth = "";
+        }
+      }
+
+      if (rawMonth && isMarathiMonth(rawMonth)) {
+        runningMonth = canonicalizeMarathiMonth(rawMonth);
+        rawMonth = runningMonth;
+        if (rawWeeks) runningWeeks = rawWeeks;
+        if (rawDays) runningDays = rawDays;
+        if (rawPeriods) runningPeriods = rawPeriods;
+      }
+
+      const effectiveMonth = rawMonth || runningMonth;
+      const effectiveWeeks = rawWeeks || (effectiveMonth === runningMonth ? runningWeeks : "");
+      const effectiveDays = rawDays || (effectiveMonth === runningMonth ? runningDays : "");
+      const effectivePeriods = rawPeriods || (effectiveMonth === runningMonth ? runningPeriods : "");
+
+      return {
+        id: `excel_${Date.now()}_${i}`,
+        month: effectiveMonth,
+        subject: get(row, colMap.subject, -1) || "मराठी",
+        weeks: effectiveWeeks,
+        workingDays: effectiveDays,
+        periods: effectivePeriods,
+        topics: rawTopic || "",
+        outcomes: rawOutcome || "",
+      };
+    });
 
     return { mappedRows, rawHeaders, rawDataRows };
   } catch (err) {
@@ -525,38 +563,49 @@ export interface PlanningTableRow {
 const DEFAULT_ANNUAL_ROWS: PlanningTableRow[] = [
   { id: "1", month: "जून", subject: "मराठी", weeks: "2", workingDays: "13", periods: "33", topics: "वर्ग पूर्वतयारी अभ्यासक्रम\nसराव व उजळणी", outcomes: "चित्र वाचन, अक्षर ओळख व पूर्वतयारी" },
   { id: "2", month: "जुलै", subject: "मराठी", weeks: "5", workingDays: "26", periods: "70", topics: "१. माझ्या या दारातून २. चित्र गप्पा ३. मी आणि माझे कुटुंब\n४. माझी जोडी ५. मला घरापर्यंत पोहोचव", outcomes: "वाचन, लेखन व शब्दसंपदा वाढवणे" },
-  { id: "3", month: "ऑगस्ट", subject: "मराठी", weeks: "4", workingDays: "22", periods: "58", topics: "९. अक्षर गट क्र. १ - क म ल आ १०. सोहमचा दिवस\nप्रथम घटक चाचणी", outcomes: "अक्षर व ध्वनी जोडणे, वाक्य वाचन" },
+  { id: "3", month: "ऑगस्ट", subject: "मराठी", weeks: "4", workingDays: "22", periods: "58", topics: "९. अक्षर गट क्र. १ - क म ल आ १०. सोहमचा दिवस\nप्रथम घटक चाचणी (तोंडी व लेखी)", outcomes: "अक्षर व ध्वनी जोडणे, वाक्य वाचन" },
   { id: "4", month: "सप्टेंबर", subject: "मराठी", weeks: "4", workingDays: "24", periods: "64", topics: "(भाग - २) १४. चांगल्या सवयी १५. झुक झुक झुक (कविता)", outcomes: "चित्रकथा वर्णन व स्व-अभिव्यक्ती" },
   { id: "5", month: "ऑक्टोबर", subject: "मराठी", weeks: "4", workingDays: "25", periods: "68", topics: "२०. अक्षरगट क्र. ६ - ध य फ ज श ओ\nप्रथम सत्र संकलित मूल्यमापन क्र. १", outcomes: "प्रथम सत्र संकलित मूल्यमापन व उजळणी" },
+  { id: "6", month: "नोव्हेंबर", subject: "मराठी", weeks: "2", workingDays: "9", periods: "25", topics: "(भाग - ३) २३. चित्रगप्पा २४. झोक्या रे झोक्या (कविता)\nदिवाळी सुट्टी उपक्रम व प्रकल्प", outcomes: "चित्रवर्णन व दिवाळी सुट्टी उपक्रम" },
+  { id: "7", month: "डिसेंबर", subject: "मराठी", weeks: "5", workingDays: "25", periods: "68", topics: "२६. माझे जग २७. अक्षरगट क्र. ८ - ट ड ठ छ ष २८. खार (कविता)", outcomes: "अक्षरगट ८ दृढीकरण व कविता गायन" },
+  { id: "8", month: "जानेवारी", subject: "मराठी", weeks: "4", workingDays: "24", periods: "65", topics: "२९. अक्षरगट क्र. ९ - क्ष ज्ञ ॲ ऑ अं अ: ऋ, मुळाक्षरे व चौदाखडी\nद्वितीय घटक चाचणी (भाग -४ )", outcomes: "चौदाखडी वाचन व द्वितीय घटक चाचणी" },
+  { id: "9", month: "फेब्रुवारी", subject: "मराठी", weeks: "4", workingDays: "23", periods: "61", topics: "३४. आठवडी बाजार (चित्रवर्णन) ३५. मेंढी (कविता)\n३६. पूर्णविराम ( . ) ३७. प्रश्नचिन्ह ( ? )", outcomes: "विरामचिन्हे व भाषा समृद्धी" },
+  { id: "10", month: "मार्च", subject: "मराठी", weeks: "4", workingDays: "23", periods: "60", topics: "३८. चला लाडू बनवू या ३९. पतंग माझा ४१. नवे ते हवे", outcomes: "अभिव्यक्ती व घटनाक्रम समजणे" },
+  { id: "11", month: "एप्रिल", subject: "मराठी", weeks: "4", workingDays: "22", periods: "58", topics: "द्वितीय सत्र संकलित मूल्यमापन क्र. २\nवार्षिक उजळणी व निकाल तयारी", outcomes: "वार्षिक मूल्यमापन व प्रगती नोंद" },
 ];
 
 const DEFAULT_ALL_SUBJECTS_ANNUAL_ROWS: PlanningTableRow[] = [
   // 1. मराठी
   { id: "m1", month: "जून - जुलै", subject: "मराठी", weeks: "7", workingDays: "39", periods: "103", topics: "१. माझ्या या दारातून २. चित्र गप्पा\n३. मी आणि माझे कुटुंब ४. माझी जोडी\n५. फिफ्टी रोड व गिरव ६. राधाचे कुटुंब", outcomes: "चित्र वाचन, शब्द ओळख व वाचन पूर्वतयारी" },
   { id: "m2", month: "ऑगस्ट - सप्टें", subject: "मराठी", weeks: "8", workingDays: "46", periods: "122", topics: "अक्षरगट १ ते ४ (क, म, ल, आ, घर, ब, इ, ई, न, स, प, त)\nप्रथम घटक चाचणी (तोंडी व लेखी)", outcomes: "अक्षर व ध्वनी जोडणे, वाक्य वाचन" },
-  { id: "m3", month: "ऑक्टोबर - नोव्हें", subject: "मराठी", weeks: "7", workingDays: "43", periods: "116", topics: "अक्षरगट ५ ते ७ व प्रथम सत्र संकलित मूल्यमापन\nदिवाळी सुट्टी उपक्रम व प्रकल्प", outcomes: "प्रकल्प सादरीकरण व संकलित मूल्यमापन" },
-  { id: "m4", month: "डिसें - एप्रिल", subject: "मराठी", weeks: "17", workingDays: "99", periods: "252", topics: "अक्षरगट ८ व संवाद, कविता, चित्रकथा\nद्वितीय सत्र संकलित मूल्यमापन क्र. २", outcomes: "वाचन-लेखन समृद्धी व द्वितीय सत्र मूल्यमापन" },
+  { id: "m3", month: "ऑक्टोबर - नोव्हें", subject: "मराठी", weeks: "7", workingDays: "43", periods: "116", topics: "अक्षरगट ५ ते ७ व प्रथम सत्र संकलित मूल्यमापन क्र. १\nदिवाळी सुट्टी उपक्रम व प्रकल्प", outcomes: "प्रकल्प सादरीकरण व संकलित मूल्यमापन" },
+  { id: "m4", month: "डिसेंबर - जानेवारी", subject: "मराठी", weeks: "9", workingDays: "49", periods: "133", topics: "२६. माझे जग, अक्षरगट ८ व ९ - क्ष ज्ञ ॲ ऑ अं अ: ऋ, मुळाक्षरे व चौदाखडी\nद्वितीय घटक चाचणी (भाग -४ )", outcomes: "मुळाक्षरे-चौदाखडी दृढीकरण व द्वितीय घटक चाचणी" },
+  { id: "m5", month: "फेब्रुवारी - एप्रिल", subject: "मराठी", weeks: "8", workingDays: "50", periods: "119", topics: "आठवडी बाजार, मेंढी, चला लाडू बनवू या, नवे ते हवे व वार्षिक उजळणी\nद्वितीय सत्र संकलित मूल्यमापन क्र. २", outcomes: "वाचन-लेखन समृद्धी व द्वितीय सत्र संकलित मूल्यमापन" },
 
   // 2. गणित
   { id: "g1", month: "जून - जुलै", subject: "गणित", weeks: "7", workingDays: "39", periods: "95", topics: "१. लहान-मोठा २. मागे-पुढे ३. वर-खाली\n४. १ ते ५ संख्यांची ओळख व लेखन\n५. शून्य (०) ची संकल्पना", outcomes: "स्थानिक संकल्पना व १ ते ५ अंक ओळख" },
   { id: "g2", month: "ऑगस्ट - सप्टें", subject: "गणित", weeks: "8", workingDays: "46", periods: "110", topics: "६. ६ ते ९ संख्यांची ओळख\n७. बेरीज (१ ते ९ पर्यंत)\n८. वजाबाकी (१ ते ९ पर्यंत)\nप्रथम घटक चाचणी", outcomes: "अंक गती व १ ते ९ बेरीज-वजाबाकी" },
-  { id: "g3", month: "ऑक्टोबर - नोव्हें", subject: "गणित", weeks: "7", workingDays: "43", periods: "100", topics: "९. १० ची ओळख व दशक संकल्पना\n१०. ११ ते २० संख्या ज्ञान\nप्रथम सत्र संकलित मूल्यमापन", outcomes: "दशक संकल्पना व संकलित मूल्यमापन" },
-  { id: "g4", month: "डिसें - एप्रिल", subject: "गणित", weeks: "17", workingDays: "99", periods: "230", topics: "११. २१ ते १०० संख्या ज्ञान\n१२. नाणी व नोटा १३. भौमितिक आकृत्या\nद्वितीय सत्र संकलित मूल्यमापन", outcomes: "व्यवहारी गणित व आकार ओळख" },
+  { id: "g3", month: "ऑक्टोबर - नोव्हें", subject: "गणित", weeks: "7", workingDays: "43", periods: "100", topics: "९. १० ची ओळख व दशक संकल्पना\n१०. ११ ते २० संख्या ज्ञान\nप्रथम सत्र संकलित मूल्यमापन क्र. १", outcomes: "दशक संकल्पना व संकलित मूल्यमापन" },
+  { id: "g4", month: "डिसेंबर - जानेवारी", subject: "गणित", weeks: "9", workingDays: "49", periods: "115", topics: "२१ ते ९९ संख्या ज्ञान, आकृतीबंध, मापन, कालमापन\n( द्वितीय घटक चाचणी )", outcomes: "स्थानिक किंमत, मापन व द्वितीय घटक चाचणी" },
+  { id: "g5", month: "फेब्रुवारी - एप्रिल", subject: "गणित", weeks: "8", workingDays: "50", periods: "115", topics: "नाणी व नोटा, गुणाकार पूर्वतयारी, समान वाटणी व वार्षिक उजळणी\nद्वितीय सत्र संकलित मूल्यमापन क्र. २", outcomes: "व्यवहारी गणित व द्वितीय सत्र संकलित मूल्यमापन" },
 
   // 3. इंग्रजी
   { id: "e1", month: "जून - जुलै", subject: "इंग्रजी", weeks: "7", workingDays: "39", periods: "80", topics: "1. Greetings & Introduction (Hello, Good Morning)\n2. Rhymes & Action Songs (Johnny Johnny, Twinkle Twinkle)\n3. Look, Listen & Say", outcomes: "Basic English listening & vocabulary" },
   { id: "e2", month: "ऑगस्ट - सप्टें", subject: "इंग्रजी", weeks: "8", workingDays: "46", periods: "95", topics: "4. Alphabet Identification (A to M)\n5. Words starting with A-M\nFirst Unit Test", outcomes: "Recognizing capital & small letters A to M" },
   { id: "e3", month: "ऑक्टोबर - नोव्हें", subject: "इंग्रजी", weeks: "7", workingDays: "43", periods: "88", topics: "6. Alphabet N to Z & Vocabulary\n7. Colors and Numbers (1 to 10 in English)\nFirst Term Summative Assessment", outcomes: "Letter recognition N to Z & term assessment" },
-  { id: "e4", month: "डिसें - एप्रिल", subject: "इंग्रजी", weeks: "17", workingDays: "99", periods: "210", topics: "8. Short Conversation & Dialogues\n9. Reading Simple 3-letter Words (cat, bat, mat)\nSecond Term Summative Assessment", outcomes: "3-letter word reading & oral communication" },
+  { id: "e4", month: "डिसेंबर - जानेवारी", subject: "इंग्रजी", weeks: "9", workingDays: "49", periods: "105", topics: "3.5 Alphabet song, 3.7 Days of the week, 4.1 Months of the year, Greetings\nSecond Unit Test (द्वितीय घटक चाचणी)", outcomes: "Letter recognition, days, months & Second Unit Test" },
+  { id: "e5", month: "फेब्रुवारी - एप्रिल", subject: "इंग्रजी", weeks: "8", workingDays: "50", periods: "105", topics: "4.5 Lost and Found, Community helpers, The magic fish, Revision\nSecond Term Summative Assessment (द्वितीय सत्र मूल्यमापन)", outcomes: "3-letter word reading & Second Term Assessment" },
 
   // 4. परिसर अभ्यास / विज्ञान
   { id: "p1", month: "जून - जुलै", subject: "परिसर अभ्यास", weeks: "7", workingDays: "39", periods: "75", topics: "१. माझे कुटुंब व माझा परिसर\n२. परिसर स्वच्छता व वैयक्तिक आरोग्य\n३. आपल्या सभोवतालचे प्राणी व पक्षी", outcomes: "पर्यावरण जाणीव व आरोग्यदायी सवयी" },
   { id: "p2", month: "ऑगस्ट - सप्टें", subject: "परिसर अभ्यास", weeks: "8", workingDays: "46", periods: "85", topics: "४. झाडे व त्यांची काळजी ५. पाणी - आपले जीवन\n६. सण व उत्सव (स्वातंत्र्य दिन, गणेशोत्सव)\nप्रथम घटक चाचणी", outcomes: "झाडे व पाण्याचे महत्त्व समजणे" },
   { id: "p3", month: "ऑक्टोबर - नोव्हें", subject: "परिसर अभ्यास", weeks: "7", workingDays: "43", periods: "80", topics: "७. ऋतुचक्र व कपडे\n८. आपली वाहतूक साधने व नियम\nप्रथम सत्र संकलित मूल्यमापन", outcomes: "वाहतूक नियम व प्रथम सत्र मूल्यमापन" },
-  { id: "p4", month: "डिसें - एप्रिल", subject: "परिसर अभ्यास", weeks: "17", workingDays: "99", periods: "190", topics: "९. दिशा व आमचा गाव/शहर\n१०. आपल्या गरजा (अन्न, वस्त्र, निवारा)\nद्वितीय सत्र संकलित मूल्यमापन", outcomes: "दिशा ज्ञान व द्वितीय सत्र मूल्यमापन" },
+  { id: "p4", month: "डिसेंबर - जानेवारी", subject: "परिसर अभ्यास", weeks: "9", workingDays: "49", periods: "95", topics: "आपल्या गरजा (अन्न, वस्त्र, निवारा), दिशा व नकाशे, सार्वजनिक सोयी\nद्वितीय घटक चाचणी", outcomes: "परिसर जाणीव, गरजांची माहिती व द्वितीय घटक चाचणी" },
+  { id: "p5", month: "फेब्रुवारी - एप्रिल", subject: "परिसर अभ्यास", weeks: "8", workingDays: "50", periods: "95", topics: "वाहतूक साधने, आपले सण, पर्यावरण संवर्धन व वार्षिक उजळणी\nद्वितीय सत्र संकलित मूल्यमापन क्र. २", outcomes: "पर्यावरण संवर्धन व द्वितीय सत्र मूल्यमापन" },
 
   // 5. कला, कार्यानुभव व शारीरिक शिक्षण
-  { id: "k1", month: "वार्षिक उपक्रम", subject: "कला / क्रीडा", weeks: "36", workingDays: "220", periods: "120", topics: "चित्रकला, रंगभरण, कागदी काम, मातीचे काम, मैदानी खेळ, योगासने व कवायत प्रकार", outcomes: "शारीरिक सुदृढता, कल्पकता व कला कौशल्य विकास" },
+  { id: "k1", month: "सत्र १ (जून - नोव्हें)", subject: "कला / क्रीडा", weeks: "18", workingDays: "110", periods: "60", topics: "चित्रकला, रंगभरण, कागदी काम, मैदानी खेळ, कवायत\nप्रथम घटक चाचणी व प्रथम सत्र मूल्यमापन", outcomes: "कला जाणीव व शारीरिक कौशल्य" },
+  { id: "k2", month: "सत्र २ (डिसें - एप्रिल)", subject: "कला / क्रीडा", weeks: "18", workingDays: "110", periods: "60", topics: "मातीकाम, हस्तकला, योगासने, वैयक्तिक स्वच्छता, वार्षिक क्रीडा स्पर्धा\nद्वितीय घटक चाचणी व द्वितीय सत्र संकलित मूल्यमापन", outcomes: "सृजनशीलता, आरोग्य सुदृढता व द्वितीय सत्र मूल्यमापन" },
 ];
 
 interface AcademicPlanningSystemProps {

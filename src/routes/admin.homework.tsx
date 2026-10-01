@@ -50,6 +50,7 @@ import { subscribeToHomework } from "@/services/homeworkService";
 import type { HomeworkItem, DailyHomeworkVariables } from "@/types/documentEditor";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
 import { DailyHomeworkTemplate } from "@/components/homework/DailyHomeworkTemplate";
+import { DailyHomeworkCalendar, formatISODate } from "@/components/homework/DailyHomeworkCalendar";
 
 export const Route = createFileRoute("/admin/homework")({
   head: () => ({
@@ -147,6 +148,23 @@ function AdminHomeworkPage() {
   // Active viewing/editing homework
   const [activePreviewHomework, setActivePreviewHomework] = useState<HomeworkItem | null>(null);
   const [previewTab, setPreviewTab] = useState<"doc" | "template">("doc");
+
+  // Workspace tab & calendar selection
+  const [workspaceView, setWorkspaceView] = useState<"calendar" | "form" | "list">("calendar");
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState<string>(getTodayDateString());
+  const uploadFormRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadForDate = (dateStr: string) => {
+    setHomeworkDate(dateStr);
+    setCalendarSelectedDate(dateStr);
+    setWorkspaceView("calendar"); // Keep in calendar view since upload form is directly accessible
+    toast.info(`${dateStr} या तारखेसाठी गृहपाठ फॉर्म तयार आहे.`);
+    setTimeout(() => {
+      uploadFormRef.current?.scrollIntoView({ behavior: "smooth" });
+      titleInputRef.current?.focus();
+    }, 100);
+  };
 
   // Auto extract text from file for indexing
   const handleFileChange = async (file: File | null) => {
@@ -319,6 +337,8 @@ function AdminHomeworkPage() {
       });
 
       toast.success("गृहपाठ यशस्वीरित्या प्रकाशित झाला!");
+      setCalendarSelectedDate(homeworkDate);
+      setWorkspaceView("calendar");
       setTitle("");
       setDescription("");
       setContent("");
@@ -682,22 +702,91 @@ function AdminHomeworkPage() {
               </button>
             </div>
 
-            {/* Upload New Homework Form */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4 flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
-                    <FileUp className="size-5" />
+            {/* View Switcher: Calendar & Daily Upload vs Form vs List */}
+            <div className="flex items-center justify-between gap-3 flex-wrap bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceView("calendar")}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all cursor-pointer ${
+                    workspaceView === "calendar"
+                      ? "bg-amber-600 text-white shadow-xs font-black"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <Calendar className="size-3.5" />
+                  <span>दैनिक कॅलेंडर दृश्य (Daily Calendar)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceView("form")}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all cursor-pointer ${
+                    workspaceView === "form"
+                      ? "bg-amber-600 text-white shadow-xs font-black"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <PlusCircle className="size-3.5" />
+                  <span>नवीन गृहपाठ फॉर्म (Upload Form)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceView("list")}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all cursor-pointer ${
+                    workspaceView === "list"
+                      ? "bg-amber-600 text-white shadow-xs font-black"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <FileText className="size-3.5" />
+                  <span>सर्व गृहपाठ यादी ({filteredItems.length})</span>
+                </button>
+              </div>
+
+              <div className="text-xs text-slate-500 font-semibold hidden md:block">
+                * कॅलेंडरवरील तारखेवर क्लिक करून त्या दिवसाचा गृहपाठ त्वरित जोडा किंवा पहा.
+              </div>
+            </div>
+
+            {/* VIEW 1: CALENDAR VIEW */}
+            {workspaceView === "calendar" && (
+              <DailyHomeworkCalendar
+                homeworkList={filteredItems}
+                selectedDate={calendarSelectedDate}
+                onSelectDate={(dateStr) => {
+                  setCalendarSelectedDate(dateStr);
+                  setHomeworkDate(dateStr);
+                }}
+                onPreviewHomework={(item) => setActivePreviewHomework(item)}
+                onUploadForDate={handleUploadForDate}
+                onDeleteHomework={handleDelete}
+                userRole="admin"
+                accentColor="amber"
+              />
+            )}
+
+            {/* Upload New Homework Form (visible in 'calendar' and 'form' views) */}
+            {(workspaceView === "calendar" || workspaceView === "form") && (
+              <div
+                ref={uploadFormRef}
+                className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md space-y-6 scroll-mt-24"
+              >
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4 flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                      <FileUp className="size-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg sm:text-xl font-black text-slate-800">
+                        दैनिक गृहपाठ प्रकाशित करा (Publish Daily Homework)
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        {selectedSubject} विषयासाठी दिनांक <span className="font-bold text-amber-700">{homeworkDate}</span> चा गृहपाठ जोडा.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg sm:text-xl font-black text-slate-800">
-                      नवीन गृहपाठ प्रकाशित करा (Publish Daily Homework)
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      {selectedSubject} विषयासाठी दिनांक, शीर्षक व सामग्री जोडा.
-                    </p>
-                  </div>
-                </div>
 
                 {/* Upload Mode Selector */}
                 <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
@@ -737,7 +826,10 @@ function AdminHomeworkPage() {
                       type="date"
                       required
                       value={homeworkDate}
-                      onChange={(e) => setHomeworkDate(e.target.value)}
+                      onChange={(e) => {
+                        setHomeworkDate(e.target.value);
+                        setCalendarSelectedDate(e.target.value);
+                      }}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm font-semibold outline-none transition-all"
                     />
                   </div>
@@ -747,6 +839,7 @@ function AdminHomeworkPage() {
                       गृहपाठ शीर्षक (Title) <span className="text-red-500">*</span>
                     </label>
                     <input
+                      ref={titleInputRef}
                       type="text"
                       required
                       placeholder="उदा. धडा १: स्वाध्याय प्रश्न १ ते ५"
@@ -893,8 +986,10 @@ function AdminHomeworkPage() {
                 </button>
               </form>
             </div>
+            )}
 
             {/* List of Uploaded Homework for this Subject */}
+            {(workspaceView === "list" || workspaceView === "calendar") && (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
@@ -1027,6 +1122,7 @@ function AdminHomeworkPage() {
                 </div>
               )}
             </div>
+            )}
           </motion.div>
         )}
       </main>

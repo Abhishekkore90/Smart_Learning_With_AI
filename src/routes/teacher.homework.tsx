@@ -39,6 +39,7 @@ import { subscribeToHomework } from "@/services/homeworkService";
 import type { HomeworkItem } from "@/types/documentEditor";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
 import { DailyHomeworkTemplate } from "@/components/homework/DailyHomeworkTemplate";
+import { DailyHomeworkCalendar, formatISODate } from "@/components/homework/DailyHomeworkCalendar";
 
 export const Route = createFileRoute("/teacher/homework")({
   head: () => ({
@@ -105,6 +106,8 @@ function HomeworkPage() {
   const [selectedClass, setSelectedClass] = useState<string>("1st");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [filterDate, setFilterDate] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [calendarDate, setCalendarDate] = useState<string>(() => formatISODate(new Date()));
 
   // Homework List state
   const [homeworkList, setHomeworkList] = useState<HomeworkItem[]>([]);
@@ -509,7 +512,59 @@ function HomeworkPage() {
                   </div>
                 </div>
 
-                {/* List Cards */}
+                {/* View Switcher: Calendar vs List */}
+                <div className="flex items-center justify-between gap-3 flex-wrap bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("calendar")}
+                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all cursor-pointer ${
+                        viewMode === "calendar"
+                          ? "bg-emerald-600 text-white shadow-xs font-black"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      <Calendar className="size-3.5" />
+                      <span>कॅलेंडर दृश्य (Calendar View)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("list")}
+                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all cursor-pointer ${
+                        viewMode === "list"
+                          ? "bg-emerald-600 text-white shadow-xs font-black"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      <Layers className="size-3.5" />
+                      <span>यादी दृश्य (List View)</span>
+                    </button>
+                  </div>
+
+                  <div className="text-xs text-slate-500 font-semibold hidden md:block">
+                    * कॅलेंडरवरून कोणत्याही तारखेचा गृहपाठ निवडून एका क्लिकवर पहा व संपादित करा
+                  </div>
+                </div>
+
+                {/* CALENDAR VIEW */}
+                {viewMode === "calendar" && (
+                  <DailyHomeworkCalendar
+                    homeworkList={filteredHomework}
+                    selectedDate={calendarDate}
+                    onSelectDate={(d) => {
+                      setCalendarDate(d);
+                      setFilterDate(d);
+                    }}
+                    onPreviewHomework={(item) => setActiveHomework(item)}
+                    userRole="teacher"
+                    accentColor="emerald"
+                  />
+                )}
+
+                {/* List Cards (visible in List View) */}
+                {viewMode === "list" && (
+                  <>
                 {loading ? (
                   <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
                     <Loader2 className="size-8 animate-spin text-amber-600 mx-auto mb-2" />
@@ -592,6 +647,8 @@ function HomeworkPage() {
                       </div>
                     ))}
                   </div>
+                )}
+                </>
                 )}
               </motion.div>
             )}

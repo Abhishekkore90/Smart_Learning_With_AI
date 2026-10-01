@@ -2334,8 +2334,8 @@ function TeacherMDMPage() {
 
       const primaryRegData = getRegisterDataForMonth(monthlyReportMonth, calcYear, "1 To 5");
       const upperRegData = getRegisterDataForMonth(monthlyReportMonth, calcYear, "6 To 8");
-      const pEnrolled = primaryRegData.enrolled || parseInt(profile?.patPrimary || "0", 10) || 0;
-      const uEnrolled = upperRegData.enrolled || parseInt(profile?.patUpper || "0", 10) || 0;
+      const pEnrolled = primaryRegData.enrolled || 0;
+      const uEnrolled = upperRegData.enrolled || 0;
 
       setCertPrimaryCookedDays(toMarathiNumbers(primaryCookedDaysVal.toString()));
       setCertUpperCookedDays(toMarathiNumbers(upperCookedDaysVal.toString()));
@@ -5236,6 +5236,11 @@ function TeacherMDMPage() {
     customRegisterRecords = registerRecords,
     customIncomingRecords = incomingRecords,
   ): number => {
+    const isVegetables = (itemName || "").toLowerCase().includes("veg") || itemName === "भाजीपाला" || itemName === "Vegetables";
+    if (isVegetables) {
+      return 0;
+    }
+
     const monthNamesEng = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const monthMap: { [k: string]: number } = {
       "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6,
@@ -5262,22 +5267,22 @@ function TeacherMDMPage() {
     }
 
     if (yearStr === initYear && evalMonthNum === initMonthNum) {
-      return getInitialOpeningStockValue(itemName);
+      return Math.max(0, getInitialOpeningStockValue(itemName));
     }
 
     if (depth > 12) {
-      return getInitialOpeningStockValue(itemName);
+      return Math.max(0, getInitialOpeningStockValue(itemName));
     }
 
     const prevKey = getPreviousMonthKey(monthName, yearStr, classStr);
     if (!prevKey) {
-      return getInitialOpeningStockValue(itemName);
+      return Math.max(0, getInitialOpeningStockValue(itemName));
     }
 
     const firstUnderscore = prevKey.indexOf("_");
     const secondUnderscore = prevKey.indexOf("_", firstUnderscore + 1);
     if (firstUnderscore === -1 || secondUnderscore === -1) {
-      return getInitialOpeningStockValue(itemName);
+      return Math.max(0, getInitialOpeningStockValue(itemName));
     }
 
     const prevYear = prevKey.substring(0, firstUnderscore);
@@ -5334,7 +5339,7 @@ function TeacherMDMPage() {
     const prevUsed = roundStock(getUsedForMonth(prevMonth, prevYear, prevClass, itemName));
 
     // Closing stock at the end of previous month = Opening + Received + Loksahabhag - Used - Damaged
-    const closing = prevOpening + prevReceived + prevLok - prevUsed - prevDamaged;
+    const closing = Math.max(0, prevOpening + prevReceived + prevLok - prevUsed - prevDamaged);
     return roundStock(closing);
   };
 
@@ -7255,22 +7260,22 @@ function TeacherMDMPage() {
 
           if (cls === "1 To 5") {
             if (primaryRec) {
-              enrolled += parseInt(primaryRec.enrolled || "0", 10);
+              enrolled += parseInt(primaryRec.enrolled || primaryRec.totalEnrolled || primaryRec.pat || record?.enrolled || record?.totalEnrolled || record?.pat || "0", 10);
               beneficiary += parseInt(primaryRec.beneficiary || "0", 10);
             }
           } else if (cls === "6 To 8") {
             if (upperRec) {
-              enrolled += parseInt(upperRec.enrolled || "0", 10);
+              enrolled += parseInt(upperRec.enrolled || upperRec.totalEnrolled || upperRec.pat || "0", 10);
               beneficiary += parseInt(upperRec.beneficiary || "0", 10);
             }
           } else {
             // Aggregate both
             if (primaryRec) {
-              enrolled += parseInt(primaryRec.enrolled || "0", 10);
+              enrolled += parseInt(primaryRec.enrolled || primaryRec.totalEnrolled || primaryRec.pat || record?.enrolled || record?.totalEnrolled || record?.pat || "0", 10);
               beneficiary += parseInt(primaryRec.beneficiary || "0", 10);
             }
             if (upperRec) {
-              enrolled += parseInt(upperRec.enrolled || "0", 10);
+              enrolled += parseInt(upperRec.enrolled || upperRec.totalEnrolled || upperRec.pat || "0", 10);
               beneficiary += parseInt(upperRec.beneficiary || "0", 10);
             }
           }
@@ -14637,7 +14642,7 @@ function TeacherMDMPage() {
 
                         {/* === MASIK TANDUL AHVAL REPORT — EXACT PDF FORMAT === */}
                         {monthlyMdmReportType === "masik_tandul_report" && (() => {
-                          const monthName = monthlyMdmReportMonth.split(' ')[0];
+                          const monthName = monthlyMdmReportSelectedMonth || monthlyMdmReportMonth.split(' ')[0];
                           const monthMap: { [k: string]: number } = {
                             "जानेवारी": 1, "फेब्रुवारी": 2, "मार्च": 3, "एप्रिल": 4,
                             "मे": 5, "जून": 6, "जुलै": 7, "ऑगस्ट": 8,
@@ -14645,7 +14650,8 @@ function TeacherMDMPage() {
                           };
                           const engMonthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                           const monthNum = monthMap[monthName] || 6;
-                          const year = monthNum >= 6 ? 2026 : 2027;
+                          const startYear = parseInt(monthlyMdmReportYear?.split('/')[0] || "2026", 10) || 2026;
+                          const year = monthNum >= 6 ? startYear : startYear + 1;
                           const schoolName = profile?.schoolName || "";
 
                           const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, monthlyReportClass);
@@ -14683,9 +14689,14 @@ function TeacherMDMPage() {
                           return (
                             <div className="space-y-3 print-page p-4 bg-white flex flex-col justify-between min-h-[1157px] print:min-h-0">
                               <div className="space-y-2">
-                              <div className="text-center space-y-0.5 mb-3 pt-1">
+                              <div className="text-center space-y-1 mb-2 pt-1">
                                 <p className="text-xs font-bold text-slate-700">पंचायत समिती {profile?.taluka || ""} ( शिक्षण विभाग {profile?.district || ""} )</p>
-                                <h2 className="text-sm font-black text-slate-900 tracking-tight uppercase">प्रधानमंत्री पोषण शक्ती निर्माण योजना तांदूळ शिजवून दिल्याचा अहवाल (सन {year}/{String(year+1).slice(-2)})</h2>
+                                <h2 className="text-sm md:text-base font-black text-slate-900 tracking-tight uppercase">
+                                  प्रधानमंत्री पोषण शक्ती निर्माण योजना तांदूळ शिजवून दिल्याचा अहवाल
+                                </h2>
+                                <div className="inline-block bg-amber-100/90 border border-amber-300 px-4 py-0.5 rounded-md font-black text-xs md:text-sm text-slate-900 shadow-2xs">
+                                  माहे : <span className="underline font-black">{monthlyMdmReportSelectedMonth} {year}</span> (सन {monthlyMdmReportYear})
+                                </div>
                               </div>
 
                               <div className="text-xs font-bold border border-slate-700 divide-y divide-slate-700 bg-white">
@@ -14814,7 +14825,7 @@ function TeacherMDMPage() {
 
                         {/* === MASIK SATHA NODVAHI (प्रपत्र ब) — EXACT PDF FORMAT === */}
                         {monthlyMdmReportType === "masik_goshwara" && (() => {
-                          const monthName = monthlyMdmReportMonth.split(' ')[0];
+                          const monthName = monthlyMdmReportSelectedMonth || monthlyMdmReportMonth.split(' ')[0];
                           const monthMap: { [k: string]: number } = {
                             "जानेवारी": 1, "फेब्रुवारी": 2, "मार्च": 3, "एप्रिल": 4,
                             "मे": 5, "जून": 6, "जुलै": 7, "ऑगस्ट": 8,
@@ -14822,7 +14833,8 @@ function TeacherMDMPage() {
                           };
                           const engMonthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                           const monthNum = monthMap[monthName] || 6;
-                          const year = monthNum >= 6 ? 2026 : 2027;
+                          const startYear = parseInt(monthlyMdmReportYear?.split('/')[0] || "2026", 10) || 2026;
+                          const year = monthNum >= 6 ? startYear : startYear + 1;
                           const schoolName = profile?.schoolName || "";
 
                           const B_FORM_ITEMS = [
@@ -14888,14 +14900,34 @@ function TeacherMDMPage() {
                             : riceData.cookedDays;
 
                           const items = B_FORM_ITEMS.map((def, idx) => {
-                            const prev = getOpeningStock(engMonthNames[monthNum], year.toString(), monthlyReportClass, def.key);
+                            const isVeg = def.key === "Vegetables" || def.nameMr === "भाजीपाला" || def.key.toLowerCase().includes("veg");
+                            const prev = isVeg ? 0 : Math.max(0, getOpeningStock(engMonthNames[monthNum], year.toString(), monthlyReportClass, def.key));
                             const rec = getIncomingForItem(def.key, engMonthNames[monthNum], year, monthlyReportClass);
                             const borrowed = getLokForMonth(def.key, engMonthNames[monthNum], year);
                             const totalRec = rec + borrowed;
                             const used = getUsedForMonth(engMonthNames[monthNum], year.toString(), monthlyReportClass, def.key);
-                            const perStudentRiceDemand = monthlyReportClass === "6 To 8" ? 0.03 : 0.02;
-                            const demand = Math.max(0, (enrolledPat * perStudentRiceDemand * 20) - (prev + totalRec - used));
-                            return { sr: idx + 1, key: def.key, name: def.nameMr, prev, rec: totalRec, used, demand: parseFloat(demand.toFixed(2)) };
+                            
+                            // For Vegetables: fresh daily procurement = usage (if no separate godown receipt), opening = 0, bal = 0
+                            const effectiveRec = isVeg ? (totalRec > 0 ? totalRec : used) : totalRec;
+                            const total = isVeg ? used : (prev + effectiveRec);
+                            const bal = isVeg ? 0 : Math.max(0, total - used);
+                            
+                            const perStudentDemand = monthlyReportClass === "6 To 8"
+                              ? (def.key === "Rice" ? 0.150 : isVeg ? 0.050 : 0.030)
+                              : (def.key === "Rice" ? 0.100 : isVeg ? 0.050 : 0.020);
+                            const demand = Math.max(0, (enrolledPat * perStudentDemand * 20) - bal);
+                            
+                            return { 
+                              sr: idx + 1, 
+                              key: def.key, 
+                              name: def.nameMr, 
+                              prev, 
+                              rec: effectiveRec, 
+                              total,
+                              used, 
+                              bal,
+                              demand: parseFloat(demand.toFixed(2)) 
+                            };
                           });
 
                           const rateVal = monthlyReportClass === "6 To 8" ? (parseFloat(upperRate) || 8.17) : (parseFloat(primaryRate) || 5.45);
@@ -14905,10 +14937,13 @@ function TeacherMDMPage() {
 
                           return (
                             <div className="space-y-2.5 print-page p-4 bg-white text-black font-sans flex flex-col justify-start border border-black shadow-xs">
-                              <div className="text-center space-y-0.5 mb-1">
-                                <h2 className="text-[13px] font-black text-black tracking-tight">
-                                  प्रधानमंत्री पोषण शक्ती निर्माण योजना : प्रपत्र (ब)
+                              <div className="text-center space-y-1 mb-2">
+                                <h2 className="text-sm md:text-base font-black text-black tracking-tight">
+                                  प्रधानमंत्री पोषण शक्ती निर्माण योजना : मासिक साठा नोंदवही प्रपत्र (ब)
                                 </h2>
+                                <div className="inline-block bg-amber-100/90 border border-amber-300 px-4 py-0.5 rounded-md font-black text-xs md:text-sm text-black shadow-2xs">
+                                  माहे : <span className="underline font-black">{monthlyMdmReportSelectedMonth} {year}</span> (सन {monthlyMdmReportYear})
+                                </div>
                                 <p className="text-xs font-bold text-black">शाळेने केंद्रप्रमुखांना दरमहा द्यावयाचा अहवाल ( २ प्रती )</p>
                               </div>
 
@@ -14923,8 +14958,7 @@ function TeacherMDMPage() {
                                   <div className="p-2">ता. : <span className="font-black text-black">{profile?.taluka || ""}</span></div>
                                   <div className="p-2">जिल्हा : <span className="font-black text-black">{profile?.district || ""}</span></div>
                                 </div>
-                                <div className="grid grid-cols-3 divide-x divide-black border-b border-black">
-                                  <div className="p-2">माहे : <span className="font-black text-black">{monthlyMdmReportMonth}</span></div>
+                                <div className="grid grid-cols-2 divide-x divide-black border-b border-black">
                                   <div className="p-2">पटसंख्या ({monthlyReportClass === "6 To 8" ? "६ ते ८" : "१ ते ५"}) : <span className="font-black text-black">{enrolledPat || '—'}</span></div>
                                   <div className="p-2">एकूण लाभार्थी संख्या : <span className="font-black text-black">{labharthi || '—'}</span></div>
                                 </div>
@@ -14963,19 +14997,17 @@ function TeacherMDMPage() {
                                   </thead>
                                   <tbody>
                                     {items.map((row) => {
-                                      const total = row.prev + row.rec;
-                                      const isVeg = row.sr === 22 || (row as any).key === "Vegetables" || String(row.name).includes("भाजी") || row.name === "भाजीपाला";
-                                       const bal = isVeg ? 0 : (total - row.used);
+                                      const isVeg = row.key === "Vegetables" || String(row.name).includes("भाजी") || row.name === "भाजीपाला";
                                       return (
                                         <tr key={row.sr} className={`border-b border-black h-[26px] ${row.sr % 2 === 0 ? "bg-slate-50/50" : "bg-white"}`}>
                                           <td className="border-r border-black py-0.5 text-xs font-bold text-black align-middle">{row.sr}</td>
                                           <td className="border-r border-black py-0.5 text-left font-black text-black pl-1.5 text-xs align-middle">{row.name}</td>
-                                          <td className="border-r border-black py-0.5 font-bold text-black align-middle">{row.prev !== 0 ? row.prev.toFixed(3) : ""}</td>
-                                          <td className="border-r border-black py-0.5 font-bold text-black align-middle">{row.rec !== 0 ? row.rec.toFixed(3) : ""}</td>
-                                          <td className="border-r border-black py-0.5 font-black text-black align-middle">{total !== 0 ? total.toFixed(3) : ""}</td>
-                                          <td className="border-r border-black py-0.5 font-black text-black align-middle">{row.used !== 0 ? row.used.toFixed(3) : ""}</td>
-                                          <td className={`border-r border-black py-0.5 font-black align-middle ${isVeg ? "text-black" : (bal < 0 ? "text-red-700" : "text-black")}`}>{isVeg ? "0.000" : (bal !== 0 ? bal.toFixed(3) : "")}</td>
-                                          <td className="border-r border-black py-0.5 font-bold text-black align-middle">{row.demand !== 0 ? row.demand.toFixed(2) : ""}</td>
+                                          <td className="border-r border-black py-0.5 font-bold text-black align-middle">{row.prev > 0 ? row.prev.toFixed(3) : (isVeg ? "" : (row.prev !== 0 ? row.prev.toFixed(3) : ""))}</td>
+                                          <td className="border-r border-black py-0.5 font-bold text-black align-middle">{row.rec > 0 ? row.rec.toFixed(3) : ""}</td>
+                                          <td className="border-r border-black py-0.5 font-black text-black align-middle">{row.total > 0 ? row.total.toFixed(3) : ""}</td>
+                                          <td className="border-r border-black py-0.5 font-black text-black align-middle">{row.used > 0 ? row.used.toFixed(3) : ""}</td>
+                                          <td className={`border-r border-black py-0.5 font-black align-middle ${isVeg ? "text-black" : (row.bal < 0 ? "text-red-700" : "text-black")}`}>{isVeg ? "0.000" : (row.bal > 0 ? row.bal.toFixed(3) : "0.000")}</td>
+                                          <td className="border-r border-black py-0.5 font-bold text-black align-middle">{row.demand > 0 ? row.demand.toFixed(2) : ""}</td>
                                           <td className="border-r border-black py-0.5 align-middle"></td>
                                         </tr>
                                       );
@@ -15032,14 +15064,15 @@ function TeacherMDMPage() {
 
                         {/* === MASIK TANDUL SHIJVUN DILYACHE BILL — EXACT PDF FORMAT === */}
                         {monthlyMdmReportType === "masik_tandul_bill" && (() => {
-                          const monthName = monthlyMdmReportMonth.split(' ')[0];
+                          const monthName = monthlyMdmReportSelectedMonth || monthlyMdmReportMonth.split(' ')[0];
                           const monthMap: { [k: string]: number } = {
                             "जानेवारी": 1, "फेब्रुवारी": 2, "मार्च": 3, "एप्रिल": 4,
                             "मे": 5, "जून": 6, "जुलै": 7, "ऑगस्ट": 8,
                             "सप्टेंबर": 9, "ऑक्टोबर": 10, "नोव्हेंबर": 11, "डिसेंबर": 12
                           };
                           const monthNum = monthMap[monthName] || 7;
-                          const year = monthNum >= 6 ? 2026 : 2027;
+                          const startYear = parseInt(monthlyMdmReportYear?.split('/')[0] || "2026", 10) || 2026;
+                          const year = monthNum >= 6 ? startYear : startYear + 1;
                           const daysInMonth = new Date(year, monthNum, 0).getDate();
                           const marDays = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
                           const schoolName = profile?.schoolName || "";
@@ -15074,11 +15107,14 @@ function TeacherMDMPage() {
                           return (
                             <div className="space-y-2.5 print-page p-4 bg-white text-black font-sans flex flex-col justify-start border border-black shadow-xs">
                               {/* Title */}
-                              <div className="text-center space-y-0.5 mb-1">
+                              <div className="text-center space-y-1 mb-1">
                                 <p className="text-xs font-bold text-black">पंचायत समिती {profile?.taluka || ""} ( शिक्षण विभाग {profile?.district || ""} )</p>
                                 <h2 className="text-sm font-black text-black tracking-tight">
-                                  प्रधानमंत्री पोषण शक्ती निर्माण योजना तांदूळ शिजवून दिल्याचे बिल (सन {year}/{String(year + 1).slice(-2)})
+                                  प्रधानमंत्री पोषण शक्ती निर्माण योजना तांदूळ शिजवून दिल्याचे बिल
                                 </h2>
+                                <div className="inline-block bg-amber-100/90 border border-amber-300 px-4 py-0.5 rounded-md font-black text-xs md:text-sm text-black shadow-2xs">
+                                  माहे : <span className="underline font-black">{monthlyMdmReportSelectedMonth} {year}</span> (सन {monthlyMdmReportYear})
+                                </div>
                               </div>
 
                               {/* School Info */}
@@ -15535,35 +15571,59 @@ function TeacherMDMPage() {
                               const wednesdaysCount = getWednesdaysInMonth(monthlyReportMonth || "April", calcYear);
 
                               const getMaxDailyEnrolled = (cls: "1 To 5" | "6 To 8") => {
-                                const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-                                const mIdx = englishMonths.indexOf(monthlyReportMonth || "July");
+                                const englishMonths = [
+                                  "January", "February", "March", "April", "May", "June",
+                                  "July", "August", "September", "October", "November", "December"
+                                ];
+                                const mIdx = englishMonths.indexOf(monthlyReportMonth || "August");
                                 if (mIdx === -1) return 0;
-                                const daysInMonth = new Date(calcYear, mIdx + 1, 0).getDate();
-                                const mStr = (mIdx + 1).toString().padStart(2, "0");
 
+                                let latestDate = "";
+                                let latestPat = 0;
                                 let maxPat = 0;
-                                for (let d = 1; d <= daysInMonth; d++) {
-                                  const dStr = d.toString().padStart(2, "0");
-                                  const dateRecordKey = `${calcYear}-${mStr}-${dStr}`;
-                                  const rec = registerRecords?.[dateRecordKey];
-                                  const classRec = rec?.[cls] || (cls === "1 To 5" ? rec : null);
-                                  if (classRec && classRec.enrolled) {
-                                    const val = parseInt(classRec.enrolled, 10);
-                                    if (!isNaN(val) && val > maxPat) {
+
+                                Object.keys(registerRecords || {}).forEach((dateStr) => {
+                                  const parts = dateStr.split("-");
+                                  if (parts.length !== 3) return;
+                                  const recYear = parseInt(parts[0], 10);
+                                  const recMonthIndex = parseInt(parts[1], 10) - 1;
+                                  if (recYear !== calcYear || recMonthIndex !== mIdx) return;
+
+                                  const rec = registerRecords[dateStr];
+                                  if (!rec) return;
+                                  const classRec = rec[cls] || (cls === "1 To 5" ? rec : null);
+                                  if (!classRec) return;
+
+                                  const rawPat =
+                                    classRec.enrolled ??
+                                    classRec.totalEnrolled ??
+                                    classRec.pat ??
+                                    classRec.patSankhya ??
+                                    rec.enrolled ??
+                                    rec.totalEnrolled ??
+                                    rec.pat;
+
+                                  const val = parseInt(String(rawPat ?? "0"), 10);
+                                  if (!isNaN(val) && val > 0) {
+                                    if (dateStr >= latestDate) {
+                                      latestDate = dateStr;
+                                      latestPat = val;
+                                    }
+                                    if (val > maxPat) {
                                       maxPat = val;
                                     }
                                   }
+                                });
+
+                                if (latestPat > 0) return latestPat;
+                                if (maxPat > 0) return maxPat;
+
+                                const regData = getRegisterDataForMonth(monthlyReportMonth || "August", calcYear, cls);
+                                if (regData?.enrolled && regData.enrolled > 0) {
+                                  return regData.enrolled;
                                 }
 
-                                if (maxPat === 0) {
-                                  const regData = getRegisterDataForMonth(monthlyReportMonth || "July", calcYear, cls);
-                                  maxPat = regData?.enrolled || 0;
-                                }
-                                if (maxPat === 0) {
-                                  const isPrimary = cls === "1 To 5";
-                                  maxPat = isPrimary ? (parseInt(profile?.patPrimary || "0", 10) || 0) : (parseInt(profile?.patUpper || "0", 10) || 0);
-                                }
-                                return maxPat;
+                                return 0;
                               };
 
                               const primaryMaxEnrolled = getMaxDailyEnrolled("1 To 5");
@@ -15598,8 +15658,8 @@ function TeacherMDMPage() {
                                 const avgBeneficiary = cookedDays > 0 ? Math.round(beneficiarySum / cookedDays) : 0;
                                 const standardLabel = isPrimary ? "1 ली ते 5 वी" : "6 वी ते 8 वी";
 
-                                const classRegData = getRegisterDataForMonth(monthlyReportMonth || "April", calcYear, cls);
-                                const classEnrolled = classRegData.enrolled || (isPrimary ? Number(profile?.patPrimary || 0) : Number(profile?.patUpper || 0));
+                                const classRegData = getRegisterDataForMonth(monthlyReportMonth || "August", calcYear, cls);
+                                const classEnrolled = (isPrimary ? primaryMaxEnrolled : upperMaxEnrolled) || classRegData.enrolled || 0;
 
                                 return (
                                   <div className="print-page b-form-page border border-slate-400 p-4 md:p-6 bg-white text-black font-sans text-xs relative w-full min-w-[1000px] min-h-[960px] shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0">

@@ -853,6 +853,20 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         let cell0 = String(rows[r]?.[0] || "").trim();
         if (cell0 === "-" || cell0 === "null" || cell0 === "undefined") cell0 = "";
 
+        // If cell0 is exam text (e.g. द्वितीय घटक चाचणी), move it to Col 4 (Topic) so it's not swallowed by month merging
+        if (isExamOrAssessmentText(cell0)) {
+          if (!rows[r][4] || rows[r][4] === "-" || rows[r][4] === "null" || rows[r][4] === "undefined") {
+            rows[r][4] = cell0;
+          }
+          cell0 = "";
+        }
+
+        // Check if ANY other cell in this row has exam text and Col 4 is missing it
+        const examCellInRow = (rows[r] || []).find((c) => isExamOrAssessmentText(c));
+        if (examCellInRow && (!rows[r][4] || rows[r][4] === "-" || rows[r][4] === "null" || !isExamOrAssessmentText(rows[r][4]))) {
+          rows[r][4] = String(examCellInRow).trim();
+        }
+
         if (cell0 && isMarathiMonth(cell0)) {
           activeMonth = canonicalizeMarathiMonth(cell0);
         }
@@ -952,7 +966,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         // Col 4: Topic / Unit details (1 cell per row)
         for (let r = startR; r < endR; r++) {
           if (!matrix[r][4]?.skip) {
-            const rawVal = String(rows[r]?.[4] || "").trim();
+            let rawVal = String(rows[r]?.[4] || "").trim();
+            if (!rawVal || rawVal === "-" || rawVal === "null" || rawVal === "undefined") {
+              const examCell = (rows[r] || []).find((c) => isExamOrAssessmentText(c));
+              if (examCell) rawVal = String(examCell).trim();
+            }
             const val = (rawVal === "null" || rawVal === "undefined") ? "" : rawVal;
             const rowText = (rows[r] || []).join(" ");
             const isExam = isExamOrAssessmentText(val) || isExamOrAssessmentText(rowText);
@@ -1790,7 +1808,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           lastGrp.questions.push(q);
         });
 
-        // ── Render 2 Lessons (Topics) per Landscape Page (At least 20 Questions per Page) ──
+        // ── Render strictly 2 Topics (Lessons) per Landscape A4 Page ──
         const LESSONS_PER_PAGE = 2;
         const pageLessonGroups: (typeof lessonGroups)[] = [];
         for (let i = 0; i < lessonGroups.length; i += LESSONS_PER_PAGE) {
@@ -1802,12 +1820,44 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           const isFullFirstPage = pIdx === 0 && generatedPages.length === 0;
           const totalQuestionsOnPage = lessonsOnPage.reduce((sum, lg) => sum + lg.questions.length, 0);
 
+          // Calculate optimized font size and padding so all questions of these 2 topics fit without cutting
+          let qFontSize = "12px";
+          let qLineHeight = "1.28";
+          let cellPadding = "2.5px 4px";
+          let headerFontSize = "12px";
+          let metaFontSize = "11.5px";
+
+          if (totalQuestionsOnPage > 22) {
+            qFontSize = "10px";
+            qLineHeight = "1.2";
+            cellPadding = "1.5px 3px";
+            headerFontSize = "10.5px";
+            metaFontSize = "9.5px";
+          } else if (totalQuestionsOnPage > 17) {
+            qFontSize = "11px";
+            qLineHeight = "1.22";
+            cellPadding = "2px 3.5px";
+            headerFontSize = "11.5px";
+            metaFontSize = "10.5px";
+          } else if (totalQuestionsOnPage > 12) {
+            qFontSize = "11.8px";
+            qLineHeight = "1.25";
+            cellPadding = "2.2px 3.5px";
+            headerFontSize = "12px";
+            metaFontSize = "11px";
+          } else {
+            qFontSize = "12.5px";
+            qLineHeight = "1.3";
+            cellPadding = "3px 4px";
+            headerFontSize = "12.5px";
+            metaFontSize = "11.5px";
+          }
+
           const pageDiv = document.createElement("div");
           pageDiv.className = "pdf-question-bank-page";
           pageDiv.style.width = `${exportWidth}px`;
-          pageDiv.style.minHeight = "720px";
-          pageDiv.style.maxHeight = `${PAGE_MAX_HEIGHT + 40}px`;
-          pageDiv.style.padding = isFullFirstPage ? "8px 16px" : "6px 16px";
+          pageDiv.style.minHeight = "710px";
+          pageDiv.style.padding = isFullFirstPage ? "6px 14px" : "5px 14px";
           pageDiv.style.boxSizing = "border-box";
           pageDiv.style.backgroundColor = "#ffffff";
           pageDiv.style.display = "flex";
@@ -1818,7 +1868,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           const topContent = document.createElement("div");
           topContent.style.display = "flex";
           topContent.style.flexDirection = "column";
-          topContent.style.gap = "4px";
+          topContent.style.gap = "3px";
 
           // 1. Top School Header
           if (isFullFirstPage) {
@@ -1833,7 +1883,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                   ${schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
                 </h2>
               </div>
-              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 10px; font-weight: 700; color: #000000; padding-top: 2px;">
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 11px; font-weight: 700; color: #000000; padding-top: 2px;">
                 <div><span style="color: #475569;">केंद्र:</span> <strong>${schoolProfile.kendraName || "—"}</strong></div>
                 <div style="text-align: center;"><span style="color: #475569;">तालुका:</span> <strong>${schoolProfile.talukaName || "—"}</strong></div>
                 <div style="text-align: center;"><span style="color: #475569;">जिल्हा:</span> <strong>${schoolProfile.districtName || "—"}</strong></div>
@@ -1847,16 +1897,16 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             banner.style.backgroundColor = "#ffffff";
             banner.style.color = "#000000";
             banner.style.border = "1.5px solid #000000";
-            banner.style.padding = "4px 10px";
+            banner.style.padding = "3.5px 10px";
             banner.style.borderRadius = "6px";
             banner.style.display = "flex";
             banner.style.justifyContent = "space-between";
             banner.style.alignItems = "center";
             banner.innerHTML = `
-              <span style="font-size: 11.5px; font-weight: 900; color: #000000;">
+              <span style="font-size: 12.5px; font-weight: 900; color: #000000;">
                 📚 इयत्ता: २ री | विषय: ${record?.subjectId || "प्रथम भाषा : मराठी"} | शैक्षणिक वर्ष: २०२६-२७ | संपूर्ण प्रश्नपेढी
               </span>
-              <span style="font-size: 10px; font-weight: 700; color: #475569;">
+              <span style="font-size: 10.5px; font-weight: 700; color: #475569;">
                 NEP 2020 / SCF-FS 2024 संलग्नीत
               </span>
             `;
@@ -1872,20 +1922,20 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             compactHeader.style.justifyContent = "space-between";
             compactHeader.style.alignItems = "center";
             compactHeader.innerHTML = `
-              <span style="font-size: 10.5px; font-weight: 900; color: #000000;">
+              <span style="font-size: 11.5px; font-weight: 900; color: #000000;">
                 🏫 ${schoolProfile.schoolName || "जिल्हा परिषद शाळा"} | UDISE: ${schoolProfile.udiseNumber || "—"}
               </span>
-              <span style="font-size: 10.5px; font-weight: 900; color: #000000;">
+              <span style="font-size: 11.5px; font-weight: 900; color: #000000;">
                 इयत्ता २ री | विषय: ${record?.subjectId || "मराठी"} | प्रश्नपेढी (२०२६-२७)
               </span>
-              <span style="font-size: 9.5px; font-weight: 800; color: #475569;">
+              <span style="font-size: 10.5px; font-weight: 800; color: #475569;">
                 पान क्रमांक: ${generatedPages.length + 1}
               </span>
             `;
             topContent.appendChild(compactHeader);
           }
 
-          // 2. Lesson Title Subheader showing the topics on this page
+          // 2. Lesson Title Subheader showing the 2 topics on this page
           const lessonBanner = document.createElement("div");
           lessonBanner.style.backgroundColor = "#ffffff";
           lessonBanner.style.border = "1.5px solid #000000";
@@ -1896,10 +1946,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           lessonBanner.style.alignItems = "center";
           lessonBanner.style.gap = "8px";
           lessonBanner.innerHTML = `
-            <div style="font-size: 11px; font-weight: 900; color: #000000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <div style="font-size: 12.5px; font-weight: 900; color: #000000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               📖 समाविष्ट पाठ: ${lessonsOnPage.map((lg) => lg.lesson).join("  &nbsp;|&nbsp;  ")}
             </div>
-            <div style="font-size: 9.5px; font-weight: 800; color: #000000; white-space: nowrap; background-color: #ffffff; padding: 2px 7px; border-radius: 4px; border: 1px solid #000000;">
+            <div style="font-size: 11px; font-weight: 800; color: #000000; white-space: nowrap; background-color: #ffffff; padding: 2px 7px; border-radius: 4px; border: 1px solid #000000;">
               🎯 एकूण प्रश्न: ${totalQuestionsOnPage}
             </div>
           `;
@@ -1927,14 +1977,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             </colgroup>
             <thead>
               <tr style="background-color: #ffffff; color: #000000; border-bottom: 2px solid #000000;">
-                <th style="border: 1px solid #000000; padding: 3.5px 2px; font-size: 9.5px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[0] || "अ.क्र."}</th>
-                <th style="border: 1px solid #000000; padding: 3.5px 3px; font-size: 9.5px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[1] || "पाठ / घटक"}</th>
-                <th style="border: 1px solid #000000; padding: 3.5px 3px; font-size: 9.5px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[2] || "अध्ययन निष्पत्ती"}</th>
-                <th style="border: 1px solid #000000; padding: 3.5px 5px; font-size: 9.5px; font-weight: 900; text-align: left; background-color: #ffffff; color: #000000;">${tableHeader[3] || "प्रश्न"}</th>
-                <th style="border: 1px solid #000000; padding: 3.5px 5px; font-size: 9.5px; font-weight: 900; text-align: left; background-color: #ffffff; color: #000000;">${tableHeader[4] || "उत्तर"}</th>
-                <th style="border: 1px solid #000000; padding: 3.5px 2px; font-size: 9px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[5] || "मूल्यमापन"}</th>
-                <th style="border: 1px solid #000000; padding: 3.5px 2px; font-size: 9px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[6] || "प्रकार"}</th>
-                <th style="border: 1px solid #000000; padding: 3.5px 2px; font-size: 9px; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[7] || "उद्दिष्ट"}</th>
+                <th style="border: 1px solid #000000; padding: 3px 2px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[0] || "अ.क्र."}</th>
+                <th style="border: 1px solid #000000; padding: 3px 3px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[1] || "पाठ / घटक"}</th>
+                <th style="border: 1px solid #000000; padding: 3px 3px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[2] || "अध्ययन निष्पत्ती"}</th>
+                <th style="border: 1px solid #000000; padding: 3px 5px; font-size: ${headerFontSize}; font-weight: 900; text-align: left; background-color: #ffffff; color: #000000;">${tableHeader[3] || "प्रश्न"}</th>
+                <th style="border: 1px solid #000000; padding: 3px 5px; font-size: ${headerFontSize}; font-weight: 900; text-align: left; background-color: #ffffff; color: #000000;">${tableHeader[4] || "उत्तर"}</th>
+                <th style="border: 1px solid #000000; padding: 3px 2px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[5] || "मूल्यमापन"}</th>
+                <th style="border: 1px solid #000000; padding: 3px 2px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[6] || "प्रकार"}</th>
+                <th style="border: 1px solid #000000; padding: 3px 2px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[7] || "उद्दिष्ट"}</th>
               </tr>
             </thead>
             <tbody>
@@ -1947,56 +1997,54 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               const midIdx = Math.floor(questions.length / 2);
               const rowBg = "#ffffff";
 
-              let evalBadge = `<span style="font-size: 8px; font-weight: 800; color: #000000;">${q.evalType || "—"}</span>`;
-              if (q.evalType.includes("तोंडी")) {
-                evalBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">तोंडी</span>`;
-              } else if (q.evalType.includes("लेखी")) {
-                evalBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">लेखी</span>`;
-              } else if (q.evalType.includes("प्रात्यक्षिक")) {
-                evalBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">प्रात्यक्षिक</span>`;
+              let evalText = q.evalType || "—";
+              if (q.evalType?.includes("तोंडी")) {
+                evalText = "तोंडी";
+              } else if (q.evalType?.includes("लेखी")) {
+                evalText = "लेखी";
+              } else if (q.evalType?.includes("प्रात्यक्षिक")) {
+                evalText = "प्रात्यक्षिक";
               }
 
-              let qTypeBadge = `<span style="font-size: 8px; font-weight: 800; color: #000000;">${q.qType || "—"}</span>`;
-              if (q.qType.includes("वस्तुनिष्ठ")) {
-                qTypeBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3px; font-size: 8px; font-weight: 800; display: inline-block;">वस्तुनिष्ठ</span>`;
-              } else if (q.qType.includes("लघुत्तरी")) {
-                qTypeBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3px; font-size: 8px; font-weight: 800; display: inline-block;">लघुत्तरी</span>`;
-              } else if (q.qType.includes("दीर्घोत्तरी")) {
-                qTypeBadge = `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3px; font-size: 8px; font-weight: 800; display: inline-block;">दीर्घोत्तरी</span>`;
+              let qTypeText = q.qType || "—";
+              if (q.qType?.includes("वस्तुनिष्ठ")) {
+                qTypeText = "वस्तुनिष्ठ";
+              } else if (q.qType?.includes("लघुत्तरी")) {
+                qTypeText = "लघुत्तरी";
+              } else if (q.qType?.includes("दीर्घोत्तरी")) {
+                qTypeText = "दीर्घोत्तरी";
               }
 
-              const objBadge = q.objective
-                ? `<span style="background-color: #ffffff; color: #000000; border: 1px solid #000000; border-radius: 4px; padding: 1px 3.5px; font-size: 8px; font-weight: 800; display: inline-block;">${q.objective}</span>`
-                : "—";
+              const objText = q.objective || "—";
 
               // Strong divider line between topics on the same page
               const lessonRowBottomBorder = isLastRowOfLesson ? "2px solid #000000" : "none";
               const standardRowBottomBorder = isLastRowOfLesson ? "2px solid #000000" : "1px solid #cbd5e1";
-              const lessonTopBorder = isFirstRowOfLesson ? "1px solid #cbd5e1" : "none";
+              const lessonTopBorder = isFirstRowOfLesson ? "1px solid #000000" : "none";
 
               const lessonContent = qIdx === midIdx
-                ? `<div style="font-weight: 900; color: #000000; text-align: center; line-height: 1.3; padding: 2px; font-size: 10px; word-break: break-word;">${lg.lesson}</div>`
+                ? `<div style="font-weight: 900; color: #000000; text-align: center; line-height: ${qLineHeight}; padding: 2px; font-size: ${qFontSize}; word-break: break-word;">${lg.lesson}</div>`
                 : "";
 
               const lessonCellHtml = `
-                    <td class="qb-col-lesson" style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-top: ${lessonTopBorder}; border-bottom: ${lessonRowBottomBorder}; padding: 2px 3px; font-size: 10px; font-weight: 900; color: #000000; background-color: #ffffff; vertical-align: middle; text-align: center; word-break: break-word;">
+                    <td class="qb-col-lesson" style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-top: ${lessonTopBorder}; border-bottom: ${lessonRowBottomBorder}; padding: ${cellPadding}; font-size: ${qFontSize}; font-weight: 900; color: #000000; background-color: #ffffff; vertical-align: middle; text-align: center; word-break: break-word;">
                       ${lessonContent}
                     </td>
                   `;
 
               const outcomeContent = qIdx === midIdx
-                ? `<div style="font-weight: 600; color: #000000; text-align: center; line-height: 1.3; padding: 2px; font-size: 9px; word-break: break-word;">${lg.outcome || "—"}</div>`
+                ? `<div style="font-weight: 600; color: #000000; text-align: center; line-height: ${qLineHeight}; padding: 2px; font-size: ${qFontSize}; word-break: break-word;">${lg.outcome || "—"}</div>`
                 : "";
 
               const outcomeCellHtml = `
-                    <td class="qb-col-outcome" style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-top: ${lessonTopBorder}; border-bottom: ${lessonRowBottomBorder}; padding: 2px 3px; font-size: 9px; font-weight: 600; color: #000000; background-color: #ffffff; vertical-align: middle; text-align: center; word-break: break-word;">
+                    <td class="qb-col-outcome" style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-top: ${lessonTopBorder}; border-bottom: ${lessonRowBottomBorder}; padding: ${cellPadding}; font-size: ${qFontSize}; font-weight: 600; color: #000000; background-color: #ffffff; vertical-align: middle; text-align: center; word-break: break-word;">
                       ${outcomeContent}
                     </td>
                   `;
 
               return `
                     <tr style="background-color: ${rowBg};">
-                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; font-size: 9.5px; font-weight: 900; text-align: center; color: #000000; vertical-align: middle; background-color: #ffffff;">
+                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: ${cellPadding}; font-size: ${qFontSize}; font-weight: 900; text-align: center; color: #000000; vertical-align: middle; background-color: #ffffff;">
                         ${q.srNo}
                       </td>
 
@@ -2004,24 +2052,24 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
                       ${outcomeCellHtml}
 
-                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 4px; font-size: 9.5px; font-weight: 700; color: #000000; line-height: 1.3; vertical-align: middle; word-break: break-word; background-color: #ffffff;">
+                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: ${cellPadding}; font-size: ${qFontSize}; font-weight: 800; color: #000000; line-height: ${qLineHeight}; vertical-align: middle; word-break: break-word; overflow-wrap: break-word; background-color: #ffffff;">
                         ${q.question}
                       </td>
 
-                      <td class="qb-col-answer" style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 4px; font-size: 9.5px; font-weight: 600; color: #000000; background-color: #ffffff; line-height: 1.3; vertical-align: middle; word-break: break-word;">
+                      <td class="qb-col-answer" style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: ${cellPadding}; font-size: ${qFontSize}; font-weight: 600; color: #000000; background-color: #ffffff; line-height: ${qLineHeight}; vertical-align: middle; word-break: break-word; overflow-wrap: break-word;">
                         ${q.answer}
                       </td>
 
-                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; text-align: center; vertical-align: middle; background-color: #ffffff;">
-                        ${evalBadge}
+                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: ${cellPadding}; text-align: center; vertical-align: middle; background-color: #ffffff; font-size: ${metaFontSize}; font-weight: 800; color: #000000; white-space: nowrap;">
+                        ${evalText}
                       </td>
 
-                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; text-align: center; vertical-align: middle; background-color: #ffffff;">
-                        ${qTypeBadge}
+                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: ${cellPadding}; text-align: center; vertical-align: middle; background-color: #ffffff; font-size: ${metaFontSize}; font-weight: 800; color: #000000; white-space: nowrap;">
+                        ${qTypeText}
                       </td>
 
-                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 2px 2px; text-align: center; vertical-align: middle; background-color: #ffffff;">
-                        ${objBadge}
+                      <td style="border-left: 1px solid #000000; border-right: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: ${cellPadding}; text-align: center; vertical-align: middle; background-color: #ffffff; font-size: ${metaFontSize}; font-weight: 800; color: #000000; white-space: nowrap;">
+                        ${objText}
                       </td>
                     </tr>
                   `;
@@ -2034,8 +2082,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
           // 4. Bottom Footer / Signature
           const bottomFooter = document.createElement("div");
-          bottomFooter.style.marginTop = "4px";
-          bottomFooter.style.paddingTop = "3px";
+          bottomFooter.style.marginTop = "3px";
+          bottomFooter.style.paddingTop = "2px";
           bottomFooter.style.borderTop = "1px solid #cbd5e1";
 
           const isLastPageOfDoc = pIdx === pageLessonGroups.length - 1;
@@ -2044,15 +2092,15 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             bottomFooter.innerHTML = `
               <div style="display: grid; grid-template-columns: 1fr 1fr; text-align: center; padding-bottom: 4px; margin-bottom: 3px; border-bottom: 1px dashed #cbd5e1;">
                 <div>
-                  <div style="font-size: 11px; font-weight: 900; color: #0f172a;">वर्ग शिक्षक स्वाक्षरी</div>
-                  <div style="font-size: 10px; font-weight: 700; color: #475569;">(${schoolProfile.teacherName || "शिक्षकाचे नाव"})</div>
+                  <div style="font-size: 12.5px; font-weight: 900; color: #0f172a;">वर्ग शिक्षक स्वाक्षरी</div>
+                  <div style="font-size: 11.5px; font-weight: 700; color: #475569;">(${schoolProfile.teacherName || "शिक्षकाचे नाव"})</div>
                 </div>
                 <div>
-                  <div style="font-size: 11px; font-weight: 900; color: #0f172a;">मुख्याध्यापक स्वाक्षरी व शिक्का</div>
-                  <div style="font-size: 10px; font-weight: 700; color: #475569;">(${schoolProfile.headMasterName || "मुख्याध्यापक नाव"})</div>
+                  <div style="font-size: 12.5px; font-weight: 900; color: #0f172a;">मुख्याध्यापक स्वाक्षरी व शिक्का</div>
+                  <div style="font-size: 11.5px; font-weight: 700; color: #475569;">(${schoolProfile.headMasterName || "मुख्याध्यापक नाव"})</div>
                 </div>
               </div>
-              <div style="display: flex; justify-content: space-between; font-size: 9px; font-weight: 700; color: #64748b;">
+              <div style="display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 700; color: #64748b;">
                 <span>महाराष्ट्र प्राथमिक शिक्षण परिषद | शैक्षणिक वर्ष २०२६-२७</span>
                 <span>अंतिम पान (${pageLessonGroups.length}/${pageLessonGroups.length})</span>
                 <span>तारीख: ${new Date().toLocaleDateString("mr-IN")}</span>
@@ -2060,7 +2108,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             `;
           } else {
             bottomFooter.innerHTML = `
-              <div style="display: flex; justify-content: space-between; font-size: 9px; font-weight: 700; color: #64748b;">
+              <div style="display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 700; color: #64748b;">
                 <span>महाराष्ट्र राज्य अभ्यासक्रम आराखडा (SCF-FS / NEP 2020)</span>
                 <span>${schoolProfile.schoolName || ""}</span>
                 <span>पान ${pIdx + 1} / ${pageLessonGroups.length} | तारीख: ${new Date().toLocaleDateString("mr-IN")}</span>
@@ -2106,9 +2154,24 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
         // High efficiency JPEG compression (0.78 retains razor-sharp Devanagari text while saving 75% file size)
         const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.78);
-        const pageHeightMm = (pageCanvas.height * pdfWidth) / pageCanvas.width;
 
-        pdf.addImage(pageImgData, "JPEG", 8, 8, pdfWidth, pageHeightMm, undefined, "FAST");
+        // Proportional scale to fit strictly within landscape A4 printable area (281mm x 196mm) with zero cutting
+        const maxAvailableWidthMm = 281;
+        const maxAvailableHeightMm = 196;
+        const canvasRatio = pageCanvas.width / pageCanvas.height;
+
+        let renderWidthMm = maxAvailableWidthMm;
+        let renderHeightMm = renderWidthMm / canvasRatio;
+
+        if (renderHeightMm > maxAvailableHeightMm) {
+          renderHeightMm = maxAvailableHeightMm;
+          renderWidthMm = renderHeightMm * canvasRatio;
+        }
+
+        const offsetX = 8 + (maxAvailableWidthMm - renderWidthMm) / 2;
+        const offsetY = 7 + (maxAvailableHeightMm - renderHeightMm) / 2;
+
+        pdf.addImage(pageImgData, "JPEG", offsetX, offsetY, renderWidthMm, renderHeightMm, undefined, "FAST");
       }
 
       if (tempContainer.parentNode) {
@@ -3037,36 +3100,22 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                         </td>
 
                                         {/* 6. मूल्यमापन प्रकार */}
-                                        <td className="border border-slate-300 p-2 text-center align-top whitespace-nowrap bg-white">
+                                        <td className="border border-slate-300 p-2 text-center align-middle whitespace-nowrap bg-white text-xs font-bold text-black">
                                           {q.evalType ? (
-                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-black border border-slate-400 inline-block">
-                                              {q.evalType.includes("तोंडी") ? "तोंडी" : q.evalType.includes("लेखी") ? "लेखी" : q.evalType.includes("प्रात्यक्षिक") ? "प्रात्यक्षिक" : q.evalType}
-                                            </span>
-                                          ) : (
-                                            <span className="text-[10px] font-bold text-slate-500">—</span>
-                                          )}
+                                            q.evalType.includes("तोंडी") ? "तोंडी" : q.evalType.includes("लेखी") ? "लेखी" : q.evalType.includes("प्रात्यक्षिक") ? "प्रात्यक्षिक" : q.evalType
+                                          ) : "—"}
                                         </td>
 
                                         {/* 7. प्रश्नाचा प्रकार */}
-                                        <td className="border border-slate-300 p-2 text-center align-top whitespace-nowrap bg-white">
+                                        <td className="border border-slate-300 p-2 text-center align-middle whitespace-nowrap bg-white text-xs font-bold text-black">
                                           {q.qType ? (
-                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-black border border-slate-400 inline-block">
-                                              {q.qType.includes("वस्तुनिष्ठ") ? "वस्तुनिष्ठ" : q.qType.includes("लघुत्तरी") ? "लघुत्तरी" : q.qType.includes("दीर्घोत्तरी") ? "दीर्घोत्तरी" : q.qType}
-                                            </span>
-                                          ) : (
-                                            <span className="text-[10px] font-bold text-slate-500">—</span>
-                                          )}
+                                            q.qType.includes("वस्तुनिष्ठ") ? "वस्तुनिष्ठ" : q.qType.includes("लघुत्तरी") ? "लघुत्तरी" : q.qType.includes("दीर्घोत्तरी") ? "दीर्घोत्तरी" : q.qType
+                                          ) : "—"}
                                         </td>
 
                                         {/* 8. उद्दिष्ट */}
-                                        <td className="border border-slate-300 p-2 text-center align-top whitespace-nowrap bg-white">
-                                          {q.objective ? (
-                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-black border border-slate-400 inline-block">
-                                              {q.objective}
-                                            </span>
-                                          ) : (
-                                            <span className="text-[10px] font-bold text-slate-500">—</span>
-                                          )}
+                                        <td className="border border-slate-300 p-2 text-center align-middle whitespace-nowrap bg-white text-xs font-bold text-black">
+                                          {q.objective || "—"}
                                         </td>
                                       </tr>
                                     );
@@ -3193,10 +3242,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                   /* Dedicated Styling for Question Bank in PDF Export */
                   .pdf-question-bank-export td,
                   .pdf-question-bank-table td {
-                    font-size: 11px !important;
-                    line-height: 1.4 !important;
                     box-sizing: border-box !important;
                     word-break: break-word !important;
+                    overflow-wrap: break-word !important;
                     white-space: normal !important;
                     color: #0f172a !important;
                     -webkit-print-color-adjust: exact !important;
@@ -3204,38 +3252,36 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                   }
                   .pdf-question-bank-export td.qb-col-lesson,
                   .pdf-question-bank-table td.qb-col-lesson {
-                    background-color: #eef2ff !important;
-                    color: #1e1b4b !important;
+                    background-color: #ffffff !important;
+                    color: #000000 !important;
                     font-weight: 900 !important;
-                    border: 1px solid #cbd5e1 !important;
+                    border: 1px solid #000000 !important;
                     vertical-align: middle !important;
                     text-align: center !important;
                   }
                   .pdf-question-bank-export td.qb-col-outcome,
                   .pdf-question-bank-table td.qb-col-outcome {
-                    background-color: #f8fafc !important;
-                    color: #334155 !important;
+                    background-color: #ffffff !important;
+                    color: #000000 !important;
                     font-weight: 600 !important;
-                    border: 1px solid #cbd5e1 !important;
+                    border: 1px solid #000000 !important;
                     vertical-align: middle !important;
                     text-align: center !important;
                   }
                   .pdf-question-bank-export td.qb-col-answer,
                   .pdf-question-bank-table td.qb-col-answer {
-                    background-color: #f0fdf4 !important;
-                    color: #064e3b !important;
+                    background-color: #ffffff !important;
+                    color: #000000 !important;
                     font-weight: 600 !important;
                   }
                   .pdf-question-bank-export th,
                   .pdf-question-bank-table th {
-                    font-size: 11px !important;
                     line-height: 1.3 !important;
-                    padding: 5px 3px !important;
-                    background-color: #0f172a !important;
-                    color: #fef08a !important;
+                    background-color: #ffffff !important;
+                    color: #000000 !important;
                     font-weight: 900 !important;
                     text-align: center !important;
-                    border: 1px solid #334155 !important;
+                    border: 1px solid #000000 !important;
                     -webkit-print-color-adjust: exact !important;
                     print-color-adjust: exact !important;
                   }
@@ -3328,6 +3374,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         ? normalizeMonthlyPlanningRows(sec.rows, sec.subjectName)
                         : normalizeAnnualPlanningRows(sec.rows);
                       const filteredRows = normalizedRows.filter((row) => {
+                        // CRITICAL: Exam / Assessment / Test / Vacation rows must ALWAYS be preserved and shown!
+                        if (isExamOrAssessmentRow(row) || isExamOrAssessmentText(row.join(" "))) {
+                          return true;
+                        }
                         if (isSignatureRow(row)) return false;
                         if (isTableColumnHeaderRow(row)) return false;
                         // Filter out rows that are duplicate header rows (headers appearing as data)

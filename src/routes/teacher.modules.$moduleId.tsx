@@ -3450,9 +3450,9 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
           objectives = "बँक आणि दैनंदिन व्यवहार समजणे, पत्र लेखन आराखडा समजणे.";
           activity = "बँकेला भेट देणे, घरगुती पत्र लिहिणे.";
         } else if (monthNameEn === "January") {
-          topic = "पाठ ७. जोडशब्द व सुविचार लेखन";
-          objectives = "जोडशब्दांचे योग्य उच्चार व लेखन करणे.";
-          activity = "दररोज एक सुविचार फलकावर लिहिणे.";
+          topic = "पाठ ७. जोडशब्द व सुविचार लेखन\nद्वितीय घटक चाचणी";
+          objectives = "जोडशब्दांचे योग्य उच्चार व लेखन करणे, द्वितीय घटक चाचणी मूल्यमापन.";
+          activity = "दररोज एक सुविचार फलकावर लिहिणे व चाचणी सोडवणे.";
         } else if (monthNameEn === "February") {
           topic = "पाठ ८. विरामचिन्हे व क्रियापद ओळख";
           objectives = "लेखनात योग्य विरामचिन्हांचा वापर करणे.";
@@ -3478,30 +3478,30 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
           activity = langIsEng ? "Abacus sums, mental math drills" : "संख्यारेषेवर बेरीज व वजाबाकी खेळ.";
         } else if (monthNameEn === "August") {
           topic = langIsEng ? "Unit 3: Multiplication tables (2-5)" : "घटक ३: गुणाकार पाढे (२ ते ५)";
-          objectives = langIsEng ? "Reciting and applying multiplication tables 2ΓÇô5" : "पाढे म्हणणे व गुणाकार समजणे.";
+          objectives = langIsEng ? "Reciting and applying multiplication tables 2–5" : "पाढे म्हणणे व गुणाकार समजणे.";
           activity = langIsEng ? "Times tables songs and flashcard quiz" : "गाण्याच्या चालीवर पाढे म्हणणे.";
         } else if (monthNameEn === "September") {
-          topic = langIsEng ? "Unit 4: Division ΓÇô equal sharing" : "घटक ४: भागाकार ΓÇô समान वाटप";
+          topic = langIsEng ? "Unit 4: Division – equal sharing" : "घटक ४: भागाकार – समान वाटप";
           objectives = langIsEng ? "Understanding division as equal grouping" : "समान गटांमध्ये विभागणी समजणे.";
           activity = langIsEng ? "Sharing objects equally in groups" : "वस्तू समान गटांत वाटप करणे.";
         } else if (monthNameEn === "October") {
-          topic = langIsEng ? "Unit 5: Fractions & Half/Quarter" : "घटक ५: अपूर्णांक ΓÇô अर्धे व पाव";
-          objectives = langIsEng ? "Identifying ┬╜ and ┬╝ of shapes and sets" : "आकृतींचे अर्धे व पाव भाग ओळखणे.";
+          topic = langIsEng ? "Unit 5: Fractions & Half/Quarter" : "घटक ५: अपूर्णांक – अर्धे व पाव";
+          objectives = langIsEng ? "Identifying ½ and ¼ of shapes and sets" : "आकृतींचे अर्धे व पाव भाग ओळखणे.";
           activity = langIsEng ? "Folding shapes into halves and quarters" : "कागदाच्या घड्या घालून अर्धे दाखवणे.";
         } else if (monthNameEn === "November") {
-          topic = langIsEng ? "Unit 6: Measurement ΓÇô Length, Weight, Capacity" : "घटक ६: मापन ΓÇô लांबी, वजन व क्षमता";
+          topic = langIsEng ? "Unit 6: Measurement – Length, Weight, Capacity" : "घटक ६: मापन – लांबी, वजन व क्षमता";
           objectives = langIsEng ? "Measuring objects using standard & non-standard units" : "मानक व अमानक एककांनी मापन करणे.";
           activity = langIsEng ? "Classroom measurement activities" : "वर्गातील वस्तू मोजणे व तुलना करणे.";
         } else if (monthNameEn === "December") {
-          topic = langIsEng ? "Unit 7: Time ΓÇô Reading Clock" : "घटक ७: वेळ ΓÇô घड्याळ वाचन";
+          topic = langIsEng ? "Unit 7: Time – Reading Clock" : "घटक ७: वेळ – घड्याळ वाचन";
           objectives = langIsEng ? "Reading time to the hour and half hour" : "पूर्ण व अर्ध्या तासाची वेळ सांगणे.";
           activity = langIsEng ? "Clock model making and time matching" : "घड्याळाच्या काट्या फिरवून वेळ दाखवणे.";
         } else if (monthNameEn === "January") {
-          topic = langIsEng ? "Unit 8: Money ΓÇô Coins and Notes" : "घटक ८: पैसे ΓÇô नाणी व नोटा";
-          objectives = langIsEng ? "Identifying and counting Indian currency" : "नाणी व नोटा ओळखणे व मोजणे.";
+          topic = langIsEng ? "Unit 8: Money – Coins and Notes\nSecond Unit Test" : "घटक ८: पैसे – नाणी व नोटा\nद्वितीय घटक चाचणी";
+          objectives = langIsEng ? "Identifying and counting Indian currency & unit testing" : "नाणी व नोटा ओळखणे व द्वितीय घटक चाचणी.";
           activity = langIsEng ? "Mock shop activity with paper notes" : "कागदी नोटा वापरून खरेदी-विक्री खेळ.";
         } else if (monthNameEn === "February") {
-          topic = langIsEng ? "Unit 9: Geometry ΓÇô Shapes & Patterns" : "घटक ९: भूमिती ΓÇô आकार व आकृतीबंध";
+          topic = langIsEng ? "Unit 9: Geometry – Shapes & Patterns" : "घटक ९: भूमिती – आकार व आकृतीबंध";
           objectives = langIsEng ? "Identifying 2D & 3D shapes and repeating patterns" : "समतल व घनाकार आकार ओळखणे.";
           activity = langIsEng ? "Shape collage and pattern drawing" : "आकारांचे चित्र काढणे व रंगवणे.";
         } else if (monthNameEn === "March") {
@@ -3543,15 +3543,15 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
           objectives = "Using adjectives to describe objects.";
           activity = "Adjective matching, describe-the-picture worksheet.";
         } else if (monthNameEn === "January") {
-          topic = "Chapter 8: Sentence Formation & Punctuation";
-          objectives = "Writing complete sentences with full stop and question mark.";
-          activity = "Sentence jumbles, punctuation spotting.";
+          topic = "Chapter 8: Sentence Formation & Punctuation\nSecond Unit Test (द्वितीय घटक चाचणी)";
+          objectives = "Writing complete sentences with full stop and question mark & Second Unit Test.";
+          activity = "Sentence jumbles, punctuation spotting, unit test.";
         } else if (monthNameEn === "February") {
           topic = "Chapter 9: Short Stories & Comprehension";
           objectives = "Reading simple stories and answering questions.";
           activity = "Story sequencing cards, comprehension exercise.";
         } else if (monthNameEn === "March") {
-          topic = "Revision ΓÇô All chapters";
+          topic = "Revision – All chapters";
           objectives = "Review vocabulary, grammar, and reading skills.";
           activity = "Fun interactive spelling bee.";
         } else {
@@ -3561,43 +3561,43 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
         }
       } else {
         if (monthNameEn === "June") {
-          topic = `${subject} ΓÇô घटक १: पायाभूत ओळख`;
+          topic = `${subject} – घटक १: पायाभूत ओळख`;
           objectives = "विषयाच्या पायाभूत संकल्पनांची ओळख.";
           activity = "चर्चा व प्रश्नोत्तरे.";
         } else if (monthNameEn === "July") {
-          topic = `${subject} ΓÇô घटक २`;
+          topic = `${subject} – घटक २`;
           objectives = "विषयाच्या दुसऱ्या घटकाचे अध्ययन.";
           activity = "गट चर्चा व नोट्स.";
         } else if (monthNameEn === "August") {
-          topic = `${subject} ΓÇô घटक ३`;
+          topic = `${subject} – घटक ३`;
           objectives = "घटक ३ च्या संकल्पना समजणे.";
           activity = "प्रात्यक्षिक व कृती उपक्रम.";
         } else if (monthNameEn === "September") {
-          topic = `${subject} ΓÇô घटक ४`;
+          topic = `${subject} – घटक ४`;
           objectives = "घटक ४ चे सखोल अध्ययन.";
           activity = "गृहपाठ व सराव.";
         } else if (monthNameEn === "October") {
-          topic = `${subject} ΓÇô प्रथम सत्र परीक्षा`;
+          topic = `${subject} – प्रथम सत्र परीक्षा`;
           objectives = "सत्र १ चे मूल्यमापन.";
           activity = "सराव प्रश्नपत्रिका.";
         } else if (monthNameEn === "November") {
-          topic = `${subject} ΓÇô घटक ५`;
+          topic = `${subject} – घटक ५`;
           objectives = "घटक ५ च्या संकल्पना समजणे.";
           activity = "चित्र, आकृत्या व नोट्स तयार करणे.";
         } else if (monthNameEn === "December") {
-          topic = `${subject} ΓÇô घटक ६`;
+          topic = `${subject} – घटक ६`;
           objectives = "घटक ६ चे अध्ययन.";
           activity = "गट कृती व सादरीकरण.";
         } else if (monthNameEn === "January") {
-          topic = `${subject} ΓÇô घटक ७`;
-          objectives = "घटक ७ ΓÇô सखोल अभ्यास.";
-          activity = "प्रकल्प व लेखन.";
+          topic = `${subject} – घटक ७\nद्वितीय घटक चाचणी`;
+          objectives = "घटक ७ – सखोल अभ्यास व द्वितीय घटक चाचणी मूल्यमापन.";
+          activity = "प्रकल्प, लेखन व चाचणी.";
         } else if (monthNameEn === "February") {
-          topic = `${subject} ΓÇô घटक ८`;
+          topic = `${subject} – घटक ८`;
           objectives = "घटक ८ चे अध्ययन व उजळणी.";
           activity = "चर्चा व सराव प्रश्न.";
         } else if (monthNameEn === "March") {
-          topic = `${subject} ΓÇô उजळणी`;
+          topic = `${subject} – उजळणी`;
           objectives = "संपूर्ण वर्षाचा अभ्यासक्रम उजळणी.";
           activity = "सराव चाचण्या.";
         } else {

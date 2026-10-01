@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 import mammoth from "mammoth";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
 import { PlanningTableRow } from "@/components/teacher/AcademicPlanningSystem";
+import { isExamOrAssessmentText, isMarathiMonth, canonicalizeMarathiMonth } from "@/lib/smartSubjectSplitter";
 
 export interface ParsedTableCell {
   value: string;
@@ -26,6 +27,19 @@ export interface ParsedTableResult {
 export const isColumnHeaderRow = (row: ParsedTableCell[]): boolean => {
   if (!row || row.length === 0) return false;
   const joined = row.map((c) => (c.value || "").toLowerCase().trim()).join(" ");
+
+  // Exam / Assessment / Vacation rows are never column header rows
+  if (
+    joined.includes("चाचणी") ||
+    joined.includes("मूल्यमापन") ||
+    joined.includes("परीक्षा") ||
+    joined.includes("सुट्ट्या") ||
+    joined.includes("सुट्टी") ||
+    joined.includes("unit test") ||
+    joined.includes("assessment")
+  ) {
+    return false;
+  }
   
   const hasMonth = joined.includes("महिना") || joined.includes("month");
   const hasHeaderKeywords =
@@ -251,19 +265,71 @@ export async function parseExcelFile(file: File): Promise<ParsedTableResult> {
     const mappedRows: PlanningTableRow[] = [];
     const dataRows = cleanedGrid.slice(headerRowIdx + 1).filter((r) => !isColumnHeaderRow(r));
 
+    // Determine column indices from rawHeaders
+    let monthCol = 0;
+    let weeksCol = 1;
+    let daysCol = 2;
+    let periodsCol = 3;
+    let topicsCol = 4;
+    let outcomesCol = 5;
+
+    rawHeaders.forEach((h, idx) => {
+      const hl = h.toLowerCase().trim();
+      if (hl.includes("महिना") || hl.includes("month")) monthCol = idx;
+      else if (hl.includes("आठवडा") || hl.includes("week")) weeksCol = idx;
+      else if (hl.includes("कामाचे") || hl.includes("दिवस") || hl.includes("days") || hl.includes("working")) daysCol = idx;
+      else if (hl.includes("तासिका") || hl.includes("तास") || hl.includes("period")) periodsCol = idx;
+      else if (hl.includes("विषय") || hl.includes("घटक") || hl.includes("पाठ") || hl.includes("topic")) topicsCol = idx;
+      else if (hl.includes("निष्पत्ती") || hl.includes("outcome") || hl.includes("साध्य")) outcomesCol = idx;
+    });
+
+    let runningMonth = "जून";
+    let runningWeeks = "";
+    let runningDays = "";
+    let runningPeriods = "";
+
     dataRows.forEach((row, i) => {
-      const visibleCells = row.filter((c) => !c.isMergedHidden || c.value);
-      if (visibleCells.length === 0) return;
+      let rawMonth = row[monthCol]?.value ? String(row[monthCol].value).trim() : "";
+      let rawWeeks = row[weeksCol]?.value ? String(row[weeksCol].value).trim() : "";
+      let rawDays = row[daysCol]?.value ? String(row[daysCol].value).trim() : "";
+      let rawPeriods = row[periodsCol]?.value ? String(row[periodsCol].value).trim() : "";
+      let rawTopic = row[topicsCol]?.value ? String(row[topicsCol].value).trim() : "";
+      let rawOutcome = row[outcomesCol]?.value ? String(row[outcomesCol].value).trim() : "";
+
+      // Check if ANY cell in this row contains exam text (e.g. द्वितीय घटक चाचणी, प्रथम घटक चाचणी, संकलित मूल्यमापन)
+      const foundExam = row.find((c) => isExamOrAssessmentText(c?.value || ""));
+      if (foundExam) {
+        const examText = String(foundExam.value).trim();
+        if (!rawTopic || !isExamOrAssessmentText(rawTopic)) {
+          rawTopic = examText;
+        }
+        if (rawMonth === examText) {
+          rawMonth = "";
+        }
+      }
+
+      if (rawMonth && isMarathiMonth(rawMonth)) {
+        runningMonth = canonicalizeMarathiMonth(rawMonth);
+        rawMonth = runningMonth;
+        if (rawWeeks) runningWeeks = rawWeeks;
+        if (rawDays) runningDays = rawDays;
+        if (rawPeriods) runningPeriods = rawPeriods;
+      }
+
+      const effectiveMonth = rawMonth || runningMonth;
+      const effectiveWeeks = rawWeeks || (effectiveMonth === runningMonth ? runningWeeks : "");
+      const effectiveDays = rawDays || (effectiveMonth === runningMonth ? runningDays : "");
+      const effectivePeriods = rawPeriods || (effectiveMonth === runningMonth ? runningPeriods : "");
 
       mappedRows.push({
         id: `excel_${Date.now()}_${i}`,
-        month: visibleCells[0]?.value || `महिना ${i + 1}`,
-        subject: visibleCells[1]?.value || "मराठी",
-        weeks: visibleCells[2]?.value || "4",
-        workingDays: visibleCells[3]?.value || "20",
-        periods: visibleCells[4]?.value || "50",
-        topics: visibleCells[5]?.value || visibleCells[1]?.value || "घटक माहिती",
-        outcomes: visibleCells[6]?.value || visibleCells[2]?.value || "अध्ययन निष्पत्ती",
+        month: effectiveMonth,
+        subject: "मराठी",
+        weeks: effectiveWeeks,
+        workingDays: effectiveDays,
+        periods: effectivePeriods,
+        topics: rawTopic || "",
+        outcomes: rawOutcome || "",
       });
     });
 

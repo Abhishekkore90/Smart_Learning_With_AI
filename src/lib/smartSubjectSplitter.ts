@@ -403,6 +403,11 @@ export const isTableColumnHeaderRow = (row: any[]): boolean => {
   const line = row.map((c) => String(c || "")).join(" ").trim().toLowerCase();
   if (!line) return false;
 
+  // IMPORTANT: Any Exam / Assessment row or Vacation row is NEVER a column header row!
+  if (isExamOrAssessmentText(line) || row.some((c) => isExamOrAssessmentText(String(c || "")))) {
+    return false;
+  }
+
   // English Header Row matching
   if (
     (line.includes("day") || line.includes("date")) &&
@@ -425,16 +430,40 @@ export const isTableColumnHeaderRow = (row: any[]): boolean => {
   }
 
   // Marathi Header Row matching
-  if (
-    (line.includes("दिनांक") || line.includes("दिवस") || line.includes("महिना") || line.includes("आठवडा") || line.includes("वार") || line.includes("day") || line.includes("date")) &&
-    (line.includes("पाठ") || line.includes("घटक") || line.includes("अध्ययन") || line.includes("निष्पत्ती") || line.includes("साहित्य") || line.includes("साधन") || line.includes("मुद्दे") || line.includes("उद्देश") || line.includes("स्वरूप") || line.includes("तपशील"))
-  ) {
+  // Note: 'वार' alone must NOT match within 'जानेवारी' or 'फेब्रुवारी'
+  const hasDayOrDate =
+    line.includes("दिनांक") ||
+    line.includes("दिवस") ||
+    line.includes("महिना") ||
+    line.includes("आठवडा") ||
+    line.includes(" वार ") ||
+    line.startsWith("वार ") ||
+    line.endsWith(" वार") ||
+    line === "वार" ||
+    line.includes("वार/") ||
+    line.includes("/वार") ||
+    line.includes("day") ||
+    line.includes("date");
+
+  const hasTopicOrContent =
+    line.includes("पाठ") ||
+    line.includes("घटक") ||
+    line.includes("अध्ययन") ||
+    line.includes("निष्पत्ती") ||
+    line.includes("साहित्य") ||
+    line.includes("साधन") ||
+    line.includes("मुद्दे") ||
+    line.includes("उद्देश") ||
+    line.includes("स्वरूप") ||
+    line.includes("तपशील");
+
+  if (hasDayOrDate && hasTopicOrContent) {
     return true;
   }
 
   // Multi-keyword check: if 3 or more standard planning column keywords are in this row, it is a header row
   const headerKeywords = [
-    "दिवस", "दिनांक", "पाठ", "घटक", "उपघटक", "अध्ययन", "निष्पत्ती",
+    "दिवस", "दिनांक", "पाठ", "उपघटक", "अध्ययन", "निष्पत्ती",
     "मुद्दे", "उद्देश", "स्वरूप", "साधन", "तंत्रे", "साहित्य", "तपशील",
     "day", "topic", "unit", "outcome", "objective", "experience", "tool", "material"
   ];
@@ -751,6 +780,21 @@ export async function extractSubjectSectionsFromExcel(
         rawMonthCell = "";
       }
 
+      // If topicCell is empty, check if ANY cell in this row contains exam text (e.g. द्वितीय घटक चाचणी)
+      if (!topicCell) {
+        for (let c = 0; c < row.length; c++) {
+          const val = String(row[c] || "").trim();
+          if (isExamOrAssessmentText(val)) {
+            topicCell = val;
+            if (c === 0 + colOffset) rawMonthCell = "";
+            if (c === 1 + colOffset) rawWeeksCell = "";
+            if (c === 2 + colOffset) rawDaysCell = "";
+            if (c === 3 + colOffset) rawPeriodsCell = "";
+            break;
+          }
+        }
+      }
+
       if (rawMonthCell && isMarathiMonth(rawMonthCell)) {
         const canon = canonicalizeMarathiMonth(rawMonthCell);
         lastMonth = canon;
@@ -982,6 +1026,18 @@ export function splitRowsIntoSubjectSections(
     if (isExamOrAssessmentText(monthCell)) {
       if (!topicCell) topicCell = monthCell;
       monthCell = "";
+    }
+
+    // If topicCell is empty, check if ANY cell in this row contains exam text (e.g. द्वितीय घटक चाचणी)
+    if (!topicCell) {
+      for (let c = 0; c < row.length; c++) {
+        const val = String(row[c] || "").trim();
+        if (isExamOrAssessmentText(val)) {
+          topicCell = val;
+          if (c === 0 + colOffset) monthCell = "";
+          break;
+        }
+      }
     }
 
     if (monthCell && isMarathiMonth(monthCell)) {
@@ -1409,6 +1465,12 @@ export function normalizeAnnualPlanningRows(rows: string[][]): string[][] {
     if (isExamOrAssessmentText(m)) {
       if (!topic) topic = m;
       m = "";
+    }
+
+    // Also check if any column has exam text and topic is empty
+    if (!topic) {
+      const foundExam = row.find((c) => isExamOrAssessmentText(c));
+      if (foundExam) topic = String(foundExam).trim();
     }
 
     if (m && isMarathiMonth(m)) {

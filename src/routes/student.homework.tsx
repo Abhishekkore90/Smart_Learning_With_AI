@@ -32,6 +32,7 @@ import { subscribeToHomework } from "@/services/homeworkService";
 import type { HomeworkItem } from "@/types/documentEditor";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
 import { DailyHomeworkTemplate } from "@/components/homework/DailyHomeworkTemplate";
+import { DailyHomeworkCalendar, formatISODate } from "@/components/homework/DailyHomeworkCalendar";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 
 export const Route = createFileRoute("/student/homework")({
@@ -49,6 +50,8 @@ function StudentHomeworkPage() {
   const [selectedSubject, setSelectedSubject] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [calendarDate, setCalendarDate] = useState<string>(() => formatISODate(new Date()));
 
   const [homeworkList, setHomeworkList] = useState<HomeworkItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,28 +213,58 @@ function StudentHomeworkPage() {
                   </p>
                 </div>
 
-                {/* Medium Switcher */}
-                <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 self-start">
-                  <button
-                    onClick={() => setSelectedMedium("marathi")}
-                    className={`px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      selectedMedium === "marathi"
-                        ? "bg-white text-indigo-700 shadow-sm"
-                        : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    मराठी माध्यम
-                  </button>
-                  <button
-                    onClick={() => setSelectedMedium("semi")}
-                    className={`px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      selectedMedium === "semi"
-                        ? "bg-white text-indigo-700 shadow-sm"
-                        : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    सेमी माध्यम
-                  </button>
+                <div className="flex items-center gap-3 flex-wrap self-start">
+                  {/* View Mode Switcher */}
+                  <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("calendar")}
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        viewMode === "calendar"
+                          ? "bg-white text-indigo-700 shadow-sm font-black"
+                          : "text-slate-500 hover:text-slate-900"
+                      }`}
+                    >
+                      <Calendar className="size-3.5" />
+                      <span>कॅलेंडर दृश्य (Calendar)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("list")}
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        viewMode === "list"
+                          ? "bg-white text-indigo-700 shadow-sm font-black"
+                          : "text-slate-500 hover:text-slate-900"
+                      }`}
+                    >
+                      <Book className="size-3.5" />
+                      <span>यादी दृश्य (Table)</span>
+                    </button>
+                  </div>
+
+                  {/* Medium Switcher */}
+                  <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                    <button
+                      onClick={() => setSelectedMedium("marathi")}
+                      className={`px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        selectedMedium === "marathi"
+                          ? "bg-white text-indigo-700 shadow-sm"
+                          : "text-slate-500 hover:text-slate-900"
+                      }`}
+                    >
+                      मराठी माध्यम
+                    </button>
+                    <button
+                      onClick={() => setSelectedMedium("semi")}
+                      className={`px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        selectedMedium === "semi"
+                          ? "bg-white text-indigo-700 shadow-sm"
+                          : "text-slate-500 hover:text-slate-900"
+                      }`}
+                    >
+                      सेमी माध्यम
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -317,9 +350,28 @@ function StudentHomeworkPage() {
                   </div>
                 </div>
 
-                {/* Table of Assignments */}
-                <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-xs">
-                  <table className="w-full text-left border-collapse">
+                {/* CALENDAR VIEW */}
+                {viewMode === "calendar" && (
+                  <DailyHomeworkCalendar
+                    homeworkList={filteredData}
+                    selectedDate={calendarDate}
+                    onSelectDate={(d) => {
+                      setCalendarDate(d);
+                      setFilterDate(d);
+                    }}
+                    onPreviewHomework={(hw) => {
+                      setActiveHomework(hw);
+                      setPreviewTab(hw.fileUrl ? "doc" : "template");
+                    }}
+                    userRole="student"
+                    accentColor="indigo"
+                  />
+                )}
+
+                {/* Table of Assignments (List View) */}
+                {viewMode === "list" && (
+                  <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-xs">
+                    <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-900 border-b border-slate-800 text-white text-[11px] font-black uppercase tracking-wider">
                         <th className="px-6 py-4 text-center w-16">क्र.</th>
@@ -403,6 +455,7 @@ function StudentHomeworkPage() {
                     </tbody>
                   </table>
                 </div>
+                )}
               </div>
             </div>
           )}
