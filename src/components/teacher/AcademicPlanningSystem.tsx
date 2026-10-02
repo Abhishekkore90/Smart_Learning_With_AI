@@ -49,7 +49,8 @@ import { toast } from "sonner";
 import { processRazorpayPayment } from "@/lib/razorpayService";
 import { getDefaultSubjectsForClass, detectRecordMedium, isRecordSemi, areSubjectsEquivalent } from "@/data/cceSubjects";
 import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorage";
-import { uploadFileWithProgress } from "@/lib/upload";
+import { uploadFileWithProgress, deleteUploadedFile } from "@/lib/upload";
+
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
 import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
 import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord, formatMarathiClassName } from "@/lib/smartPlanningParser";
@@ -2021,7 +2022,35 @@ export function AcademicPlanningSystem({
       const docRef = doc(db, "academic_plannings", rec.id);
       await deleteDoc(docRef);
 
-      // 2. Also remove from local IndexedDB if cached
+      // 2. Delete physical uploaded file from backend storage (Firebase / Bunny)
+      const cloudUrl = rec.fileUrl || (rec as any).cloudUrl;
+      if (cloudUrl) {
+        deleteUploadedFile(cloudUrl).catch(() => {});
+      }
+
+      // 3. Also delete any user edits from 'academic_plannings_user_edits' so data never mixes!
+
+      try {
+        const editKeys = [
+          rec.id,
+          `annual_${rec.id}`,
+          `monthly_${rec.id}`,
+          `question_bank_${rec.id}`,
+        ];
+        editKeys.forEach((k) => {
+          deleteDoc(doc(db, "academic_plannings_user_edits", k)).catch(() => {});
+          if (user?.uid) {
+            deleteDoc(doc(db, "academic_plannings_user_edits", `${user.uid}_${k}`)).catch(() => {});
+            deleteDoc(doc(db, "academic_plannings_user_edits", `annual_${user.uid}_${rec.id}`)).catch(() => {});
+            deleteDoc(doc(db, "academic_plannings_user_edits", `monthly_${user.uid}_${rec.id}`)).catch(() => {});
+            deleteDoc(doc(db, "academic_plannings_user_edits", `question_bank_${user.uid}_${rec.id}`)).catch(() => {});
+          }
+        });
+      } catch (editDelErr) {
+        console.warn("User edit deletion notice:", editDelErr);
+      }
+
+      // 3. Also remove from local IndexedDB if cached
       try {
         const dbReq = indexedDB.open("cce_file_store", 1);
         dbReq.onsuccess = () => {
@@ -2035,10 +2064,17 @@ export function AcademicPlanningSystem({
         console.warn("IndexedDB file deletion notice:", idbErr);
       }
 
-      // 3. Clear metadata cache for this file
-      localStorage.removeItem(`cce_meta_${rec.id}`);
+      // 4. Clear all local storage entries associated with this file ID
+      try {
+        Object.keys(localStorage).forEach((key) => {
+          if (key.includes(rec.id)) {
+            localStorage.removeItem(key);
+          }
+        });
+        localStorage.removeItem(`cce_meta_${rec.id}`);
+      } catch (e) {}
 
-      // 4. Update local planningFiles state & cache
+      // 5. Update local planningFiles state & cache instantly
       setPlanningFiles((prev) => {
         const updated = { ...prev };
         delete updated[rec.id];
@@ -2053,7 +2089,7 @@ export function AcademicPlanningSystem({
         return updated;
       });
 
-      // 5. If modal is currently open previewing this file, close it
+      // 6. If modal is currently open previewing this file, close it instantly
       if (viewModalFile && viewModalFile.id === rec.id) {
         setViewModalFile(null);
         setIsAnnotating(false);
@@ -2973,7 +3009,7 @@ export function AcademicPlanningSystem({
                             if (fileRec) {
                               handleViewFile({
                                 ...fileRec,
-                                subjectId: "all",
+                                subjectId: subjName || fileRec.subjectId || "मराठी",
                                 planningType: selectedPlanningType,
                                 category:
                                   selectedPlanningType === "question_bank"
@@ -3319,6 +3355,7 @@ export function AcademicPlanningSystem({
                     record={viewModalFile as any}
                     fileUrl={viewModalFile.fileUrl}
                     mode={mode}
+                    selectedSubject={viewModalFile.subjectId || selectedSubject || "मराठी"}
                     onDelete={() => handleDeleteFile(viewModalFile)}
                   />
                 )}

@@ -43,6 +43,8 @@ interface DocumentEditorViewerProps {
   documentId: string;
   fileUrl: string;
   fileName?: string;
+  wordFileUrl?: string;
+  wordFileName?: string;
   documentType: "question_paper" | "homework";
   title?: string;
   userId?: string;
@@ -57,6 +59,8 @@ export function DocumentEditorViewer({
   documentId,
   fileUrl,
   fileName = "document.pdf",
+  wordFileUrl,
+  wordFileName,
   documentType,
   title,
   userId = "guest_user",
@@ -672,6 +676,18 @@ export function DocumentEditorViewer({
             >
               <Printer className="size-4" />
             </button>
+
+            {wordFileUrl && (
+              <a
+                href={wordFileUrl}
+                download={wordFileName || "question_paper.docx"}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                title="Word (.docx) फाईल डाऊनलोड करा"
+              >
+                <FileText className="size-3.5" />
+                <span className="hidden sm:inline">Word (.docx) डाउनलोड</span>
+              </a>
+            )}
 
             <button
               onClick={handleDownloadPdf}

@@ -1,6 +1,7 @@
 
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { storage } from "@/lib/firebase";
+
 
 export interface UploadOptions {
   folderPath?: string;
@@ -249,3 +250,51 @@ function uploadToFirebase(
     );
   });
 }
+
+/**
+ * Permanently delete an uploaded file from Firebase Storage or Bunny CDN storage
+ */
+export async function deleteUploadedFile(fileUrl?: string | null): Promise<void> {
+  if (!fileUrl || typeof fileUrl !== "string") return;
+
+  // 1. If it's a Firebase Storage URL
+  if (
+    fileUrl.includes("firebasestorage.googleapis.com") ||
+    fileUrl.includes("appspot.com")
+  ) {
+    try {
+      if (storage) {
+        const fileRef = ref(storage, fileUrl);
+        await deleteObject(fileRef);
+      }
+    } catch (err) {
+      console.warn("Firebase storage file deletion notice:", err);
+    }
+  }
+
+  // 2. If it's a Bunny Storage URL
+  const cdnHostname = (
+    import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "sgkbrainova.b-cdn.net"
+  )
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "")
+    .toLowerCase();
+
+  const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
+  const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
+
+  if (storageApiKey && storageZone && fileUrl.includes(cdnHostname)) {
+    try {
+      const urlObj = new URL(fileUrl);
+      const relativePath = urlObj.pathname.replace(/^\/+/, "");
+      const targetUrl = `https://storage.bunnycdn.com/${storageZone}/${relativePath}`;
+      await fetch(targetUrl, {
+        method: "DELETE",
+        headers: { AccessKey: storageApiKey },
+      });
+    } catch (err) {
+      console.warn("Bunny file deletion notice:", err);
+    }
+  }
+}
+

@@ -75,6 +75,8 @@ export interface DailyHomeworkVariables {
   }[];
 }
 
+import type { QuestionPaperData } from "./questionPaper";
+
 export interface HomeworkItem {
   id: string;
   medium: string;
@@ -95,12 +97,13 @@ export interface HomeworkItem {
 
   templateId?: string;
   pageCount?: number;
-  documentType?: "pdf" | "image" | "template" | "text";
+  documentType?: "pdf" | "image" | "template" | "text" | "question_paper";
 
   contentBlocks?: any[];
   originalFileUrl?: string;
 
   variables?: DailyHomeworkVariables;
+  questionPaperData?: QuestionPaperData;
 
   editableVersion?: any;
 
@@ -130,8 +133,13 @@ export interface QuestionPaperItem {
   fileType?: string;
   fileSize?: number;
 
+  // Converted Word (.docx) file fields (question paper only)
+  wordFileUrl?: string;
+  wordFileName?: string;
+  wordFileSize?: number;
+
   pageCount?: number;
-  documentType?: "pdf" | "image" | "text";
+  documentType?: "pdf" | "image" | "text" | "word";
 
   createdAt?: string;
   uploadedAt: string;

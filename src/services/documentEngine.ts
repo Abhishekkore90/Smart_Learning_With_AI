@@ -728,6 +728,49 @@ export async function resetUserDocumentEdits(
 }
 
 /**
+ * Permanently purge all cached, local, and Firestore edits associated with a deleted document
+ */
+export async function purgeDocumentAndAllEdits(
+  docType: "question_paper" | "homework",
+  documentId: string,
+  userId?: string
+): Promise<void> {
+  if (!documentId) return;
+
+  // 1. Invalidate in-memory cache
+  documentCache.delete(documentId);
+
+  // 2. Clear all matching localStorage keys
+  try {
+    const subCol = docType === "question_paper" ? "questionPaperEdits" : "homeworkEdits";
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes(documentId) || key.includes(`${subCol}_`))) {
+        if (key.includes(documentId)) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  } catch (err) {
+    console.warn("Error cleaning localStorage during purge:", err);
+  }
+
+  // 3. Clear Firestore user edits
+  const subCol = docType === "question_paper" ? "questionPaperEdits" : "homeworkEdits";
+  if (userId) {
+    try {
+      await deleteDoc(doc(db, "users", userId, subCol, documentId));
+    } catch (_) {}
+    try {
+      await deleteDoc(doc(db, subCol, `${userId}_${documentId}`));
+    } catch (_) {}
+  }
+}
+
+
+/**
  * Export DocumentModel with rendered pages & overlays to a multi-page PDF
  */
 export async function exportDocumentToPdf(

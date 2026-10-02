@@ -22,6 +22,8 @@ import { saveUserDocumentEdits, resetUserDocumentEdits } from "@/services/docume
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 
+import { QuestionPaperRenderer } from "@/components/homework/QuestionPaperRenderer";
+
 interface DailyHomeworkTemplateProps {
   homework: HomeworkItem;
   userId?: string;
@@ -39,6 +41,17 @@ export function DailyHomeworkTemplate({
   canEdit = true,
   onBack,
 }: DailyHomeworkTemplateProps) {
+  // If this homework item is a structured question paper, render the rich QuestionPaperRenderer
+  if (homework.documentType === "question_paper" || homework.questionPaperData) {
+    return (
+      <QuestionPaperRenderer
+        initialData={homework.questionPaperData}
+        canEdit={canEdit}
+        onBack={onBack}
+      />
+    );
+  }
+
   // Initialize dynamic variables from homework record or fallback defaults
   const [variables, setVariables] = useState<DailyHomeworkVariables>(() => {
     return (

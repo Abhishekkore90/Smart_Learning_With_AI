@@ -48,6 +48,7 @@ import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import type { QuestionPaperItem } from "@/types/documentEditor";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
 import { QuestionPaperTemplate } from "@/components/questionPaper/QuestionPaperTemplate";
+import { QuestionPaperManualEditor } from "@/components/questionPaper/QuestionPaperManualEditor";
 
 export const Route = createFileRoute("/teacher/question-paper")({
   head: () => ({
@@ -282,7 +283,7 @@ function QuestionPaperPage() {
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    मूळ दस्तऐवज (Document View)
+                    मूळ दस्तऐवज व संपादन (Document & Word)
                   </button>
                 )}
                 <button
@@ -303,6 +304,8 @@ function QuestionPaperPage() {
                 documentId={activePaper.id}
                 fileUrl={activePaper.fileUrl}
                 fileName={activePaper.fileName}
+                wordFileUrl={activePaper.wordFileUrl}
+                wordFileName={activePaper.wordFileName}
                 documentType="question_paper"
                 title={`${activePaper.title} — ${activePaper.class} (${activePaper.examTypeLabel || activePaper.examType})`}
                 userId={user?.uid || "guest_teacher"}
@@ -555,13 +558,20 @@ function QuestionPaperPage() {
                       >
                         <div className="space-y-2.5">
                           <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">
-                              <Award className="size-3" />
-                              {paper.examTypeLabel || paper.examType}
-                            </span>
-                            <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
-                              एकूण गुण: {paper.totalMarks}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">
+                                <Award className="size-3" />
+                                {paper.examTypeLabel || paper.examType}
+                              </span>
+                              <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
+                                एकूण गुण: {paper.totalMarks}
+                              </span>
+                              {paper.wordFileUrl && (
+                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1">
+                                  <FileText className="size-3 text-blue-600" /> Word (.docx) उपलब्ध
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <h3 className="text-lg font-black text-slate-900 leading-snug">
@@ -576,15 +586,29 @@ function QuestionPaperPage() {
                         </div>
 
                         {/* Interactive Buttons */}
-                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 truncate">
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 truncate max-w-[200px]">
                             <FileText className="size-4 text-blue-600 shrink-0" />
                             <span className="truncate">{paper.fileName || "प्रश्नपत्रिका PDF"}</span>
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
+                            {paper.wordFileUrl && (
+                              <a
+                                href={paper.wordFileUrl}
+                                download={paper.wordFileName || `${paper.title}.docx`}
+                                className="inline-flex items-center gap-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                                title="Word (.docx) फाईल डाऊनलोड करा"
+                              >
+                                <FileText className="size-3.5" />
+                                <span>Word (.docx)</span>
+                              </a>
+                            )}
                             <button
-                              onClick={() => setActivePaper(paper)}
+                              onClick={() => {
+                                setActivePaper(paper);
+                                setPreviewTab("doc");
+                              }}
                               className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
                             >
                               <Eye className="size-3.5" />

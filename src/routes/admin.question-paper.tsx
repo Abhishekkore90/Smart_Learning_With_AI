@@ -33,6 +33,7 @@ import {
   Award,
   Edit3,
   X,
+  FileCheck,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -48,11 +49,16 @@ import {
 } from "firebase/firestore";
 import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
-import { uploadFileWithProgress } from "@/lib/upload";
+import { uploadFileWithProgress, deleteUploadedFile } from "@/lib/upload";
 import { extractTextFromFile } from "@/lib/contentExtractor";
 import type { QuestionPaperItem } from "@/types/documentEditor";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
 import { QuestionPaperTemplate } from "@/components/questionPaper/QuestionPaperTemplate";
+import { purgeDocumentAndAllEdits } from "@/services/documentEngine";
+import { convertPdfToDocxBlob } from "@/services/pdfToWordConverter";
+import { QuestionPaperManualEditor } from "@/components/questionPaper/QuestionPaperManualEditor";
+
+
 
 export const Route = createFileRoute("/admin/question-paper")({
   head: () => ({
@@ -245,17 +251,59 @@ function AdminQuestionPaperPage() {
       let fileName = "";
       let fileSize = 0;
       let fileType = "";
+      let wordFileUrl = "";
+      let wordFileName = "";
+      let wordFileSize = 0;
+      let contentToSave = content.trim();
 
       if (selectedFile) {
         setUploadProgress(10);
+        // 1. Upload original file
         const uploadResult = await uploadFileWithProgress(selectedFile, {
           folderPath: `admin_question_papers/${selectedMedium}/${selectedClass}/${selectedSubject}`,
-          onProgress: (p) => setUploadProgress(p),
+          onProgress: (p) => setUploadProgress(Math.round(p * 0.45)),
         });
         fileUrl = uploadResult.url;
         fileName = uploadResult.fileName;
         fileSize = uploadResult.sizeBytes;
         fileType = selectedFile.type || (fileName.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+
+        // 2. If PDF, convert as-is without changing structure into Word (.docx) and upload to backend
+        const isPdf =
+          fileType === "application/pdf" ||
+          fileName.toLowerCase().endsWith(".pdf") ||
+          selectedFile.name.toLowerCase().endsWith(".pdf");
+
+        if (isPdf) {
+          try {
+            toast.info("PDF चे Word (.docx) फाईलमध्ये रूपांतर करत आहे (Preserving structure)...");
+            const arrayBuf = await selectedFile.arrayBuffer();
+            const convResult = await convertPdfToDocxBlob(arrayBuf, title.trim());
+
+            if (!contentToSave && convResult.textContent) {
+              contentToSave = convResult.textContent;
+            }
+
+            const baseName = selectedFile.name.replace(/\.[^/.]+$/, "");
+            wordFileName = `${baseName}.docx`;
+            wordFileSize = convResult.blob.size;
+
+            const wordFile = new File([convResult.blob], wordFileName, {
+              type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            });
+
+            toast.info("रूपांतरित Word (.docx) फाईल बॅकएंडमध्ये साठवत आहे...");
+            const wordUploadResult = await uploadFileWithProgress(wordFile, {
+              folderPath: `admin_question_papers/${selectedMedium}/${selectedClass}/${selectedSubject}/word`,
+              onProgress: (p) => setUploadProgress(45 + Math.round(p * 0.5)),
+            });
+            wordFileUrl = wordUploadResult.url;
+            toast.success("Word (.docx) फाईल बॅकएंडमध्ये यशस्वीरित्या साठवली गेली!");
+          } catch (convErr: any) {
+            console.error("PDF to Word conversion warning:", convErr);
+            toast.warning("Word रूपांतरणात अडचण: " + (convErr.message || ""));
+          }
+        }
       }
 
       const examTypeObj = EXAM_TYPES.find((t) => t.id === examType);
@@ -276,11 +324,14 @@ function AdminQuestionPaperPage() {
         academicYear,
         title: title.trim(),
         description: description.trim(),
-        content: content.trim() || description.trim(),
+        content: contentToSave || description.trim(),
         fileUrl: fileUrl || null,
         fileName: fileName || null,
         fileType: fileType || null,
         fileSize: fileSize || null,
+        wordFileUrl: wordFileUrl || null,
+        wordFileName: wordFileName || null,
+        wordFileSize: wordFileSize || null,
         documentType: isPdfFile ? "pdf" : "image",
         createdAt: new Date().toISOString(),
         uploadedAt: new Date().toISOString(),
@@ -307,12 +358,31 @@ function AdminQuestionPaperPage() {
   const handleDelete = async (id: string, paperTitle: string) => {
     if (!confirm(`तुम्हाला खात्री आहे का "${paperTitle}" ही प्रश्नपत्रिका हटवायची आहे?`)) return;
     try {
+      const targetPaper = paperList.find((p) => p.id === id);
+
+      // 1. Immediately update UI state
+      setPaperList((prev) => prev.filter((p) => p.id !== id));
+      if (activePreviewPaper?.id === id) {
+        setActivePreviewPaper(null);
+      }
+
+      // 2. Delete main document from Firestore
       await deleteDoc(doc(db, "admin_question_papers", id));
+
+      // 3. Delete physical uploaded file from backend storage (Firebase / Bunny)
+      if (targetPaper?.fileUrl) {
+        deleteUploadedFile(targetPaper.fileUrl).catch(() => {});
+      }
+
+      // 4. Purge all cached and stored user edits so data never mixes!
+      await purgeDocumentAndAllEdits("question_paper", id);
+
       toast.success("प्रश्नपत्रिका हटवली गेली.");
     } catch (err: any) {
       toast.error("हटवताना त्रुटी आली: " + err.message);
     }
   };
+
 
   const currentClassObj = CLASS_OPTIONS.find((c) => c.id === selectedClass);
   const currentMediumObj = MEDIUM_OPTIONS.find((m) => m.id === selectedMedium);
@@ -376,7 +446,7 @@ function AdminQuestionPaperPage() {
                               : "text-slate-400 hover:text-white"
                           }`}
                         >
-                          मूळ दस्तऐवज (Document)
+                          मूळ दस्तऐवज व संपादन (Document & Word)
                         </button>
                       )}
                       <button
@@ -406,6 +476,8 @@ function AdminQuestionPaperPage() {
                       documentId={activePreviewPaper.id}
                       fileUrl={activePreviewPaper.fileUrl}
                       fileName={activePreviewPaper.fileName}
+                      wordFileUrl={activePreviewPaper.wordFileUrl}
+                      wordFileName={activePreviewPaper.wordFileName}
                       documentType="question_paper"
                       title={activePreviewPaper.title}
                       userId="admin"
@@ -897,6 +969,11 @@ function AdminQuestionPaperPage() {
                               <span className="px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-black border border-amber-200">
                                 एकूण गुण: {item.totalMarks}
                               </span>
+                              {item.wordFileUrl && (
+                                <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-200 flex items-center gap-1">
+                                  <FileCheck className="size-3 text-emerald-600" /> Word (.docx) उपलब्ध
+                                </span>
+                              )}
                             </div>
                             <h4 className="font-black text-base text-slate-900 leading-snug">
                               {item.title}
@@ -925,26 +1002,37 @@ function AdminQuestionPaperPage() {
                       </div>
 
                       {/* File attachment preview & action */}
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 truncate">
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 truncate max-w-[200px]">
                           <FileText className="size-4 text-blue-600 shrink-0" />
                           <span className="truncate">{item.fileName || "प्रश्नपत्रिका PDF"}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {item.fileUrl && (
-                            <button
-                              onClick={() => setActivePreviewPaper(item)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
+                          {item.wordFileUrl && (
+                            <a
+                              href={item.wordFileUrl}
+                              download={item.wordFileName || `${item.title}.docx`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                              title="Word (.docx) फाईल डाऊनलोड करा"
                             >
-                              <Eye className="size-3.5" /> पहा व संपादन
-                            </button>
+                              <FileText className="size-3.5" /> Word (.docx)
+                            </a>
                           )}
+                          <button
+                            onClick={() => {
+                              setActivePreviewPaper(item);
+                              setPreviewTab("doc");
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
+                          >
+                            <Eye className="size-3.5" /> पहा व संपादन
+                          </button>
                           {item.fileUrl && (
                             <a
                               href={item.fileUrl}
                               download={item.fileName || "question-paper.pdf"}
                               className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all"
-                              title="डाउनलोड"
+                              title="मूळ PDF डाउनलोड"
                             >
                               <Download className="size-3.5" />
                             </a>

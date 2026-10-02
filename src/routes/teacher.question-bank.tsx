@@ -197,6 +197,7 @@ function QuestionBankPage() {
 
   const deleteQuestion = async (id: string) => {
     try {
+      setQuestions((prev) => prev.filter((q) => q.id !== id));
       await deleteDoc(doc(db, "question_bank", id));
       toast.info("Question removed.");
     } catch (error) {

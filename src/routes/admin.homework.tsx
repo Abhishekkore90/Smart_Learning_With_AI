@@ -44,13 +44,19 @@ import {
 } from "firebase/firestore";
 import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
-import { uploadFileWithProgress } from "@/lib/upload";
+import { uploadFileWithProgress, deleteUploadedFile } from "@/lib/upload";
+
 import { extractTextFromFile } from "@/lib/contentExtractor";
 import { subscribeToHomework } from "@/services/homeworkService";
 import type { HomeworkItem, DailyHomeworkVariables } from "@/types/documentEditor";
+import type { QuestionPaperData } from "@/types/questionPaper";
+import { QUESTION_PAPER_PRESETS } from "@/data/questionPaperPresets";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
 import { DailyHomeworkTemplate } from "@/components/homework/DailyHomeworkTemplate";
 import { DailyHomeworkCalendar, formatISODate } from "@/components/homework/DailyHomeworkCalendar";
+import { QuestionPaperRenderer } from "@/components/homework/QuestionPaperRenderer";
+import { purgeDocumentAndAllEdits } from "@/services/documentEngine";
+
 
 export const Route = createFileRoute("/admin/homework")({
   head: () => ({
@@ -135,7 +141,8 @@ function AdminHomeworkPage() {
   // Homework creation form
   const [homeworkDate, setHomeworkDate] = useState<string>(getTodayDateString());
   const [dueDate, setDueDate] = useState("");
-  const [uploadMode, setUploadMode] = useState<"file" | "template">("file");
+  const [uploadMode, setUploadMode] = useState<"file" | "template" | "question_paper">("file");
+  const [selectedQuestionPaperPresetId, setSelectedQuestionPaperPresetId] = useState<string>("marathi-class1-test1");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
@@ -147,7 +154,7 @@ function AdminHomeworkPage() {
 
   // Active viewing/editing homework
   const [activePreviewHomework, setActivePreviewHomework] = useState<HomeworkItem | null>(null);
-  const [previewTab, setPreviewTab] = useState<"doc" | "template">("doc");
+  const [previewTab, setPreviewTab] = useState<"doc" | "template" | "qp">("doc");
 
   // Workspace tab & calendar selection
   const [workspaceView, setWorkspaceView] = useState<"calendar" | "form" | "list">("calendar");
@@ -267,8 +274,10 @@ function AdminHomeworkPage() {
         fileType = selectedFile.type || (fileName.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
       }
 
-      // If template mode, create structured daily variables
+      // If question_paper mode or template mode, create structured data
       let dailyVariables: DailyHomeworkVariables | null = null;
+      let qpData: QuestionPaperData | null = null;
+
       if (uploadMode === "template") {
         dailyVariables = {
           weekday: new Date(homeworkDate).toLocaleDateString("mr-IN", { weekday: "long" }),
@@ -298,6 +307,16 @@ function AdminHomeworkPage() {
             description: "आजचा गृहपाठ तपासून पालकांची स्वाक्षरी घ्या.",
           },
         };
+      } else if (uploadMode === "question_paper") {
+        const basePreset =
+          QUESTION_PAPER_PRESETS.find((p) => p.id === selectedQuestionPaperPresetId) ||
+          QUESTION_PAPER_PRESETS[0];
+        qpData = {
+          ...JSON.parse(JSON.stringify(basePreset)),
+          date: homeworkDate,
+          standard: selectedClass === "1st" ? "१ ली" : selectedClass,
+          subject: selectedSubject || basePreset.subject,
+        };
       }
 
       const isPdf =
@@ -309,6 +328,8 @@ function AdminHomeworkPage() {
       const documentType =
         uploadMode === "template"
           ? "template"
+          : uploadMode === "question_paper"
+          ? "question_paper"
           : isPdf
           ? "pdf"
           : "image";
@@ -319,16 +340,22 @@ function AdminHomeworkPage() {
         subject: selectedSubject,
         homeworkDate,
         dueDate: dueDate || null,
-        title: title.trim(),
+        title: title.trim() || (uploadMode === "question_paper" ? (qpData?.examName || "आकारिक मूल्यमापन चाचणी") : "दैनिक गृहपाठ"),
         description: description.trim(),
         content: content.trim() || description.trim(),
         fileUrl: fileUrl || null,
         fileName: fileName || null,
         fileType: fileType || null,
         fileSize: fileSize || null,
-        templateId: uploadMode === "template" ? "balbharati-class1-daily" : null,
+        templateId:
+          uploadMode === "template"
+            ? "balbharati-class1-daily"
+            : uploadMode === "question_paper"
+            ? selectedQuestionPaperPresetId
+            : null,
         documentType,
         variables: dailyVariables,
+        questionPaperData: qpData,
         originalFileUrl: fileUrl || null,
         createdAt: new Date().toISOString(),
         uploadedAt: new Date().toISOString(),
@@ -357,12 +384,31 @@ function AdminHomeworkPage() {
   const handleDelete = async (id: string, itemTitle: string) => {
     if (!confirm(`तुम्हाला खात्री आहे का "${itemTitle}" हा गृहपाठ हटवायचा आहे?`)) return;
     try {
+      const targetItem = homeworkList.find((item) => item.id === id);
+
+      // 1. Immediately remove from local state
+      setHomeworkList((prev) => prev.filter((item) => item.id !== id));
+      if (activePreviewHomework?.id === id) {
+        setActivePreviewHomework(null);
+      }
+
+      // 2. Delete main document from Firestore
       await deleteDoc(doc(db, "admin_homework", id));
+
+      // 3. Delete physical uploaded file from backend storage (Firebase / Bunny)
+      if (targetItem?.fileUrl) {
+        deleteUploadedFile(targetItem.fileUrl).catch(() => {});
+      }
+
+      // 4. Purge all related user edits and storage
+      await purgeDocumentAndAllEdits("homework", id);
+
       toast.success("गृहपाठ हटवला गेला.");
     } catch (err: any) {
       toast.error("हटवताना त्रुटी आली: " + err.message);
     }
   };
+
 
   const currentClassObj = CLASS_OPTIONS.find((c) => c.id === selectedClass);
   const currentMediumObj = MEDIUM_OPTIONS.find((m) => m.id === selectedMedium);
@@ -451,7 +497,13 @@ function AdminHomeworkPage() {
                 </div>
 
                 <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
-                  {previewTab === "doc" && activePreviewHomework.fileUrl ? (
+                  {activePreviewHomework.documentType === "question_paper" || activePreviewHomework.questionPaperData ? (
+                    <QuestionPaperRenderer
+                      initialData={activePreviewHomework.questionPaperData}
+                      canEdit={true}
+                      onBack={() => setActivePreviewHomework(null)}
+                    />
+                  ) : previewTab === "doc" && activePreviewHomework.fileUrl ? (
                     <DocumentEditorViewer
                       documentId={activePreviewHomework.id}
                       fileUrl={activePreviewHomework.fileUrl}
@@ -789,7 +841,7 @@ function AdminHomeworkPage() {
                   </div>
 
                 {/* Upload Mode Selector */}
-                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                <div className="flex flex-wrap bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold gap-1">
                   <button
                     type="button"
                     onClick={() => setUploadMode("file")}
@@ -811,6 +863,21 @@ function AdminHomeworkPage() {
                     }`}
                   >
                     दैनिक कार्यपुस्तिका टेम्पलेट
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUploadMode("question_paper");
+                      if (!title) setTitle("आकारिक मूल्यमापन चाचणी क्र. १");
+                    }}
+                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                      uploadMode === "question_paper"
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <FileText className="size-3.5" />
+                    📝 चाचणी प्रश्नपत्रिका (Question Paper)
                   </button>
                 </div>
               </div>
@@ -919,6 +986,67 @@ function AdminHomeworkPage() {
                           </button>
                         </div>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Question Paper Template Mode */}
+                {uploadMode === "question_paper" && (
+                  <div className="space-y-3 p-4 bg-blue-50/70 rounded-2xl border border-blue-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <label className="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <BookOpen className="size-4 text-blue-600" />
+                          चाचणी प्रश्नपत्रिका निवडा (Select Question Paper Preset)
+                        </label>
+                        <p className="text-[11px] text-blue-700 font-medium mt-0.5">
+                          खालीलपैकी कोणतीही प्रश्नपत्रिका निवडा, प्रकाशित केल्यानंतर वेबवर सर्व मजकूर थेट संपादित करता येईल.
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-bold text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full shrink-0">
+                        वेबवर पूर्ण संपादनक्षम (Fully Editable)
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                      {QUESTION_PAPER_PRESETS.map((preset) => (
+                        <div
+                          key={preset.id}
+                          onClick={() => {
+                            setSelectedQuestionPaperPresetId(preset.id);
+                            setTitle(`${preset.examName} - ${preset.subject}`);
+                            setDescription(`${preset.subject} (${preset.standard}) आकारिक मूल्यमापन चाचणी प्रश्नपत्रिका - गुण ${preset.totalMarks}`);
+                          }}
+                          className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                            selectedQuestionPaperPresetId === preset.id
+                              ? "border-blue-600 bg-white shadow-md ring-2 ring-blue-200"
+                              : "border-slate-200 bg-white/80 hover:border-slate-300"
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-1 mb-1.5">
+                              <span className="text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-800 px-2 py-0.5 rounded">
+                                {preset.standard}
+                              </span>
+                              <span className="text-xs font-black text-blue-700">
+                                {preset.totalMarks} गुण
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-black text-slate-900 leading-snug">
+                              {preset.subject}
+                            </h4>
+                            <p className="text-xs text-slate-600 font-medium mt-0.5">
+                              {preset.examName}
+                            </p>
+                          </div>
+                          <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] font-bold text-slate-500 flex items-center justify-between">
+                            <span>{preset.questions.length} प्रश्न</span>
+                            <span className={selectedQuestionPaperPresetId === preset.id ? "text-blue-600 font-black" : "text-slate-400"}>
+                              {selectedQuestionPaperPresetId === preset.id ? "✓ निवडले" : "निवडा ➔"}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
