@@ -5,6 +5,10 @@ export interface DocumentTextBlock {
   y: number; // percentage (0 - 100) of page height
   width: number; // percentage (0 - 100)
   height: number; // percentage (0 - 100)
+  origX?: number;
+  origY?: number;
+  origWidth?: number;
+  origHeight?: number;
   fontSize: number; // in pt/px equivalent
   fontFamily?: string;
   fontWeight?: string | number;
@@ -13,6 +17,8 @@ export interface DocumentTextBlock {
   rotation?: number;
   editable?: boolean;
   isCustom?: boolean; // created manually by user overlay
+  isEdited?: boolean;
+  isErased?: boolean;
 }
 
 export interface DocumentPage {

@@ -639,6 +639,7 @@ export interface UserSchoolProfile {
   udiseNumber: string;
   teacherName: string;
   headMasterName: string;
+  isSavedByUser?: boolean;
 }
 
 export function AcademicPlanningSystem({
@@ -872,47 +873,112 @@ export function AcademicPlanningSystem({
   });
 
   useEffect(() => {
-    const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
-    const storageKey = `user_planning_school_profile_${effectiveUserId}`;
-    const unified = getUnifiedSchoolProfile();
+    const effectiveUserId = user?.uid || auth?.currentUser?.uid;
+    const storageKey = effectiveUserId ? `user_planning_school_profile_${effectiveUserId}` : null;
+
+    const blankProfile: UserSchoolProfile = {
+      schoolName: "",
+      kendraName: "",
+      talukaName: "",
+      districtName: "",
+      udiseNumber: "",
+      teacherName: "",
+      headMasterName: "",
+      isSavedByUser: false,
+    };
+
+    // Helper to validate genuine user-saved profile vs legacy/contaminated mock data
+    const isGenuineUserSaved = (p: any): boolean => {
+      if (!p || typeof p !== "object") return false;
+      if (p.isSavedByUser === true) return true;
+      // Reject legacy contaminated mock data
+      if (
+        p.schoolName === "z.p.school" ||
+        p.udiseNumber === "2233445566778899" ||
+        p.headMasterName?.includes("बाळासाहेब") ||
+        p.kendraName === "नरसिंगपूर"
+      ) {
+        return false;
+      }
+      return Boolean(p.schoolName && p.schoolName.trim() !== "");
+    };
 
     const applyProfile = (data: Partial<UserSchoolProfile>) => {
       const merged: UserSchoolProfile = {
-        schoolName: data.schoolName || unified.schoolName || "",
-        kendraName: data.kendraName || unified.kendra || unified.centerName || "",
-        talukaName: data.talukaName || unified.taluka || "",
-        districtName: data.districtName || unified.jilha || unified.district || "",
-        udiseNumber: data.udiseNumber || unified.udise || "",
-        teacherName: data.teacherName || unified.teacherName || "",
-        headMasterName: data.headMasterName || unified.headmaster || "",
+        schoolName: data.schoolName?.trim() || "",
+        kendraName: data.kendraName?.trim() || "",
+        talukaName: data.talukaName?.trim() || "",
+        districtName: data.districtName?.trim() || "",
+        udiseNumber: data.udiseNumber?.trim() || "",
+        teacherName: data.teacherName?.trim() || "",
+        headMasterName: data.headMasterName?.trim() || "",
+        isSavedByUser: Boolean(data.isSavedByUser),
       };
       setSchoolProfile(merged);
       setSchoolFormData(merged);
-      if (!merged.schoolName) setShowSchoolForm(true);
       return merged;
     };
 
-    const cached = localStorage.getItem(storageKey);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        applyProfile(parsed);
-      } catch (e) {
-        applyProfile({});
+    // 1. Check local cache for this specific authenticated user
+    let cachedFound = false;
+    if (storageKey) {
+      const cached = localStorage.getItem(storageKey);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (isGenuineUserSaved(parsed)) {
+            applyProfile(parsed);
+            cachedFound = true;
+          } else {
+            // Clean up legacy contaminated cache
+            localStorage.removeItem(storageKey);
+          }
+        } catch (e) {}
       }
-    } else {
-      applyProfile({});
     }
 
+    if (!cachedFound) {
+      applyProfile(blankProfile);
+    }
+
+    // 2. Fetch from Firestore for logged-in user
     const fetchSchoolProfile = async () => {
       if (db && effectiveUserId && effectiveUserId !== "guest_teacher") {
         try {
+          // Check dedicated user_planning_school_profiles collection
           const docRef = doc(db, "user_planning_school_profiles", effectiveUserId);
           const snap = await getDoc(docRef);
           if (snap.exists()) {
             const data = snap.data() as UserSchoolProfile;
-            const merged = applyProfile(data);
-            localStorage.setItem(storageKey, JSON.stringify(merged));
+            if (isGenuineUserSaved(data)) {
+              const merged = applyProfile({ ...data, isSavedByUser: true });
+              if (storageKey) localStorage.setItem(storageKey, JSON.stringify(merged));
+              return;
+            }
+          }
+
+          // Fallback check: Did this user provide personal info when registering in 'users' collection?
+          const userDocRef = doc(db, "users", effectiveUserId);
+          const userSnap = await getDoc(userDocRef);
+          if (userSnap.exists()) {
+            const uData = userSnap.data();
+            if (uData && (uData.schoolName || uData.fullName)) {
+              const candidate = {
+                schoolName: uData.schoolName || "",
+                kendraName: uData.kendra || uData.centerName || "",
+                talukaName: uData.taluka || "",
+                districtName: uData.district || uData.jilha || "",
+                udiseNumber: uData.udise || uData.udiseNumber || "",
+                teacherName: uData.fullName || user?.displayName || "",
+                headMasterName: uData.headmaster || "",
+                isSavedByUser: true,
+              };
+              if (isGenuineUserSaved(candidate)) {
+                const merged = applyProfile(candidate);
+                if (storageKey) localStorage.setItem(storageKey, JSON.stringify(merged));
+                return;
+              }
+            }
           }
         } catch (err) {
           console.warn("Planning school profile fetch notice:", err);
@@ -921,20 +987,6 @@ export function AcademicPlanningSystem({
     };
 
     fetchSchoolProfile();
-
-    const handleProfileUpdate = () => {
-      const updatedUnified = getUnifiedSchoolProfile();
-      setSchoolProfile((prev) => ({
-        ...prev,
-        districtName: prev.districtName || updatedUnified.jilha || updatedUnified.district || "",
-        schoolName: prev.schoolName || updatedUnified.schoolName || "",
-        kendraName: prev.kendraName || updatedUnified.kendra || "",
-        talukaName: prev.talukaName || updatedUnified.taluka || "",
-        udiseNumber: prev.udiseNumber || updatedUnified.udise || "",
-      }));
-    };
-    window.addEventListener("schoolProfileUpdated", handleProfileUpdate);
-    return () => window.removeEventListener("schoolProfileUpdated", handleProfileUpdate);
   }, [user?.uid]);
 
   const handleSaveSchoolProfile = async () => {
@@ -943,30 +995,42 @@ export function AcademicPlanningSystem({
       const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
       const storageKey = `user_planning_school_profile_${effectiveUserId}`;
 
-      localStorage.setItem(storageKey, JSON.stringify(schoolFormData));
+      const profileToSave: UserSchoolProfile = {
+        schoolName: schoolFormData.schoolName.trim(),
+        kendraName: schoolFormData.kendraName.trim(),
+        talukaName: schoolFormData.talukaName.trim(),
+        districtName: (schoolFormData.districtName || "").trim(),
+        udiseNumber: schoolFormData.udiseNumber.trim(),
+        teacherName: schoolFormData.teacherName.trim(),
+        headMasterName: schoolFormData.headMasterName.trim(),
+        isSavedByUser: true,
+      };
+
+      localStorage.setItem(storageKey, JSON.stringify(profileToSave));
 
       saveUnifiedSchoolProfile({
-        schoolName: schoolFormData.schoolName,
-        kendra: schoolFormData.kendraName,
-        centerName: schoolFormData.kendraName,
-        taluka: schoolFormData.talukaName,
-        jilha: schoolFormData.districtName,
-        district: schoolFormData.districtName,
-        udise: schoolFormData.udiseNumber,
-        teacherName: schoolFormData.teacherName,
-        headmaster: schoolFormData.headMasterName,
+        schoolName: profileToSave.schoolName,
+        kendra: profileToSave.kendraName,
+        centerName: profileToSave.kendraName,
+        taluka: profileToSave.talukaName,
+        jilha: profileToSave.districtName,
+        district: profileToSave.districtName,
+        udise: profileToSave.udiseNumber,
+        teacherName: profileToSave.teacherName,
+        headmaster: profileToSave.headMasterName,
       });
 
       if (db && effectiveUserId && effectiveUserId !== "guest_teacher") {
         try {
           const docRef = doc(db, "user_planning_school_profiles", effectiveUserId);
-          await setDoc(docRef, { ...schoolFormData, updatedAt: new Date().toISOString() }, { merge: true });
+          await setDoc(docRef, { ...profileToSave, updatedAt: new Date().toISOString() }, { merge: true });
         } catch (e) {
           console.warn("Firestore save planning school profile notice:", e);
         }
       }
 
-      setSchoolProfile(schoolFormData);
+      setSchoolProfile(profileToSave);
+      setSchoolFormData(profileToSave);
       setShowSchoolForm(false);
       toast.success("🎉 शाळा व शिक्षक माहिती यशस्वीरित्या जतन झाली!");
     } catch (err) {
@@ -4263,7 +4327,7 @@ export function AcademicPlanningSystem({
                   type="text"
                   value={schoolFormData.schoolName}
                   onChange={(e) => setSchoolFormData({ ...schoolFormData, schoolName: e.target.value })}
-                  placeholder="उदा. जि. प. प्राथ. शाळा, नवी मुंबई"
+                  placeholder="उदा. जि. प. प्राथमिक शाळा..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                 />
               </div>
@@ -4274,7 +4338,7 @@ export function AcademicPlanningSystem({
                   type="text"
                   value={schoolFormData.kendraName}
                   onChange={(e) => setSchoolFormData({ ...schoolFormData, kendraName: e.target.value })}
-                  placeholder="उदा. वाशी"
+                  placeholder="उदा. केंद्र नाव"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                 />
               </div>
@@ -4285,7 +4349,7 @@ export function AcademicPlanningSystem({
                   type="text"
                   value={schoolFormData.talukaName}
                   onChange={(e) => setSchoolFormData({ ...schoolFormData, talukaName: e.target.value })}
-                  placeholder="उदा. तासगाव"
+                  placeholder="उदा. तालुका नाव"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                 />
               </div>
@@ -4296,7 +4360,7 @@ export function AcademicPlanningSystem({
                   type="text"
                   value={schoolFormData.districtName || ""}
                   onChange={(e) => setSchoolFormData({ ...schoolFormData, districtName: e.target.value })}
-                  placeholder="उदा. सांगली"
+                  placeholder="उदा. जिल्हा नाव"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                 />
               </div>
@@ -4318,7 +4382,7 @@ export function AcademicPlanningSystem({
                   type="text"
                   value={schoolFormData.teacherName}
                   onChange={(e) => setSchoolFormData({ ...schoolFormData, teacherName: e.target.value })}
-                  placeholder="उदा. श्री. अमितेश शिंदे"
+                  placeholder="उदा. वर्ग शिक्षकाचे नाव"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                 />
               </div>
@@ -4329,7 +4393,7 @@ export function AcademicPlanningSystem({
                   type="text"
                   value={schoolFormData.headMasterName}
                   onChange={(e) => setSchoolFormData({ ...schoolFormData, headMasterName: e.target.value })}
-                  placeholder="उदा. श्रीमती कविता पाटील"
+                  placeholder="उदा. मुख्याध्यापकाचे नाव"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
                 />
               </div>

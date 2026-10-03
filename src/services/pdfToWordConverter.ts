@@ -12,6 +12,7 @@ import {
   BorderStyle,
   PageBreak,
 } from "docx";
+import { decodeMarathiLegacyText } from "./marathiFontDecoder";
 
 // Set PDF.js worker
 if (typeof window !== "undefined") {
@@ -119,7 +120,8 @@ export async function convertPdfToDocxBlob(
 
       const minX = Math.min(...currentLineItems.map((i) => i.x));
       const maxX = Math.max(...currentLineItems.map((i) => i.x + i.width));
-      const text = currentLineItems.map((i) => i.str).join(" ").trim();
+      const rawText = currentLineItems.map((i) => i.str).join(" ").trim();
+      const text = decodeMarathiLegacyText(rawText);
       const avgFontSize =
         currentLineItems.reduce((acc, i) => acc + i.fontSize, 0) /
         currentLineItems.length;
@@ -193,7 +195,7 @@ export async function convertPdfToDocxBlob(
         const gap = lastPart.x - (firstPart.x + firstPart.width);
 
         // Substantial gap indicating right-aligned marks or two columns
-        if (gap > 70 && lastPart.x > pageWidth * 0.6) {
+        if (gap > 35 && lastPart.x > pageWidth * 0.45) {
           const leftText = line.items
             .slice(0, line.items.length - 1)
             .map((it) => it.str)
@@ -201,13 +203,16 @@ export async function convertPdfToDocxBlob(
             .trim();
           const rightText = lastPart.str.trim();
 
+          const leftColPct = Math.max(35, Math.min(70, Math.round((lastPart.x / pageWidth) * 100) - 2));
+          const rightColPct = 100 - leftColPct;
+
           const table = new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: [
               new TableRow({
                 children: [
                   new TableCell({
-                    width: { size: 75, type: WidthType.PERCENTAGE },
+                    width: { size: leftColPct, type: WidthType.PERCENTAGE },
                     borders: {
                       top: { style: BorderStyle.NONE },
                       bottom: { style: BorderStyle.NONE },
@@ -229,7 +234,7 @@ export async function convertPdfToDocxBlob(
                     ],
                   }),
                   new TableCell({
-                    width: { size: 25, type: WidthType.PERCENTAGE },
+                    width: { size: rightColPct, type: WidthType.PERCENTAGE },
                     borders: {
                       top: { style: BorderStyle.NONE },
                       bottom: { style: BorderStyle.NONE },

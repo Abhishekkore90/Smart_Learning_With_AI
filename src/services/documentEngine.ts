@@ -8,6 +8,7 @@ import type {
   DocumentTextBlock,
   UserDocumentEdits,
 } from "@/types/documentEditor";
+import { decodeMarathiLegacyText } from "./marathiFontDecoder";
 
 // Robust worker configuration for PDF.js using local static worker
 if (typeof window !== "undefined") {
@@ -29,21 +30,64 @@ function groupTextItemsIntoBlocks(
 ): DocumentTextBlock[] {
   if (!items || items.length === 0) return [];
 
-  // Filter out empty items
-  const validItems = items
-    .filter((item) => item.str && item.str.trim())
-    .map((item, idx) => {
-      // transform: [scaleX, skewY, skewX, scaleY, tx, ty]
-      const tx = item.transform[4];
-      const ty = item.transform[5];
-      // In PDF coordinate space, ty is from bottom. Convert to top-left coordinate
-      const fontSize = Math.hypot(item.transform[0], item.transform[1]) || 12;
-      const x = tx;
-      const y = viewportHeight - ty - fontSize; // approximate top in viewport
-      const width = item.width || (item.str.length * fontSize * 0.55);
-      const height = item.height || (fontSize * 1.2);
+  // Filter out empty items and unpack any multi-space or column splits
+  const validItems: {
+    id: string;
+    str: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    fontSize: number;
+    fontFamily: string;
+    fontWeight: "bold" | "normal";
+  }[] = [];
 
-      return {
+  for (let idx = 0; idx < items.length; idx++) {
+    const item = items[idx];
+    if (!item.str || !item.str.trim()) continue;
+
+    // transform: [scaleX, skewY, skewX, scaleY, tx, ty]
+    const tx = item.transform ? item.transform[4] : 0;
+    const ty = item.transform ? item.transform[5] : 0;
+    const fontSize = Math.hypot(item.transform ? item.transform[0] : 12, item.transform ? item.transform[1] : 0) || 12;
+    const x = tx;
+    const y = viewportHeight - ty - fontSize; // top in viewport
+    const width = item.width || (item.str.length * fontSize * 0.55);
+    const height = item.height || (fontSize * 1.25);
+    const fontName = (item.fontName || "").toLowerCase();
+    const isBold =
+      fontName.includes("bold") ||
+      fontName.includes("black") ||
+      fontName.includes("heavy") ||
+      Boolean(item.fontWeight && item.fontWeight >= 600);
+    const fontWeight: "bold" | "normal" = isBold ? "bold" : "normal";
+    const fontFamily = item.fontName || "Noto Sans Devanagari, sans-serif";
+
+    // If a single PDF text item contains a large internal blank gap (>= 3 consecutive spaces),
+    // split it into distinct items so separate columns/sentences remain separated!
+    if (/\s{3,}/.test(item.str)) {
+      const parts = item.str.split(/(\s{3,})/);
+      let currentX = x;
+      for (const part of parts) {
+        const partWidth = (part.length / item.str.length) * width;
+        if (part.trim()) {
+          validItems.push({
+            id: `t_${idx}_${Math.round(currentX)}_${Math.round(y)}`,
+            str: part.trim(),
+            x: currentX,
+            y,
+            width: partWidth,
+            height,
+            fontSize,
+            fontFamily,
+            fontWeight,
+          });
+        }
+        currentX += partWidth;
+      }
+    } else {
+      validItems.push({
         id: `t_${idx}_${Math.round(x)}_${Math.round(y)}`,
         str: item.str,
         x,
@@ -51,13 +95,16 @@ function groupTextItemsIntoBlocks(
         width,
         height,
         fontSize,
-        fontFamily: item.fontName || "Noto Sans Devanagari",
-      };
-    });
+        fontFamily,
+        fontWeight,
+      });
+    }
+  }
 
-  // Sort top-to-bottom, then left-to-right
+  // Sort top-to-bottom, then left-to-right (with Devanagari matra tolerance)
   validItems.sort((a, b) => {
-    if (Math.abs(a.y - b.y) > 6) {
+    const yTolerance = Math.max(6, Math.min(a.fontSize, b.fontSize) * 0.45);
+    if (Math.abs(a.y - b.y) > yTolerance) {
       return a.y - b.y;
     }
     return a.x - b.x;
@@ -69,32 +116,56 @@ function groupTextItemsIntoBlocks(
   const flushGroup = () => {
     if (currentGroup.length === 0) return;
     const first = currentGroup[0];
-    const last = currentGroup[currentGroup.length - 1];
 
     const minX = Math.min(...currentGroup.map((g) => g.x));
     const minY = Math.min(...currentGroup.map((g) => g.y));
     const maxX = Math.max(...currentGroup.map((g) => g.x + g.width));
     const maxY = Math.max(...currentGroup.map((g) => g.y + g.height));
 
-    const combinedText = currentGroup.map((g) => g.str).join(" ");
+    // Combine text items preserving legitimate word spaces without breaking syllables
+    let combinedText = "";
+    for (let k = 0; k < currentGroup.length; k++) {
+      const g = currentGroup[k];
+      if (k === 0) {
+        combinedText += g.str;
+      } else {
+        const prevG = currentGroup[k - 1];
+        const gap = g.x - (prevG.x + prevG.width);
+        if (gap > Math.max(2, prevG.fontSize * 0.2)) {
+          combinedText += " " + g.str;
+        } else {
+          combinedText += g.str;
+        }
+      }
+    }
+
+    // Automatically decode any legacy Marathi font encoding (DV-TTSurekh, Shree-Lipi, KrutiDev)
+    const cleanText = decodeMarathiLegacyText(combinedText);
+
     const avgFontSize = Math.round(
       currentGroup.reduce((sum, g) => sum + g.fontSize, 0) / currentGroup.length
     );
+    const hasBold = currentGroup.some((g) => g.fontWeight === "bold");
 
     // Convert to percentages
     const xPct = Math.max(0, Math.min(100, (minX / viewportWidth) * 100));
     const yPct = Math.max(0, Math.min(100, (minY / viewportHeight) * 100));
     const wPct = Math.max(2, Math.min(100 - xPct, ((maxX - minX) / viewportWidth) * 100));
-    const hPct = Math.max(1.5, Math.min(100 - yPct, ((maxY - minY) / viewportHeight) * 100));
+    const hPct = Math.max(1.8, Math.min(100 - yPct, ((maxY - minY) / viewportHeight) * 100));
 
     blocks.push({
       id: `blk_${blocks.length}_${Math.round(minX)}_${Math.round(minY)}`,
-      text: combinedText,
+      text: cleanText,
       x: Number(xPct.toFixed(2)),
       y: Number(yPct.toFixed(2)),
       width: Number(wPct.toFixed(2)),
       height: Number(hPct.toFixed(2)),
-      fontSize: avgFontSize || 14,
+      origX: Number(xPct.toFixed(2)),
+      origY: Number(yPct.toFixed(2)),
+      origWidth: Number(wPct.toFixed(2)),
+      origHeight: Number(hPct.toFixed(2)),
+      fontSize: avgFontSize || 12,
+      fontWeight: hasBold ? "bold" : "normal",
       fontFamily: first.fontFamily || "Noto Sans Devanagari, sans-serif",
       editable: true,
     });
@@ -109,10 +180,34 @@ function groupTextItemsIntoBlocks(
     }
 
     const prev = currentGroup[currentGroup.length - 1];
-    const sameLine = Math.abs(item.y - prev.y) <= Math.max(5, prev.fontSize * 0.4);
-    const adjacent = (item.x - (prev.x + prev.width)) <= Math.max(30, prev.fontSize * 2.2);
+    
+    // Vertical line tolerance: items must be on the exact same line
+    const yTolerance = Math.max(6, Math.min(prev.fontSize, item.fontSize) * 0.45);
+    const sameLine = Math.abs(item.y - prev.y) <= yTolerance;
 
-    if (sameLine && adjacent) {
+    // Horizontal gap between end of previous item and start of current item
+    const hGap = item.x - (prev.x + prev.width);
+
+    // Sentence-end punctuation check: if previous item ends with '.', '।', '?', '!', ':', ';', or ')' / ']'
+    // E.g. "(गुण २)" or "जुळव." followed by another column/clause like "चित्र बघ..."
+    const prevTrimmed = prev.str.trim();
+    const isPrevSentenceEnd = /[.!?।:;\]\)\}\>]$/.test(prevTrimmed);
+
+    // Question numbering or bullet start check: e.g. "१)", "1.", "(अ)", etc.
+    const itemTrimmed = item.str.trim();
+    const isItemNewSection = /^([0-9०-९]+[\.\)]|\([0-9०-९a-zA-Zअ-ह]+\)|[अ-ह]\))/.test(itemTrimmed);
+
+    // Adjacent words check:
+    // Regular word spaces are small (~3-8px). Any gap larger than ~12px or 0.85 * font size
+    // is a separate column, tab gap, or distinct sentence and MUST NOT be merged!
+    // If the previous word ended with punctuation/brackets, even a gap > 5px means a separate sentence!
+    const isAdjacentWords =
+      hGap >= -Math.max(4, prev.fontSize * 0.3) &&
+      hGap <= Math.max(11, prev.fontSize * 0.85) &&
+      !isItemNewSection &&
+      !(isPrevSentenceEnd && hGap > Math.max(5, prev.fontSize * 0.35));
+
+    if (sameLine && isAdjacentWords) {
       currentGroup.push(item);
     } else {
       flushGroup();
@@ -821,28 +916,40 @@ export async function exportDocumentToPdf(
 
       // Draw modified or custom text blocks over background
       for (const block of page.textBlocks) {
-        if (!block.text) continue;
+        const isModified = Boolean(block.isCustom || block.isEdited || block.isErased);
+        if (!isModified && !block.text) continue;
+
+        const origW = (((block.origWidth || block.width) / 100) * page.width);
+        const origH = (((block.origHeight || block.height) / 100) * page.height);
+        const curW = ((block.width / 100) * page.width);
+        const curH = ((block.height / 100) * page.height);
+        const maskW = Math.max(origW, curW);
+        const maskH = Math.max(origH, curH);
+
         const x = (block.x / 100) * page.width;
         const y = (block.y / 100) * page.height;
-        const w = (block.width / 100) * page.width;
-        const h = (block.height / 100) * page.height;
 
-        // If block is custom or was edited, render opaque backing so original text is cleanly replaced
-        if (block.isCustom || (block as any).isEdited) {
+        // If block is custom, edited, or erased: render solid white rectangle over original bounding box
+        if (isModified) {
           ctx.fillStyle = "#ffffff";
-          ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+          ctx.fillRect(x - 3, y - 3, maskW + 6, maskH + 6);
         }
 
-        ctx.fillStyle = block.color || "#0f172a";
-        ctx.font = `${block.fontWeight || "600"} ${block.fontSize || 12}px "Noto Sans Devanagari", sans-serif`;
-        ctx.textBaseline = "top";
+        // Draw new text if present and not erased
+        if (block.text && block.text.trim() && !block.isErased) {
+          ctx.fillStyle = block.color || "#0f172a";
+          const isBold = block.fontWeight === "bold" || (typeof block.fontWeight === "number" && block.fontWeight >= 600);
+          const weight = isBold ? "bold" : "normal";
+          ctx.font = `${weight} ${block.fontSize || 12}px "Noto Sans Devanagari", sans-serif`;
+          ctx.textBaseline = "top";
 
-        // Word wrap text within width
-        const lines = wrapText(ctx, block.text, w);
-        let curY = y;
-        for (const line of lines) {
-          ctx.fillText(line, x, curY);
-          curY += (block.fontSize || 12) * 1.25;
+          // Word wrap text within width
+          const lines = wrapText(ctx, block.text, Math.max(maskW, 80));
+          let curY = y;
+          for (const line of lines) {
+            ctx.fillText(line, x, curY);
+            curY += (block.fontSize || 12) * 1.25;
+          }
         }
       }
 
@@ -874,14 +981,18 @@ export function printDocument(model: DocumentModel): void {
           : ""
       }
       ${page.textBlocks
-        .filter((b) => b.isCustom || (b as any).isEdited)
-        .map(
-          (b) => `
-        <div style="position: absolute; left: ${b.x}%; top: ${b.y}%; width: ${b.width}%; background: white; color: ${b.color || "#0f172a"}; font-size: ${b.fontSize}px; font-family: 'Noto Sans Devanagari', sans-serif; font-weight: ${b.fontWeight || 600}; z-index: 10;">
-          ${escapeHtml(b.text)}
+        .filter((b) => b.isCustom || b.isEdited || b.isErased)
+        .map((b) => {
+          const w = Math.max(b.width, b.origWidth || b.width);
+          const h = Math.max(b.height, b.origHeight || b.height);
+          const hasText = b.text && b.text.trim() && !b.isErased;
+          const isBold = b.fontWeight === "bold" || (typeof b.fontWeight === "number" && b.fontWeight >= 600);
+          return `
+        <div style="position: absolute; left: ${b.x}%; top: ${b.y}%; min-width: ${w}%; min-height: ${h}%; background: #ffffff; color: ${b.color || "#0f172a"}; font-size: ${b.fontSize}px; font-family: 'Noto Sans Devanagari', sans-serif; font-weight: ${isBold ? 'bold' : 'normal'}; z-index: 10; padding: 2px;">
+          ${hasText ? escapeHtml(b.text) : ""}
         </div>
-      `
-        )
+      `;
+        })
         .join("")}
     </div>
   `

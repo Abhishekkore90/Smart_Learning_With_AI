@@ -23,6 +23,7 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   GoogleAuthProvider,
+  FacebookAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
 import {
@@ -89,6 +90,7 @@ function UnifiedLoginPortal() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [facebookLoading, setFacebookLoading] = useState(false);
 
   // Forgot password modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -495,6 +497,160 @@ function UnifiedLoginPortal() {
     }
   };
 
+  const handleFacebookSignIn = async () => {
+    setFacebookLoading(true);
+    clearUnlockedPinSections();
+    try {
+      if (!auth) {
+        throw new Error("Authentication service is temporarily unavailable.");
+      }
+
+      const provider = new FacebookAuthProvider();
+      provider.addScope("email");
+      provider.addScope("public_profile");
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      if (!user) {
+        throw new Error("Facebook authentication failed. No user record returned.");
+      }
+
+      // Check existing teacher or user record
+      let teacherDoc = await getDoc(doc(db, "teachers", user.uid));
+      let userDoc = await getDoc(doc(db, "users", user.uid));
+
+      let userData: any = teacherDoc.exists()
+        ? teacherDoc.data()
+        : userDoc.exists()
+          ? userDoc.data()
+          : null;
+
+      // If not found by UID, check if an existing record has this email
+      if (!userData && user.email) {
+        try {
+          const qTeacher = query(
+            collection(db, "teachers"),
+            where("email", "==", user.email)
+          );
+          const snapTeacher = await getDocs(qTeacher);
+          if (!snapTeacher.empty) {
+            userData = snapTeacher.docs[0].data();
+          } else {
+            const qUser = query(
+              collection(db, "users"),
+              where("email", "==", user.email)
+            );
+            const snapUser = await getDocs(qUser);
+            if (!snapUser.empty) {
+              userData = snapUser.docs[0].data();
+            }
+          }
+        } catch (_lookupErr) {
+          console.warn("Secondary email lookup note:", _lookupErr);
+        }
+      }
+
+      // If brand-new user via Facebook, create profile
+      if (!userData) {
+        userData = {
+          fullName: user.displayName || "Educator",
+          email: user.email || "",
+          udise: "",
+          schoolName: "",
+          address: "",
+          state: "Maharashtra",
+          board: "Maharashtra ZP Teacher",
+          role: "teacher",
+          createdAt: new Date().toISOString(),
+          photoURL: user.photoURL || "",
+          verified: false,
+        };
+
+        try {
+          await setDoc(doc(db, "teachers", user.uid), userData, { merge: true });
+          await setDoc(doc(db, "users", user.uid), userData, { merge: true });
+        } catch (_docErr) {
+          console.warn("Firestore user creation note:", _docErr);
+        }
+      } else {
+        if (!userData.role) userData.role = "teacher";
+        if (!userData.fullName && user.displayName) userData.fullName = user.displayName;
+      }
+
+      if (userData.udise) {
+        localStorage.setItem("teacher_udise", userData.udise);
+      }
+      localStorage.setItem(
+        "sqaaf_teacher_profile",
+        JSON.stringify({
+          fullName: userData.fullName || user.displayName || "Educator",
+          email: userData.email || user.email || "",
+          udise: userData.udise || "",
+          schoolName: userData.schoolName || "",
+          address: userData.address || "",
+          role: userData.role || "teacher",
+        })
+      );
+
+      try {
+        await setDoc(
+          doc(db, "logged_users", user.uid),
+          {
+            uid: user.uid,
+            email: user.email || "",
+            fullName: userData.fullName || user.displayName || "Educator",
+            udise: userData.udise || "",
+            schoolName: userData.schoolName || "",
+            phone: userData.phone || user.phoneNumber || "",
+            lastLoginAt: serverTimestamp(),
+            loginCount: (userData.loginCount || 0) + 1,
+            role: userData.role || "teacher",
+            provider: "facebook",
+          },
+          { merge: true }
+        );
+      } catch (_e) {
+        // Non-critical
+      }
+
+      toast.success(
+        lang === "mr"
+          ? "Facebook द्वारे यशस्वीरित्या प्रवेश केला!"
+          : "Signed in with Facebook successfully!"
+      );
+
+      if (redirect) {
+        window.location.href = redirect;
+      } else {
+        window.location.href = "/teacher";
+      }
+    } catch (error: any) {
+      if (
+        error?.code === "auth/popup-closed-by-user" ||
+        error?.code === "auth/cancelled-popup-request"
+      ) {
+        return;
+      }
+      console.error("Facebook sign in error:", error);
+      if (error?.code === "auth/account-exists-with-different-credential") {
+        toast.error(
+          lang === "mr"
+            ? "हा ईमेल आधीच दुसऱ्या पर्यायाने (उदा. Google ने) जोडलेला आहे. कृपया Google ने लॉगिन करा."
+            : "An account already exists with the same email address. Please sign in with Google or password."
+        );
+      } else {
+        toast.error(
+          error.message ||
+            (lang === "mr"
+              ? "Facebook प्रमाणीकरण अयशस्वी झाले. कृपया पुन्हा प्रयत्न करा."
+              : "Facebook sign-in failed. Please try again.")
+        );
+      }
+    } finally {
+      setFacebookLoading(false);
+    }
+  };
+
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanInput = forgotInput.trim();
@@ -703,8 +859,8 @@ function UnifiedLoginPortal() {
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
-                  disabled={loading || googleLoading}
-                  className="w-full h-14 bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 text-white font-black rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 text-xs tracking-wider shadow-md hover:shadow-lg cursor-pointer group relative overflow-hidden"
+                  disabled={loading || googleLoading || facebookLoading}
+                  className="w-full h-13 bg-white/10 hover:bg-white/15 border border-white/20 hover:border-white/30 text-white font-black rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 text-xs tracking-wider shadow-md hover:shadow-lg cursor-pointer group relative overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   {googleLoading ? (
@@ -730,7 +886,29 @@ function UnifiedLoginPortal() {
                         />
                       </svg>
                       <span className="font-black uppercase text-[11px] sm:text-xs tracking-wider">
-                        {t.login_google || "Sign in / Sign up with Google"}
+                        {t.login_google || "Sign in with Google"}
+                      </span>
+                    </>
+                  )}
+                </button>
+
+                {/* Facebook Sign In Button */}
+                <button
+                  type="button"
+                  onClick={handleFacebookSignIn}
+                  disabled={loading || googleLoading || facebookLoading}
+                  className="w-full h-13 mt-2.5 bg-[#1877F2]/15 hover:bg-[#1877F2]/25 border border-[#1877F2]/40 hover:border-[#1877F2]/60 text-white font-black rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50 text-xs tracking-wider shadow-md hover:shadow-lg cursor-pointer group relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-[#1877F2]/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {facebookLoading ? (
+                    <Loader2 className="size-5 animate-spin text-white" />
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 shrink-0 fill-[#1877F2]" viewBox="0 0 24 24">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                      </svg>
+                      <span className="font-black uppercase text-[11px] sm:text-xs tracking-wider">
+                        {lang === "mr" ? "Facebook सह लॉगिन करा" : "Sign in with Facebook"}
                       </span>
                     </>
                   )}

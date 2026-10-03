@@ -12,6 +12,7 @@ import {
   Printer,
   Plus,
   Trash2,
+  Eraser,
   Loader2,
   AlertCircle,
   FileText,
@@ -38,6 +39,7 @@ import {
   exportDocumentToPdf,
   printDocument,
 } from "@/services/documentEngine";
+import { decodeMarathiLegacyText } from "@/services/marathiFontDecoder";
 
 interface DocumentEditorViewerProps {
   documentId: string;
@@ -126,23 +128,46 @@ export function DocumentEditorViewer({
         if (userId) {
           const userEdits = await loadUserDocumentEdits(documentType, documentId, userId);
           if (userEdits && userEdits.pages && userEdits.pages.length > 0) {
-            editsFound = true;
             mergedPages = model.pages.map((p) => {
               const editedPage = userEdits.pages.find((ep) => ep.pageNumber === p.pageNumber);
               if (editedPage && editedPage.textBlocks) {
-                return {
-                  ...p,
-                  textBlocks: editedPage.textBlocks,
-                };
+                const modifiedBlocks = editedPage.textBlocks.filter(
+                  (b) => b.isEdited || b.isCustom || b.isErased
+                );
+                if (modifiedBlocks.length > 0) {
+                  editsFound = true;
+                  // Overlay modified blocks onto the fresh base model blocks
+                  const baseBlocks = p.textBlocks.map((baseB) => {
+                    const matched = modifiedBlocks.find((mb) => mb.id === baseB.id);
+                    return matched || baseB;
+                  });
+                  const customBlocks = modifiedBlocks.filter((mb) => mb.isCustom);
+                  return {
+                    ...p,
+                    textBlocks: [
+                      ...baseBlocks,
+                      ...customBlocks.filter((cb) => !baseBlocks.some((bb) => bb.id === cb.id)),
+                    ],
+                  };
+                }
               }
               return p;
             });
           }
         }
 
+        // Ensure all loaded text blocks (cached or new) are decoded to proper Marathi Unicode
+        const cleanedPages = mergedPages.map((p) => ({
+          ...p,
+          textBlocks: (p.textBlocks || []).map((b) => ({
+            ...b,
+            text: decodeMarathiLegacyText(b.text || ""),
+          })),
+        }));
+
         if (isMounted) {
           setDocModel(model);
-          setPagesState(mergedPages);
+          setPagesState(cleanedPages);
           setHasUserEdits(editsFound);
           setLoading(false);
         }
@@ -191,18 +216,22 @@ export function DocumentEditorViewer({
     }
   };
 
-  // Update text of a block
+  // Update text of a block (handles editing, erasing, and whiteout)
   const handleUpdateBlockText = (pageIndex: number, blockId: string, newText: string) => {
     setPagesState((prevPages) => {
       const nextPages = [...prevPages];
       const page = { ...nextPages[pageIndex] };
       page.textBlocks = page.textBlocks.map((b) => {
         if (b.id === blockId) {
+          const isErased = newText.trim() === "";
           return {
             ...b,
             text: newText,
             isEdited: true,
-          } as any;
+            isErased,
+            origWidth: b.origWidth || b.width,
+            origHeight: b.origHeight || b.height,
+          };
         }
         return b;
       });
@@ -226,7 +255,7 @@ export function DocumentEditorViewer({
             ...b,
             ...updates,
             isEdited: true,
-          } as any;
+          };
         }
         return b;
       });
@@ -248,20 +277,55 @@ export function DocumentEditorViewer({
         y,
         width: 45,
         height: 4.5,
+        origWidth: 45,
+        origHeight: 4.5,
         fontSize: 14,
         fontFamily: "Noto Sans Devanagari, sans-serif",
         fontWeight: "600",
         color: "#0f172a",
         editable: true,
         isCustom: true,
+        isEdited: true,
+        isErased: false,
       };
-      (newBlock as any).isEdited = true;
       page.textBlocks = [...page.textBlocks, newBlock];
       nextPages[pageIndex] = page;
       return nextPages;
     });
     setActiveEditingBlockId(newId);
     toast.success("नवीन मजकूर ब्लॉक जोडला गेला!");
+  };
+
+  // Add dedicated whiteout eraser block to cleanly cover any area
+  const handleAddWhiteoutBlockAt = (pageIndex: number, x: number = 10, y: number = 20) => {
+    const newId = `whiteout_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+    setPagesState((prevPages) => {
+      const nextPages = [...prevPages];
+      const page = { ...nextPages[pageIndex] };
+      const newBlock: DocumentTextBlock = {
+        id: newId,
+        text: "",
+        x,
+        y,
+        width: 35,
+        height: 4,
+        origWidth: 35,
+        origHeight: 4,
+        fontSize: 14,
+        fontFamily: "Noto Sans Devanagari, sans-serif",
+        fontWeight: "600",
+        color: "#0f172a",
+        editable: true,
+        isCustom: true,
+        isEdited: true,
+        isErased: true,
+      };
+      page.textBlocks = [...page.textBlocks, newBlock];
+      nextPages[pageIndex] = page;
+      return nextPages;
+    });
+    setActiveEditingBlockId(newId);
+    toast.success("व्हाईटआऊट खोडरबर जोडला! (Whiteout Eraser added)");
   };
 
   // Delete text block (custom blocks or revert edited blocks)
@@ -289,7 +353,7 @@ export function DocumentEditorViewer({
       const page = { ...nextPages[pageIndex] };
       if (origBlock) {
         page.textBlocks = page.textBlocks.map((b) =>
-          b.id === blockId ? { ...origBlock, isEdited: false } : b
+          b.id === blockId ? { ...origBlock, isEdited: false, isErased: false } : b
         );
       } else {
         page.textBlocks = page.textBlocks.filter((b) => b.id !== blockId);
@@ -717,6 +781,14 @@ export function DocumentEditorViewer({
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => handleAddWhiteoutBlockAt(currentPageNum - 1)}
+              className="flex items-center gap-1 px-3 py-1 bg-rose-600/90 hover:bg-rose-600 text-white rounded-lg font-bold transition-all shadow-sm shrink-0 cursor-pointer"
+              title="कागदावरील कोणताही मजकूर किंवा भाग खोडण्यासाठी व्हाईटआऊट खोडरबर वापरा"
+            >
+              <Eraser className="size-3.5" />
+              <span>+ व्हाईटआऊट खोडरबर (+ Eraser)</span>
+            </button>
+            <button
               onClick={() => handleAddCustomBlockAt(currentPageNum - 1, 10, 20)}
               className="flex items-center gap-1 px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold transition-all shadow-sm shrink-0 cursor-pointer"
             >
@@ -787,57 +859,52 @@ export function DocumentEditorViewer({
               <div className="absolute inset-0 w-full h-full z-10 pointer-events-auto">
                 {page.textBlocks.map((block) => {
                   const isEditing = activeEditingBlockId === block.id && mode === "edit";
-                  const isModified = Boolean(block.isCustom || (block as any).isEdited);
+                  const isErased = Boolean(block.isErased || (block.isEdited && !block.text?.trim()));
+                  const isModified = Boolean(block.isCustom || block.isEdited || isErased);
 
                   // In view mode: if not modified and background exists, don't render anything
                   if (mode === "view" && page.backgroundUrl && !isModified) {
                     return null;
                   }
 
-                  return (
-                    <div
-                      key={block.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (mode === "edit") {
-                          setActiveEditingBlockId(block.id);
-                        }
-                      }}
-                      className={`doc-text-block-item absolute transition-all ${
-                        isEditing
-                          ? "bg-white z-50 rounded shadow-md"
-                          : isModified
-                          ? "bg-white border border-amber-300 hover:border-amber-500 shadow-xs rounded cursor-pointer z-30"
-                          : mode === "edit"
-                          ? "cursor-text z-20"
-                          : "z-10"
-                      }`}
-                      style={{
-                        left: `${block.x}%`,
-                        top: `${block.y}%`,
-                        width: isEditing ? `${Math.max(block.width, 18)}%` : isModified ? "auto" : `${block.width}%`,
-                        minWidth: isEditing ? "120px" : "20px",
-                        maxWidth: "96%",
-                        fontSize: `${Math.max(10, Math.round(block.fontSize * zoomScale * 0.88))}px`,
-                        fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif",
-                        fontWeight: block.fontWeight || "600",
-                        color: block.color || "#0f172a",
-                        lineHeight: 1.3,
-                        backgroundColor:
-                          isModified || isEditing ? "#ffffff" : "transparent",
-                        boxShadow:
-                          isModified && !isEditing
-                            ? "0 0 0 2px #ffffff"
-                            : undefined,
-                      }}
-                    >
-                      {isEditing ? (
-                        /* DIRECT IN-PLACE EDITING ON THE SHEET (NO POPUP MODAL) */
+                  const origW = block.origWidth || block.width;
+                  const origH = block.origHeight || block.height;
+                  const maskW = Math.max(block.width, origW);
+                  const maskH = Math.max(block.height, origH);
+
+                  // Calculate exact font size scaled 1:1 with rendered PDF viewport
+                  const scaleRatio = page.width > 0 ? displayWidth / page.width : zoomScale;
+                  const exactFontSize = Math.max(8, Math.round((block.fontSize || 12) * scaleRatio));
+                  const isBold =
+                    block.fontWeight === "bold" ||
+                    (typeof block.fontWeight === "number" && block.fontWeight >= 600) ||
+                    block.fontWeight === "600" ||
+                    block.fontWeight === "700";
+                  const exactFontWeight = isBold ? "bold" : "normal";
+
+                  // 1. ACTIVE EDITING BLOCK: Solid white background covering original sentence
+                  if (isEditing) {
+                    return (
+                      <div
+                        key={block.id}
+                        className="doc-text-block-item absolute z-50 bg-white rounded-md shadow-2xl p-1.5"
+                        style={{
+                          left: `${block.x}%`,
+                          top: `${block.y}%`,
+                          width: `${Math.max(maskW, 20)}%`,
+                          minHeight: `${Math.max(maskH, 3.2)}%`,
+                          minWidth: "150px",
+                          maxWidth: "96%",
+                          backgroundColor: "#ffffff",
+                          boxShadow: "0 0 0 3px #ffffff, 0 8px 24px rgba(0,0,0,0.25)",
+                        }}
+                      >
                         <div className="relative w-full h-full">
                           <textarea
                             autoFocus
-                            rows={Math.max(1, block.text.split("\n").length)}
-                            value={block.text}
+                            rows={Math.max(1, (block.text || "").split("\n").length)}
+                            value={block.text || ""}
+                            placeholder="येथे नवीन मजकूर टाईप करा (किंवा खोडण्यासाठी रिक्त ठेवा)..."
                             onChange={(e) =>
                               handleUpdateBlockText(pageIdx, block.id, e.target.value)
                             }
@@ -847,61 +914,183 @@ export function DocumentEditorViewer({
                                 setActiveEditingBlockId(null);
                               }
                             }}
-                            className="w-full bg-white text-slate-900 border-2 border-indigo-600 rounded-sm outline-none px-1.5 py-0.5 m-0 resize-none font-sans"
+                            className="w-full bg-white text-slate-900 border-2 border-indigo-600 rounded outline-none p-1 resize-none font-sans"
                             style={{
-                              fontSize: "inherit",
-                              fontFamily: "inherit",
-                              fontWeight: "inherit",
+                              fontSize: `${exactFontSize}px`,
+                              fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif",
+                              fontWeight: exactFontWeight,
                               lineHeight: 1.25,
                             }}
                           />
+                          <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-100 gap-1 flex-wrap">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  handleUpdateBlockText(pageIdx, block.id, "");
+                                  toast.success("मजकूर खोडला गेला! (Erased)");
+                                }}
+                                className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-[11px] font-bold cursor-pointer flex items-center gap-1"
+                                title="हा मजकूर खोडा (Erase text)"
+                              >
+                                <Trash2 className="size-3" />
+                                <span>खोडा (Erase)</span>
+                              </button>
+                              {(block.isEdited || block.isCustom) && (
+                                <button
+                                  type="button"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    block.isCustom
+                                      ? handleDeleteBlock(pageIdx, block.id)
+                                      : handleRevertBlock(pageIdx, block.id);
+                                    setActiveEditingBlockId(null);
+                                  }}
+                                  className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded text-[11px] font-bold cursor-pointer flex items-center gap-1"
+                                  title={block.isCustom ? "हटवा" : "मूळ मजकूर परत आणा"}
+                                >
+                                  <RotateCcw className="size-3" />
+                                  <span>पूर्ववत (Revert)</span>
+                                </button>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setActiveEditingBlockId(null);
+                              }}
+                              className="px-3 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[11px] font-bold shadow-sm cursor-pointer flex items-center gap-1"
+                              title="बदल पूर्ण करा (Done)"
+                            >
+                              <Check className="size-3" />
+                              <span>पूर्ण (Done)</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // 2. ERASED BLOCK: Solid white patch completely wiping out the underlying text
+                  if (isErased) {
+                    if (mode === "view") {
+                      return (
+                        <div
+                          key={block.id}
+                          className="absolute z-20 pointer-events-none"
+                          style={{
+                            left: `${block.x}%`,
+                            top: `${block.y}%`,
+                            width: `${maskW}%`,
+                            height: `${maskH}%`,
+                            backgroundColor: "#ffffff",
+                            boxShadow: "0 0 0 3px #ffffff",
+                          }}
+                        />
+                      );
+                    }
+                    return (
+                      <div
+                        key={block.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveEditingBlockId(block.id);
+                        }}
+                        className="absolute z-30 border border-dashed border-rose-400 hover:border-rose-600 rounded cursor-pointer group transition-all"
+                        style={{
+                          left: `${block.x}%`,
+                          top: `${block.y}%`,
+                          width: `${maskW}%`,
+                          minHeight: `${Math.max(maskH, 2.5)}%`,
+                          backgroundColor: "#ffffff",
+                          boxShadow: "0 0 0 2px #ffffff",
+                        }}
+                        title="हा मजकूर खोडला आहे. नवीन मजकूर टाईप करण्यासाठी येथे क्लिक करा."
+                      >
+                        <div className="flex items-center justify-between px-1.5 py-0.5 text-[10px] text-rose-600 font-bold select-none h-full">
+                          <span className="flex items-center gap-1 opacity-80 group-hover:opacity-100 truncate">
+                            <Eraser className="size-3 shrink-0" />
+                            <span className="truncate">खोडून टाकले (Erased)</span>
+                          </span>
                           <button
                             type="button"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              setActiveEditingBlockId(null);
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              block.isCustom
+                                ? handleDeleteBlock(pageIdx, block.id)
+                                : handleRevertBlock(pageIdx, block.id);
                             }}
-                            className="absolute -bottom-6 right-0 px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold shadow-md cursor-pointer flex items-center gap-0.5 z-50"
-                            title="पूर्ण करा (Done)"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-[9px] px-1.5 shrink-0"
+                            title={block.isCustom ? "हटवा" : "मूळ मजकूर परत आणा"}
                           >
-                            <Check className="size-3" />
-                            <span>पूर्ण</span>
+                            {block.isCustom ? "हटवा" : "पूर्ववत"}
                           </button>
                         </div>
-                      ) : isModified ? (
-                        /* MODIFIED TEXT DIRECTLY ON THE SHEET OVER SOLID WHITE BACKING */
-                        <div className="relative group px-1 py-0.5">
+                      </div>
+                    );
+                  }
+
+                  // 3. MODIFIED WITH NEW TEXT: Solid white backing hiding original sentence + new text cleanly displayed
+                  if (isModified && block.text?.trim()) {
+                    return (
+                      <div
+                        key={block.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (mode === "edit") {
+                            setActiveEditingBlockId(block.id);
+                          }
+                        }}
+                        className={`doc-text-block-item absolute transition-all z-30 ${
+                          mode === "edit"
+                            ? "hover:ring-2 hover:ring-amber-400 cursor-pointer rounded"
+                            : ""
+                        }`}
+                        style={{
+                          left: `${block.x}%`,
+                          top: `${block.y}%`,
+                          minWidth: `${maskW}%`,
+                          minHeight: `${maskH}%`,
+                          backgroundColor: "#ffffff",
+                          boxShadow: "0 0 0 2px #ffffff",
+                          fontSize: `${exactFontSize}px`,
+                          fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif",
+                          fontWeight: exactFontWeight,
+                          color: block.color || "#0f172a",
+                          lineHeight: 1.25,
+                        }}
+                        title={mode === "edit" ? "बदल करण्यासाठी थेट क्लिक करा (Click to edit)" : undefined}
+                      >
+                        <div className="relative p-0 leading-tight">
                           <span className="block whitespace-pre-wrap break-words">
                             {block.text}
                           </span>
-                          {mode === "edit" && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                block.isCustom
-                                  ? handleDeleteBlock(pageIdx, block.id)
-                                  : handleRevertBlock(pageIdx, block.id);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2.5 -right-2.5 p-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full shadow-sm z-30"
-                              title={block.isCustom ? "हटवा" : "मूळ मजकूर परत आणा"}
-                            >
-                              <RotateCcw className="size-2.5" />
-                            </button>
-                          )}
                         </div>
-                      ) : (
-                        /* UNEDITED BLOCK: INVISIBLE HOTSPOT DIRECTLY ON SHEET */
-                        <div
-                          className={`w-full h-full min-h-[16px] transition-all rounded ${
-                            mode === "edit"
-                              ? "hover:border hover:border-amber-400 hover:bg-amber-400/20 cursor-text"
-                              : ""
-                          }`}
-                          title={mode === "edit" ? "बदलण्यासाठी येथे क्लिक करा" : undefined}
-                        />
-                      )}
-                    </div>
+                      </div>
+                    );
+                  }
+
+                  // 4. UNEDITED BLOCK: Direct click-to-edit hotspot in edit mode (no hover popups)
+                  return (
+                    <div
+                      key={block.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveEditingBlockId(block.id);
+                      }}
+                      className="absolute z-20 cursor-pointer rounded hover:bg-amber-400/20 hover:ring-1.5 hover:ring-amber-400 transition-colors"
+                      style={{
+                        left: `${block.x}%`,
+                        top: `${block.y}%`,
+                        width: `${Math.max(block.width, 3)}%`,
+                        minWidth: "26px",
+                        height: `${Math.max(block.height, 2.2)}%`,
+                        minHeight: "18px",
+                      }}
+                      title="संपादित करण्यासाठी थेट क्लिक करा (Click to edit)"
+                    />
                   );
                 })}
               </div>
