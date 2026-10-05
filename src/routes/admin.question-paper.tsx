@@ -93,11 +93,46 @@ const MEDIUM_OPTIONS = [
   },
 ];
 
+export const EXAM_TABS = [
+  {
+    id: "unit1",
+    labelMr: "चाचणी १",
+    labelEn: "Unit Test 1",
+    fullNameMr: "घटक चाचणी १",
+    icon: Award,
+    color: "from-blue-600 to-indigo-600",
+  },
+  {
+    id: "term1",
+    labelMr: "प्रथम सत्र",
+    labelEn: "Term 1 (Semester 1)",
+    fullNameMr: "प्रथम सत्र परीक्षा",
+    icon: Calendar,
+    color: "from-purple-600 to-pink-600",
+  },
+  {
+    id: "unit2",
+    labelMr: "चाचणी २",
+    labelEn: "Unit Test 2",
+    fullNameMr: "घटक चाचणी २",
+    icon: Award,
+    color: "from-amber-500 to-orange-600",
+  },
+  {
+    id: "term2",
+    labelMr: "द्वितीय सत्र",
+    labelEn: "Term 2 (Semester 2)",
+    fullNameMr: "द्वितीय सत्र परीक्षा",
+    icon: Calendar,
+    color: "from-emerald-600 to-teal-600",
+  },
+];
+
 const EXAM_TYPES = [
-  { id: "unit1", label: "घटक चाचणी १ (Unit Test 1)" },
-  { id: "term1", label: "प्रथम सत्र परीक्षा (Term 1 Exam)" },
-  { id: "unit2", label: "घटक चाचणी २ (Unit Test 2)" },
-  { id: "term2", label: "द्वितीय सत्र परीक्षा (Term 2 Exam)" },
+  { id: "unit1", label: "चाचणी १ (Unit Test 1)" },
+  { id: "term1", label: "प्रथम सत्र (Term 1 Exam)" },
+  { id: "unit2", label: "चाचणी २ (Unit Test 2)" },
+  { id: "term2", label: "द्वितीय सत्र (Term 2 Exam)" },
   { id: "practice", label: "सराव चाचणी परीक्षा (Practice Test)" },
 ];
 
@@ -138,6 +173,7 @@ function AdminQuestionPaperPage() {
   // Stepper: "medium" -> "class" -> "subject" -> "workspace"
   const [step, setStep] = useState<"medium" | "class" | "subject" | "workspace">("medium");
 
+  const [selectedExamTab, setSelectedExamTab] = useState<string>("unit1");
   const [selectedMedium, setSelectedMedium] = useState<string>("marathi");
   const [selectedClass, setSelectedClass] = useState<string>("1st");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
@@ -182,7 +218,7 @@ function AdminQuestionPaperPage() {
   const [paperList, setPaperList] = useState<QuestionPaperItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterExamType, setFilterExamType] = useState<string>("all");
+  const [filterExamType, setFilterExamType] = useState<string>("unit1");
 
   // Real-time listener for admin_question_papers
   useEffect(() => {
@@ -220,8 +256,28 @@ function AdminQuestionPaperPage() {
       const matchSubject =
         !selectedSubject ||
         item.subject?.trim().toLowerCase() === selectedSubject.trim().toLowerCase();
-      const matchExam =
-        filterExamType === "all" || item.examType === filterExamType;
+
+      const matchExam = (() => {
+        if (filterExamType === "all") return true;
+        const eType = (item.examType || "").toLowerCase().trim();
+        const eLabel = (item.examTypeLabel || "").toLowerCase().trim();
+        const title = (item.title || "").toLowerCase().trim();
+
+        if (filterExamType === "unit1") {
+          return eType === "unit1" || eLabel.includes("चाचणी १") || eLabel.includes("चाचणी 1") || title.includes("चाचणी १") || title.includes("चाचणी 1") || title.includes("unit 1");
+        }
+        if (filterExamType === "term1") {
+          return eType === "term1" || eLabel.includes("प्रथम सत्र") || title.includes("प्रथम सत्र") || title.includes("term 1") || title.includes("sem 1");
+        }
+        if (filterExamType === "unit2") {
+          return eType === "unit2" || eLabel.includes("चाचणी २") || eLabel.includes("चाचणी 2") || title.includes("चाचणी २") || title.includes("चाचणी 2") || title.includes("unit 2");
+        }
+        if (filterExamType === "term2") {
+          return eType === "term2" || eLabel.includes("द्वितीय सत्र") || title.includes("द्वितीय सत्र") || title.includes("term 2") || title.includes("sem 2");
+        }
+        return eType === filterExamType;
+      })();
+
       const matchSearch =
         !searchTerm ||
         item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -231,22 +287,26 @@ function AdminQuestionPaperPage() {
     });
   }, [paperList, selectedMedium, selectedClass, selectedSubject, filterExamType, searchTerm]);
 
-  // Upload & publish question paper
-  const handleSavePaper = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isUploading) return; // Prevent double submit
-
-    if (!title.trim()) {
-      toast.error("कृपया प्रश्नपत्रिकेचे शीर्षक प्रविष्ट करा.");
-      return;
-    }
+  // Direct File Upload & Instant Publish
+  const handleDirectFileUpload = async (file: File) => {
+    if (!file || isUploading) return;
     if (!selectedSubject) {
-      toast.error("कृपया विषय निवडा.");
+      toast.error("कृपया आधी विषय निवडा.");
       return;
     }
 
     try {
       setIsUploading(true);
+      setUploadProgress(5);
+
+      const examTypeObj = EXAM_TABS.find((t) => t.id === selectedExamTab) || {
+        id: selectedExamTab,
+        labelMr: "चाचणी १",
+      };
+
+      const baseName = file.name.replace(/\.[^/.]+$/, "").trim();
+      const generatedTitle = baseName || `${currentClassObj?.mr || selectedClass} ${selectedSubject} (${examTypeObj.labelMr})`;
+
       let fileUrl = "";
       let fileName = "";
       let fileSize = 0;
@@ -254,77 +314,69 @@ function AdminQuestionPaperPage() {
       let wordFileUrl = "";
       let wordFileName = "";
       let wordFileSize = 0;
-      let contentToSave = content.trim();
+      let contentToSave = "";
 
-      if (selectedFile) {
-        setUploadProgress(10);
-        // 1. Upload original file
-        const uploadResult = await uploadFileWithProgress(selectedFile, {
-          folderPath: `admin_question_papers/${selectedMedium}/${selectedClass}/${selectedSubject}`,
-          onProgress: (p) => setUploadProgress(Math.round(p * 0.45)),
-        });
-        fileUrl = uploadResult.url;
-        fileName = uploadResult.fileName;
-        fileSize = uploadResult.sizeBytes;
-        fileType = selectedFile.type || (fileName.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+      toast.info(`"${file.name}" अपलोड होत आहे...`);
 
-        // 2. If PDF, convert as-is without changing structure into Word (.docx) and upload to backend
-        const isPdf =
-          fileType === "application/pdf" ||
-          fileName.toLowerCase().endsWith(".pdf") ||
-          selectedFile.name.toLowerCase().endsWith(".pdf");
+      // 1. Upload original file
+      const uploadResult = await uploadFileWithProgress(file, {
+        folderPath: `admin_question_papers/${selectedMedium}/${selectedClass}/${selectedSubject}`,
+        onProgress: (p) => setUploadProgress(Math.round(p * 0.45)),
+      });
+      fileUrl = uploadResult.url;
+      fileName = uploadResult.fileName;
+      fileSize = uploadResult.sizeBytes;
+      fileType = file.type || (fileName.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
 
-        if (isPdf) {
-          try {
-            toast.info("PDF चे Word (.docx) फाईलमध्ये रूपांतर करत आहे (Preserving structure)...");
-            const arrayBuf = await selectedFile.arrayBuffer();
-            const convResult = await convertPdfToDocxBlob(arrayBuf, title.trim());
+      // 2. If PDF, convert as-is to Word (.docx)
+      const isPdf =
+        fileType === "application/pdf" ||
+        fileName.toLowerCase().endsWith(".pdf") ||
+        file.name.toLowerCase().endsWith(".pdf");
 
-            if (!contentToSave && convResult.textContent) {
-              contentToSave = convResult.textContent;
-            }
+      if (isPdf) {
+        try {
+          toast.info("PDF चे Word (.docx) फाईलमध्ये रूपांतर करत आहे...");
+          const arrayBuf = await file.arrayBuffer();
+          const convResult = await convertPdfToDocxBlob(arrayBuf, generatedTitle);
 
-            const baseName = selectedFile.name.replace(/\.[^/.]+$/, "");
-            wordFileName = `${baseName}.docx`;
-            wordFileSize = convResult.blob.size;
-
-            const wordFile = new File([convResult.blob], wordFileName, {
-              type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            });
-
-            toast.info("रूपांतरित Word (.docx) फाईल बॅकएंडमध्ये साठवत आहे...");
-            const wordUploadResult = await uploadFileWithProgress(wordFile, {
-              folderPath: `admin_question_papers/${selectedMedium}/${selectedClass}/${selectedSubject}/word`,
-              onProgress: (p) => setUploadProgress(45 + Math.round(p * 0.5)),
-            });
-            wordFileUrl = wordUploadResult.url;
-            toast.success("Word (.docx) फाईल बॅकएंडमध्ये यशस्वीरित्या साठवली गेली!");
-          } catch (convErr: any) {
-            console.error("PDF to Word conversion warning:", convErr);
-            toast.warning("Word रूपांतरणात अडचण: " + (convErr.message || ""));
+          if (convResult.textContent) {
+            contentToSave = convResult.textContent;
           }
+
+          wordFileName = `${baseName}.docx`;
+          wordFileSize = convResult.blob.size;
+
+          const wordFile = new File([convResult.blob], wordFileName, {
+            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          });
+
+          const wordUploadResult = await uploadFileWithProgress(wordFile, {
+            folderPath: `admin_question_papers/${selectedMedium}/${selectedClass}/${selectedSubject}/word`,
+            onProgress: (p) => setUploadProgress(45 + Math.round(p * 0.5)),
+          });
+          wordFileUrl = wordUploadResult.url;
+        } catch (convErr: any) {
+          console.error("PDF to Word conversion warning:", convErr);
         }
       }
-
-      const examTypeObj = EXAM_TYPES.find((t) => t.id === examType);
 
       const isPdfFile =
         fileType === "application/pdf" ||
         fileName.toLowerCase().endsWith(".pdf") ||
-        fileUrl.toLowerCase().includes(".pdf") ||
-        fileUrl.startsWith("data:application/pdf");
+        fileUrl.toLowerCase().includes(".pdf");
 
-      await addDoc(collection(db, "admin_question_papers"), {
+      const docData = {
         medium: selectedMedium,
         class: selectedClass,
         subject: selectedSubject,
-        examType,
-        examTypeLabel: examTypeObj?.label || examType,
-        totalMarks,
-        academicYear,
-        title: title.trim(),
-        description: description.trim(),
-        content: contentToSave || description.trim(),
+        examType: selectedExamTab,
+        examTypeLabel: examTypeObj.labelMr,
+        totalMarks: "२०",
+        academicYear: "2026-27",
+        title: generatedTitle,
+        description: `${currentClassObj?.mr} ${selectedSubject} - ${examTypeObj.labelMr}`,
+        content: contentToSave || `${selectedSubject} ${examTypeObj.labelMr} प्रश्नपत्रिका`,
         fileUrl: fileUrl || null,
         fileName: fileName || null,
         fileType: fileType || null,
@@ -332,22 +384,27 @@ function AdminQuestionPaperPage() {
         wordFileUrl: wordFileUrl || null,
         wordFileName: wordFileName || null,
         wordFileSize: wordFileSize || null,
-        documentType: isPdfFile ? "pdf" : "image",
+        documentType: (isPdfFile ? "pdf" : "image") as "pdf" | "image",
         createdAt: new Date().toISOString(),
         uploadedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         uploadedBy: "admin",
-      });
+      };
 
-      toast.success("प्रश्नपत्रिका यशस्वीरित्या प्रकाशित झाली!");
-      setTitle("");
-      setDescription("");
-      setContent("");
+      const docRef = await addDoc(collection(db, "admin_question_papers"), docData);
+
+      toast.success("प्रश्नपत्रिका थेट यशस्वीरित्या प्रकाशित झाली!");
       setSelectedFile(null);
       setUploadProgress(0);
       if (fileInputRef.current) fileInputRef.current.value = "";
+
+      // DIRECTLY SHOW TO USER: Immediately open in preview!
+      setActivePreviewPaper({
+        id: docRef.id,
+        ...docData,
+      } as QuestionPaperItem);
     } catch (err: any) {
-      console.error("Save error:", err);
+      console.error("Direct upload error:", err);
       toast.error(err.message || "प्रश्नपत्रिका अपलोड करताना त्रुटी आली.");
     } finally {
       setIsUploading(false);
@@ -562,6 +619,72 @@ function AdminQuestionPaperPage() {
           </div>
         </div>
 
+        {/* 4 EXAM TABS: चाचणी १ | प्रथम सत्र | चाचणी २ | द्वितीय सत्र */}
+        <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-black text-xs shadow-xs">
+                ★
+              </div>
+              <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                परीक्षा निवडा (Select Exam):
+              </h3>
+            </div>
+            <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+              सध्याची निवड: <strong className="text-blue-950 font-black">{EXAM_TABS.find(t => t.id === selectedExamTab)?.labelMr || "चाचणी १"}</strong>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+            {EXAM_TABS.map((tab, idx) => {
+              const isActive = selectedExamTab === tab.id;
+              const IconComponent = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setSelectedExamTab(tab.id);
+                    setExamType(tab.id);
+                  }}
+                  className={`relative p-3.5 sm:p-4 rounded-2xl text-left transition-all duration-200 border-2 cursor-pointer flex items-center gap-3 shadow-xs ${
+                    isActive
+                      ? `bg-gradient-to-r ${tab.color} text-white border-transparent shadow-md scale-[1.02]`
+                      : "bg-slate-50/70 hover:bg-white text-slate-800 border-slate-200 hover:border-blue-300 hover:shadow-xs"
+                  }`}
+                >
+                  <div
+                    className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      isActive ? "bg-white/20 text-white" : "bg-white text-slate-700 border border-slate-200 shadow-2xs"
+                    }`}
+                  >
+                    <IconComponent className="size-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                          isActive ? "bg-white/25 text-white" : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {idx + 1}
+                      </span>
+                      <span className="font-black text-base sm:text-lg leading-tight truncate">
+                        {tab.labelMr}
+                      </span>
+                    </div>
+                    <div className={`text-[11px] font-semibold mt-0.5 ${isActive ? "text-white/80" : "text-slate-400"}`}>
+                      {tab.labelEn}
+                    </div>
+                  </div>
+                  {isActive && (
+                    <span className="size-2 rounded-full bg-white shadow-xs shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* STEP 1: MEDIUM SELECTION */}
         {step === "medium" && (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -725,178 +848,99 @@ function AdminQuestionPaperPage() {
             </div>
 
             {/* Upload New Question Paper Form */}
+            {/* Direct File Upload As Per Selected Attributes */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                <div className="size-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
-                  <FileUp className="size-5" />
+              {/* Summary of Active Selection */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 p-4 rounded-2xl border border-blue-100">
+                <div className="space-y-1">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    निवडलेले तपशील (Selected Attributes)
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-3 py-1 rounded-xl bg-blue-600 text-white font-black text-xs shadow-xs">
+                      {EXAM_TABS.find((t) => t.id === selectedExamTab)?.labelMr || "चाचणी १"}
+                    </span>
+                    <span className="px-3 py-1 rounded-xl bg-indigo-600 text-white font-bold text-xs shadow-xs">
+                      {currentMediumObj?.labelMr}
+                    </span>
+                    <span className="px-3 py-1 rounded-xl bg-purple-600 text-white font-bold text-xs shadow-xs">
+                      {currentClassObj?.mr}
+                    </span>
+                    <span className="px-3 py-1 rounded-xl bg-slate-900 text-white font-bold text-xs shadow-xs">
+                      विषय: {selectedSubject}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-black text-slate-800">
-                    नवीन प्रश्नपत्रिका प्रकाशित करा (Publish Question Paper)
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    {selectedSubject} विषयासाठी परीक्षा प्रकार निवडा व मूळ PDF फाईल जोडा.
-                  </p>
+                <div className="text-xs font-semibold text-slate-600">
+                  ⚡ फाईल निवडताच थेट प्रकाशित होईल व स्क्रीनवर दिसेल.
                 </div>
               </div>
 
-              <form onSubmit={handleSavePaper} className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                      परीक्षा प्रकार (Exam Type) <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={examType}
-                      onChange={(e) => setExamType(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none transition-all cursor-pointer bg-white"
-                    >
-                      {EXAM_TYPES.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+              {/* Direct Drag & Drop or Click to Upload */}
+              <div
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const droppedFile = e.dataTransfer.files?.[0];
+                  if (droppedFile) handleDirectFileUpload(droppedFile);
+                }}
+                className="border-2 border-dashed border-blue-300 hover:border-blue-500 bg-blue-50/20 hover:bg-blue-50/50 rounded-3xl p-8 sm:p-12 text-center transition-all duration-300 space-y-4"
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleDirectFileUpload(file);
+                  }}
+                  className="hidden"
+                  id="direct-qp-upload-input"
+                />
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                      एकूण गुण (Total Marks) <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={totalMarks}
-                      onChange={(e) => setTotalMarks(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none transition-all cursor-pointer bg-white"
-                    >
-                      {MARKS_OPTIONS.map((m) => (
-                        <option key={m} value={m}>
-                          {m} गुण
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                      शैक्षणिक वर्ष (Academic Year)
-                    </label>
-                    <input
-                      type="text"
-                      value={academicYear}
-                      onChange={(e) => setAcademicYear(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none transition-all"
-                      placeholder="उदा. 2026-27"
-                    />
-                  </div>
+                <div className="size-20 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto shadow-inner">
+                  <FileUp className="size-10" />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                    प्रश्नपत्रिकेचे शीर्षक (Paper Title) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="उदा. घटक चाचणी १ — भाषा (Formative Evaluation Test 1)"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none transition-all"
-                  />
+                <div className="space-y-1.5 max-w-md mx-auto">
+                  <h4 className="text-lg sm:text-xl font-black text-slate-900">
+                    प्रश्नपत्रिका फाईल येथे ड्रॅग करा किंवा निवडा
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium">
+                    (PDF, Word .docx किंवा Images) — निवडलेल्या {currentClassObj?.mr} {selectedSubject} ({EXAM_TABS.find((t) => t.id === selectedExamTab)?.labelMr}) साठी थेट प्रकाशित होईल.
+                  </p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                    प्रश्नपत्रिका PDF / फाईल जोडा (Attach Original Document - चित्रे व डिझाइन सुरक्षित राहील) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-                      onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
-                      className="hidden"
-                      id="qp-file-input"
-                    />
-                    <label
-                      htmlFor="qp-file-input"
-                      className="flex items-center gap-2 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-300 cursor-pointer transition-all active:scale-95"
-                    >
-                      <FileUp className="size-4 text-blue-600" />
-                      <span>{selectedFile ? "फाईल बदला" : "फाईल निवडा (PDF/PNG/JPG)"}</span>
-                    </label>
-                    {isExtracting && (
-                      <span className="text-xs font-bold text-blue-700 flex items-center gap-1.5 animate-pulse bg-blue-50 px-3 py-2 rounded-xl border border-blue-200">
-                        <Loader2 className="size-3.5 animate-spin" /> मजकूर मिळवत आहे...
+                {/* Progress Bar during upload */}
+                {isUploading && (
+                  <div className="max-w-md mx-auto space-y-2 pt-2">
+                    <div className="flex justify-between text-xs font-black text-blue-700">
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 className="size-3.5 animate-spin" /> अपलोड व रूपांतरण चालू आहे...
                       </span>
-                    )}
-                    {selectedFile && !isExtracting && (
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-blue-50 px-3 py-2 rounded-xl border border-blue-200">
-                        <FileText className="size-4 text-blue-600" />
-                        <span className="truncate max-w-xs">{selectedFile.name}</span>
-                        <span className="text-slate-400">({(selectedFile.size / 1024).toFixed(0)} KB)</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedFile(null);
-                            if (fileInputRef.current) fileInputRef.current.value = "";
-                          }}
-                          className="text-red-500 hover:text-red-700 ml-1"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                    तपशील / सूचना (Instructions / Description)
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="उदा. वेळ: १ तास. सर्व प्रश्न सोडविणे आवश्यक आहे..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm font-semibold outline-none transition-all resize-y"
-                  />
-                </div>
-
-                {/* Progress bar */}
-                {isUploading && uploadProgress > 0 && (
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-bold text-blue-700">
-                      <span>अपलोड होत आहे...</span>
                       <span>{uploadProgress}%</span>
                     </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
                       <div
-                        className="bg-blue-500 h-full transition-all duration-300"
+                        className="bg-blue-600 h-full transition-all duration-300"
                         style={{ width: `${uploadProgress}%` }}
                       />
                     </div>
                   </div>
                 )}
 
-                {/* Submit button */}
-                <button
-                  type="submit"
-                  disabled={isUploading}
-                  className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider shadow-lg shadow-blue-500/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      <span>अपलोड होत आहे...</span>
-                    </>
-                  ) : (
-                    <>
-                      <PlusCircle className="size-4" />
-                      <span>प्रश्नपत्रिका प्रकाशित करा (Publish Question Paper)</span>
-                    </>
-                  )}
-                </button>
-              </form>
+                <div>
+                  <label
+                    htmlFor="direct-qp-upload-input"
+                    className={`inline-flex items-center gap-2.5 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl text-xs sm:text-sm font-black uppercase tracking-wider shadow-lg shadow-blue-500/25 transition-all cursor-pointer active:scale-95 ${
+                      isUploading ? "opacity-50 pointer-events-none" : ""
+                    }`}
+                  >
+                    <FileUp className="size-5" />
+                    <span>फाईल निवडा व थेट प्रकाशित करा (Upload & Publish)</span>
+                  </label>
+                </div>
+              </div>
             </div>
 
             {/* List of Uploaded Question Papers */}

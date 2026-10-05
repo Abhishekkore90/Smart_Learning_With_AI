@@ -19,6 +19,7 @@ import {
   Building2,
   Type,
   Bold,
+  GraduationCap,
   X,
   Check,
   Sparkles,
@@ -40,6 +41,7 @@ import {
   printDocument,
 } from "@/services/documentEngine";
 import { decodeMarathiLegacyText } from "@/services/marathiFontDecoder";
+import { getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 
 interface DocumentEditorViewerProps {
   documentId: string;
@@ -93,9 +95,24 @@ export function DocumentEditorViewer({
 
   // Quick School Header Customizer Modal
   const [showSchoolHeaderModal, setShowSchoolHeaderModal] = useState<boolean>(false);
-  const [schoolNameInput, setSchoolNameInput] = useState<string>(
-    userName ? `जि. प. प्राथमिक शाळा (${userName})` : "जिल्हा परिषद प्राथमिक शाळा"
-  );
+  const [showFillSchoolModal, setShowFillSchoolModal] = useState<boolean>(false);
+  const [fillSchoolNameInput, setFillSchoolNameInput] = useState<string>(() => {
+    try {
+      const uProfile = getUnifiedSchoolProfile();
+      if (uProfile?.schoolName?.trim()) return uProfile.schoolName.trim();
+    } catch (e) {}
+    return userName ? `जि. प. प्राथमिक शाळा (${userName})` : "जिल्हा परिषद प्राथमिक शाळा";
+  });
+  const [fillSchoolFontSize, setFillSchoolFontSize] = useState<number>(15);
+  const [fillSchoolPlacement, setFillSchoolPlacement] = useState<"full_line" | "infront">("full_line");
+  const [hideSecondaryDashes, setHideSecondaryDashes] = useState<boolean>(true);
+  const [schoolNameInput, setSchoolNameInput] = useState<string>(() => {
+    try {
+      const uProfile = getUnifiedSchoolProfile();
+      if (uProfile?.schoolName?.trim()) return uProfile.schoolName.trim();
+    } catch (e) {}
+    return userName ? `जि. प. प्राथमिक शाळा (${userName})` : "जिल्हा परिषद प्राथमिक शाळा";
+  });
   const [kendraInput, setKendraInput] = useState<string>("केंद्र शाळा");
   const [studentNameInput, setStudentNameInput] = useState<string>(
     "विद्यार्थ्याचे नाव: _________________________"
@@ -363,6 +380,169 @@ export function DocumentEditorViewer({
     });
     setActiveEditingBlockId(null);
     toast.info("मजकूर मूळ स्थितीत परत आणला.");
+  };
+
+  // Dedicated Fill School Name: Fits user's school name right in front of 'शाळेचे नाव' on Page 1
+  const handleFillSchoolName = () => {
+    if (pagesState.length === 0) return;
+    const pageIdx = 0;
+    const trimmedName = fillSchoolNameInput.trim();
+    if (!trimmedName) {
+      toast.error("कृपया शाळेचे नाव प्रविष्ट करा.");
+      return;
+    }
+
+    setPagesState((prevPages) => {
+      const nextPages = [...prevPages];
+      const page = { ...nextPages[pageIdx] };
+      const blocks = [...page.textBlocks];
+
+      // 1. Search Page 1 for block matching "शाळेचे नाव"
+      let targetIdx = blocks.findIndex((b) => {
+        const t = (b.text || "").toLowerCase();
+        return t.includes("शाळेचे नाव") || t.includes("शाळेचे  नाव") || t.includes("शाळा नाव");
+      });
+
+      if (targetIdx === -1) {
+        targetIdx = blocks.findIndex((b) => {
+          const t = (b.text || "").toLowerCase();
+          return (t.includes("शाळेचे") || t.includes("शाळा") || t.includes("school")) && (b.y || 0) < 35;
+        });
+      }
+
+      const customSchoolBlockId = "custom_filled_school_name";
+      const filteredBlocks = blocks.filter((b) => b.id !== customSchoolBlockId);
+
+      if (targetIdx !== -1) {
+        const origTarget = filteredBlocks[targetIdx];
+        const origText = origTarget.text || "";
+        const hasDashes = /[-_.~=—–•\.]{2,}/.test(origText);
+
+        if (fillSchoolPlacement === "full_line" || hasDashes) {
+          // Replace this block directly with "शाळेचे नाव : [School Name]"
+          // and expand its width and height to solidly cover the dotted line area
+          const fullText = `शाळेचे नाव : ${trimmedName}`;
+          const newWidth = Math.max(origTarget.width, origTarget.origWidth || 0, 78);
+          const newHeight = Math.max(origTarget.height, origTarget.origHeight || 0, 4.4);
+
+          filteredBlocks[targetIdx] = {
+            ...origTarget,
+            text: fullText,
+            width: Math.min(newWidth, 94 - origTarget.x),
+            height: newHeight,
+            origWidth: Math.max(origTarget.origWidth || origTarget.width, newWidth),
+            origHeight: Math.max(origTarget.origHeight || origTarget.height, newHeight),
+            fontSize: fillSchoolFontSize || origTarget.fontSize || 15,
+            fontWeight: "bold",
+            color: "#0f172a",
+            isEdited: true,
+            isErased: false,
+          };
+        } else {
+          // Option: Position right in front of "शाळेचे नाव"
+          const labelWidth = Math.max(origTarget.width, 13);
+          const startX = Math.min(origTarget.x + labelWidth + 0.8, 85);
+          const availableW = Math.max(25, 93 - startX);
+          const newHeight = Math.max(origTarget.height, 4.4);
+
+          const newBlock: DocumentTextBlock = {
+            id: customSchoolBlockId,
+            text: trimmedName,
+            x: Number(startX.toFixed(2)),
+            y: origTarget.y,
+            width: Number(availableW.toFixed(2)),
+            height: newHeight,
+            origWidth: availableW,
+            origHeight: newHeight,
+            fontSize: fillSchoolFontSize || origTarget.fontSize || 15,
+            fontWeight: "bold",
+            color: "#0f172a",
+            fontFamily: "Noto Sans Devanagari, sans-serif",
+            editable: true,
+            isCustom: true,
+          };
+          (newBlock as any).isEdited = true;
+          filteredBlocks.push(newBlock);
+        }
+
+        // Hide secondary dashed line blocks underneath if checked
+        if (hideSecondaryDashes) {
+          filteredBlocks.forEach((b, idx) => {
+            if (idx !== targetIdx) {
+              const isNearY = Math.abs(b.y - (origTarget.y + 2.5)) < 3.2;
+              const isNearX = Math.abs(b.x - origTarget.x) < 30;
+              const isOnlyDashes = /^[\s\-_.~=—–•\.]+$/.test(b.text || "");
+              if (isNearY && isNearX && isOnlyDashes) {
+                filteredBlocks[idx] = {
+                  ...b,
+                  text: "",
+                  isEdited: true,
+                  isErased: true,
+                };
+              }
+            }
+          });
+        }
+      } else {
+        // Fallback: If no block matching "शाळेचे नाव" on Page 1, place at standard top header
+        const fallbackBlock: DocumentTextBlock = {
+          id: customSchoolBlockId,
+          text: `शाळेचे नाव : ${trimmedName}`,
+          x: 5,
+          y: 3.2,
+          width: 88,
+          height: 4.5,
+          origWidth: 88,
+          origHeight: 4.5,
+          fontSize: fillSchoolFontSize || 15,
+          fontWeight: "bold",
+          color: "#0f172a",
+          fontFamily: "Noto Sans Devanagari, sans-serif",
+          editable: true,
+          isCustom: true,
+        };
+        (fallbackBlock as any).isEdited = true;
+        filteredBlocks.push(fallbackBlock);
+      }
+
+      page.textBlocks = filteredBlocks;
+      nextPages[pageIdx] = page;
+      return nextPages;
+    });
+
+    setHasUserEdits(true);
+    setShowFillSchoolModal(false);
+    toast.success("शाळेचे नाव व्यवस्थित बसवण्यात आले! (School Name Fitted Properly)");
+  };
+
+  // Revert / Clear custom filled school name
+  const handleClearFilledSchoolName = () => {
+    if (pagesState.length === 0 || !docModel) return;
+    const pageIdx = 0;
+    const originalPage = docModel.pages[pageIdx];
+
+    setPagesState((prevPages) => {
+      const nextPages = [...prevPages];
+      const page = { ...nextPages[pageIdx] };
+      let blocks = page.textBlocks.filter((b) => b.id !== "custom_filled_school_name");
+
+      blocks = blocks.map((b) => {
+        if (b.isEdited && (b.text?.includes("शाळेचे नाव") || b.text?.includes("शाळा"))) {
+          const origBlock = originalPage?.textBlocks.find((ob) => ob.id === b.id);
+          if (origBlock) {
+            return { ...origBlock, isEdited: false, isErased: false };
+          }
+        }
+        return b;
+      });
+
+      page.textBlocks = blocks;
+      nextPages[pageIdx] = page;
+      return nextPages;
+    });
+
+    setShowFillSchoolModal(false);
+    toast.info("शाळेचे नाव पूर्ववत करण्यात आले.");
   };
 
   // Apply School Header quickly to Page 1
@@ -644,6 +824,18 @@ export function DocumentEditorViewer({
             </div>
           )}
 
+          {/* Fill School Name Tab Button */}
+          {canEdit && (
+            <button
+              onClick={() => setShowFillSchoolModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow-emerald-500/20 transition-all cursor-pointer border border-emerald-400/40 active:scale-95"
+              title="प्रश्नपत्रिकेवर 'शाळेचे नाव' पुढे आपल्या शाळेचे नाव व्यवस्थित बसवा"
+            >
+              <GraduationCap className="size-3.5 text-emerald-100" />
+              <span>शाळेचे नाव भरा (Fill School Name)</span>
+            </button>
+          )}
+
           {/* School Header Quick Customizer Button */}
           {canEdit && (
             <button
@@ -652,7 +844,7 @@ export function DocumentEditorViewer({
               title="शाळेचे नाव व तपशील बदला"
             >
               <Building2 className="size-3.5 text-blue-400" />
-              <span className="hidden md:inline">शाळा तपशील (Header)</span>
+              <span className="hidden md:inline">इतर तपशील (Header)</span>
             </button>
           )}
 
@@ -1218,6 +1410,204 @@ export function DocumentEditorViewer({
                 <Check className="size-4" />
                 <span>लागू करा (Apply to Page 1)</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fill School Name Modal */}
+      {showFillSchoolModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-lg w-full text-slate-800 shadow-2xl space-y-4 border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-700">
+                  <GraduationCap className="size-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900 flex items-center gap-1.5">
+                    <span>शाळेचे नाव भरा</span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                      Auto-Fit
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    प्रश्नपत्रिकेवरील 'शाळेचे नाव' च्या पुढे शाळेचे नाव व्यवस्थित बसवून मूळ तुटक रेषा झाका.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFillSchoolModal(false)}
+                className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Input for school name */}
+              <div>
+                <label className="block font-bold text-slate-800 mb-1.5">
+                  शाळेचे नाव (School Name):
+                </label>
+                <input
+                  type="text"
+                  value={fillSchoolNameInput}
+                  onChange={(e) => setFillSchoolNameInput(e.target.value)}
+                  placeholder="उदा. जिल्हा परिषद प्राथमिक शाळा, कात्रज"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-emerald-500/40 rounded-xl font-bold text-slate-900 text-sm outline-none focus:border-emerald-600 focus:bg-white shadow-xs"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  ✓ प्रोफाईलमधून आपोआप भरले आहे. आवश्यकतेनुसार बदलू शकता.
+                </p>
+              </div>
+
+              {/* Live Preview Box */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  दिसण्याचा नमुना (Live Document Preview):
+                </label>
+                <div className="p-3 bg-slate-50 border-2 border-dashed border-emerald-300 rounded-xl space-y-1">
+                  <div className="text-[11px] text-slate-500 font-semibold">
+                    प्रश्नपत्रिकेवर असे दिसेल:
+                  </div>
+                  <div
+                    className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs font-bold text-slate-900 flex items-center gap-1.5"
+                    style={{ fontSize: `${fillSchoolFontSize}px` }}
+                  >
+                    {fillSchoolPlacement === "full_line" ? (
+                      <>
+                        <span className="font-extrabold text-slate-900 shrink-0">शाळेचे नाव :</span>
+                        <span className="text-emerald-900 underline decoration-emerald-500/50 decoration-2">
+                          {fillSchoolNameInput || "येथे शाळेचे नाव येईल"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-slate-400 font-normal shrink-0">शाळेचे नाव</span>
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-900">
+                          {fillSchoolNameInput || "येथे शाळेचे नाव येईल"}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Placement style mode chips */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5">
+                  बसविण्याचा प्रकार (Placement Style):
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFillSchoolPlacement("full_line")}
+                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                      fillSchoolPlacement === "full_line"
+                        ? "bg-emerald-50 border-emerald-500 text-emerald-900 font-bold shadow-2xs"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <div className="font-bold flex items-center gap-1">
+                      <span>शाळेचे नाव : [नाव]</span>
+                      {fillSchoolPlacement === "full_line" && <Check className="size-3 text-emerald-600" />}
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-normal mt-0.5">
+                      पूर्ण ओळ स्वच्छ पांढऱ्या पार्श्वभूमीवर (Recommended)
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFillSchoolPlacement("infront")}
+                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                      fillSchoolPlacement === "infront"
+                        ? "bg-emerald-50 border-emerald-500 text-emerald-900 font-bold shadow-2xs"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <div className="font-bold flex items-center gap-1">
+                      <span>केवळ [शाळेचे नाव]</span>
+                      {fillSchoolPlacement === "infront" && <Check className="size-3 text-emerald-600" />}
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-normal mt-0.5">
+                      मूळ 'शाळेचे नाव' पुढे ओव्हरले म्हणून
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Font Size & Options */}
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    अक्षरांचा आकार (Font Size):
+                  </label>
+                  <div className="flex items-center gap-1">
+                    {[
+                      { size: 13, label: "लहान (13px)" },
+                      { size: 15, label: "मध्यम (15px)" },
+                      { size: 17, label: "मोठे (17px)" },
+                      { size: 20, label: "ठळक (20px)" },
+                    ].map((f) => (
+                      <button
+                        key={f.size}
+                        type="button"
+                        onClick={() => setFillSchoolFontSize(f.size)}
+                        className={`px-2 py-1 rounded-lg border text-[11px] font-bold cursor-pointer transition-all ${
+                          fillSchoolFontSize === f.size
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Checkbox for covering original lines */}
+              <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hideSecondaryDashes}
+                  onChange={(e) => setHideSecondaryDashes(e.target.checked)}
+                  className="rounded text-emerald-600 focus:ring-emerald-500 size-4"
+                />
+                <span className="text-xs font-semibold text-slate-700 select-none">
+                  मूळ तुटक / डॅश रेषा (Underlines) स्वच्छ झाकून टाका
+                </span>
+              </label>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={handleClearFilledSchoolName}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold cursor-pointer"
+                title="पूर्वी भरलेले शाळेचे नाव पूर्ववत करा"
+              >
+                पूर्ववत (Clear)
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFillSchoolModal(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  रद्द करा
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFillSchoolName}
+                  className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5 active:scale-95"
+                >
+                  <Check className="size-4" />
+                  <span>शाळेचे नाव बसवा (Fit School Name)</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

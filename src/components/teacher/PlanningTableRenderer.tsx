@@ -20,8 +20,9 @@ import {
   normalizeMonthlyPlanningRow,
   normalizeMonthlyPlanningRows,
   isTableColumnHeaderRow,
+  getAcademicMonthRank,
 } from "@/lib/smartSubjectSplitter";
-import { getBunnyStorageUrl } from "@/lib/bunny-auth-pdf";
+import { getBunnyStorageUrl, fetchBinaryFile } from "@/lib/bunny-auth-pdf";
 import {
   BookOpen,
   Calendar,
@@ -200,43 +201,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   const [questionBankSheets, setQuestionBankSheets] = useState<ParsedSheet[]>([]);
   const [selectedQuestionBankLesson, setSelectedQuestionBankLesson] = useState<string>("all");
 
-  // Dynamically resolve active selected subject from web or record
-  const resolvedSubjectName = useMemo(() => {
-    if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
-      return selectedSubjectFilter;
-    }
-    if (selectedSubject && selectedSubject !== "all") {
-      return selectedSubject;
-    }
-    if (record?.subjectId && record.subjectId !== "all") {
-      return record.subjectId;
-    }
-    const recAny = record as any;
-    if (recAny?.subject && recAny.subject !== "all") {
-      return recAny.subject;
-    }
-    if (record?.fileName?.includes("मराठी")) {
-      return "मराठी";
-    }
-    return "मराठी";
-  }, [selectedSubjectFilter, selectedSubject, record]);
-
-  // Keep selectedSubjectFilter defaulting to "all" whenever a document opens or switches
-  useEffect(() => {
-    setSelectedSubjectFilter("all");
-    setSelectedQuestionBankLesson("all");
-    setSearchQuery("");
-  }, [record?.id, fileUrl]);
-
-  // Inline Table Editing State & User-Specific Storage
-  const [isInlineEditing, setIsInlineEditing] = useState<boolean>(false);
-  const [isSavingEdits, setIsSavingEdits] = useState<boolean>(false);
-  const [editableSections, setEditableSections] = useState<SubjectSection[]>([]);
-  const [savedUserEditRecord, setSavedUserEditRecord] = useState<PlanningDocumentRecord | null>(null);
-
-  const printContainerRef = useRef<HTMLDivElement>(null);
-  const activeUrl = fileUrl || record?.fileUrl || null;
-
   // Strictly identify the current section type: "question_bank" | "monthly" | "annual"
   const currentSectionType: "question_bank" | "monthly" | "annual" = useMemo(() => {
     const recAny = record as any;
@@ -275,6 +239,49 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   const isQuestionBank = currentSectionType === "question_bank";
   const isMonthly = currentSectionType === "monthly";
   const isAnnual = currentSectionType === "annual";
+
+  // Dynamically resolve active selected subject from web or record
+  const resolvedSubjectName = useMemo(() => {
+    if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
+      return selectedSubjectFilter;
+    }
+    if (selectedSubject && selectedSubject !== "all") {
+      return selectedSubject;
+    }
+    if (record?.subjectId && record.subjectId !== "all") {
+      return record.subjectId;
+    }
+    const recAny = record as any;
+    if (recAny?.subject && recAny.subject !== "all") {
+      return recAny.subject;
+    }
+    if (record?.fileName?.includes("मराठी")) {
+      return "मराठी";
+    }
+    if (record?.fileName?.includes("इंग्रजी") || record?.fileName?.toLowerCase().includes("english")) {
+      return "इंग्रजी";
+    }
+    if (record?.fileName?.includes("गणित") || record?.fileName?.toLowerCase().includes("math")) {
+      return "गणित";
+    }
+    return isMonthly ? "सर्व विषय" : "सर्व विषय (All Subjects)";
+  }, [selectedSubjectFilter, selectedSubject, record, isMonthly]);
+
+  // Keep selectedSubjectFilter defaulting to "all" whenever a document opens or switches
+  useEffect(() => {
+    setSelectedSubjectFilter("all");
+    setSelectedQuestionBankLesson("all");
+    setSearchQuery("");
+  }, [record?.id, fileUrl]);
+
+  // Inline Table Editing State & User-Specific Storage
+  const [isInlineEditing, setIsInlineEditing] = useState<boolean>(false);
+  const [isSavingEdits, setIsSavingEdits] = useState<boolean>(false);
+  const [editableSections, setEditableSections] = useState<SubjectSection[]>([]);
+  const [savedUserEditRecord, setSavedUserEditRecord] = useState<PlanningDocumentRecord | null>(null);
+
+  const printContainerRef = useRef<HTMLDivElement>(null);
+  const activeUrl = fileUrl || record?.fileUrl || null;
 
   // Strictly namespaced active record ID so Question Bank and Monthly/Annual Planning never share keys
   const activeRecordId = useMemo(() => {
@@ -409,57 +416,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         let buffer: ArrayBuffer | null = null;
 
         // 1. Try network fetch if activeUrl is present
-        if (activeUrl && !activeUrl.startsWith("blob:")) {
-          try {
-            const headers: Record<string, string> = {};
-            if (import.meta.env.DEV && import.meta.env.VITE_BUNNY_STORAGE_API_KEY) {
-              headers["AccessKey"] = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
-            }
-
-            let response = await fetch(fetchUrl, { headers });
-            let cType = response.headers.get("content-type") || "";
-            let isHtml = cType.includes("text/html");
-
-            // If fetchUrl returned HTML or failed, and it's a Bunny URL, try dev proxy or secure pdf-proxy
-            if ((!response.ok || isHtml) && activeUrl.includes("b-cdn.net")) {
-              const zone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
-              const rawPath = decodeURIComponent(new URL(activeUrl).pathname).replace(/^\//, "");
-              const cleanPath = rawPath.startsWith(zone + "/") ? rawPath.slice(zone.length + 1) : rawPath;
-              const directStorageProxyUrl = `/api/bunny-storage/${zone}/${encodeURI(cleanPath)}`;
-
-              try {
-                const proxyRes = await fetch(directStorageProxyUrl, { headers });
-                const proxyCType = proxyRes.headers.get("content-type") || "";
-                if (proxyRes.ok && !proxyCType.includes("text/html")) {
-                  response = proxyRes;
-                  cType = proxyCType;
-                  isHtml = false;
-                }
-              } catch (e) { }
-            }
-
-            if (response.ok && !isHtml) {
-              const ab = await response.arrayBuffer();
-              const firstBytes = new Uint8Array(ab.slice(0, 50));
-              const textHeader = new TextDecoder().decode(firstBytes).toLowerCase();
-              if (!textHeader.includes("<!doctype") && !textHeader.includes("<html")) {
-                buffer = ab;
-              } else {
-                console.warn("Received HTML SPA fallback instead of binary file.");
-              }
-            }
-          } catch (e) {
-            console.warn("Network fetch notice, trying IndexedDB fallback:", e);
-          }
-        } else if (activeUrl && activeUrl.startsWith("blob:")) {
-          try {
-            const blobRes = await fetch(activeUrl);
-            if (blobRes.ok) {
-              buffer = await blobRes.arrayBuffer();
-            }
-          } catch (e) {
-            console.warn("Blob URL expired, trying IndexedDB fallback:", e);
-          }
+        if (activeUrl) {
+          buffer = await fetchBinaryFile(activeUrl);
         }
 
         // 2. Fallback to local IndexedDB if network fetch failed or activeUrl missing/expired
@@ -602,7 +560,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     const isMonthlyPlan = isMonthly;
     if (isMonthlyPlan) {
       if (parsedWorkbook && parsedWorkbook.monthlySections && Object.keys(parsedWorkbook.monthlySections).length > 0) {
-        return Object.values(parsedWorkbook.monthlySections).map((mSec: any) => ({
+        const sections = Object.values(parsedWorkbook.monthlySections).map((mSec: any) => ({
           subjectName: mSec.monthName,
           displaySubjectName: mSec.displayMonthName,
           headers: mSec.headers || DEFAULT_HEADERS.masik_niyojan,
@@ -610,6 +568,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           startRow: 0,
           endRow: mSec.rows.length,
         }));
+        sections.sort((a, b) => getAcademicMonthRank(a.subjectName) - getAcademicMonthRank(b.subjectName));
+        return sections;
       }
 
       const currentRec = savedUserEditRecord || record;
@@ -622,7 +582,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       if (rowsToUse.length > 0) {
         const mSplitMap = splitRowsIntoMonthlySections(rowsToUse);
         if (Object.keys(mSplitMap).length > 0) {
-          return Object.values(mSplitMap).map((mSec) => ({
+          const sections = Object.values(mSplitMap).map((mSec) => ({
             subjectName: mSec.monthName,
             displaySubjectName: mSec.displayMonthName,
             headers: mSec.headers || DEFAULT_HEADERS.masik_niyojan,
@@ -630,6 +590,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             startRow: 0,
             endRow: mSec.rows.length,
           }));
+          sections.sort((a, b) => getAcademicMonthRank(a.subjectName) - getAcademicMonthRank(b.subjectName));
+          return sections;
         }
       }
     }
@@ -676,13 +638,25 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       return questionBankSheets.map((s) => s.sheetName);
     }
     if (allSectionsAvailable.length > 0) {
-      return allSectionsAvailable.map((s) => s.subjectName);
+      const names = allSectionsAvailable.map((s) => s.subjectName);
+      if (isMonthly) {
+        names.sort((a, b) => getAcademicMonthRank(a) - getAcademicMonthRank(b));
+      }
+      return names;
     }
     if (parsedWorkbook && parsedWorkbook.allSubjectNames.length > 0) {
-      return parsedWorkbook.allSubjectNames;
+      const names = [...parsedWorkbook.allSubjectNames];
+      if (isMonthly) {
+        names.sort((a, b) => getAcademicMonthRank(a) - getAcademicMonthRank(b));
+      }
+      return names;
     }
     const currentMed = detectRecordMedium(record);
-    return getDefaultSubjectsForClass(record?.classId || "1st", currentMed);
+    const names = getDefaultSubjectsForClass(record?.classId || "1st", currentMed);
+    if (isMonthly) {
+      names.sort((a, b) => getAcademicMonthRank(a) - getAcademicMonthRank(b));
+    }
+    return names;
   }, [record?.planningType, record?.classId, record, isMonthly, isQuestionBank, questionBankSheets, allSectionsAvailable, parsedWorkbook]);
 
   // Dynamic Selected Medium Display
@@ -696,13 +670,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     let title = parsedWorkbook?.classTitle || "";
     if (!title || title.length > 50) {
       const clsName = formatMarathiClassName(record?.classId || record?.fileName || "1st");
-      return `इयत्ता : ${clsName} ${isMonthly ? "मासिक नियोजन" : "वार्षिक नियोजन"} सन :- 2026-27`;
+      return `इयत्ता : ${clsName} • ${isMonthly ? "मासिक नियोजन" : "वार्षिक नियोजन"} • सन : २०२६-२७`;
     }
     return title;
   }, [parsedWorkbook, record, isMonthly]);
 
-  // Helper to format clean section/month banner title
-  const formatCleanSectionTitle = (sec: SubjectSection) => {
+  // Helper to get structured section title parts with clean spacing
+  const getSectionBannerParts = (sec: SubjectSection) => {
     const rawTitle = (sec.displaySubjectName || sec.subjectName || "").trim();
     const clsName = formatMarathiClassName(record?.classId || record?.fileName || "1st");
     const recAny = record as any;
@@ -723,22 +697,60 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     }
 
     if (isMonthly) {
-      const monthRegex = /(जुन|जून|जुलै|ऑगस्ट|सप्टेंबर|सप्टें|ऑक्टोबर|ऑक्टो|नोव्हेंबर|नोव्हें|डिसेंबर|डिसे|जानेवारी|जाने|फेब्रुवारी|फेब्रु|मार्च|एप्रिल|मे)(?:\s*\d{4})?/i;
+      const isEnglish = /[a-zA-Z]/.test(sec.subjectName || rawTitle);
+      const cleanMonth = (sec.subjectName || rawTitle).trim();
+
+      if (isEnglish) {
+        return {
+          isEnglish: true,
+          segments: [
+            "Monthly & Unit Planning",
+            `Month : ${cleanMonth}`,
+            `Subject : ${realSubject}`,
+            `Medium : ${displayMedium}`,
+          ],
+          fullText: `Monthly & Unit Planning  —  Month : ${cleanMonth}  |  Subject : ${realSubject}  |  Medium : ${displayMedium}`,
+        };
+      }
+
+      const monthRegex = /(जुन|जून|जुलै|ऑगस्ट|सप्टेंबर|सप्टें|ऑक्टोबर|ऑक्टो|नोव्हेंबर|नोव्हें|डिसेंबर|डिसे|जानेवारी|जाने|फेब्रुवारी|फेब्रु|मार्च\s*(?:\+|&|आणि|[-–/]|ते)?\s*एप्रिल|मार्च|एप्रिल|मे)(?:\s*[\d\u0966-\u096F]{4})?/i;
       const match = rawTitle.match(monthRegex) || (sec.subjectName || "").match(monthRegex);
       let monthName = match ? match[0].trim() : "जून २०२६";
       if (monthName.startsWith("जुन")) monthName = monthName.replace("जुन", "जून");
-      if (!monthName.includes("२०२६") && !monthName.includes("2026")) {
+      if (!monthName.includes("२०२६") && !monthName.includes("2026") && !monthName.includes("२०२७") && !monthName.includes("2027")) {
         monthName += " २०२६";
       }
 
-      return `अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - ${monthName}, विषय : ${realSubject}, माध्यम : ${displayMedium}`;
+      return {
+        isEnglish: false,
+        segments: [
+          "अभ्यासक्रमाचे मासिक व घटक नियोजन",
+          `माहे : ${monthName}`,
+          `विषय : ${realSubject}`,
+          `माध्यम : ${displayMedium}`,
+        ],
+        fullText: `अभ्यासक्रमाचे मासिक व घटक नियोजन  —  माहे : ${monthName}  |  विषय : ${realSubject}  |  माध्यम : ${displayMedium}`,
+      };
     }
 
-    let baseLine = cleanClassTitle;
-    if (!baseLine || baseLine.length > 50) {
-      baseLine = `इयत्ता : ${clsName} वार्षिक नियोजन सन :- २०२६-२७`;
-    }
-    return `${baseLine}, विषय : ${realSubject}, माध्यम : ${displayMedium}`;
+    // Annual Planning: cleanly separated sentences with breathing room
+    const annualSegments = [
+      `इयत्ता : ${clsName}`,
+      "वार्षिक नियोजन सन : २०२६-२७",
+      `विषय : ${realSubject}`,
+      `माध्यम : ${displayMedium}`,
+    ];
+
+    return {
+      isEnglish: false,
+      segments: annualSegments,
+      fullText: annualSegments.join("  |  "),
+    };
+  };
+
+  // Helper to format clean section/month banner title
+  const formatCleanSectionTitle = (sec: SubjectSection) => {
+    return getSectionBannerParts(sec).fullText;
   };
 
 
@@ -1441,7 +1453,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         sName.includes(fLower) ||
         fLower.includes(sName) ||
         areSubjectsEquivalent(sName, fLower) ||
-        areSubjectsEquivalent(dName, fLower)
+        areSubjectsEquivalent(dName, fLower) ||
+        (isMonthly && getAcademicMonthRank(sName) === getAcademicMonthRank(fLower) && getAcademicMonthRank(sName) < 900)
       );
     });
 
@@ -2483,7 +2496,22 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
         // Extract components of the section
         const schoolHeader = secClone.querySelector(".pdf-school-header");
-        const subjectBanner = secClone.querySelector(".pdf-subject-banner");
+        const subjectBanner = secClone.querySelector(".pdf-subject-banner") as HTMLElement | null;
+        if (subjectBanner) {
+          subjectBanner.style.display = "flex";
+          subjectBanner.style.flexDirection = "row";
+          subjectBanner.style.flexWrap = "nowrap";
+          subjectBanner.style.justifyContent = "space-between";
+          subjectBanner.style.alignItems = "center";
+          subjectBanner.style.padding = "6px 14px";
+          subjectBanner.style.whiteSpace = "nowrap";
+          subjectBanner.style.width = "100%";
+          subjectBanner.style.boxSizing = "border-box";
+          subjectBanner.querySelectorAll("*").forEach((el: any) => {
+            el.style.flexWrap = "nowrap";
+            el.style.whiteSpace = "nowrap";
+          });
+        }
         const tableEl = secClone.querySelector("table");
         const colgroup = secClone.querySelector("colgroup");
         const thead = secClone.querySelector("thead");
@@ -3564,8 +3592,23 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     background-color: #fffbe6 !important;
                   }
                   .pdf-export-active .pdf-subject-banner {
-                    justify-content: center !important;
-                    text-align: center !important;
+                    display: flex !important;
+                    flex-direction: row !important;
+                    flex-wrap: nowrap !important;
+                    justify-content: space-between !important;
+                    align-items: center !important;
+                    padding: 6px 14px !important;
+                    white-space: nowrap !important;
+                    width: 100% !important;
+                    box-sizing: border-box !important;
+                  }
+                  .pdf-export-active .pdf-subject-banner * {
+                    flex-wrap: nowrap !important;
+                    white-space: nowrap !important;
+                    word-break: keep-all !important;
+                  }
+                  .pdf-export-active .pdf-subject-banner .flex-wrap {
+                    flex-wrap: nowrap !important;
                   }
                   .pdf-export-active .pdf-subject-banner h3 {
                     text-align: center !important;
@@ -3691,27 +3734,60 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           </div>
 
                           {/* Subject Banner Header */}
-                          <div className="pdf-subject-banner relative bg-indigo-50/90 border border-indigo-200 text-indigo-950 px-4 py-2 sm:py-2.5 rounded-2xl flex items-center justify-center shadow-xs">
-                            <h3 className="text-xs sm:text-[12.5px] md:text-[13px] font-black tracking-tight flex items-center justify-center gap-2 text-indigo-950 text-center whitespace-nowrap overflow-hidden max-w-[calc(100%-130px)]">
-                              <BookOpen className="size-4 text-indigo-600 shrink-0" />
-                              <span className="whitespace-nowrap">{formatCleanSectionTitle(sec)}</span>
-                            </h3>
-                            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-2.5 shrink-0">
-                              <span className="text-[11px] font-bold text-indigo-700 bg-indigo-100/80 px-2.5 py-1 rounded-full border border-indigo-200 whitespace-nowrap">
-                                {filteredRows.length} ओळी (Rows)
-                              </span>
+                          {(() => {
+                            const parts = getSectionBannerParts(sec);
+                            return (
+                              <div className="pdf-subject-banner relative bg-amber-50/90 border-2 border-amber-300 text-amber-950 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-2xl flex flex-nowrap items-center justify-between gap-2 sm:gap-3 shadow-xs overflow-hidden">
+                                <div className="flex items-center gap-2 sm:gap-2.5 flex-nowrap flex-1 min-w-0 overflow-hidden">
+                                  <BookOpen className="size-4 sm:size-4.5 text-amber-600 shrink-0" />
+                                  <div className="flex items-center flex-nowrap whitespace-nowrap gap-x-1 sm:gap-x-1.5 text-xs sm:text-[13px] md:text-[13.5px] font-black text-amber-950 min-w-0">
+                                    {parts.segments.map((seg, idx) => {
+                                      const colonMatch = seg.match(/^(.*?)\s*(:-|:)\s*(.*)$/);
+                                      const hasColon = !!colonMatch;
+                                      const label = hasColon ? colonMatch[1].trim() : seg;
+                                      const val = hasColon ? colonMatch[3].trim() : "";
 
-                              {isInlineEditing && (
-                                <button
-                                  onClick={() => handleAddRow(sec.subjectName)}
-                                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-black transition-all cursor-pointer flex items-center gap-1"
-                                >
-                                  <Plus className="size-3.5" />
-                                  <span>ओळ जोडा</span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                                      return (
+                                        <div key={idx} className="flex items-center shrink-0">
+                                          {idx > 0 && (
+                                            <span className="text-amber-400 font-black select-none text-xs sm:text-sm mx-1 sm:mx-1.5 md:mx-2">
+                                              •
+                                            </span>
+                                          )}
+                                          <span className="inline-flex items-center whitespace-nowrap">
+                                            {hasColon ? (
+                                              <>
+                                                <span className="font-bold text-amber-800/90">{label}</span>
+                                                <span className="font-black text-amber-600 mx-1">:</span>
+                                                <span className="font-black text-amber-950">{val}</span>
+                                              </>
+                                            ) : (
+                                              <span className="font-black text-amber-950">{seg}</span>
+                                            )}
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0 self-center">
+                                  <span className="text-[11px] sm:text-xs font-black text-amber-800 bg-amber-100/90 px-2.5 sm:px-3 py-1 rounded-full border border-amber-300 whitespace-nowrap shadow-2xs shrink-0">
+                                    {filteredRows.length} ओळी (Rows)
+                                  </span>
+
+                                  {isInlineEditing && (
+                                    <button
+                                      onClick={() => handleAddRow(sec.subjectName)}
+                                      className="px-2.5 sm:px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1 shadow-xs active:scale-95"
+                                    >
+                                      <Plus className="size-3.5" />
+                                      <span className="hidden sm:inline">ओळ जोडा</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* Mobile Scroll Indicator */}
                           <div className="flex items-center justify-between text-[11px] font-extrabold text-indigo-700 bg-indigo-50/80 px-3 py-1.5 rounded-lg border border-indigo-100 sm:hidden mb-2">
@@ -3934,27 +4010,27 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                             const isExam = cellInfo?.isExam || isExamOrAssessmentText(cellInfo?.displayValue) || isExamOrAssessmentText(r[cIdx]) || isExamOrAssessmentText(cellVal);
                                             const cellText = cellVal;
 
-                                            let cellClasses = "border border-slate-300 p-2 leading-relaxed";
+                                            let cellClasses = "border border-slate-300 p-2.5 sm:p-3 leading-relaxed sm:leading-6";
                                             if (isExam) {
-                                              cellClasses += " exam-assessment-cell text-center font-black text-slate-950 bg-amber-50/50 text-xs sm:text-[13px]";
+                                              cellClasses += " exam-assessment-cell text-center font-black text-slate-950 bg-amber-50/50 text-xs sm:text-[13.5px]";
                                             } else if (isMonthly) {
                                               cellClasses += " align-middle";
                                               if (cIdx === 0) {
-                                                cellClasses += " text-center font-bold text-slate-900 text-xs sm:text-[12px]";
+                                                cellClasses += " text-center font-bold text-slate-900 text-xs sm:text-[13px]";
                                               } else if (cIdx === 1) {
-                                                cellClasses += " text-center font-bold text-slate-950 text-xs sm:text-[12px] whitespace-pre-line break-words";
+                                                cellClasses += " text-center font-bold text-slate-950 text-xs sm:text-[13.5px] whitespace-pre-line break-words";
                                               } else if (cIdx === 2) {
-                                                cellClasses += " text-center font-bold text-slate-900 text-xs sm:text-[12px] whitespace-pre-line break-words leading-relaxed";
+                                                cellClasses += " text-center font-bold text-slate-900 text-xs sm:text-[13.5px] whitespace-pre-line break-words leading-relaxed sm:leading-6";
                                               } else if (cIdx === 3) {
-                                                cellClasses += " text-center font-medium text-slate-900 text-xs sm:text-[12px] whitespace-pre-line break-words";
+                                                cellClasses += " text-center font-medium text-slate-900 text-xs sm:text-[13px] whitespace-pre-line break-words";
                                               } else {
-                                                cellClasses += " text-left text-slate-900 text-xs sm:text-[12px] whitespace-pre-line break-words leading-relaxed";
+                                                cellClasses += " text-left text-slate-900 text-xs sm:text-[13.5px] whitespace-pre-line break-words leading-relaxed sm:leading-6";
                                               }
                                             } else {
                                               cellClasses += " align-middle";
                                               cellClasses += cIdx <= 3
-                                                ? " text-center font-bold text-slate-900 text-xs"
-                                                : " text-left text-xs whitespace-pre-line";
+                                                ? " text-center font-bold text-slate-900 text-xs sm:text-[13px]"
+                                                : " text-left text-xs sm:text-[13.5px] whitespace-pre-line leading-relaxed sm:leading-6";
                                             }
 
                                             return (

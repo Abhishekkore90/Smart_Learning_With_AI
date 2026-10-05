@@ -57,7 +57,10 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: "Forbidden: Only Bunny CDN URLs are allowed" });
   }
 
-  const apiKey = process.env.BUNNY_STORAGE_API_KEY || process.env.VITE_BUNNY_STORAGE_API_KEY;
+  const apiKey =
+    process.env.BUNNY_STORAGE_API_KEY ||
+    process.env.VITE_BUNNY_STORAGE_API_KEY ||
+    "bc06a0c2-aad1-436c-b88a1c197eca-d74a-44e8";
   if (!apiKey) {
     return res.status(500).json({ error: "Server configuration error: Missing API key" });
   }

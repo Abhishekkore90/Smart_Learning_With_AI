@@ -7,10 +7,12 @@ import {
   Edit3,
   ChevronLeft,
   CheckCircle2,
+  GraduationCap,
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import type { QuestionPaperItem } from "@/types/documentEditor";
 import { jsPDF } from "jspdf";
+import { getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 
 export interface QuestionPaperTemplateProps {
   paper?: Partial<QuestionPaperItem>;
@@ -99,8 +101,16 @@ export function QuestionPaperTemplate({
   onBack,
 }: QuestionPaperTemplateProps) {
   const [data, setData] = useState<QuestionPaperData>(() => {
+    const profileSchool = (() => {
+      try {
+        const u = getUnifiedSchoolProfile();
+        if (u?.schoolName?.trim()) return u.schoolName.trim();
+      } catch (e) {}
+      return null;
+    })();
     return {
       ...DEFAULT_PAPER_DATA,
+      schoolName: profileSchool || (userName ? `जि. प. प्राथमिक शाळा (${userName})` : DEFAULT_PAPER_DATA.schoolName),
       examTitle: paper?.examTypeLabel || paper?.title || DEFAULT_PAPER_DATA.examTitle,
       className: paper?.class ? `${paper.class} ली` : DEFAULT_PAPER_DATA.className,
       subjectName: paper?.subject || DEFAULT_PAPER_DATA.subjectName,
@@ -207,6 +217,24 @@ export function QuestionPaperTemplate({
         </div>
 
         <div className="flex items-center flex-wrap gap-2">
+          {canEdit && (
+            <button
+              onClick={() => {
+                const current = data.schoolName;
+                const promptVal = window.prompt("शाळेचे नाव प्रविष्ट करा (Enter School Name):", current);
+                if (promptVal !== null && promptVal.trim()) {
+                  setData((prev) => ({ ...prev, schoolName: promptVal.trim() }));
+                  toast.success("शाळेचे नाव अपडेट केले!");
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer border border-emerald-400/40"
+              title="शाळेचे नाव भरा"
+            >
+              <GraduationCap className="size-3.5 text-emerald-100" />
+              <span>शाळेचे नाव भरा</span>
+            </button>
+          )}
+
           {canEdit && (
             <button
               onClick={() => setIsEditing(!isEditing)}

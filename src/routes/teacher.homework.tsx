@@ -40,6 +40,7 @@ import type { HomeworkItem } from "@/types/documentEditor";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
 import { DailyHomeworkTemplate } from "@/components/homework/DailyHomeworkTemplate";
 import { DailyHomeworkCalendar, formatISODate } from "@/components/homework/DailyHomeworkCalendar";
+import { MCQHomeworkSection } from "@/components/homework/MCQHomeworkSection";
 
 export const Route = createFileRoute("/teacher/homework")({
   head: () => ({
@@ -98,6 +99,9 @@ const GRADIENTS = [
 function HomeworkPage() {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();
+
+  // Main Homework Co-Tabs: "homework" vs "mcq"
+  const [mainTab, setMainTab] = useState<"homework" | "mcq">("homework");
 
   // Wizard state: "medium" -> "class" -> "subject" -> "list"
   const [step, setStep] = useState<"medium" | "class" | "subject" | "list">("medium");
@@ -182,7 +186,48 @@ function HomeworkPage() {
       </div>
 
       <main className="pt-20 pb-16 px-3 sm:px-6 max-w-7xl mx-auto space-y-6">
-        {/* Banner */}
+        {/* Top Co-Tabs: Regular Homework vs MCQ Homework */}
+        <div className="no-print flex items-center gap-2 p-1.5 bg-slate-200/90 rounded-2xl w-fit shadow-xs">
+          <button
+            type="button"
+            onClick={() => setMainTab("homework")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+              mainTab === "homework"
+                ? "bg-white text-emerald-800 shadow-md font-black"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <BookOpen className="size-4 text-emerald-600" />
+            <span>दैनिक गृहपाठ (Daily Homework)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainTab("mcq")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+              mainTab === "mcq"
+                ? "bg-indigo-600 text-white shadow-md font-black"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Sparkles className="size-4 text-amber-300" />
+            <span>MCQ स्वाध्याय (MCQ Quiz & Questions)</span>
+            <span className="bg-amber-400 text-amber-950 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+              नवीन
+            </span>
+          </button>
+        </div>
+
+        {mainTab === "mcq" ? (
+          <MCQHomeworkSection
+            defaultRole="teacher"
+            userName={profile?.fullName || (profile as any)?.name || user?.displayName || "शिक्षक"}
+            initialClass={selectedClass || "all"}
+            initialSubject={selectedSubject || "all"}
+          />
+        ) : (
+          <>
+            {/* Banner */}
         <div className="no-print bg-gradient-to-r from-teal-700 via-emerald-800 to-indigo-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 size-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -653,6 +698,8 @@ function HomeworkPage() {
               </motion.div>
             )}
           </div>
+        )}
+        </>
         )}
       </main>
     </div>

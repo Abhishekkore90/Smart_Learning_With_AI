@@ -9,11 +9,15 @@
       "destination": "/api/bunny-storage?path=$1"
     },
     {
+      "source": "/api/pdf-proxy",
+      "destination": "/api/pdf-proxy"
+    },
+    {
       "source": "/api/anthropic/(.*)",
       "destination": "https://api.anthropic.com/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

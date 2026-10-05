@@ -1112,6 +1112,105 @@ export const DEFAULT_MONTHLY_HEADERS = [
   "आवश्यक साहित्य",
 ];
 
+export const ACADEMIC_MONTH_ORDER: Record<string, number> = {
+  // June
+  "june": 1, "jun": 1, "जून": 1, "जुन": 1,
+  // July
+  "july": 2, "jul": 2, "जुलै": 2, "जुलाई": 2,
+  // August
+  "august": 3, "aug": 3, "ऑगस्ट": 3, "ऑगष्ट": 3, "ऑग": 3, "आगस्ट": 3,
+  // September
+  "september": 4, "semptember": 4, "sept": 4, "sep": 4, "सप्टेंबर": 4, "सप्टें": 4, "सप्टे": 4,
+  // October
+  "october": 5, "oct": 5, "ऑक्टोबर": 5, "ऑक्टोंबर": 5, "ऑक्टो": 5,
+  // November
+  "november": 6, "novembar": 6, "nov": 6, "नोव्हेंबर": 6, "नोव्हें": 6, "नोव्हे": 6,
+  // December
+  "december": 7, "decembar": 7, "dec": 7, "डिसेंबर": 7, "डिसें": 7, "डिसं": 7,
+  // January
+  "january": 8, "jan": 8, "जानेवारी": 8, "जाने": 8,
+  // February
+  "february": 9, "feb": 9, "फेब्रुवारी": 9, "फेब्रु": 9,
+  // March
+  "march": 10, "mar": 10, "मार्च": 10,
+  // March + April combined
+  "march + april": 10.5, "march & april": 10.5, "मार्च + एप्रिल": 10.5, "मार्च - एप्रिल": 10.5,
+  // April
+  "april": 11, "apr": 11, "एप्रिल": 11, "एप्रि": 11,
+  // May
+  "may": 12, "मे": 12,
+};
+
+export function getAcademicMonthRank(monthStr: string): number {
+  if (!monthStr) return 999;
+  const lower = monthStr.toLowerCase().trim();
+  if ((lower.includes("march") || lower.includes("मार्च")) && (lower.includes("april") || lower.includes("एप्रिल"))) {
+    return 10.5;
+  }
+  for (const [key, rank] of Object.entries(ACADEMIC_MONTH_ORDER)) {
+    if (lower.includes(key)) return rank;
+  }
+  return 999;
+}
+
+export function extractCleanMonthNameFromLine(line: string): string | null {
+  if (!line) return null;
+  const l = line.trim();
+
+  // Guard against regular exercise/reading lines that casually contain a month word
+  const isBannerCandidate =
+    /monthly\s*(?:&|and)?\s*unit\s*planning/i.test(l) ||
+    /मासिक\s+व\s+घटक\s+नियोजन/i.test(l) ||
+    /\bmonth\s*[:\-–]?\s*[a-z]/i.test(l) ||
+    /माहे\s*[:\-–]?\s*[\u0900-\u097F]/i.test(l) ||
+    (l.length < 50 && (isMarathiMonth(l) || /\b(june|july|august|september|semptember|october|november|novembar|december|decembar|january|february|march|april)\b/i.test(l)));
+
+  if (!isBannerCandidate) return null;
+
+  // 1. Compound March + April
+  if (/march\s*(?:\+|&|and|[-–/]|ते)\s*april/i.test(l) || /मार्च\s*(?:\+|&|आणि|[-–/]|ते)\s*एप्रिल/i.test(l)) {
+    const isEng = /[a-zA-Z]/.test(l);
+    return isEng ? "March + April 2027" : "मार्च + एप्रिल २०२७";
+  }
+
+  // 2. English Months (with resilient handling for typos like Semptember, Novembar, Decembar)
+  const engMatch = l.match(/\b(june|july|august|semptember|september|sept|october|oct|novembar|november|nov|decembar|december|dec|january|jan|february|feb|march|mar|april|apr|may)\b(?:\s*(\d{4}))?/i);
+  if (engMatch) {
+    const m = engMatch[1].toLowerCase();
+    let stdName = "";
+    let defaultYear = "2026";
+
+    if (m.startsWith("jun")) { stdName = "June"; defaultYear = "2026"; }
+    else if (m.startsWith("jul")) { stdName = "July"; defaultYear = "2026"; }
+    else if (m.startsWith("aug")) { stdName = "August"; defaultYear = "2026"; }
+    else if (m.startsWith("sep") || m.startsWith("semp")) { stdName = "September"; defaultYear = "2026"; }
+    else if (m.startsWith("oct")) { stdName = "October"; defaultYear = "2026"; }
+    else if (m.startsWith("nov")) { stdName = "November"; defaultYear = "2026"; }
+    else if (m.startsWith("dec")) { stdName = "December"; defaultYear = "2026"; }
+    else if (m.startsWith("jan")) { stdName = "January"; defaultYear = "2027"; }
+    else if (m.startsWith("feb")) { stdName = "February"; defaultYear = "2027"; }
+    else if (m.startsWith("mar")) { stdName = "March"; defaultYear = "2027"; }
+    else if (m.startsWith("apr")) { stdName = "April"; defaultYear = "2027"; }
+    else if (m.startsWith("may")) { stdName = "May"; defaultYear = "2027"; }
+
+    if (stdName) {
+      return `${stdName} ${defaultYear}`;
+    }
+  }
+
+  // 3. Marathi Months
+  const marMatch = l.match(/(जुन|जून|जुलै|जुलाई|ऑगस्ट|ऑगष्ट|ऑग|आगस्ट|सप्टेंबर|सप्टें|सप्टे|ऑक्टोबर|ऑक्टोंबर|ऑक्टो|नोव्हेंबर|नोव्हें|नोव्हे|डिसेंबर|डिसें|डिसं|जानेवारी|जाने|फेब्रुवारी|फेब्रु|मार्च|एप्रिल|एप्रि|मे)(?:\s*([\d\u0966-\u096F]{4}))?/i);
+  if (marMatch) {
+    const rawM = marMatch[1];
+    const stdMar = canonicalizeMarathiMonth(rawM);
+    const isNextYear = ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे"].includes(stdMar);
+    const year = isNextYear ? "२०२७" : "२०२६";
+    return `${stdMar} ${year}`;
+  }
+
+  return null;
+}
+
 export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string, MonthlySection> {
   const monthlyMap: Record<string, MonthlySection> = {};
 
@@ -1142,28 +1241,11 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
     const line = (row || []).map((c) => String(c || "")).join(" ").trim();
     if (!line) return;
 
-    // Check for Month Header Banner (Marathi or English):
-    // e.g. "अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - जुलै २०२६" OR "Monthly Planning Month: June 2026" OR "Month: June"
-    const monthMatch = line.match(/(?:मासिक\s+व\s+घटक\s+नियोजन\s+माहे|माहे|month\s*[:\-–]?|monthly\s+planning\s*(?:month)?\s*[:\-–]?)\s*([^\n\r]+)/i);
-    const marathiMonthMatch = line.match(/(जुन|जून|जुलै|ऑगस्ट|सप्टेंबर|सप्टें|ऑक्टोबर|ऑक्टो|नोव्हेंबर|नोव्हें|डिसेंबर|डिसे|जानेवारी|जाने|फेब्रुवारी|फेब्रु|मार्च|एप्रिल|मे)(?:\s*\d{4}[-–]?\d{0,4})?/i);
-    const englishMonthMatch = line.match(/(June|July|August|September|Sept|October|Oct|November|Nov|December|Dec|January|Jan|February|Feb|March|Mar|April|Apr|May)(?:\s*\d{4}[-–]?\d{0,4})?/i);
-
-    if (
-      (monthMatch && monthMatch[1]) ||
-      (line.length < 40 && (marathiMonthMatch || englishMonthMatch) && (line.toLowerCase().includes("month") || line.includes("माहे") || line.includes("नियोजन")))
-    ) {
+    // Check for Clean Month Header Banner
+    const detectedMonth = extractCleanMonthNameFromLine(line);
+    if (detectedMonth) {
       flushCurrentMonth();
-      let rawMonth = monthMatch && monthMatch[1] ? monthMatch[1].replace(/^[-\s–:]+/, "").trim() : line.trim();
-      const cleanMar = rawMonth.match(/(जुन|जून|जुलै|ऑगस्ट|सप्टेंबर|सप्टें|ऑक्टोबर|ऑक्टो|नोव्हेंबर|नोव्हें|डिसेंबर|डिसे|जानेवारी|जाने|फेब्रुवारी|फेब्रु|मार्च|एप्रिल|मे)(?:\s*\d{4}[-–]?\d{0,4})?/i);
-      const cleanEng = rawMonth.match(/(June|July|August|September|Sept|October|Oct|November|Nov|December|Dec|January|Jan|February|Feb|March|Mar|April|Apr|May)(?:\s*\d{4}[-–]?\d{0,4})?/i);
-
-      if (cleanMar) {
-        currentMonthName = cleanMar[0].trim();
-      } else if (cleanEng) {
-        currentMonthName = cleanEng[0].trim();
-      } else {
-        currentMonthName = rawMonth.split(/\s+अभ्यासक्रमाचे|\s+मासिक|\s+विषय|\s+monthly/i)[0].trim() || rawMonth;
-      }
+      currentMonthName = detectedMonth;
       currentRows = [];
       return;
     }
@@ -1191,17 +1273,19 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
     }
 
     // Regular Data Row: ensure 7 columns
-    if (!currentMonthName) currentMonthName = "जून २०२६";
+    if (!currentMonthName) currentMonthName = "June 2026";
 
-    // If row starts with April divider inside a March-April combined block
+    // If row starts with April divider inside a March block (ONLY if not already March + April combined)
     const cell0 = String(row[0] || "").trim();
     if (
       (cell0.includes("एप्रिल") || cell0.toLowerCase().includes("april")) &&
-      currentMonthName.includes("मार्च") &&
+      (currentMonthName.includes("मार्च") || currentMonthName.toLowerCase().includes("march")) &&
+      !currentMonthName.includes("एप्रिल") &&
+      !currentMonthName.toLowerCase().includes("april") &&
       currentRows.length > 0
     ) {
       flushCurrentMonth();
-      currentMonthName = "एप्रिल २०२६";
+      currentMonthName = currentMonthName.toLowerCase().includes("march") ? "April 2027" : "एप्रिल २०२७";
       currentRows = [];
     }
 
@@ -1226,7 +1310,18 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
   });
 
   flushCurrentMonth();
-  return monthlyMap;
+
+  // Strictly sort monthlyMap in Academic Year Chronological Order (June 2026 -> April 2027)
+  const sortedEntries = Object.entries(monthlyMap).sort(([nameA], [nameB]) => {
+    return getAcademicMonthRank(nameA) - getAcademicMonthRank(nameB);
+  });
+
+  const sortedMonthlyMap: Record<string, MonthlySection> = {};
+  for (const [k, v] of sortedEntries) {
+    sortedMonthlyMap[k] = v;
+  }
+
+  return sortedMonthlyMap;
 }
 
 /**

@@ -83,12 +83,47 @@ const MEDIUM_OPTIONS = [
   },
 ];
 
+export const EXAM_TABS = [
+  {
+    id: "unit1",
+    labelMr: "चाचणी १",
+    labelEn: "Unit Test 1",
+    fullNameMr: "घटक चाचणी १",
+    icon: Award,
+    color: "from-blue-600 to-indigo-600",
+  },
+  {
+    id: "term1",
+    labelMr: "प्रथम सत्र",
+    labelEn: "Term 1 (Semester 1)",
+    fullNameMr: "प्रथम सत्र परीक्षा",
+    icon: Calendar,
+    color: "from-purple-600 to-pink-600",
+  },
+  {
+    id: "unit2",
+    labelMr: "चाचणी २",
+    labelEn: "Unit Test 2",
+    fullNameMr: "घटक चाचणी २",
+    icon: Award,
+    color: "from-amber-500 to-orange-600",
+  },
+  {
+    id: "term2",
+    labelMr: "द्वितीय सत्र",
+    labelEn: "Term 2 (Semester 2)",
+    fullNameMr: "द्वितीय सत्र परीक्षा",
+    icon: Calendar,
+    color: "from-emerald-600 to-teal-600",
+  },
+];
+
 const EXAM_TYPES = [
+  { id: "unit1", label: "चाचणी १ (Unit Test 1)" },
+  { id: "term1", label: "प्रथम सत्र (Term 1 Exam)" },
+  { id: "unit2", label: "चाचणी २ (Unit Test 2)" },
+  { id: "term2", label: "द्वितीय सत्र (Term 2 Exam)" },
   { id: "all", label: "सर्व परीक्षा (All Exams)" },
-  { id: "unit1", label: "घटक चाचणी १ (Unit Test 1)" },
-  { id: "term1", label: "प्रथम सत्र परीक्षा (Term 1 Exam)" },
-  { id: "unit2", label: "घटक चाचणी २ (Unit Test 2)" },
-  { id: "term2", label: "द्वितीय सत्र परीक्षा (Term 2 Exam)" },
   { id: "practice", label: "सराव चाचणी परीक्षा (Practice Test)" },
 ];
 
@@ -120,10 +155,11 @@ function QuestionPaperPage() {
   // Wizard Step: "medium" -> "class" -> "subject" -> "list"
   const [step, setStep] = useState<"medium" | "class" | "subject" | "list">("medium");
 
+  const [selectedExamTab, setSelectedExamTab] = useState<string>("unit1");
   const [selectedMedium, setSelectedMedium] = useState<string>("marathi");
   const [selectedClass, setSelectedClass] = useState<string>("1st");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
-  const [filterExamType, setFilterExamType] = useState<string>("all");
+  const [filterExamType, setFilterExamType] = useState<string>("unit1");
   const [searchTerm, setSearchTerm] = useState("");
 
   // Firestore Papers
@@ -186,8 +222,28 @@ function QuestionPaperPage() {
       const matchSubject =
         !selectedSubject ||
         item.subject?.trim().toLowerCase() === selectedSubject.trim().toLowerCase();
-      const matchExam =
-        filterExamType === "all" || item.examType === filterExamType;
+
+      const matchExam = (() => {
+        if (filterExamType === "all") return true;
+        const eType = (item.examType || "").toLowerCase().trim();
+        const eLabel = (item.examTypeLabel || "").toLowerCase().trim();
+        const title = (item.title || "").toLowerCase().trim();
+
+        if (filterExamType === "unit1") {
+          return eType === "unit1" || eLabel.includes("चाचणी १") || eLabel.includes("चाचणी 1") || title.includes("चाचणी १") || title.includes("चाचणी 1") || title.includes("unit 1");
+        }
+        if (filterExamType === "term1") {
+          return eType === "term1" || eLabel.includes("प्रथम सत्र") || title.includes("प्रथम सत्र") || title.includes("term 1") || title.includes("sem 1");
+        }
+        if (filterExamType === "unit2") {
+          return eType === "unit2" || eLabel.includes("चाचणी २") || eLabel.includes("चाचणी 2") || title.includes("चाचणी २") || title.includes("चाचणी 2") || title.includes("unit 2");
+        }
+        if (filterExamType === "term2") {
+          return eType === "term2" || eLabel.includes("द्वितीय सत्र") || title.includes("द्वितीय सत्र") || title.includes("term 2") || title.includes("sem 2");
+        }
+        return eType === filterExamType;
+      })();
+
       const matchSearch =
         !searchTerm ||
         item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -338,7 +394,74 @@ function QuestionPaperPage() {
           </div>
         ) : (
           /* STEPPING SELECTION WORKFLOW */
-          <div>
+          <div className="space-y-6">
+            {/* 4 EXAM TABS: चाचणी १ | प्रथम सत्र | चाचणी २ | द्वितीय सत्र */}
+            <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-black text-xs shadow-xs">
+                    ★
+                  </div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                    परीक्षा निवडा (Select Exam):
+                  </h3>
+                </div>
+                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+                  सध्याची निवड: <strong className="text-indigo-950 font-black">{EXAM_TABS.find(t => t.id === selectedExamTab)?.labelMr || "चाचणी १"}</strong>
+                </span>
+              </div>
+
+              {/* The 4 Exam Tabs Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+                {EXAM_TABS.map((tab, idx) => {
+                  const isActive = selectedExamTab === tab.id;
+                  const IconComponent = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setSelectedExamTab(tab.id);
+                        setFilterExamType(tab.id);
+                      }}
+                      className={`relative p-3.5 sm:p-4 rounded-2xl text-left transition-all duration-200 border-2 cursor-pointer flex items-center gap-3 shadow-xs ${
+                        isActive
+                          ? `bg-gradient-to-r ${tab.color} text-white border-transparent shadow-md scale-[1.02]`
+                          : "bg-slate-50/70 hover:bg-white text-slate-800 border-slate-200 hover:border-indigo-300 hover:shadow-xs"
+                      }`}
+                    >
+                      <div
+                        className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
+                          isActive ? "bg-white/20 text-white" : "bg-white text-slate-700 border border-slate-200 shadow-2xs"
+                        }`}
+                      >
+                        <IconComponent className="size-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                              isActive ? "bg-white/25 text-white" : "bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            {idx + 1}
+                          </span>
+                          <span className="font-black text-base sm:text-lg leading-tight truncate">
+                            {tab.labelMr}
+                          </span>
+                        </div>
+                        <div className={`text-[11px] font-semibold mt-0.5 ${isActive ? "text-white/80" : "text-slate-400"}`}>
+                          {tab.labelEn}
+                        </div>
+                      </div>
+                      {isActive && (
+                        <span className="size-2 rounded-full bg-white shadow-xs shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* STEP 1: MEDIUM */}
             {step === "medium" && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -500,7 +623,13 @@ function QuestionPaperPage() {
                     {/* Exam Type Filter */}
                     <select
                       value={filterExamType}
-                      onChange={(e) => setFilterExamType(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFilterExamType(val);
+                        if (EXAM_TABS.some((t) => t.id === val)) {
+                          setSelectedExamTab(val);
+                        }
+                      }}
                       className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-blue-500 cursor-pointer"
                     >
                       {EXAM_TYPES.map((t) => (

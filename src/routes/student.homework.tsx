@@ -34,6 +34,7 @@ import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditor
 import { DailyHomeworkTemplate } from "@/components/homework/DailyHomeworkTemplate";
 import { DailyHomeworkCalendar, formatISODate } from "@/components/homework/DailyHomeworkCalendar";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { MCQHomeworkSection } from "@/components/homework/MCQHomeworkSection";
 
 export const Route = createFileRoute("/student/homework")({
   component: StudentHomeworkPage,
@@ -44,6 +45,9 @@ const CLASSES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
 function StudentHomeworkPage() {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();
+
+  // Homework Co-Tabs: "homework" vs "mcq"
+  const [mainTab, setMainTab] = useState<"homework" | "mcq">("homework");
 
   const [selectedMedium, setSelectedMedium] = useState("marathi");
   const [selectedClass, setSelectedClass] = useState("1st");
@@ -124,8 +128,49 @@ function StudentHomeworkPage() {
 
       <main className="lg:pl-64 pt-16 min-h-screen">
         <div className="p-4 sm:p-8 space-y-8 max-w-7xl mx-auto">
-          {/* Active Homework Document Viewer */}
-          {activeHomework ? (
+          {/* Top Co-Tabs: Regular Homework vs MCQ Homework */}
+          <div className="no-print flex items-center gap-2 p-1.5 bg-slate-200/90 rounded-2xl w-fit shadow-xs">
+            <button
+              type="button"
+              onClick={() => setMainTab("homework")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                mainTab === "homework"
+                  ? "bg-white text-indigo-700 shadow-md font-black"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <BookOpen className="size-4 text-indigo-600" />
+              <span>दैनिक गृहपाठ (Daily Homework)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMainTab("mcq")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                mainTab === "mcq"
+                  ? "bg-indigo-600 text-white shadow-md font-black"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Sparkles className="size-4 text-amber-300" />
+              <span>MCQ स्वाध्याय (MCQ Quiz)</span>
+              <span className="bg-amber-400 text-amber-950 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                नवीन
+              </span>
+            </button>
+          </div>
+
+          {mainTab === "mcq" ? (
+            <MCQHomeworkSection
+              defaultRole="student"
+              userName={profile?.fullName || (profile as any)?.name || user?.displayName || "विद्यार्थी"}
+              initialClass={selectedClass || "all"}
+              initialSubject={selectedSubject || "all"}
+            />
+          ) : (
+            <>
+              {/* Active Homework Document Viewer */}
+              {activeHomework ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
                 <button
@@ -458,6 +503,8 @@ function StudentHomeworkPage() {
                 )}
               </div>
             </div>
+          )}
+          </>
           )}
         </div>
       </main>
