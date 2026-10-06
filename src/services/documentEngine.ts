@@ -9,6 +9,7 @@ import type {
   UserDocumentEdits,
 } from "@/types/documentEditor";
 import { decodeMarathiLegacyText } from "./marathiFontDecoder";
+import { fetchBinaryFile } from "@/lib/bunny-auth-pdf";
 
 // Robust worker configuration for PDF.js using local static worker
 if (typeof window !== "undefined") {
@@ -344,16 +345,15 @@ export async function loadDocumentModel(
     }
   }
 
-  // 2. Try fetching arrayBuffer to detect magic bytes and avoid CORS issues
+  // 2. Fetch binary file using universal fetcher (Bunny Storage with AccessKey, proxy, or direct URL)
   try {
-    const res = await fetch(resolvedUrl);
-    if (res.ok) {
-      const buffer = await res.arrayBuffer();
+    const buffer = (await fetchBinaryFile(fileUrl)) || (await fetchBinaryFile(resolvedUrl));
+    if (buffer) {
       const headerBytes = new Uint8Array(buffer.slice(0, 5));
       const headerStr = String.fromCharCode(...headerBytes);
 
       // PDF Magic bytes: '%PDF-'
-      if (headerStr.startsWith("%PDF")) {
+      if (headerStr.startsWith("%PDF") || fileName?.toLowerCase().endsWith(".pdf")) {
         return await loadPdfFromBuffer(buffer, resolvedUrl, docId, fileName, cacheKey);
       }
 
@@ -363,7 +363,7 @@ export async function loadDocumentModel(
       return await loadImageDocumentModel(blobUrl, docId, fileName, cacheKey, resolvedUrl);
     }
   } catch (fetchErr) {
-    console.warn("Direct buffer fetch bypassed, using URL loaders:", fetchErr);
+    console.warn("Universal binary fetch notice:", fetchErr);
   }
 
   // 3. URL and extension based detection fallback
@@ -917,22 +917,33 @@ export async function exportDocumentToPdf(
       // Draw modified or custom text blocks over background
       for (const block of page.textBlocks) {
         const isModified = Boolean(block.isCustom || block.isEdited || block.isErased);
-        if (!isModified && !block.text) continue;
+        if (!isModified) continue;
+
+        const isSchoolName =
+          (block.text || "").includes("शाळेचे नाव") ||
+          (block.text || "").includes("SCHOOL NAME") ||
+          block.id === "custom_filled_school_name";
 
         const origW = (((block.origWidth || block.width) / 100) * page.width);
         const origH = (((block.origHeight || block.height) / 100) * page.height);
         const curW = ((block.width / 100) * page.width);
         const curH = ((block.height / 100) * page.height);
-        const maskW = Math.max(origW, curW);
-        const maskH = Math.max(origH, curH);
+        let maskW = Math.max(origW, curW);
+        let maskH = Math.max(origH, curH);
 
         const x = (block.x / 100) * page.width;
         const y = (block.y / 100) * page.height;
 
+        if (isSchoolName) {
+          // Stretch white mask across the entire header dotted area and both lines of dots to right border
+          maskW = Math.max(maskW, (page.width * 0.92) - x);
+          maskH = Math.max(maskH, page.height * 0.045);
+        }
+
         // If block is custom, edited, or erased: render solid white rectangle over original bounding box
         if (isModified) {
           ctx.fillStyle = "#ffffff";
-          ctx.fillRect(x - 3, y - 3, maskW + 6, maskH + 6);
+          ctx.fillRect(isSchoolName ? x : x - 3, isSchoolName ? y : y - 3, isSchoolName ? maskW : maskW + 6, isSchoolName ? maskH : maskH + 6);
         }
 
         // Draw new text if present and not erased
@@ -943,12 +954,24 @@ export async function exportDocumentToPdf(
           ctx.font = `${weight} ${block.fontSize || 12}px "Noto Sans Devanagari", sans-serif`;
           ctx.textBaseline = "top";
 
-          // Word wrap text within width
-          const lines = wrapText(ctx, block.text, Math.max(maskW, 80));
-          let curY = y;
-          for (const line of lines) {
-            ctx.fillText(line, x, curY);
-            curY += (block.fontSize || 12) * 1.25;
+          if (isSchoolName) {
+            // Always keep on 1 line! Dynamically scale font size so it fits cleanly
+            let fitSize = block.fontSize || 14;
+            ctx.font = `${weight} ${fitSize}px "Noto Sans Devanagari", sans-serif`;
+            const maxAllowedWidth = Math.max(page.width - x - 25, 200);
+            while (ctx.measureText(block.text).width > maxAllowedWidth && fitSize > 8) {
+              fitSize -= 0.5;
+              ctx.font = `${weight} ${fitSize}px "Noto Sans Devanagari", sans-serif`;
+            }
+            ctx.fillText(block.text, x, y);
+          } else {
+            // Word wrap text within width
+            const lines = wrapText(ctx, block.text, Math.max(maskW, 80));
+            let curY = y;
+            for (const line of lines) {
+              ctx.fillText(line, x, curY);
+              curY += (block.fontSize || 12) * 1.25;
+            }
           }
         }
       }
@@ -983,12 +1006,13 @@ export function printDocument(model: DocumentModel): void {
       ${page.textBlocks
         .filter((b) => b.isCustom || b.isEdited || b.isErased)
         .map((b) => {
-          const w = Math.max(b.width, b.origWidth || b.width);
-          const h = Math.max(b.height, b.origHeight || b.height);
+          const isSchool = (b.text || '').includes('शाळेचे नाव') || (b.text || '').includes('SCHOOL NAME') || b.id === 'custom_filled_school_name';
+          const w = isSchool ? Math.max(b.width, b.origWidth || b.width, 92.0 - b.x) : Math.max(b.width, b.origWidth || b.width);
+          const h = isSchool ? Math.max(b.height, b.origHeight || b.height, 4.5) : Math.max(b.height, b.origHeight || b.height);
           const hasText = b.text && b.text.trim() && !b.isErased;
           const isBold = b.fontWeight === "bold" || (typeof b.fontWeight === "number" && b.fontWeight >= 600);
           return `
-        <div style="position: absolute; left: ${b.x}%; top: ${b.y}%; min-width: ${w}%; min-height: ${h}%; background: #ffffff; color: ${b.color || "#0f172a"}; font-size: ${b.fontSize}px; font-family: 'Noto Sans Devanagari', sans-serif; font-weight: ${isBold ? 'bold' : 'normal'}; z-index: 10; padding: 2px;">
+        <div style="position: absolute; left: ${b.x}%; top: ${b.y}%; min-width: ${w}%; min-height: ${h}%; background: #ffffff; color: ${b.color || "#0f172a"}; font-size: ${b.fontSize}px; font-family: 'Noto Sans Devanagari', sans-serif; font-weight: ${isBold ? 'bold' : 'normal'}; z-index: 10; padding: 2px; white-space: ${isSchool ? 'nowrap' : 'normal'};">
           ${hasText ? escapeHtml(b.text) : ""}
         </div>
       `;

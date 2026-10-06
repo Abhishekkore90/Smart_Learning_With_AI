@@ -23,6 +23,11 @@ import {
 } from "@/services/pdfToWordConverter";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  getUnifiedSchoolProfile,
+  fetchUnifiedSchoolProfile,
+  saveUnifiedSchoolProfile,
+} from "@/utils/schoolProfileHelper";
 
 export interface QuestionPaperManualEditorProps {
   paper: QuestionPaperItem;
@@ -55,11 +60,22 @@ export function QuestionPaperManualEditor({
   canEdit = true,
   onBack,
 }: QuestionPaperManualEditorProps) {
+  const initialSchool = (() => {
+    try {
+      const u = getUnifiedSchoolProfile();
+      if (u?.schoolName?.trim() && !u.schoolName.includes("___")) return u.schoolName.trim();
+    } catch (e) {}
+    return "जिल्हा परिषद प्राथमिक शाळा";
+  })();
+
+  let rawContent = paper.content || paper.description || "";
+  if (rawContent && rawContent.includes("शाळेचे नाव") && /[-_.~=—–•\.]{4,}/.test(rawContent)) {
+    rawContent = rawContent.replace(/शाळेचे नाव\s*[-_.~=—–•\.]{4,}/g, `शाळेचे नाव : ${initialSchool}`);
+  }
+
   // Initial state derived from paper
   const initialData: QuestionPaperEditState = {
-    schoolName: userName
-      ? `जि. प. प्राथमिक शाळा (${userName})`
-      : "जि. प. प्राथमिक शाळा, ________________________",
+    schoolName: initialSchool,
     examTitle: paper.examTypeLabel || paper.title || "चाचणी परीक्षा",
     className: paper.class ? `${paper.class} ली` : "१ ली",
     subjectName: paper.subject || "मराठी",
@@ -69,7 +85,7 @@ export function QuestionPaperManualEditor({
     examDate: new Date().toLocaleDateString("mr-IN"),
     studentNamePlaceholder: "विद्यार्थ्याचे नाव : ________________________________________",
     rollNo: "____",
-    content: paper.content || paper.description || "",
+    content: rawContent,
   };
 
   const [data, setData] = useState<QuestionPaperEditState>(initialData);
@@ -84,12 +100,36 @@ export function QuestionPaperManualEditor({
   useEffect(() => {
     let isMounted = true;
     async function loadEdits() {
+      let resolvedSchool = "";
+      try {
+        const u = getUnifiedSchoolProfile();
+        if (u?.schoolName?.trim() && !u.schoolName.includes("___")) {
+          resolvedSchool = u.schoolName.trim();
+        }
+      } catch (e) {}
+
+      if (!resolvedSchool && userId && userId !== "guest_teacher") {
+        try {
+          const fetched = await fetchUnifiedSchoolProfile(userId);
+          if (fetched?.schoolName?.trim() && !fetched.schoolName.includes("___")) {
+            resolvedSchool = fetched.schoolName.trim();
+          }
+        } catch (e) {}
+      }
+
       // 1. Check localStorage first for instant load
       try {
         const local = localStorage.getItem(storageKey);
         if (local && isMounted) {
-          setData(JSON.parse(local));
+          const parsed = JSON.parse(local);
+          const isDashed = !parsed.schoolName || parsed.schoolName.includes("___") || /[-_.~=—–•\.]{4,}/.test(parsed.schoolName);
+          if ((isDashed || !parsed.schoolName) && resolvedSchool) {
+            parsed.schoolName = resolvedSchool;
+          }
+          setData(parsed);
           setHasEdits(true);
+        } else if (resolvedSchool && isMounted) {
+          setData((prev) => ({ ...prev, schoolName: resolvedSchool }));
         }
       } catch (e) {
         // ignore
@@ -102,6 +142,10 @@ export function QuestionPaperManualEditor({
           const snap = await getDoc(docRef);
           if (snap.exists() && isMounted) {
             const remoteData = snap.data() as QuestionPaperEditState;
+            const isDashed = !remoteData.schoolName || remoteData.schoolName.includes("___") || /[-_.~=—–•\.]{4,}/.test(remoteData.schoolName);
+            if ((isDashed || !remoteData.schoolName) && resolvedSchool) {
+              remoteData.schoolName = resolvedSchool;
+            }
             setData(remoteData);
             setHasEdits(true);
             localStorage.setItem(storageKey, JSON.stringify(remoteData));
@@ -123,6 +167,9 @@ export function QuestionPaperManualEditor({
     try {
       setIsSaving(true);
       localStorage.setItem(storageKey, JSON.stringify(data));
+      if (data.schoolName?.trim()) {
+        saveUnifiedSchoolProfile({ schoolName: data.schoolName.trim() });
+      }
 
       if (userId && paper.id) {
         try {
@@ -293,7 +340,7 @@ export function QuestionPaperManualEditor({
           </button>
 
           {/* Original Word file download if admin uploaded one */}
-          {paper.wordFileUrl && (
+          {paper.wordFileUrl && userRole === "admin" && (
             <a
               href={paper.wordFileUrl}
               download={paper.wordFileName || "question_paper.docx"}

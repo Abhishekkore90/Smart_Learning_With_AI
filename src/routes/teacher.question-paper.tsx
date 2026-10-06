@@ -49,6 +49,7 @@ import type { QuestionPaperItem } from "@/types/documentEditor";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
 import { QuestionPaperTemplate } from "@/components/questionPaper/QuestionPaperTemplate";
 import { QuestionPaperManualEditor } from "@/components/questionPaper/QuestionPaperManualEditor";
+import { fetchUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 
 export const Route = createFileRoute("/teacher/question-paper")({
   head: () => ({
@@ -168,7 +169,6 @@ function QuestionPaperPage() {
 
   // Active opened paper for View & Edit
   const [activePaper, setActivePaper] = useState<QuestionPaperItem | null>(null);
-  const [previewTab, setPreviewTab] = useState<"doc" | "template">("doc");
 
   useEffect(() => {
     if (!authLoading) {
@@ -182,6 +182,13 @@ function QuestionPaperPage() {
       }
     }
   }, [user, profile, authLoading, navigate]);
+
+  // Pre-fetch authentic user school profile so structure & document views have it instantly
+  useEffect(() => {
+    if (user?.uid && user.uid !== "guest_teacher") {
+      fetchUnifiedSchoolProfile(user.uid);
+    }
+  }, [user?.uid]);
 
   // Real-time listener for canonical admin_question_papers
   useEffect(() => {
@@ -328,34 +335,14 @@ function QuestionPaperPage() {
                 <span>सर्व प्रश्नपत्रिका यादी (Back)</span>
               </button>
 
-              {/* View Switcher: Document View vs Question Paper Template */}
-              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-                {activePaper.fileUrl && (
-                  <button
-                    onClick={() => setPreviewTab("doc")}
-                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                      previewTab === "doc"
-                        ? "bg-indigo-600 text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    मूळ दस्तऐवज व संपादन (Document & Word)
-                  </button>
-                )}
-                <button
-                  onClick={() => setPreviewTab("template")}
-                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                    previewTab === "template"
-                      ? "bg-indigo-600 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  चाचणी पत्रिका साचा (Question Paper Template)
-                </button>
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                <span className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl border border-blue-200">
+                  {activePaper.title}
+                </span>
               </div>
             </div>
 
-            {previewTab === "doc" && activePaper.fileUrl ? (
+            {activePaper.fileUrl ? (
               <DocumentEditorViewer
                 documentId={activePaper.id}
                 fileUrl={activePaper.fileUrl}
@@ -695,11 +682,6 @@ function QuestionPaperPage() {
                               <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
                                 एकूण गुण: {paper.totalMarks}
                               </span>
-                              {paper.wordFileUrl && (
-                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1">
-                                  <FileText className="size-3 text-blue-600" /> Word (.docx) उपलब्ध
-                                </span>
-                              )}
                             </div>
                           </div>
 
@@ -722,21 +704,9 @@ function QuestionPaperPage() {
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
-                            {paper.wordFileUrl && (
-                              <a
-                                href={paper.wordFileUrl}
-                                download={paper.wordFileName || `${paper.title}.docx`}
-                                className="inline-flex items-center gap-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-                                title="Word (.docx) फाईल डाऊनलोड करा"
-                              >
-                                <FileText className="size-3.5" />
-                                <span>Word (.docx)</span>
-                              </a>
-                            )}
                             <button
                               onClick={() => {
                                 setActivePaper(paper);
-                                setPreviewTab("doc");
                               }}
                               className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
                             >

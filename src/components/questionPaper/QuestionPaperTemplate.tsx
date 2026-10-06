@@ -12,7 +12,11 @@ import {
 import { showToast as toast } from "@/lib/custom-toast";
 import type { QuestionPaperItem } from "@/types/documentEditor";
 import { jsPDF } from "jspdf";
-import { getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
+import {
+  getUnifiedSchoolProfile,
+  fetchUnifiedSchoolProfile,
+  saveUnifiedSchoolProfile,
+} from "@/utils/schoolProfileHelper";
 
 export interface QuestionPaperTemplateProps {
   paper?: Partial<QuestionPaperItem>;
@@ -53,7 +57,7 @@ interface QuestionPaperData {
 }
 
 const DEFAULT_PAPER_DATA: QuestionPaperData = {
-  schoolName: "जि. प. प्राथमिक शाळा, ________________________",
+  schoolName: "",
   examTitle: "आकारिक मूल्यमापन चाचणी क्र. १",
   className: "१ ली (1st)",
   subjectName: "भाषा व गणित (Language & Maths)",
@@ -100,17 +104,20 @@ export function QuestionPaperTemplate({
   canEdit = true,
   onBack,
 }: QuestionPaperTemplateProps) {
+  const getUserSavedQPSchool = (uid?: string): string => {
+    if (!uid || typeof window === "undefined") return "";
+    try {
+      const saved = localStorage.getItem(`user_question_paper_school_${uid}`);
+      if (saved && saved.trim() && !saved.includes("___")) return saved.trim();
+    } catch (e) {}
+    return "";
+  };
+
   const [data, setData] = useState<QuestionPaperData>(() => {
-    const profileSchool = (() => {
-      try {
-        const u = getUnifiedSchoolProfile();
-        if (u?.schoolName?.trim()) return u.schoolName.trim();
-      } catch (e) {}
-      return null;
-    })();
+    const savedUserSchool = getUserSavedQPSchool(userId);
     return {
       ...DEFAULT_PAPER_DATA,
-      schoolName: profileSchool || (userName ? `जि. प. प्राथमिक शाळा (${userName})` : DEFAULT_PAPER_DATA.schoolName),
+      schoolName: savedUserSchool || "",
       examTitle: paper?.examTypeLabel || paper?.title || DEFAULT_PAPER_DATA.examTitle,
       className: paper?.class ? `${paper.class} ली` : DEFAULT_PAPER_DATA.className,
       subjectName: paper?.subject || DEFAULT_PAPER_DATA.subjectName,
@@ -123,20 +130,66 @@ export function QuestionPaperTemplate({
   const storageKey = `qp_custom_template_${paper?.id || "default"}_${userId || "guest"}`;
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        setData(JSON.parse(saved));
+    let isMounted = true;
+    async function initProfileAndData() {
+      let resolvedSchool = getUserSavedQPSchool(userId);
+
+      if (!resolvedSchool && userId && userId !== "guest_teacher") {
+        try {
+          const { db } = await import("@/lib/firebase");
+          const { doc, getDoc } = await import("firebase/firestore");
+          const userDocRef = doc(db, "users", userId);
+          const snap = await getDoc(userDocRef);
+          if (snap.exists()) {
+            const qpName = snap.data()?.questionPaperSchoolName;
+            if (qpName && typeof qpName === "string" && qpName.trim() && !qpName.includes("___")) {
+              resolvedSchool = qpName.trim();
+              localStorage.setItem(`user_question_paper_school_${userId}`, resolvedSchool);
+            }
+          }
+        } catch (e) {}
       }
-    } catch (e) {
-      // ignore
+
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved && isMounted) {
+          const parsed = JSON.parse(saved);
+          if (resolvedSchool) {
+            parsed.schoolName = resolvedSchool;
+          }
+          setData(parsed);
+          return;
+        }
+      } catch (e) {}
+
+      if (resolvedSchool && isMounted) {
+        setData((prev) => ({
+          ...prev,
+          schoolName: resolvedSchool,
+        }));
+      }
     }
-  }, [storageKey]);
+
+    initProfileAndData();
+    return () => {
+      isMounted = false;
+    };
+  }, [storageKey, userId]);
 
   const handleSave = () => {
     try {
       setIsSaving(true);
       localStorage.setItem(storageKey, JSON.stringify(data));
+      if (data.schoolName?.trim() && userId) {
+        localStorage.setItem(`user_question_paper_school_${userId}`, data.schoolName.trim());
+        if (userId !== "guest_teacher") {
+          import("@/lib/firebase").then(({ db }) => {
+            import("firebase/firestore").then(({ doc, setDoc }) => {
+              setDoc(doc(db, "users", userId), { questionPaperSchoolName: data.schoolName.trim() }, { merge: true }).catch(() => {});
+            });
+          });
+        }
+      }
       toast.success("प्रश्नपत्रिकेचा बदललेला साचा जतन झाला!");
     } catch (e) {
       toast.error("जतन करताना त्रुटी आली.");
@@ -148,7 +201,11 @@ export function QuestionPaperTemplate({
   const handleReset = () => {
     if (window.confirm("प्रश्नपत्रिका पूर्ववत (Default) करायची आहे का?")) {
       localStorage.removeItem(storageKey);
-      setData(DEFAULT_PAPER_DATA);
+      const savedUserSchool = getUserSavedQPSchool(userId);
+      setData({
+        ...DEFAULT_PAPER_DATA,
+        schoolName: savedUserSchool || "",
+      });
       toast.success("साचा पूर्ववत करण्यात आला.");
     }
   };
@@ -220,10 +277,24 @@ export function QuestionPaperTemplate({
           {canEdit && (
             <button
               onClick={() => {
-                const current = data.schoolName;
+                const current = data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "");
                 const promptVal = window.prompt("शाळेचे नाव प्रविष्ट करा (Enter School Name):", current);
                 if (promptVal !== null && promptVal.trim()) {
-                  setData((prev) => ({ ...prev, schoolName: promptVal.trim() }));
+                  const newName = promptVal.trim();
+                  setData((prev) => ({ ...prev, schoolName: newName }));
+                  saveUnifiedSchoolProfile({ schoolName: newName });
+                  if (userId) {
+                    try {
+                      localStorage.setItem(`user_question_paper_school_${userId}`, newName);
+                    } catch (e) {}
+                    if (userId !== "guest_teacher") {
+                      import("@/lib/firebase").then(({ db }) => {
+                        import("firebase/firestore").then(({ doc, setDoc }) => {
+                          setDoc(doc(db, "users", userId), { questionPaperSchoolName: newName }, { merge: true }).catch(() => {});
+                        });
+                      });
+                    }
+                  }
                   toast.success("शाळेचे नाव अपडेट केले!");
                 }
               }}
@@ -269,17 +340,11 @@ export function QuestionPaperTemplate({
             </>
           )}
 
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
-          >
-            <Printer className="size-3.5" />
-            <span>प्रिंट</span>
-          </button>
+
 
           <button
             onClick={handleDownloadPdf}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
             <Download className="size-3.5" />
             <span>PDF डाउनलोड</span>
@@ -299,16 +364,24 @@ export function QuestionPaperTemplate({
             {/* School Name */}
             <div className="mb-3 text-center sm:text-left">
               {isEditing ? (
-                <input
-                  type="text"
-                  value={data.schoolName}
-                  onChange={(e) => setData({ ...data, schoolName: e.target.value })}
-                  className="w-full text-center sm:text-left text-lg sm:text-xl font-black text-slate-900 border-b-2 border-indigo-500 outline-none pb-1 bg-amber-50/50"
-                  placeholder="शाळेचे नाव प्रविष्ट करा"
-                />
+                <div className="flex items-center gap-2">
+                  <span className="text-base sm:text-lg font-black text-slate-900 shrink-0">शाळेचे नाव :</span>
+                  <input
+                    type="text"
+                    value={data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "")}
+                    onChange={(e) => setData({ ...data, schoolName: e.target.value })}
+                    className="flex-1 text-base sm:text-lg font-black text-slate-900 border-b-2 border-indigo-500 outline-none pb-0.5 bg-amber-50/50"
+                    placeholder="येथे शाळेचे नाव भरा"
+                  />
+                </div>
               ) : (
-                <div className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-                  {data.schoolName}
+                <div className="text-base sm:text-xl font-black text-slate-900 tracking-tight flex items-baseline gap-2 flex-wrap">
+                  <span className="shrink-0 text-slate-900 font-black">शाळेचे नाव :</span>
+                  <span className="text-slate-950 font-black">
+                    {data.schoolName
+                      ? data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "")
+                      : "____________________________________"}
+                  </span>
                 </div>
               )}
             </div>

@@ -1981,10 +1981,12 @@ export function AcademicPlanningSystem({
 
       const fileSizeDisplay = `${compressedSizeMb} MB`;
 
-      // 4. Ensure payload is compact so setDoc never exceeds Firestore 1MB document limit
-      const safeRawDataRows =
-        excelRawDataRows.length > 0 && excelRawDataRows.length <= 50 ? excelRawDataRows : [];
-      const safeTableRows = rowsToSave.length <= 50 ? rowsToSave : [];
+      // 4. Store parsed rows directly in Firestore so mobile and all clients can display instantly without downloading
+      // Keep payload under ~750KB (Firestore doc limit is 1MB = 1048KB)
+      const rawDataJson = JSON.stringify(excelRawDataRows);
+      const safeRawDataRows = rawDataJson.length < 750000 ? excelRawDataRows : [];
+      const tableRowsJson = JSON.stringify(rowsToSave);
+      const safeTableRows = tableRowsJson.length < 750000 ? rowsToSave : [];
 
       const newRecord: PlanningFileRecord = {
         id: recordKey,
@@ -2005,7 +2007,8 @@ export function AcademicPlanningSystem({
         uploadedAt: new Date().toISOString(),
         ...(safeTableRows.length > 0 && { tableRows: safeTableRows }),
         ...(excelRawHeaders.length > 0 && { rawHeaders: excelRawHeaders }),
-        ...(safeRawDataRows.length > 0 && { rawDataRows: safeRawDataRows }),
+        ...(rawDataJson.length < 750000 && { rowsJson: rawDataJson }),
+        ...(safeRawDataRows.length > 0 && { cellRows: safeRawDataRows.map((r) => ({ c: r })) }),
       };
 
       // 5. Save metadata to Firestore with fallback for payload size safety

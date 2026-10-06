@@ -41,7 +41,11 @@ import {
   printDocument,
 } from "@/services/documentEngine";
 import { decodeMarathiLegacyText } from "@/services/marathiFontDecoder";
-import { getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
+import {
+  getUnifiedSchoolProfile,
+  fetchUnifiedSchoolProfile,
+  saveUnifiedSchoolProfile,
+} from "@/utils/schoolProfileHelper";
 
 interface DocumentEditorViewerProps {
   documentId: string;
@@ -93,38 +97,206 @@ export function DocumentEditorViewer({
   const [currentPageNum, setCurrentPageNum] = useState<number>(1);
   const [activeEditingBlockId, setActiveEditingBlockId] = useState<string | null>(null);
 
-  // Quick School Header Customizer Modal
-  const [showSchoolHeaderModal, setShowSchoolHeaderModal] = useState<boolean>(false);
+  // Helper to read question paper school name specifically saved by this user
+  const getUserSavedQPSchool = (uid?: string): string => {
+    if (!uid || typeof window === "undefined") return "";
+    try {
+      const saved = localStorage.getItem(`user_question_paper_school_${uid}`);
+      if (saved && saved.trim() && !saved.includes("___")) return saved.trim();
+    } catch (e) { }
+    return "";
+  };
+
+  /** 
+   * Helper to apply school name cleanly across all pages in the document:
+   * - If a page has a school name prompt (शाळेचे नाव / शाळा / SCHOOL NAME) in the header region (y < 35%),
+   *   replace it with the user's school name, stretching across the full dotted line area with
+   *   a solid white background so all underlying dotted lines are completely masked.
+   * - If a page does NOT have a school name prompt (e.g. continuation pages),
+   *   leave that page completely untouched (NO school name added).
+   */
+  const applySchoolNameToDocumentPages = (
+    pages: DocumentPage[],
+    schoolName: string
+  ): { updatedPages: DocumentPage[]; affectedCount: number } => {
+    if (!pages || pages.length === 0) return { updatedPages: pages, affectedCount: 0 };
+    const cleanSchoolName = schoolName
+      .replace(/^(?:शाळेचे नाव|शाळा नाव|school name)\s*[:-]?\s*/i, "")
+      .trim();
+    if (!cleanSchoolName) return { updatedPages: pages, affectedCount: 0 };
+
+    let affectedCount = 0;
+    let anyHeaderFound = false;
+
+    const updatedPages = pages.map((page) => {
+      const blocks = [...page.textBlocks];
+
+      // Find if this page has a school name block in the header area (top 35%)
+      let targetIdx = blocks.findIndex((b) => {
+        const t = (b.text || "").toLowerCase();
+        return (
+          (t.includes("शाळेचे नाव") ||
+            t.includes("शाळेचे  नाव") ||
+            t.includes("शाळा नाव")) &&
+          (b.y || 0) < 35
+        );
+      });
+
+      if (targetIdx === -1) {
+        targetIdx = blocks.findIndex((b) => {
+          const t = (b.text || "").toLowerCase();
+          return (
+            (t.includes("school name") ||
+              t.includes("name of school") ||
+              (t.includes("school") && (b.y || 0) < 20)) &&
+            (b.y || 0) < 35
+          );
+        });
+      }
+
+      if (targetIdx === -1) {
+        targetIdx = blocks.findIndex((b) => {
+          const t = (b.text || "").toLowerCase();
+          return (
+            (t.includes("शाळेचे") || t.includes("शाळा")) &&
+            (b.y || 0) < 35
+          );
+        });
+      }
+
+      if (targetIdx === -1) {
+        targetIdx = blocks.findIndex((b) => {
+          const t = (b.text || "").toLowerCase();
+          const hasDashes = /[-_.~=—–•\.]{3,}/.test(t);
+          return hasDashes && (b.y || 0) < 15;
+        });
+      }
+
+      // If this page does NOT have a school name section, DO NOT add one!
+      if (targetIdx === -1) {
+        return page;
+      }
+
+      anyHeaderFound = true;
+      affectedCount++;
+      const origTarget = blocks[targetIdx];
+      const isEnglish = (origTarget.text || "").toLowerCase().includes("school");
+      const fullText = isEnglish
+        ? `SCHOOL NAME : ${cleanSchoolName}`
+        : `शाळेचे नाव : ${cleanSchoolName}`;
+
+      // Match font size as per that page's original header font size (typically 20-21px)
+      const pageHeaderFontSize = Math.max(origTarget.fontSize || 20, 18);
+      let fitFontSize = pageHeaderFontSize;
+      if (fullText.length > 55) {
+        fitFontSize = Math.round(pageHeaderFontSize * 0.75);
+      } else if (fullText.length > 44) {
+        fitFontSize = Math.round(pageHeaderFontSize * 0.85);
+      } else if (fullText.length > 36) {
+        fitFontSize = Math.round(pageHeaderFontSize * 0.92);
+      }
+
+      const startX = origTarget.x;
+      const startY = origTarget.y;
+      // Stretch to cover right border of inner box completely (~92%)
+      const newWidth = Math.max(origTarget.width, origTarget.origWidth || 0, 92.0 - startX);
+      // Height spans down to ~8.9% to fully cover Line 1 AND Line 2 of dotted lines
+      const newHeight = Math.min(
+        Math.max(origTarget.height, origTarget.origHeight || 0, 4.5),
+        9.0 - startY
+      );
+
+      const nextBlocks = blocks.filter((b) => b.id !== "custom_filled_school_name");
+      const filteredTargetIdx = nextBlocks.findIndex((b) => b.id === origTarget.id);
+      const useIdx = filteredTargetIdx !== -1 ? filteredTargetIdx : targetIdx;
+
+      nextBlocks[useIdx] = {
+        ...origTarget,
+        text: fullText,
+        width: newWidth,
+        height: newHeight,
+        origWidth: Math.max(origTarget.origWidth || origTarget.width, newWidth),
+        origHeight: Math.max(origTarget.origHeight || origTarget.height, newHeight),
+        fontSize: fitFontSize,
+        fontWeight: "bold",
+        color: "#0f172a",
+        isEdited: true,
+        isErased: false,
+      };
+
+      // Erase any secondary dashed line text blocks nearby on this page if present
+      nextBlocks.forEach((b, idx) => {
+        if (idx !== useIdx) {
+          const isNearY = b.y >= startY - 0.5 && b.y <= startY + 4.5;
+          const isOnlyDashes = /^[\s\-_.~=—–•\.]+$/.test(b.text || "");
+          if (isNearY && isOnlyDashes) {
+            nextBlocks[idx] = {
+              ...b,
+              text: "",
+              isEdited: true,
+              isErased: true,
+            };
+          }
+        }
+      });
+
+      return {
+        ...page,
+        textBlocks: nextBlocks,
+      };
+    });
+
+    // Only if NO page in the entire document had any school name block, fallback to Page 1 top header
+    if (!anyHeaderFound && updatedPages.length > 0) {
+      const page0 = { ...updatedPages[0] };
+      const fallbackBlock: DocumentTextBlock = {
+        id: "custom_filled_school_name",
+        text: `शाळेचे नाव : ${cleanSchoolName}`,
+        x: 10,
+        y: 4.5,
+        width: 82,
+        height: 4.5,
+        origWidth: 82,
+        origHeight: 4.5,
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "#0f172a",
+        fontFamily: "Noto Sans Devanagari, sans-serif",
+        editable: true,
+        isCustom: true,
+      };
+      (fallbackBlock as any).isEdited = true;
+      page0.textBlocks = [
+        ...page0.textBlocks.filter((b) => b.id !== "custom_filled_school_name"),
+        fallbackBlock,
+      ];
+      updatedPages[0] = page0;
+      affectedCount = 1;
+    }
+
+    return { updatedPages, affectedCount };
+  };
+
+  // Fill School Name Modal
   const [showFillSchoolModal, setShowFillSchoolModal] = useState<boolean>(false);
+  // Firstly keep it blank! After user fills it, it will be remembered for that user
   const [fillSchoolNameInput, setFillSchoolNameInput] = useState<string>(() => {
-    try {
-      const uProfile = getUnifiedSchoolProfile();
-      if (uProfile?.schoolName?.trim()) return uProfile.schoolName.trim();
-    } catch (e) {}
-    return userName ? `जि. प. प्राथमिक शाळा (${userName})` : "जिल्हा परिषद प्राथमिक शाळा";
+    return getUserSavedQPSchool(userId);
   });
-  const [fillSchoolFontSize, setFillSchoolFontSize] = useState<number>(15);
-  const [fillSchoolPlacement, setFillSchoolPlacement] = useState<"full_line" | "infront">("full_line");
-  const [hideSecondaryDashes, setHideSecondaryDashes] = useState<boolean>(true);
   const [schoolNameInput, setSchoolNameInput] = useState<string>(() => {
-    try {
-      const uProfile = getUnifiedSchoolProfile();
-      if (uProfile?.schoolName?.trim()) return uProfile.schoolName.trim();
-    } catch (e) {}
-    return userName ? `जि. प. प्राथमिक शाळा (${userName})` : "जिल्हा परिषद प्राथमिक शाळा";
+    return getUserSavedQPSchool(userId);
   });
-  const [kendraInput, setKendraInput] = useState<string>("केंद्र शाळा");
-  const [studentNameInput, setStudentNameInput] = useState<string>(
-    "विद्यार्थ्याचे नाव: _________________________"
-  );
-  const [rollNoInput, setRollNoInput] = useState<string>("हजेरी क्र: ____");
-  const [examDateInput, setExamDateInput] = useState<string>(
-    new Date().toLocaleDateString("mr-IN")
-  );
-  const [totalMarksInput, setTotalMarksInput] = useState<string>("");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  // Synchronize modal input with user-specific saved school name (stays blank if never filled)
+  useEffect(() => {
+    if (showFillSchoolModal) {
+      const saved = getUserSavedQPSchool(userId);
+      setFillSchoolNameInput(saved || "");
+    }
+  }, [showFillSchoolModal, userId]);
 
   // Load Document & Merged User Edits
   useEffect(() => {
@@ -173,18 +345,36 @@ export function DocumentEditorViewer({
           }
         }
 
-        // Ensure all loaded text blocks (cached or new) are decoded to proper Marathi Unicode
-        const cleanedPages = mergedPages.map((p) => ({
-          ...p,
-          textBlocks: (p.textBlocks || []).map((b) => ({
-            ...b,
-            text: decodeMarathiLegacyText(b.text || ""),
-          })),
-        }));
+        // Only inject if THIS user has previously filled & saved their school name.
+        // Firstly it stays blank until the user fills it.
+        let activeSchoolName = getUserSavedQPSchool(userId);
+        if (!activeSchoolName && userId && userId !== "guest_teacher") {
+          try {
+            const { db } = await import("@/lib/firebase");
+            const { doc, getDoc } = await import("firebase/firestore");
+            const userDocRef = doc(db, "users", userId);
+            const userSnap = await getDoc(userDocRef);
+            if (userSnap.exists()) {
+              const qpName = userSnap.data()?.questionPaperSchoolName;
+              if (qpName && typeof qpName === "string" && qpName.trim() && !qpName.includes("___")) {
+                activeSchoolName = qpName.trim();
+                localStorage.setItem(`user_question_paper_school_${userId}`, activeSchoolName);
+              }
+            }
+          } catch (e) { }
+        }
+
+        if (activeSchoolName) {
+          setFillSchoolNameInput(activeSchoolName);
+          setSchoolNameInput(activeSchoolName);
+
+          const { updatedPages } = applySchoolNameToDocumentPages(mergedPages, activeSchoolName);
+          mergedPages = updatedPages;
+        }
 
         if (isMounted) {
           setDocModel(model);
-          setPagesState(cleanedPages);
+          setPagesState(mergedPages);
           setHasUserEdits(editsFound);
           setLoading(false);
         }
@@ -199,7 +389,7 @@ export function DocumentEditorViewer({
           } catch (fbErr) {
             setError(
               err?.message ||
-                "कागदपत्र उघडताना त्रुटी आली. कृपया फाईल उपलब्ध असल्याची खात्री करा."
+              "कागदपत्र उघडताना त्रुटी आली. कृपया फाईल उपलब्ध असल्याची खात्री करा."
             );
             setLoading(false);
           }
@@ -382,235 +572,110 @@ export function DocumentEditorViewer({
     toast.info("मजकूर मूळ स्थितीत परत आणला.");
   };
 
-  // Dedicated Fill School Name: Fits user's school name right in front of 'शाळेचे नाव' on Page 1
+  // Dedicated Fill School Name: Automatically fits school name properly across all pages containing school header
   const handleFillSchoolName = () => {
     if (pagesState.length === 0) return;
-    const pageIdx = 0;
     const trimmedName = fillSchoolNameInput.trim();
     if (!trimmedName) {
       toast.error("कृपया शाळेचे नाव प्रविष्ट करा.");
       return;
     }
 
+    const cleanSchoolName = trimmedName
+      .replace(/^(?:शाळेचे नाव|शाळा नाव|school name)\s*[:-]?\s*/i, "")
+      .trim();
+
     setPagesState((prevPages) => {
-      const nextPages = [...prevPages];
-      const page = { ...nextPages[pageIdx] };
-      const blocks = [...page.textBlocks];
-
-      // 1. Search Page 1 for block matching "शाळेचे नाव"
-      let targetIdx = blocks.findIndex((b) => {
-        const t = (b.text || "").toLowerCase();
-        return t.includes("शाळेचे नाव") || t.includes("शाळेचे  नाव") || t.includes("शाळा नाव");
-      });
-
-      if (targetIdx === -1) {
-        targetIdx = blocks.findIndex((b) => {
-          const t = (b.text || "").toLowerCase();
-          return (t.includes("शाळेचे") || t.includes("शाळा") || t.includes("school")) && (b.y || 0) < 35;
-        });
-      }
-
-      const customSchoolBlockId = "custom_filled_school_name";
-      const filteredBlocks = blocks.filter((b) => b.id !== customSchoolBlockId);
-
-      if (targetIdx !== -1) {
-        const origTarget = filteredBlocks[targetIdx];
-        const origText = origTarget.text || "";
-        const hasDashes = /[-_.~=—–•\.]{2,}/.test(origText);
-
-        if (fillSchoolPlacement === "full_line" || hasDashes) {
-          // Replace this block directly with "शाळेचे नाव : [School Name]"
-          // and expand its width and height to solidly cover the dotted line area
-          const fullText = `शाळेचे नाव : ${trimmedName}`;
-          const newWidth = Math.max(origTarget.width, origTarget.origWidth || 0, 78);
-          const newHeight = Math.max(origTarget.height, origTarget.origHeight || 0, 4.4);
-
-          filteredBlocks[targetIdx] = {
-            ...origTarget,
-            text: fullText,
-            width: Math.min(newWidth, 94 - origTarget.x),
-            height: newHeight,
-            origWidth: Math.max(origTarget.origWidth || origTarget.width, newWidth),
-            origHeight: Math.max(origTarget.origHeight || origTarget.height, newHeight),
-            fontSize: fillSchoolFontSize || origTarget.fontSize || 15,
-            fontWeight: "bold",
-            color: "#0f172a",
-            isEdited: true,
-            isErased: false,
-          };
-        } else {
-          // Option: Position right in front of "शाळेचे नाव"
-          const labelWidth = Math.max(origTarget.width, 13);
-          const startX = Math.min(origTarget.x + labelWidth + 0.8, 85);
-          const availableW = Math.max(25, 93 - startX);
-          const newHeight = Math.max(origTarget.height, 4.4);
-
-          const newBlock: DocumentTextBlock = {
-            id: customSchoolBlockId,
-            text: trimmedName,
-            x: Number(startX.toFixed(2)),
-            y: origTarget.y,
-            width: Number(availableW.toFixed(2)),
-            height: newHeight,
-            origWidth: availableW,
-            origHeight: newHeight,
-            fontSize: fillSchoolFontSize || origTarget.fontSize || 15,
-            fontWeight: "bold",
-            color: "#0f172a",
-            fontFamily: "Noto Sans Devanagari, sans-serif",
-            editable: true,
-            isCustom: true,
-          };
-          (newBlock as any).isEdited = true;
-          filteredBlocks.push(newBlock);
-        }
-
-        // Hide secondary dashed line blocks underneath if checked
-        if (hideSecondaryDashes) {
-          filteredBlocks.forEach((b, idx) => {
-            if (idx !== targetIdx) {
-              const isNearY = Math.abs(b.y - (origTarget.y + 2.5)) < 3.2;
-              const isNearX = Math.abs(b.x - origTarget.x) < 30;
-              const isOnlyDashes = /^[\s\-_.~=—–•\.]+$/.test(b.text || "");
-              if (isNearY && isNearX && isOnlyDashes) {
-                filteredBlocks[idx] = {
-                  ...b,
-                  text: "",
-                  isEdited: true,
-                  isErased: true,
-                };
-              }
-            }
-          });
-        }
-      } else {
-        // Fallback: If no block matching "शाळेचे नाव" on Page 1, place at standard top header
-        const fallbackBlock: DocumentTextBlock = {
-          id: customSchoolBlockId,
-          text: `शाळेचे नाव : ${trimmedName}`,
-          x: 5,
-          y: 3.2,
-          width: 88,
-          height: 4.5,
-          origWidth: 88,
-          origHeight: 4.5,
-          fontSize: fillSchoolFontSize || 15,
-          fontWeight: "bold",
-          color: "#0f172a",
-          fontFamily: "Noto Sans Devanagari, sans-serif",
-          editable: true,
-          isCustom: true,
-        };
-        (fallbackBlock as any).isEdited = true;
-        filteredBlocks.push(fallbackBlock);
-      }
-
-      page.textBlocks = filteredBlocks;
-      nextPages[pageIdx] = page;
-      return nextPages;
+      const { updatedPages } = applySchoolNameToDocumentPages(prevPages, cleanSchoolName);
+      return updatedPages;
     });
 
+    // Remember for this user specifically
+    if (userId) {
+      try {
+        localStorage.setItem(`user_question_paper_school_${userId}`, cleanSchoolName);
+      } catch (e) { }
+
+      if (userId !== "guest_teacher") {
+        try {
+          import("@/lib/firebase").then(({ db }) => {
+            import("firebase/firestore").then(({ doc, setDoc }) => {
+              const userDocRef = doc(db, "users", userId);
+              setDoc(
+                userDocRef,
+                { questionPaperSchoolName: cleanSchoolName },
+                { merge: true }
+              ).catch((err) =>
+                console.warn("Save questionPaperSchoolName notice:", err)
+              );
+            });
+          });
+        } catch (e) { }
+      }
+    }
+
+    saveUnifiedSchoolProfile({ schoolName: cleanSchoolName });
     setHasUserEdits(true);
     setShowFillSchoolModal(false);
-    toast.success("शाळेचे नाव व्यवस्थित बसवण्यात आले! (School Name Fitted Properly)");
+    toast.success("शाळेचे नाव जिथे आवश्यक आहे तिथे व्यवस्थित बसवले!");
   };
 
-  // Revert / Clear custom filled school name
+  // Revert / Clear custom filled school name across all pages
   const handleClearFilledSchoolName = () => {
-    if (pagesState.length === 0 || !docModel) return;
-    const pageIdx = 0;
-    const originalPage = docModel.pages[pageIdx];
+    if (userId) {
+      try {
+        localStorage.removeItem(`user_question_paper_school_${userId}`);
+      } catch (e) { }
+      if (userId !== "guest_teacher") {
+        try {
+          import("@/lib/firebase").then(({ db }) => {
+            import("firebase/firestore").then(({ doc, updateDoc, deleteField }) => {
+              const userDocRef = doc(db, "users", userId);
+              updateDoc(userDocRef, { questionPaperSchoolName: deleteField() }).catch(() => { });
+            });
+          });
+        } catch (e) { }
+      }
+    }
+    setFillSchoolNameInput("");
+
+    if (pagesState.length === 0 || !docModel) {
+      setShowFillSchoolModal(false);
+      return;
+    }
 
     setPagesState((prevPages) => {
-      const nextPages = [...prevPages];
-      const page = { ...nextPages[pageIdx] };
-      let blocks = page.textBlocks.filter((b) => b.id !== "custom_filled_school_name");
+      return prevPages.map((page, pIdx) => {
+        const originalPage = docModel.pages[pIdx];
+        let blocks = page.textBlocks.filter((b) => b.id !== "custom_filled_school_name");
 
-      blocks = blocks.map((b) => {
-        if (b.isEdited && (b.text?.includes("शाळेचे नाव") || b.text?.includes("शाळा"))) {
-          const origBlock = originalPage?.textBlocks.find((ob) => ob.id === b.id);
-          if (origBlock) {
-            return { ...origBlock, isEdited: false, isErased: false };
+        blocks = blocks.map((b) => {
+          if (
+            b.isEdited &&
+            (b.text?.includes("शाळेचे नाव") ||
+              b.text?.includes("शाळा") ||
+              b.text?.includes("SCHOOL NAME"))
+          ) {
+            const origBlock = originalPage?.textBlocks.find((ob) => ob.id === b.id);
+            if (origBlock) {
+              return { ...origBlock, isEdited: false, isErased: false };
+            }
           }
-        }
-        return b;
-      });
+          return b;
+        });
 
-      page.textBlocks = blocks;
-      nextPages[pageIdx] = page;
-      return nextPages;
+        return {
+          ...page,
+          textBlocks: blocks,
+        };
+      });
     });
 
     setShowFillSchoolModal(false);
     toast.info("शाळेचे नाव पूर्ववत करण्यात आले.");
   };
 
-  // Apply School Header quickly to Page 1
-  const handleApplySchoolHeader = () => {
-    if (pagesState.length === 0) return;
-    const pageIdx = 0;
-    const headerId1 = "custom_school_name_header";
-    const headerId2 = "custom_student_info_header";
 
-    const line1Text = kendraInput.trim()
-      ? `${schoolNameInput.trim()} • केंद्र: ${kendraInput.trim()}`
-      : schoolNameInput.trim();
-
-    const line2Parts: string[] = [];
-    if (studentNameInput.trim()) line2Parts.push(studentNameInput.trim());
-    if (rollNoInput.trim()) line2Parts.push(rollNoInput.trim());
-    if (examDateInput.trim()) line2Parts.push(`दिनांक: ${examDateInput.trim()}`);
-    if (totalMarksInput.trim()) line2Parts.push(`एकूण गुण: ${totalMarksInput.trim()}`);
-    const line2Text = line2Parts.join("   |   ");
-
-    setPagesState((prevPages) => {
-      const nextPages = [...prevPages];
-      const page = { ...nextPages[pageIdx] };
-      const otherBlocks = page.textBlocks.filter(
-        (b) => b.id !== headerId1 && b.id !== headerId2
-      );
-
-      const block1: DocumentTextBlock = {
-        id: headerId1,
-        text: line1Text,
-        x: 4,
-        y: 2,
-        width: 92,
-        height: 4.5,
-        fontSize: 16,
-        fontWeight: "800",
-        color: "#0f172a",
-        fontFamily: "Noto Sans Devanagari, sans-serif",
-        editable: true,
-        isCustom: true,
-      };
-      (block1 as any).isEdited = true;
-
-      const block2: DocumentTextBlock = {
-        id: headerId2,
-        text: line2Text,
-        x: 4,
-        y: 6.8,
-        width: 92,
-        height: 3.8,
-        fontSize: 13,
-        fontWeight: "600",
-        color: "#1e293b",
-        fontFamily: "Noto Sans Devanagari, sans-serif",
-        editable: true,
-        isCustom: true,
-      };
-      (block2 as any).isEdited = true;
-
-      page.textBlocks = [block1, block2, ...otherBlocks];
-      nextPages[pageIdx] = page;
-      return nextPages;
-    });
-
-    setShowSchoolHeaderModal(false);
-    setMode("edit");
-    toast.success("शाळेचे नाव व तपशील पहिल्या पानावर लागू झाले!");
-  };
 
   // Save Edits (User specific)
   const handleSaveEdits = async () => {
@@ -622,7 +687,9 @@ export function DocumentEditorViewer({
       setIsSaving(true);
       const userPagesPayload = pagesState.map((p) => ({
         pageNumber: p.pageNumber,
-        textBlocks: p.textBlocks,
+        textBlocks: p.textBlocks.filter(
+          (b) => b.isCustom || (b as any).isEdited || (b as any).isErased
+        ),
       }));
 
       await saveUserDocumentEdits(
@@ -673,20 +740,97 @@ export function DocumentEditorViewer({
     }
   };
 
+  /**
+   * Helper to generate a clean, meaningful filename for downloaded PDFs
+   * using the question paper's actual class, subject, and exam title.
+   */
+  const getProperDownloadFileName = (): string => {
+    let cleanTitle = (title || "").trim();
+    cleanTitle = cleanTitle.replace(/\.(pdf|docx|doc)$/i, "").trim();
+
+    const isTechnicalName =
+      !cleanTitle ||
+      /^clean_\d+/i.test(cleanTitle) ||
+      /^edited_pdf_/i.test(cleanTitle) ||
+      /^doc_\d+/i.test(cleanTitle) ||
+      cleanTitle.toLowerCase().includes("pdf_pages_");
+
+    if (!isTechnicalName) {
+      let safeName = cleanTitle.replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+      if (documentType === "question_paper" && !safeName.includes("प्रश्नपत्रिका")) {
+        safeName += " - प्रश्नपत्रिका";
+      } else if (documentType === "homework" && !safeName.includes("गृहपाठ")) {
+        safeName += " - गृहपाठ";
+      }
+      return safeName;
+    }
+
+    // Fallback: extract intelligent metadata from Page 1 text blocks
+    if (pagesState && pagesState.length > 0) {
+      const page1 = pagesState[0];
+      const blocks = page1.textBlocks || [];
+
+      const classBlock = blocks.find((b) => {
+        const t = (b.text || "").toLowerCase();
+        return (t.includes("इयत्ता") || t.includes("std")) && (b.y || 0) < 30;
+      });
+
+      const subjectBlock = blocks.find((b) => {
+        const t = (b.text || "").toLowerCase();
+        return (t.includes("विषय") || t.includes("sub")) && (b.y || 0) < 30;
+      });
+
+      const examBlock = blocks.find((b) => {
+        const t = (b.text || "").toLowerCase();
+        return (
+          (t.includes("चाचणी") ||
+            t.includes("मूल्यमापन") ||
+            t.includes("evaluation") ||
+            t.includes("test")) &&
+          (b.y || 0) < 30
+        );
+      });
+
+      const parts: string[] = [];
+      if (classBlock?.text) {
+        parts.push(classBlock.text.replace(/[:\-_]/g, " ").replace(/\s+/g, " ").trim());
+      }
+      if (subjectBlock?.text) {
+        parts.push(subjectBlock.text.replace(/[:\-_]/g, " ").replace(/\s+/g, " ").trim());
+      }
+      if (examBlock?.text) {
+        parts.push(examBlock.text.replace(/[:\-_]/g, " ").replace(/\s+/g, " ").trim());
+      }
+
+      if (parts.length > 0) {
+        let assembled = parts.join(" - ");
+        if (documentType === "question_paper" && !assembled.includes("प्रश्नपत्रिका")) {
+          assembled += " - प्रश्नपत्रिका";
+        } else if (documentType === "homework" && !assembled.includes("गृहपाठ")) {
+          assembled += " - गृहपाठ";
+        }
+        return assembled.replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+      }
+    }
+
+    return documentType === "question_paper"
+      ? "इयत्ता १ ली प्रश्नपत्रिका"
+      : "स्वाध्याय गृहपाठ";
+  };
+
   // PDF Export
   const handleDownloadPdf = async () => {
     if (!docModel) return;
     try {
       setIsExporting(true);
       toast.info("PDF तयार होत आहे, कृपया प्रतीक्षा करा...");
+      const downloadName = getProperDownloadFileName();
       const exportModel: DocumentModel = {
         ...docModel,
+        fileName: downloadName,
         pages: pagesState,
       };
-      await exportDocumentToPdf(
-        exportModel,
-        fileName ? fileName.replace(/\.[^/.]+$/, "") + "_edited" : "document_edited"
-      );
+      await exportDocumentToPdf(exportModel, downloadName);
       toast.success("PDF यशस्वीरित्या डाउनलोड झाली!");
     } catch (err: any) {
       console.error("PDF export error:", err);
@@ -699,8 +843,10 @@ export function DocumentEditorViewer({
   // Print
   const handlePrint = () => {
     if (!docModel) return;
+    const downloadName = getProperDownloadFileName();
     const printModel: DocumentModel = {
       ...docModel,
+      fileName: downloadName,
       pages: pagesState,
     };
     printDocument(printModel);
@@ -717,7 +863,7 @@ export function DocumentEditorViewer({
             : "गृहपाठ लोड होत आहे..."}
         </h3>
         <p className="text-xs text-slate-500 mt-1 max-w-sm">
-          मूळ डिझाइन, चित्रे व फॉन्ट अचूकतेने तयार केले जात आहेत. (₹0 AI Cost)
+          मूळ डिझाइन, चित्रे व फॉन्ट अचूकतेने तयार केले जात आहेत.
         </p>
       </div>
     );
@@ -801,22 +947,20 @@ export function DocumentEditorViewer({
                   setMode("view");
                   setActiveEditingBlockId(null);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  mode === "view"
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "text-slate-400 hover:text-white"
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${mode === "view"
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-white"
+                  }`}
               >
                 <Eye className="size-3.5" />
                 <span>पहा (View)</span>
               </button>
               <button
                 onClick={() => setMode("edit")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  mode === "edit"
-                    ? "bg-amber-600 text-white shadow-sm"
-                    : "text-slate-400 hover:text-white"
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${mode === "edit"
+                  ? "bg-amber-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-white"
+                  }`}
               >
                 <Edit3 className="size-3.5" />
                 <span>संपादित करा (Edit)</span>
@@ -836,17 +980,7 @@ export function DocumentEditorViewer({
             </button>
           )}
 
-          {/* School Header Quick Customizer Button */}
-          {canEdit && (
-            <button
-              onClick={() => setShowSchoolHeaderModal(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
-              title="शाळेचे नाव व तपशील बदला"
-            >
-              <Building2 className="size-3.5 text-blue-400" />
-              <span className="hidden md:inline">इतर तपशील (Header)</span>
-            </button>
-          )}
+
 
           {/* Zoom Buttons */}
           <div className="flex items-center bg-slate-800 rounded-xl border border-slate-700 px-1 py-0.5">
@@ -925,25 +1059,7 @@ export function DocumentEditorViewer({
               </button>
             )}
 
-            <button
-              onClick={handlePrint}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-all cursor-pointer"
-              title="प्रिंट करा (Print)"
-            >
-              <Printer className="size-4" />
-            </button>
 
-            {wordFileUrl && (
-              <a
-                href={wordFileUrl}
-                download={wordFileName || "question_paper.docx"}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
-                title="Word (.docx) फाईल डाऊनलोड करा"
-              >
-                <FileText className="size-3.5" />
-                <span className="hidden sm:inline">Word (.docx) डाउनलोड</span>
-              </a>
-            )}
 
             <button
               onClick={handleDownloadPdf}
@@ -1015,6 +1131,19 @@ export function DocumentEditorViewer({
                   setActiveEditingBlockId(null);
                 }
               }}
+              onDoubleClick={(e) => {
+                // Double clicking anywhere on page directly adds a new text block at that spot
+                if (mode === "edit") {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const clickX = Math.round(((e.clientX - rect.left) / rect.width) * 100);
+                  const clickY = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+                  handleAddCustomBlockAt(
+                    pageIdx,
+                    Math.max(4, Math.min(80, clickX)),
+                    Math.max(2, Math.min(94, clickY))
+                  );
+                }
+              }}
               className="relative bg-white shadow-2xl rounded-xl overflow-hidden transition-all select-text"
               style={{
                 width: `${displayWidth}px`,
@@ -1051,52 +1180,83 @@ export function DocumentEditorViewer({
               <div className="absolute inset-0 w-full h-full z-10 pointer-events-auto">
                 {page.textBlocks.map((block) => {
                   const isEditing = activeEditingBlockId === block.id && mode === "edit";
-                  const isErased = Boolean(block.isErased || (block.isEdited && !block.text?.trim()));
-                  const isModified = Boolean(block.isCustom || block.isEdited || isErased);
+                  const isErased = Boolean(
+                    (block as any).isErased || ((block as any).isEdited && !block.text?.trim())
+                  );
+                  const isModified = Boolean(
+                    block.isCustom || (block as any).isEdited || isErased
+                  );
 
-                  // In view mode: if not modified and background exists, don't render anything
+                  // In view mode: if not modified and background exists, don't render anything (prevents double text)
                   if (mode === "view" && page.backgroundUrl && !isModified) {
                     return null;
                   }
 
+                  const isSchoolBlock =
+                    (block.text || "").includes("शाळेचे नाव") ||
+                    (block.text || "").includes("SCHOOL NAME") ||
+                    block.id === "custom_filled_school_name";
+
                   const origW = block.origWidth || block.width;
                   const origH = block.origHeight || block.height;
-                  const maskW = Math.max(block.width, origW);
-                  const maskH = Math.max(block.height, origH);
+                  const blockWidthPct = isSchoolBlock
+                    ? Math.max(block.width, origW, 92.0 - block.x)
+                    : Math.max(block.width, origW);
+                  const blockHeightPct = isSchoolBlock
+                    ? Math.max(block.height, origH, 4.5)
+                    : Math.max(block.height, origH, 2.4);
 
-                  // Calculate exact font size scaled 1:1 with rendered PDF viewport
-                  const scaleRatio = page.width > 0 ? displayWidth / page.width : zoomScale;
-                  const exactFontSize = Math.max(8, Math.round((block.fontSize || 12) * scaleRatio));
-                  const isBold =
-                    block.fontWeight === "bold" ||
-                    (typeof block.fontWeight === "number" && block.fontWeight >= 600) ||
-                    block.fontWeight === "600" ||
-                    block.fontWeight === "700";
-                  const exactFontWeight = isBold ? "bold" : "normal";
+                  // Scale font size strictly according to the page's actual rendering scale so that edited text remains the exact same font size as the original text on that page
+                  const pageScale = page.width > 0 ? displayWidth / page.width : zoomScale;
+                  const baseFontSize = block.fontSize || (isSchoolBlock ? 20 : 14);
+                  const renderedFontSize = Math.max(11, Math.round(baseFontSize * pageScale));
 
-                  // 1. ACTIVE EDITING BLOCK: Solid white background covering original sentence
-                  if (isEditing) {
-                    return (
-                      <div
-                        key={block.id}
-                        className="doc-text-block-item absolute z-50 bg-white rounded-md shadow-2xl p-1.5"
-                        style={{
-                          left: `${block.x}%`,
-                          top: `${block.y}%`,
-                          width: `${Math.max(maskW, 20)}%`,
-                          minHeight: `${Math.max(maskH, 3.2)}%`,
-                          minWidth: "150px",
-                          maxWidth: "96%",
-                          backgroundColor: "#ffffff",
-                          boxShadow: "0 0 0 3px #ffffff, 0 8px 24px rgba(0,0,0,0.25)",
-                        }}
-                      >
-                        <div className="relative w-full h-full">
+                  return (
+                    <div
+                      key={block.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (mode === "edit" && !isEditing) {
+                          setActiveEditingBlockId(block.id);
+                        }
+                      }}
+                      className={`doc-text-block-item absolute transition-none ${isEditing
+                        ? "bg-white z-40 ring-2 ring-blue-500 rounded-xs shadow-xs"
+                        : isModified
+                          ? "bg-white z-30 rounded-xs cursor-pointer"
+                          : mode === "edit"
+                            ? "hover:ring-1 hover:ring-blue-400 hover:bg-blue-400/10 cursor-text z-20 rounded-xs"
+                            : "z-10"
+                        }`}
+                      style={{
+                        left: `${block.x}%`,
+                        top: `${block.y}%`,
+                        width: `${blockWidthPct}%`,
+                        minWidth: isEditing
+                          ? `${Math.max(blockWidthPct, 15)}%`
+                          : isModified
+                            ? `${blockWidthPct}%`
+                            : "20px",
+                        minHeight: `${blockHeightPct}%`,
+                        maxWidth: "96%",
+                        fontSize: `${renderedFontSize}px`,
+                        fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif",
+                        fontWeight: block.fontWeight || "600",
+                        color: block.color || "#0f172a",
+                        lineHeight: 1.25,
+                        backgroundColor:
+                          isModified || isEditing ? "#ffffff" : "transparent",
+                        boxShadow: isEditing ? "0 0 0 2px #3b82f6" : undefined,
+                      }}
+                    >
+                      {isEditing ? (
+                        /* DIRECT SEAMLESS IN-PLACE EDITING (NO POPUP CARD, NO BUTTONS) */
+                        <div className="relative w-full h-full bg-white">
                           <textarea
                             autoFocus
                             rows={Math.max(1, (block.text || "").split("\n").length)}
                             value={block.text || ""}
-                            placeholder="येथे नवीन मजकूर टाईप करा (किंवा खोडण्यासाठी रिक्त ठेवा)..."
+                            placeholder="येथे मजकूर टाईप करा..."
                             onChange={(e) =>
                               handleUpdateBlockText(pageIdx, block.id, e.target.value)
                             }
@@ -1105,184 +1265,67 @@ export function DocumentEditorViewer({
                               if (e.key === "Escape") {
                                 setActiveEditingBlockId(null);
                               }
-                            }}
-                            className="w-full bg-white text-slate-900 border-2 border-indigo-600 rounded outline-none p-1 resize-none font-sans"
-                            style={{
-                              fontSize: `${exactFontSize}px`,
-                              fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif",
-                              fontWeight: exactFontWeight,
-                              lineHeight: 1.25,
-                            }}
-                          />
-                          <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-100 gap-1 flex-wrap">
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  handleUpdateBlockText(pageIdx, block.id, "");
-                                  toast.success("मजकूर खोडला गेला! (Erased)");
-                                }}
-                                className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-[11px] font-bold cursor-pointer flex items-center gap-1"
-                                title="हा मजकूर खोडा (Erase text)"
-                              >
-                                <Trash2 className="size-3" />
-                                <span>खोडा (Erase)</span>
-                              </button>
-                              {(block.isEdited || block.isCustom) && (
-                                <button
-                                  type="button"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    block.isCustom
-                                      ? handleDeleteBlock(pageIdx, block.id)
-                                      : handleRevertBlock(pageIdx, block.id);
-                                    setActiveEditingBlockId(null);
-                                  }}
-                                  className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded text-[11px] font-bold cursor-pointer flex items-center gap-1"
-                                  title={block.isCustom ? "हटवा" : "मूळ मजकूर परत आणा"}
-                                >
-                                  <RotateCcw className="size-3" />
-                                  <span>पूर्ववत (Revert)</span>
-                                </button>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              onMouseDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey && !(block.text || "").includes("\n")) {
                                 e.preventDefault();
                                 setActiveEditingBlockId(null);
-                              }}
-                              className="px-3 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[11px] font-bold shadow-sm cursor-pointer flex items-center gap-1"
-                              title="बदल पूर्ण करा (Done)"
-                            >
-                              <Check className="size-3" />
-                              <span>पूर्ण (Done)</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // 2. ERASED BLOCK: Solid white patch completely wiping out the underlying text
-                  if (isErased) {
-                    if (mode === "view") {
-                      return (
-                        <div
-                          key={block.id}
-                          className="absolute z-20 pointer-events-none"
-                          style={{
-                            left: `${block.x}%`,
-                            top: `${block.y}%`,
-                            width: `${maskW}%`,
-                            height: `${maskH}%`,
-                            backgroundColor: "#ffffff",
-                            boxShadow: "0 0 0 3px #ffffff",
-                          }}
-                        />
-                      );
-                    }
-                    return (
-                      <div
-                        key={block.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveEditingBlockId(block.id);
-                        }}
-                        className="absolute z-30 border border-dashed border-rose-400 hover:border-rose-600 rounded cursor-pointer group transition-all"
-                        style={{
-                          left: `${block.x}%`,
-                          top: `${block.y}%`,
-                          width: `${maskW}%`,
-                          minHeight: `${Math.max(maskH, 2.5)}%`,
-                          backgroundColor: "#ffffff",
-                          boxShadow: "0 0 0 2px #ffffff",
-                        }}
-                        title="हा मजकूर खोडला आहे. नवीन मजकूर टाईप करण्यासाठी येथे क्लिक करा."
-                      >
-                        <div className="flex items-center justify-between px-1.5 py-0.5 text-[10px] text-rose-600 font-bold select-none h-full">
-                          <span className="flex items-center gap-1 opacity-80 group-hover:opacity-100 truncate">
-                            <Eraser className="size-3 shrink-0" />
-                            <span className="truncate">खोडून टाकले (Erased)</span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              block.isCustom
-                                ? handleDeleteBlock(pageIdx, block.id)
-                                : handleRevertBlock(pageIdx, block.id);
+                              }
                             }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-[9px] px-1.5 shrink-0"
-                            title={block.isCustom ? "हटवा" : "मूळ मजकूर परत आणा"}
-                          >
-                            {block.isCustom ? "हटवा" : "पूर्ववत"}
-                          </button>
+                            className="w-full h-full bg-white text-slate-900 border-none outline-none p-0 m-0 resize-none font-inherit leading-tight selection:bg-blue-200"
+                            style={{
+                              fontSize: "inherit",
+                              fontFamily: "inherit",
+                              fontWeight: "inherit",
+                              lineHeight: 1.25,
+                              color: block.color || "#0f172a",
+                              backgroundColor: "#ffffff",
+                              display: "block",
+                            }}
+                          />
                         </div>
-                      </div>
-                    );
-                  }
-
-                  // 3. MODIFIED WITH NEW TEXT: Solid white backing hiding original sentence + new text cleanly displayed
-                  if (isModified && block.text?.trim()) {
-                    return (
-                      <div
-                        key={block.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (mode === "edit") {
-                            setActiveEditingBlockId(block.id);
-                          }
-                        }}
-                        className={`doc-text-block-item absolute transition-all z-30 ${
-                          mode === "edit"
-                            ? "hover:ring-2 hover:ring-amber-400 cursor-pointer rounded"
+                      ) : isModified ? (
+                        /* MODIFIED TEXT DIRECTLY ON THE SHEET OVER SOLID WHITE BACKING (NO UNDERLYING TEXT VISIBLE) */
+                        <div className="relative group px-0.5 bg-white w-full h-full min-h-[16px] leading-tight">
+                          {isErased ? (
+                            <span className="block text-slate-300 text-[10px] italic select-none">
+                              {mode === "edit" ? "(खोडून टाकले)" : ""}
+                            </span>
+                          ) : (
+                            <span
+                              className={`block ${isSchoolBlock
+                                ? "whitespace-nowrap"
+                                : "whitespace-pre-wrap break-words"
+                                }`}
+                            >
+                              {block.text}
+                            </span>
+                          )}
+                          {mode === "edit" && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                block.isCustom
+                                  ? handleDeleteBlock(pageIdx, block.id)
+                                  : handleRevertBlock(pageIdx, block.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-2.5 -right-2.5 p-0.5 bg-slate-700 hover:bg-slate-900 text-white rounded-full shadow-xs z-30"
+                              title={block.isCustom ? "हटवा" : "मूळ मजकूर परत आणा"}
+                            >
+                              <RotateCcw className="size-2.5" />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        /* UNEDITED BLOCK: INVISIBLE HOTSPOT DIRECTLY ON SHEET */
+                        <div
+                          className={`w-full h-full min-h-[16px] transition-all rounded ${mode === "edit"
+                            ? "hover:border hover:border-amber-400 hover:bg-amber-400/20 cursor-text"
                             : ""
-                        }`}
-                        style={{
-                          left: `${block.x}%`,
-                          top: `${block.y}%`,
-                          minWidth: `${maskW}%`,
-                          minHeight: `${maskH}%`,
-                          backgroundColor: "#ffffff",
-                          boxShadow: "0 0 0 2px #ffffff",
-                          fontSize: `${exactFontSize}px`,
-                          fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif",
-                          fontWeight: exactFontWeight,
-                          color: block.color || "#0f172a",
-                          lineHeight: 1.25,
-                        }}
-                        title={mode === "edit" ? "बदल करण्यासाठी थेट क्लिक करा (Click to edit)" : undefined}
-                      >
-                        <div className="relative p-0 leading-tight">
-                          <span className="block whitespace-pre-wrap break-words">
-                            {block.text}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // 4. UNEDITED BLOCK: Direct click-to-edit hotspot in edit mode (no hover popups)
-                  return (
-                    <div
-                      key={block.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveEditingBlockId(block.id);
-                      }}
-                      className="absolute z-20 cursor-pointer rounded hover:bg-amber-400/20 hover:ring-1.5 hover:ring-amber-400 transition-colors"
-                      style={{
-                        left: `${block.x}%`,
-                        top: `${block.y}%`,
-                        width: `${Math.max(block.width, 3)}%`,
-                        minWidth: "26px",
-                        height: `${Math.max(block.height, 2.2)}%`,
-                        minHeight: "18px",
-                      }}
-                      title="संपादित करण्यासाठी थेट क्लिक करा (Click to edit)"
-                    />
+                            }`}
+                          title={mode === "edit" ? "बदलण्यासाठी येथे क्लिक करा" : undefined}
+                        />
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -1296,124 +1339,7 @@ export function DocumentEditorViewer({
         })}
       </div>
 
-      {/* School Header Quick Customizer Modal */}
-      {showSchoolHeaderModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-lg w-full text-slate-800 shadow-2xl space-y-4 border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-blue-100 text-blue-700">
-                  <Building2 className="size-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-base text-slate-900">
-                    शाळेचे नाव व माहिती जोडा (School Header)
-                  </h3>
-                  <p className="text-xs text-slate-500 font-medium">
-                    पहिल्या पानावर आपल्या शाळेचे नाव, केंद्र व विद्यार्थ्याची माहिती जोडा.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowSchoolHeaderModal(false)}
-                className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700"
-              >
-                <X className="size-5" />
-              </button>
-            </div>
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  शाळेचे नाव (School Name):
-                </label>
-                <input
-                  type="text"
-                  value={schoolNameInput}
-                  onChange={(e) => setSchoolNameInput(e.target.value)}
-                  placeholder="उदा. जि. प. प्राथमिक शाळा, पुणे"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">केंद्र (Center):</label>
-                  <input
-                    type="text"
-                    value={kendraInput}
-                    onChange={(e) => setKendraInput(e.target.value)}
-                    placeholder="उदा. केंद्र शाळा"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">दिनांक (Date):</label>
-                  <input
-                    type="text"
-                    value={examDateInput}
-                    onChange={(e) => setExamDateInput(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  विद्यार्थी नाव व हजेरी क्र. ओळ:
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    value={studentNameInput}
-                    onChange={(e) => setStudentNameInput(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
-                  />
-                  <input
-                    type="text"
-                    value={rollNoInput}
-                    onChange={(e) => setRollNoInput(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
-                  />
-                </div>
-              </div>
-
-              {documentType === "question_paper" && (
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    एकूण गुण (Total Marks, optional):
-                  </label>
-                  <input
-                    type="text"
-                    value={totalMarksInput}
-                    onChange={(e) => setTotalMarksInput(e.target.value)}
-                    placeholder="उदा. २०"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold outline-none focus:border-blue-600 focus:bg-white"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowSchoolHeaderModal(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
-              >
-                रद्द करा
-              </button>
-              <button
-                type="button"
-                onClick={handleApplySchoolHeader}
-                className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5"
-              >
-                <Check className="size-4" />
-                <span>लागू करा (Apply to Page 1)</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Fill School Name Modal */}
       {showFillSchoolModal && (
@@ -1444,142 +1370,31 @@ export function DocumentEditorViewer({
               </button>
             </div>
 
-            <div className="space-y-4 text-xs">
+            <div className="space-y-4">
               {/* Input for school name */}
               <div>
-                <label className="block font-bold text-slate-800 mb-1.5">
+                <label className="block font-bold text-slate-800 mb-1.5 text-sm">
                   शाळेचे नाव (School Name):
                 </label>
                 <input
                   type="text"
                   value={fillSchoolNameInput}
                   onChange={(e) => setFillSchoolNameInput(e.target.value)}
-                  placeholder="उदा. जिल्हा परिषद प्राथमिक शाळा, कात्रज"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-emerald-500/40 rounded-xl font-bold text-slate-900 text-sm outline-none focus:border-emerald-600 focus:bg-white shadow-xs"
+                  placeholder="उदा. जिल्हा परिषद प्राथमिक शाळा..."
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleFillSchoolName();
+                    }
+                  }}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-emerald-500/40 rounded-xl font-bold text-slate-900 text-sm outline-none focus:border-emerald-600 focus:bg-white shadow-xs"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">
-                  ✓ प्रोफाईलमधून आपोआप भरले आहे. आवश्यकतेनुसार बदलू शकता.
+                <p className="text-[11px] text-slate-500 mt-1.5">
+                  {fillSchoolNameInput
+                    ? "✓ भरलेले शाळेचे नाव प्रश्नपत्रिकेवर १ ओळीत आपोआप व्यवस्थित (Auto-Fit) बसवले जाईल व कायम लक्षात ठेवले जाईल."
+                    : "प्रथम रिक्त राहील. आपण एकदा शाळेचे नाव भरल्यास ते आपल्यासाठी कायम लक्षात ठेवले जाईल."}
                 </p>
               </div>
-
-              {/* Live Preview Box */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  दिसण्याचा नमुना (Live Document Preview):
-                </label>
-                <div className="p-3 bg-slate-50 border-2 border-dashed border-emerald-300 rounded-xl space-y-1">
-                  <div className="text-[11px] text-slate-500 font-semibold">
-                    प्रश्नपत्रिकेवर असे दिसेल:
-                  </div>
-                  <div
-                    className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs font-bold text-slate-900 flex items-center gap-1.5"
-                    style={{ fontSize: `${fillSchoolFontSize}px` }}
-                  >
-                    {fillSchoolPlacement === "full_line" ? (
-                      <>
-                        <span className="font-extrabold text-slate-900 shrink-0">शाळेचे नाव :</span>
-                        <span className="text-emerald-900 underline decoration-emerald-500/50 decoration-2">
-                          {fillSchoolNameInput || "येथे शाळेचे नाव येईल"}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-slate-400 font-normal shrink-0">शाळेचे नाव</span>
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-900">
-                          {fillSchoolNameInput || "येथे शाळेचे नाव येईल"}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Placement style mode chips */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1.5">
-                  बसविण्याचा प्रकार (Placement Style):
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFillSchoolPlacement("full_line")}
-                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
-                      fillSchoolPlacement === "full_line"
-                        ? "bg-emerald-50 border-emerald-500 text-emerald-900 font-bold shadow-2xs"
-                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    <div className="font-bold flex items-center gap-1">
-                      <span>शाळेचे नाव : [नाव]</span>
-                      {fillSchoolPlacement === "full_line" && <Check className="size-3 text-emerald-600" />}
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-normal mt-0.5">
-                      पूर्ण ओळ स्वच्छ पांढऱ्या पार्श्वभूमीवर (Recommended)
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFillSchoolPlacement("infront")}
-                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
-                      fillSchoolPlacement === "infront"
-                        ? "bg-emerald-50 border-emerald-500 text-emerald-900 font-bold shadow-2xs"
-                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    <div className="font-bold flex items-center gap-1">
-                      <span>केवळ [शाळेचे नाव]</span>
-                      {fillSchoolPlacement === "infront" && <Check className="size-3 text-emerald-600" />}
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-normal mt-0.5">
-                      मूळ 'शाळेचे नाव' पुढे ओव्हरले म्हणून
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Font Size & Options */}
-              <div className="flex items-center justify-between gap-3 pt-1">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    अक्षरांचा आकार (Font Size):
-                  </label>
-                  <div className="flex items-center gap-1">
-                    {[
-                      { size: 13, label: "लहान (13px)" },
-                      { size: 15, label: "मध्यम (15px)" },
-                      { size: 17, label: "मोठे (17px)" },
-                      { size: 20, label: "ठळक (20px)" },
-                    ].map((f) => (
-                      <button
-                        key={f.size}
-                        type="button"
-                        onClick={() => setFillSchoolFontSize(f.size)}
-                        className={`px-2 py-1 rounded-lg border text-[11px] font-bold cursor-pointer transition-all ${
-                          fillSchoolFontSize === f.size
-                            ? "bg-emerald-600 text-white border-emerald-600"
-                            : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Checkbox for covering original lines */}
-              <label className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={hideSecondaryDashes}
-                  onChange={(e) => setHideSecondaryDashes(e.target.checked)}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 size-4"
-                />
-                <span className="text-xs font-semibold text-slate-700 select-none">
-                  मूळ तुटक / डॅश रेषा (Underlines) स्वच्छ झाकून टाका
-                </span>
-              </label>
             </div>
 
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">

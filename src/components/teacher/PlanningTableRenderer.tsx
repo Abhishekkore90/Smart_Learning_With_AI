@@ -529,6 +529,31 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       return Object.values(splitMap);
     };
 
+    const extractRowsFromRecord = (rec: any): string[][] => {
+      if (!rec) return [];
+      if (rec.rowsJson && typeof rec.rowsJson === "string") {
+        try {
+          const parsed = JSON.parse(rec.rowsJson);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch (e) {}
+      }
+      if (Array.isArray(rec.cellRows) && rec.cellRows.length > 0) {
+        return rec.cellRows.map((r: any) => (r.c || r.cells || (Array.isArray(r) ? r : [])));
+      }
+      if (Array.isArray(rec.rawDataRows) && rec.rawDataRows.length > 0) {
+        return rec.rawDataRows.map((r: any) => (Array.isArray(r) ? r : (r.c || r.cells || [])));
+      }
+      if (Array.isArray(rec.rows) && rec.rows.length > 0) {
+        return rec.rows.map((r: any) => (Array.isArray(r) ? r : (r.c || r.cells || [])));
+      }
+      if (Array.isArray(rec.gridData) && rec.gridData.length > 0) {
+        return rec.gridData.map((rowCells: any[]) =>
+          rowCells.map((cell: any) => (typeof cell === "string" ? cell : cell?.value || ""))
+        );
+      }
+      return [];
+    };
+
     // 1. If user or admin has saved customized edit data, verify section type match before using
     if (savedUserEditRecord) {
       const recAny = savedUserEditRecord as any;
@@ -573,8 +598,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       }
 
       const currentRec = savedUserEditRecord || record;
-      const recAny = currentRec as any;
-      let rowsToUse: string[][] = recAny?.rawDataRows || currentRec?.rows || [];
+      let rowsToUse: string[][] = extractRowsFromRecord(currentRec);
       if (rowsToUse.length === 0 && parsedWorkbook?.rawGrid) {
         rowsToUse = parsedWorkbook.rawGrid;
       }
@@ -601,7 +625,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       return Object.values(parsedWorkbook.subjects);
     }
 
-    // 4. Otherwise fallback to record tableRows / rawDataRows
+    // 4. Otherwise fallback to record tableRows / rawDataRows / rowsJson
     if (record) {
       const recAny = record as any;
 
@@ -610,16 +634,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         if (sections.length > 0) return sections;
       }
 
-      let rowsToUse: string[][] = [];
-      if (recAny.rawDataRows && Array.isArray(recAny.rawDataRows) && recAny.rawDataRows.length > 0) {
-        rowsToUse = recAny.rawDataRows;
-      } else if (record.rows && Array.isArray(record.rows) && record.rows.length > 0) {
-        rowsToUse = record.rows;
-      } else if (record.gridData && Array.isArray(record.gridData) && record.gridData.length > 0) {
-        rowsToUse = record.gridData.map((rowCells) =>
-          rowCells.map((cell) => (typeof cell === "string" ? cell : cell?.value || ""))
-        );
-      }
+      let rowsToUse: string[][] = extractRowsFromRecord(record);
 
       if (rowsToUse.length > 0) {
         const splitMap = splitRowsIntoSubjectSections(rowsToUse, record.subjectId || "मराठी");

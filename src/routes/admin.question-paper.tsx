@@ -492,32 +492,6 @@ function AdminQuestionPaperPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* View Switcher: Document vs Template */}
-                    <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs">
-                      {activePreviewPaper.fileUrl && (
-                        <button
-                          onClick={() => setPreviewTab("doc")}
-                          className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                            previewTab === "doc"
-                              ? "bg-indigo-600 text-white shadow-xs"
-                              : "text-slate-400 hover:text-white"
-                          }`}
-                        >
-                          मूळ दस्तऐवज व संपादन (Document & Word)
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setPreviewTab("template")}
-                        className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                          previewTab === "template"
-                            ? "bg-indigo-600 text-white shadow-xs"
-                            : "text-slate-400 hover:text-white"
-                        }`}
-                      >
-                        चाचणी पत्रिका साचा (Template)
-                      </button>
-                    </div>
-
                     <button
                       onClick={() => setActivePreviewPaper(null)}
                       className="p-1.5 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer"
@@ -528,7 +502,7 @@ function AdminQuestionPaperPage() {
                 </div>
 
                 <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
-                  {previewTab === "doc" && activePreviewPaper.fileUrl ? (
+                  {activePreviewPaper.fileUrl ? (
                     <DocumentEditorViewer
                       documentId={activePreviewPaper.id}
                       fileUrl={activePreviewPaper.fileUrl}
@@ -645,6 +619,7 @@ function AdminQuestionPaperPage() {
                   onClick={() => {
                     setSelectedExamTab(tab.id);
                     setExamType(tab.id);
+                    setFilterExamType(tab.id);
                   }}
                   className={`relative p-3.5 sm:p-4 rounded-2xl text-left transition-all duration-200 border-2 cursor-pointer flex items-center gap-3 shadow-xs ${
                     isActive
