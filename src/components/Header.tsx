@@ -115,6 +115,7 @@ export function Header() {
       path.startsWith("/ai-tools") ||
       path.startsWith("/digital-school") ||
       path.startsWith("/digital_school") ||
+      path.startsWith("/mcq") ||
       path === "/digital_school.html" ||
       path === "/login" ||
       path === "/signup"

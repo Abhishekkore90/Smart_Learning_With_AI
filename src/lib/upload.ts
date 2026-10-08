@@ -14,6 +14,7 @@ export interface UploadResult {
   url: string;
   storageProvider: "bunny" | "firebase";
   fileName: string;
+
   sizeBytes: number;
 }
 
@@ -29,7 +30,7 @@ export async function uploadFileWithProgress(
   const {
     folderPath = "documents",
     onProgress,
-    maxSizeBytes = 10 * 1024 * 1024, // 10MB default limit
+    maxSizeBytes = 100 * 1024 * 1024, // 100MB default limit (large question papers & scanned PDFs)
   } = options;
 
   if (file.size > maxSizeBytes) {

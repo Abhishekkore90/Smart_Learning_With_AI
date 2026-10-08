@@ -382,72 +382,7 @@ function QuestionPaperPage() {
         ) : (
           /* STEPPING SELECTION WORKFLOW */
           <div className="space-y-6">
-            {/* 4 EXAM TABS: चाचणी १ | प्रथम सत्र | चाचणी २ | द्वितीय सत्र */}
-            <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-black text-xs shadow-xs">
-                    ★
-                  </div>
-                  <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
-                    परीक्षा निवडा (Select Exam):
-                  </h3>
-                </div>
-                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
-                  सध्याची निवड: <strong className="text-indigo-950 font-black">{EXAM_TABS.find(t => t.id === selectedExamTab)?.labelMr || "चाचणी १"}</strong>
-                </span>
-              </div>
 
-              {/* The 4 Exam Tabs Grid */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
-                {EXAM_TABS.map((tab, idx) => {
-                  const isActive = selectedExamTab === tab.id;
-                  const IconComponent = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        setSelectedExamTab(tab.id);
-                        setFilterExamType(tab.id);
-                      }}
-                      className={`relative p-3.5 sm:p-4 rounded-2xl text-left transition-all duration-200 border-2 cursor-pointer flex items-center gap-3 shadow-xs ${
-                        isActive
-                          ? `bg-gradient-to-r ${tab.color} text-white border-transparent shadow-md scale-[1.02]`
-                          : "bg-slate-50/70 hover:bg-white text-slate-800 border-slate-200 hover:border-indigo-300 hover:shadow-xs"
-                      }`}
-                    >
-                      <div
-                        className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
-                          isActive ? "bg-white/20 text-white" : "bg-white text-slate-700 border border-slate-200 shadow-2xs"
-                        }`}
-                      >
-                        <IconComponent className="size-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-                              isActive ? "bg-white/25 text-white" : "bg-slate-200 text-slate-700"
-                            }`}
-                          >
-                            {idx + 1}
-                          </span>
-                          <span className="font-black text-base sm:text-lg leading-tight truncate">
-                            {tab.labelMr}
-                          </span>
-                        </div>
-                        <div className={`text-[11px] font-semibold mt-0.5 ${isActive ? "text-white/80" : "text-slate-400"}`}>
-                          {tab.labelEn}
-                        </div>
-                      </div>
-                      {isActive && (
-                        <span className="size-2 rounded-full bg-white shadow-xs shrink-0" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
             {/* STEP 1: MEDIUM */}
             {step === "medium" && (
@@ -535,6 +470,73 @@ function QuestionPaperPage() {
             {/* STEP 3: SUBJECT */}
             {step === "subject" && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                {/* 4 EXAM TABS: चाचणी १ | प्रथम सत्र | चाचणी २ | द्वितीय सत्र */}
+                <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-black text-xs shadow-xs">
+                        ★
+                      </div>
+                      <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                        परीक्षा निवडा (Select Exam):
+                      </h3>
+                    </div>
+                    <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+                      सध्याची निवड: <strong className="text-indigo-950 font-black">{EXAM_TABS.find(t => t.id === selectedExamTab)?.labelMr || "चाचणी १"}</strong>
+                    </span>
+                  </div>
+
+                  {/* The 4 Exam Tabs Grid */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+                    {EXAM_TABS.map((tab, idx) => {
+                      const isActive = selectedExamTab === tab.id;
+                      const IconComponent = tab.icon;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => {
+                            setSelectedExamTab(tab.id);
+                            setFilterExamType(tab.id);
+                          }}
+                          className={`relative p-3.5 sm:p-4 rounded-2xl text-left transition-all duration-200 border-2 cursor-pointer flex items-center gap-3 shadow-xs ${
+                            isActive
+                              ? `bg-gradient-to-r ${tab.color} text-white border-transparent shadow-md scale-[1.02]`
+                              : "bg-slate-50/70 hover:bg-white text-slate-800 border-slate-200 hover:border-indigo-300 hover:shadow-xs"
+                          }`}
+                        >
+                          <div
+                            className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
+                              isActive ? "bg-white/20 text-white" : "bg-white text-slate-700 border border-slate-200 shadow-2xs"
+                            }`}
+                          >
+                            <IconComponent className="size-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                                  isActive ? "bg-white/25 text-white" : "bg-slate-200 text-slate-700"
+                                }`}
+                              >
+                                {idx + 1}
+                              </span>
+                              <span className="font-black text-base sm:text-lg leading-tight truncate">
+                                {tab.labelMr}
+                              </span>
+                            </div>
+                            <div className={`text-[11px] font-semibold mt-0.5 ${isActive ? "text-white/80" : "text-slate-400"}`}>
+                              {tab.labelEn}
+                            </div>
+                          </div>
+                          {isActive && (
+                            <span className="size-2 rounded-full bg-white shadow-xs shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
                     <h2 className="text-xl sm:text-2xl font-black text-slate-800">

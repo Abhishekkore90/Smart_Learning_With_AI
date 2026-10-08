@@ -267,17 +267,6 @@ function HomeworkPage() {
                 >
                   २. इयत्ता
                 </button>
-                <ChevronRight className="size-3.5 text-white/40" />
-                <button
-                  onClick={() => setStep("subject")}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                    step === "subject"
-                      ? "bg-white text-emerald-900 shadow-md font-black"
-                      : "text-white/80 hover:text-white"
-                  }`}
-                >
-                  ३. विषय
-                </button>
               </div>
             )}
           </div>
@@ -420,7 +409,7 @@ function HomeworkPage() {
                         onClick={() => {
                           setSelectedClass(cls.id);
                           setSelectedSubject("");
-                          setStep("subject");
+                          setStep("list");
                         }}
                         className={`p-6 rounded-2xl text-center transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-lg ${
                           isSelected
@@ -440,61 +429,6 @@ function HomeworkPage() {
               </motion.div>
             )}
 
-            {/* STEP 3: SUBJECT */}
-            {step === "subject" && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-slate-800">
-                      पायरी ३: विषय निवडा (Select Subject)
-                    </h2>
-                    <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                      {currentMediumObj?.labelMr} • {currentClassObj?.mr}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setStep("class")}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 cursor-pointer"
-                  >
-                    <ChevronLeft className="size-4" /> इयत्ता बदला
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {availableSubjects.map((subj, idx) => {
-                    const IconComponent = getSubjectIcon(subj);
-                    const isSelected = selectedSubject === subj;
-                    const grad = GRADIENTS[idx % GRADIENTS.length];
-                    return (
-                      <button
-                        key={subj}
-                        onClick={() => {
-                          setSelectedSubject(subj);
-                          setStep("list");
-                        }}
-                        className={`p-5 rounded-2xl text-left transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-lg flex items-center gap-4 ${
-                          isSelected
-                            ? "bg-gradient-to-r " + grad.bg + " text-white border-transparent scale-102"
-                            : "bg-white text-slate-800 border-slate-200 hover:border-amber-400 hover:bg-amber-50/20"
-                        }`}
-                      >
-                        <div className={`size-12 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? "bg-white/20" : "bg-amber-100 text-amber-700"}`}>
-                          <IconComponent className="size-6" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-black text-base truncate">{subj}</div>
-                          <div className={`text-xs font-semibold ${isSelected ? "text-white/80" : "text-slate-400"}`}>
-                            गृहपाठ पाहण्यासाठी क्लिक करा
-                          </div>
-                        </div>
-                        <ChevronRight className="size-5 shrink-0 opacity-60" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-
             {/* STEP 4: HOMEWORK LIST */}
             {step === "list" && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -507,10 +441,6 @@ function HomeworkPage() {
                     <span className="text-slate-400">/</span>
                     <span className="px-3 py-1 rounded-lg bg-orange-100 text-orange-800 font-bold">
                       {currentClassObj?.mr}
-                    </span>
-                    <span className="text-slate-400">/</span>
-                    <span className="px-3 py-1 rounded-lg bg-indigo-100 text-indigo-800 font-bold">
-                      विषय: {selectedSubject}
                     </span>
                   </div>
 
@@ -549,10 +479,11 @@ function HomeworkPage() {
                     </div>
 
                     <button
-                      onClick={() => setStep("subject")}
-                      className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                      onClick={() => setStep("class")}
+                      className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer flex items-center gap-1"
                     >
-                      विषय बदला
+                      <ChevronLeft className="size-3.5" />
+                      <span>इयत्ता बदला</span>
                     </button>
                   </div>
                 </div>
@@ -626,7 +557,7 @@ function HomeworkPage() {
                     <p className="text-xs text-slate-500 max-w-md mx-auto">
                       {filterDate
                         ? "इतर तारीख निवडा किंवा फिल्टर काढून सर्व गृहपाठ तपासा."
-                        : `${currentMediumObj?.labelMr} • ${currentClassObj?.mr} • ${selectedSubject} विषयासाठी ॲडमिनने अद्याप गृहपाठ अपलोड केलेला नाही.`}
+                        : `${currentMediumObj?.labelMr} • ${currentClassObj?.mr} साठी ॲडमिनने अद्याप गृहपाठ अपलोड केलेला नाही.`}
                     </p>
                   </div>
                 ) : (

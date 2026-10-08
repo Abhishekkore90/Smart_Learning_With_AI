@@ -3415,8 +3415,8 @@ export function AcademicPlanningSystem({
             </div>
 
             {/* Modal Preview Body */}
-            <div className="flex-1 p-2 sm:p-4 overflow-hidden bg-slate-950/80 flex flex-col items-center justify-center relative">
-              <div className="w-full h-full min-h-0 flex-1 relative rounded-2xl overflow-y-auto bg-white shadow-2xl flex flex-col p-4">
+            <div className="flex-1 p-1 sm:p-4 overflow-hidden bg-slate-950/80 flex flex-col items-center justify-center relative">
+              <div className="w-full h-full min-h-0 flex-1 relative rounded-xl sm:rounded-2xl overflow-y-auto bg-white shadow-2xl flex flex-col p-1.5 sm:p-4">
                 {viewModalFile && (
                   <PlanningTableRenderer
                     record={viewModalFile as any}

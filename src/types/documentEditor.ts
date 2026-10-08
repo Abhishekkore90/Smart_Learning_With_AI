@@ -21,6 +21,20 @@ export interface DocumentTextBlock {
   isErased?: boolean;
 }
 
+export interface QuestionPaperHeaderData {
+  schoolName: string;
+  examTitle: string;
+  className: string;
+  subjectName: string;
+  totalMarks: string;
+  studentName: string;
+  rollNo: string;
+  examDate: string;
+  obtainedMarks: string;
+  enabled?: boolean;
+  isEnglish?: boolean;
+}
+
 export interface DocumentPage {
   pageNumber: number;
   width: number; // original point width (e.g. 595.28 for A4)
@@ -28,6 +42,7 @@ export interface DocumentPage {
   backgroundUrl?: string; // high-res canvas rendering data URL
   textBlocks: DocumentTextBlock[];
   isScanned?: boolean;
+  headerBoxData?: QuestionPaperHeaderData;
 }
 
 export interface DocumentModel {
@@ -35,9 +50,11 @@ export interface DocumentModel {
   sourceFileUrl: string;
   fileName?: string;
   fileType?: string;
+  documentType?: "homework" | "question_paper" | "other";
   pageCount: number;
   pages: DocumentPage[];
   isScannedPdf?: boolean;
+  headerBoxData?: QuestionPaperHeaderData;
 }
 
 export interface UserDocumentEdits {
@@ -48,7 +65,9 @@ export interface UserDocumentEdits {
   pages: {
     pageNumber: number;
     textBlocks: DocumentTextBlock[];
+    headerBoxData?: QuestionPaperHeaderData;
   }[];
+  headerBoxData?: QuestionPaperHeaderData;
   updatedAt: string;
 }
 

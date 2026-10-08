@@ -8,6 +8,8 @@ import {
   ChevronLeft,
   CheckCircle2,
   GraduationCap,
+  X,
+  Check,
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import type { QuestionPaperItem } from "@/types/documentEditor";
@@ -127,6 +129,18 @@ export function QuestionPaperTemplate({
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showFillSchoolModal, setShowFillSchoolModal] = useState(false);
+  const [headerForm, setHeaderForm] = useState({
+    schoolName: "",
+    examTitle: "आकारिक मूल्यमापन चाचणी क्र. १",
+    className: "१ ली",
+    subjectName: "भाषा",
+    totalMarks: "२०",
+    studentName: "_____________________",
+    rollNo: "",
+    examDate: "दि.   /   / २०२६",
+    obtainedMarks: "",
+  });
   const storageKey = `qp_custom_template_${paper?.id || "default"}_${userId || "guest"}`;
 
   useEffect(() => {
@@ -277,32 +291,24 @@ export function QuestionPaperTemplate({
           {canEdit && (
             <button
               onClick={() => {
-                const current = data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "");
-                const promptVal = window.prompt("शाळेचे नाव प्रविष्ट करा (Enter School Name):", current);
-                if (promptVal !== null && promptVal.trim()) {
-                  const newName = promptVal.trim();
-                  setData((prev) => ({ ...prev, schoolName: newName }));
-                  saveUnifiedSchoolProfile({ schoolName: newName });
-                  if (userId) {
-                    try {
-                      localStorage.setItem(`user_question_paper_school_${userId}`, newName);
-                    } catch (e) {}
-                    if (userId !== "guest_teacher") {
-                      import("@/lib/firebase").then(({ db }) => {
-                        import("firebase/firestore").then(({ doc, setDoc }) => {
-                          setDoc(doc(db, "users", userId), { questionPaperSchoolName: newName }, { merge: true }).catch(() => {});
-                        });
-                      });
-                    }
-                  }
-                  toast.success("शाळेचे नाव अपडेट केले!");
-                }
+                setHeaderForm({
+                  schoolName: data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, ""),
+                  examTitle: data.examTitle,
+                  className: data.className,
+                  subjectName: data.subjectName,
+                  totalMarks: data.totalMarks,
+                  studentName: data.studentNamePlaceholder,
+                  rollNo: data.rollNo,
+                  examDate: data.examDate || "दि.   /   / २०२६",
+                  obtainedMarks: data.obtainedMarks,
+                });
+                setShowFillSchoolModal(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer border border-emerald-400/40"
-              title="शाळेचे नाव भरा"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer border border-emerald-400/40 active:scale-95"
+              title="शाळेचे नाव व परीक्षेचा सर्व तपशील भरा"
             >
               <GraduationCap className="size-3.5 text-emerald-100" />
-              <span>शाळेचे नाव भरा</span>
+              <span>शाळेचे नाव भरा (Fill School Name)</span>
             </button>
           )}
 
@@ -360,7 +366,7 @@ export function QuestionPaperTemplate({
           style={{ fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif" }}
         >
           {/* Header Box */}
-          <div className="border-2 border-slate-900 rounded-lg p-4 mb-6">
+          <div className="border-2 border-slate-900 rounded-none p-4 mb-6">
             {/* School Name */}
             <div className="mb-3 text-center sm:text-left">
               {isEditing ? (
@@ -445,23 +451,31 @@ export function QuestionPaperTemplate({
               </div>
             </div>
 
-            {/* Student Name, Roll No, Marks Obtained */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-2 border-t border-dashed border-slate-200 text-xs font-semibold">
-              <div className="sm:col-span-2">
-                <span>{data.studentNamePlaceholder}</span>
+            {/* Student Name & Roll No (Row 4) */}
+            <div className="flex items-center justify-between text-xs sm:text-sm font-semibold mt-3 pt-2 border-t border-dashed border-slate-200">
+              <div className="flex-1 flex items-center gap-1.5">
+                <span className="font-bold">विद्यार्थ्याचे नाव :-</span>
+                <span className="flex-1 border-b border-slate-900 inline-block min-w-[120px] max-w-[280px] font-bold px-1 text-slate-950">
+                  {data.studentNamePlaceholder && data.studentNamePlaceholder !== "_____________________" ? data.studentNamePlaceholder : ""}
+                </span>
               </div>
-              <div className="flex items-center justify-between sm:justify-end gap-3">
-                <div className="flex items-center gap-1">
-                  <span>हजेरी क्र.</span>
-                  <div className="w-9 h-6 border border-slate-800 rounded flex items-center justify-center font-bold">
-                    {data.rollNo}
-                  </div>
+              <div className="flex items-center gap-2 pl-3 shrink-0">
+                <span className="font-bold">हजेरी क्रमांक -</span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs sm:text-sm bg-white">
+                  {data.rollNo}
                 </div>
-                <div className="flex items-center gap-1">
-                  <span>मिळालेले गुण:</span>
-                  <div className="w-10 h-6 border-2 border-slate-900 rounded flex items-center justify-center font-black text-indigo-700">
-                    {data.obtainedMarks}
-                  </div>
+              </div>
+            </div>
+
+            {/* Date & Marks Obtained (Row 5) */}
+            <div className="flex items-center justify-between text-xs sm:text-sm font-semibold mt-2">
+              <div className="font-bold">
+                {data.examDate || "दि.   /   / २०२६"}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="font-bold">मिळालेले गुण -</span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs sm:text-sm bg-white">
+                  {data.obtainedMarks}
                 </div>
               </div>
             </div>
@@ -633,6 +647,301 @@ export function QuestionPaperTemplate({
           </div>
         </div>
       </div>
+
+      {/* Fill School Name & Exam Details Modal */}
+      {showFillSchoolModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-xl w-full text-slate-800 shadow-2xl space-y-4 border border-slate-200 animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-700">
+                  <GraduationCap className="size-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900 flex items-center gap-1.5">
+                    <span>शाळेचे नाव व परीक्षेचा तपशील भरा</span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+                      हेडर बॉक्स (Header Box)
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    खालील सर्व माहिती भरा. ही माहिती थेट प्रश्नपत्रिकेवरील हेडर बॉक्समध्ये व्यवस्थित बसवली जाईल.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFillSchoolModal(false)}
+                className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <div className="space-y-3.5 overflow-y-auto pr-1 flex-1 text-xs sm:text-sm">
+              {/* Field 1: School Name */}
+              <div>
+                <label className="block font-bold text-slate-800 mb-1 text-xs">
+                  १. शाळेचे नाव (School Name):
+                </label>
+                <input
+                  type="text"
+                  value={headerForm.schoolName}
+                  onChange={(e) => setHeaderForm({ ...headerForm, schoolName: e.target.value })}
+                  placeholder="उदा. जिल्हा परिषद शाळा धोंडेवाडी"
+                  autoFocus
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-emerald-500/40 rounded-xl font-bold text-slate-900 text-sm outline-none focus:border-emerald-600 focus:bg-white shadow-xs"
+                />
+              </div>
+
+              {/* Field 2: Exam / Assessment Title */}
+              <div>
+                <label className="block font-bold text-slate-800 mb-1 text-xs">
+                  २. चाचणी / परीक्षेचे नाव (Exam Title):
+                </label>
+                <input
+                  type="text"
+                  value={headerForm.examTitle}
+                  onChange={(e) => setHeaderForm({ ...headerForm, examTitle: e.target.value })}
+                  placeholder="उदा. आकारिक मूल्यमापन चाचणी क्र. १"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                />
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {[
+                    "आकारिक मूल्यमापन चाचणी क्र. १",
+                    "आकारिक मूल्यमापन चाचणी क्र. २",
+                    "संकलित मूल्यमापन चाचणी १",
+                    "संकलित मूल्यमापन चाचणी २",
+                    "द्वितीय सत्र परीक्षा",
+                  ].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setHeaderForm({ ...headerForm, examTitle: t })}
+                      className={`px-2 py-0.5 text-[11px] font-semibold rounded-lg border transition-all cursor-pointer ${
+                        headerForm.examTitle === t
+                          ? "bg-indigo-50 text-indigo-700 border-indigo-300 font-bold"
+                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Fields 3, 4, 5: Class, Subject, Total Marks */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ३. इयत्ता (Class):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.className}
+                    onChange={(e) => setHeaderForm({ ...headerForm, className: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ४. विषय (Subject):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.subjectName}
+                    onChange={(e) => setHeaderForm({ ...headerForm, subjectName: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ५. एकूण गुण (Marks):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.totalMarks}
+                    onChange={(e) => setHeaderForm({ ...headerForm, totalMarks: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Fields 6, 7: Student Name & Roll No */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ६. विद्यार्थ्याचे नाव (Student Name):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.studentName}
+                    onChange={(e) => setHeaderForm({ ...headerForm, studentName: e.target.value })}
+                    placeholder="उदा. _____________________ (किंवा विद्यार्थ्याचे नाव)"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ७. हजेरी क्रमांक (Roll No.):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.rollNo}
+                    onChange={(e) => setHeaderForm({ ...headerForm, rollNo: e.target.value })}
+                    placeholder="[   ] (रिक्त चौकट)"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white text-center"
+                  />
+                </div>
+              </div>
+
+              {/* Fields 8, 9: Date & Marks Obtained */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ८. दिनांक (Date):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.examDate}
+                    onChange={(e) => setHeaderForm({ ...headerForm, examDate: e.target.value })}
+                    placeholder="उदा. दि.   /   / २०२६"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ९. मिळालेले गुण (Obtained):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.obtainedMarks}
+                    onChange={(e) => setHeaderForm({ ...headerForm, obtainedMarks: e.target.value })}
+                    placeholder="[   ] (तपासणीसाठी)"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white text-center"
+                  />
+                </div>
+              </div>
+
+              {/* Live Preview Box (Exact Screenshot 1 match) */}
+              <div className="pt-2">
+                <div className="text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1.5">
+                  <span>👁️ थेट पूर्वावलोकन (Live Preview - बॉक्स कसा दिसेल):</span>
+                </div>
+                <div className="bg-white border-2 border-slate-900 rounded-none p-3 text-slate-900 shadow-sm select-none font-sans">
+                  {/* Line 1: School Name */}
+                  <div className="font-black text-sm tracking-tight mb-1 text-slate-900">
+                    शाळेचे नाव : <span className="text-slate-950 font-black">{headerForm.schoolName || "____________________________________"}</span>
+                  </div>
+                  {/* Line 2: Exam Title */}
+                  <div className="text-center font-black text-xs sm:text-sm my-1 text-slate-900">
+                    {headerForm.examTitle || "आकारिक मूल्यमापन चाचणी क्र. १"}
+                  </div>
+                  {/* Line 3: Class, Subject, Marks */}
+                  <div className="flex items-center justify-between text-xs font-bold mt-1.5 pt-1 border-t border-slate-200">
+                    <div>इयत्ता - <span className="font-black">{headerForm.className || "१ ली"}</span></div>
+                    <div>विषय - <span className="font-black">{headerForm.subjectName || "भाषा"}</span></div>
+                    <div>एकूण गुण - <span className="font-black">{headerForm.totalMarks || "२०"}</span></div>
+                  </div>
+                  {/* Line 4: Student Name & Roll No */}
+                  <div className="flex items-center justify-between text-xs font-semibold mt-1.5">
+                    <div className="flex-1 flex items-center gap-1">
+                      <span>विद्यार्थ्याचे नाव :-</span>
+                      <span className="flex-1 border-b border-slate-900 inline-block min-w-[100px] max-w-[200px] px-1 font-bold">
+                        {headerForm.studentName && headerForm.studentName !== "_____________________" ? headerForm.studentName : ""}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 pl-2 shrink-0">
+                      <span>हजेरी क्रमांक -</span>
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs bg-white">
+                        {headerForm.rollNo}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Line 5: Date & Marks */}
+                  <div className="flex items-center justify-between text-xs font-semibold mt-1.5">
+                    <div>{headerForm.examDate || "दि.   /   / २०२६"}</div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span>मिळालेले गुण -</span>
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs bg-white">
+                        {headerForm.obtainedMarks}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setData((prev) => ({ ...prev, schoolName: "" }));
+                  setShowFillSchoolModal(false);
+                  toast.info("शाळेचे नाव पूर्ववत करण्यात आले.");
+                }}
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold cursor-pointer"
+              >
+                पूर्ववत (Clear)
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFillSchoolModal(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  रद्द करा
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cleanSchool = (headerForm.schoolName || "").replace(/^शाळेचे नाव\s*[:-]?\s*/i, "").trim();
+                    setData((prev) => ({
+                      ...prev,
+                      schoolName: cleanSchool,
+                      examTitle: headerForm.examTitle,
+                      className: headerForm.className,
+                      subjectName: headerForm.subjectName,
+                      totalMarks: headerForm.totalMarks,
+                      studentNamePlaceholder: headerForm.studentName,
+                      rollNo: headerForm.rollNo,
+                      examDate: headerForm.examDate,
+                      obtainedMarks: headerForm.obtainedMarks,
+                    }));
+                    if (cleanSchool) {
+                      saveUnifiedSchoolProfile({ schoolName: cleanSchool });
+                      if (userId) {
+                        try {
+                          localStorage.setItem(`user_question_paper_school_${userId}`, cleanSchool);
+                        } catch (e) {}
+                        if (userId !== "guest_teacher") {
+                          import("@/lib/firebase").then(({ db }) => {
+                            import("firebase/firestore").then(({ doc, setDoc }) => {
+                              setDoc(doc(db, "users", userId), { questionPaperSchoolName: cleanSchool }, { merge: true }).catch(() => {});
+                            });
+                          });
+                        }
+                      }
+                    }
+                    setShowFillSchoolModal(false);
+                    toast.success("शाळेचे नाव व परीक्षेचा सर्व तपशील बॉक्समध्ये व्यवस्थित बसवला!");
+                  }}
+                  className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5 active:scale-95"
+                >
+                  <Check className="size-4" />
+                  <span>प्रश्नपत्रिकेवर बसवा (Fit Into Paper Box)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -30,10 +30,13 @@ import type {
   DocumentModel,
   DocumentPage,
   DocumentTextBlock,
+  QuestionPaperHeaderData,
+  UserDocumentEdits,
 } from "@/types/documentEditor";
 import {
   loadDocumentModel,
   createDefaultFallbackModel,
+  detectPageHeaderBox,
   loadUserDocumentEdits,
   saveUserDocumentEdits,
   resetUserDocumentEdits,
@@ -277,9 +280,55 @@ export function DocumentEditorViewer({
     return { updatedPages, affectedCount };
   };
 
-  // Fill School Name Modal
+  // Question Paper Header Details & School Name Modal
   const [showFillSchoolModal, setShowFillSchoolModal] = useState<boolean>(false);
-  // Firstly keep it blank! After user fills it, it will be remembered for that user
+  const [headerData, setHeaderData] = useState<QuestionPaperHeaderData | null>(null);
+
+  // Compute smart initial defaults based on title and user
+  const computeInitialHeader = (initialSchool?: string): QuestionPaperHeaderData => {
+    let guessedClass = "१ ली";
+    if (title?.includes("२ री") || title?.includes("2nd")) guessedClass = "२ री";
+    else if (title?.includes("३ री") || title?.includes("3rd")) guessedClass = "३ री";
+    else if (title?.includes("४ थी") || title?.includes("4th")) guessedClass = "४ थी";
+    else if (title?.includes("५ वी") || title?.includes("5th")) guessedClass = "५ वी";
+    else if (title?.includes("६ वी") || title?.includes("6th")) guessedClass = "६ वी";
+    else if (title?.includes("७ वी") || title?.includes("7th")) guessedClass = "७ वी";
+    else if (title?.includes("८ वी") || title?.includes("8th")) guessedClass = "८ वी";
+
+    let guessedSubject = "भाषा";
+    if (title?.includes("गणित") || title?.toLowerCase().includes("math")) guessedSubject = "गणित";
+    else if (title?.includes("इंग्रजी") || title?.toLowerCase().includes("eng")) guessedSubject = "इंग्रजी";
+    else if (title?.includes("परिसर अभ्यास")) guessedSubject = "परिसर अभ्यास";
+    else if (title?.includes("मराठी")) guessedSubject = "भाषा";
+
+    let guessedExam = "आकारिक मूल्यमापन चाचणी क्र. १";
+    if (title?.includes("चाचणी २") || title?.includes("unit2")) guessedExam = "आकारिक मूल्यमापन चाचणी क्र. २";
+    else if (title?.includes("संकलित") && (title?.includes("२") || title?.includes("2"))) guessedExam = "संकलित मूल्यमापन चाचणी २";
+    else if (title?.includes("संकलित")) guessedExam = "संकलित मूल्यमापन चाचणी १";
+    else if (title?.includes("सत्र")) guessedExam = "द्वितीय सत्र परीक्षा";
+
+    const sName = initialSchool || getUserSavedQPSchool(userId) || getUnifiedSchoolProfile()?.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी";
+
+    return {
+      schoolName: sName,
+      examTitle: guessedExam,
+      className: guessedClass,
+      subjectName: guessedSubject,
+      totalMarks: "२०",
+      studentName: "_____________________",
+      rollNo: "",
+      examDate: "दि.   /   / २०२६",
+      obtainedMarks: "",
+      enabled: true,
+    };
+  };
+
+  const [editingHeaderPageIndex, setEditingHeaderPageIndex] = useState<number | null>(null);
+
+  const [headerForm, setHeaderForm] = useState<QuestionPaperHeaderData>(() => {
+    return computeInitialHeader();
+  });
+
   const [fillSchoolNameInput, setFillSchoolNameInput] = useState<string>(() => {
     return getUserSavedQPSchool(userId);
   });
@@ -290,13 +339,22 @@ export function DocumentEditorViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  // Synchronize modal input with user-specific saved school name (stays blank if never filled)
+  // Synchronize modal input with user-specific saved school name or header data
   useEffect(() => {
     if (showFillSchoolModal) {
-      const saved = getUserSavedQPSchool(userId);
-      setFillSchoolNameInput(saved || "");
+      if (
+        editingHeaderPageIndex !== null &&
+        pagesState[editingHeaderPageIndex]?.headerBoxData
+      ) {
+        setHeaderForm({ ...pagesState[editingHeaderPageIndex].headerBoxData! });
+      } else if (headerData) {
+        setHeaderForm({ ...headerData });
+      } else {
+        const saved = getUserSavedQPSchool(userId);
+        setHeaderForm(computeInitialHeader(saved || ""));
+      }
     }
-  }, [showFillSchoolModal, userId]);
+  }, [showFillSchoolModal, editingHeaderPageIndex, userId]);
 
   // Load Document & Merged User Edits
   useEffect(() => {
@@ -313,12 +371,13 @@ export function DocumentEditorViewer({
         // 2. Load user-specific edits if any
         let mergedPages = [...model.pages];
         let editsFound = false;
+        let loadedUserEdits: UserDocumentEdits | null = null;
 
         if (userId) {
-          const userEdits = await loadUserDocumentEdits(documentType, documentId, userId);
-          if (userEdits && userEdits.pages && userEdits.pages.length > 0) {
+          loadedUserEdits = await loadUserDocumentEdits(documentType, documentId, userId);
+          if (loadedUserEdits && loadedUserEdits.pages && loadedUserEdits.pages.length > 0) {
             mergedPages = model.pages.map((p) => {
-              const editedPage = userEdits.pages.find((ep) => ep.pageNumber === p.pageNumber);
+              const editedPage = loadedUserEdits!.pages.find((ep) => ep.pageNumber === p.pageNumber);
               if (editedPage && editedPage.textBlocks) {
                 const modifiedBlocks = editedPage.textBlocks.filter(
                   (b) => b.isEdited || b.isCustom || b.isErased
@@ -333,6 +392,7 @@ export function DocumentEditorViewer({
                   const customBlocks = modifiedBlocks.filter((mb) => mb.isCustom);
                   return {
                     ...p,
+                    headerBoxData: editedPage.headerBoxData || p.headerBoxData,
                     textBlocks: [
                       ...baseBlocks,
                       ...customBlocks.filter((cb) => !baseBlocks.some((bb) => bb.id === cb.id)),
@@ -370,6 +430,79 @@ export function DocumentEditorViewer({
 
           const { updatedPages } = applySchoolNameToDocumentPages(mergedPages, activeSchoolName);
           mergedPages = updatedPages;
+        }
+
+        // Restore or initialize Header Box Data
+        let restoredHeader: QuestionPaperHeaderData | null = null;
+        if (loadedUserEdits?.headerBoxData) {
+          restoredHeader = loadedUserEdits.headerBoxData;
+        } else {
+          try {
+            const savedLocalHdr = localStorage.getItem(`user_qp_header_${userId}_${documentId}`);
+            if (savedLocalHdr) {
+              restoredHeader = JSON.parse(savedLocalHdr);
+            }
+          } catch (e) { }
+        }
+
+        if (!restoredHeader && documentType === "question_paper") {
+          restoredHeader = computeInitialHeader(activeSchoolName);
+        }
+
+        const effectiveSchoolName = activeSchoolName || restoredHeader?.schoolName;
+
+        // Detect and populate headerBoxData across ALL pages of the PDF ONLY for question papers
+        if (documentType === "question_paper") {
+          mergedPages = mergedPages.map((page, pIdx) => {
+            let pHeader: QuestionPaperHeaderData | undefined =
+              page.headerBoxData || detectPageHeaderBox(page, effectiveSchoolName) || undefined;
+            if (pIdx === 0 && !pHeader && restoredHeader) {
+              pHeader = restoredHeader;
+            }
+
+            if (pHeader) {
+              const finalSchool = effectiveSchoolName || pHeader.schoolName;
+              pHeader = {
+                ...pHeader,
+                schoolName: finalSchool,
+                rollNo: restoredHeader?.rollNo || pHeader.rollNo || "",
+                obtainedMarks: restoredHeader?.obtainedMarks || pHeader.obtainedMarks || "",
+                studentName:
+                  restoredHeader?.studentName && restoredHeader.studentName !== "_____________________"
+                    ? restoredHeader.studentName
+                    : pHeader.studentName,
+                examDate: restoredHeader?.examDate || pHeader.examDate,
+                enabled: true,
+              };
+
+              return {
+                ...page,
+                headerBoxData: pHeader,
+                textBlocks: page.textBlocks.map((b) => {
+                  if ((b.y || 0) < 26) {
+                    return { ...b, text: "", isEdited: true, isErased: true };
+                  }
+                  return b;
+                }),
+              };
+            }
+            return page;
+          });
+
+          if (mergedPages.length > 0 && mergedPages[0].headerBoxData) {
+            setHeaderData(mergedPages[0].headerBoxData);
+            setHeaderForm(mergedPages[0].headerBoxData);
+            if (mergedPages[0].headerBoxData.schoolName) {
+              setFillSchoolNameInput(mergedPages[0].headerBoxData.schoolName);
+            }
+          }
+        } else {
+          // For homework or other documents, ensure no question paper header box is present
+          mergedPages = mergedPages.map((page) => ({
+            ...page,
+            headerBoxData: undefined,
+          }));
+          setHeaderData(null);
         }
 
         if (isMounted) {
@@ -431,12 +564,31 @@ export function DocumentEditorViewer({
       page.textBlocks = page.textBlocks.map((b) => {
         if (b.id === blockId) {
           const isErased = newText.trim() === "";
+          const origW = b.origWidth || b.width;
+          let calculatedWidth = origW;
+          if (newText && page.width > 0) {
+            try {
+              const canvas = document.createElement("canvas");
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                const isBold = b.fontWeight === "bold" || (typeof b.fontWeight === "number" && b.fontWeight >= 600);
+                ctx.font = `${isBold ? "bold" : "normal"} ${b.fontSize || 12}px "Noto Sans Devanagari", sans-serif`;
+                const measuredWidthPt = ctx.measureText(newText).width;
+                const newWidthPct = Number(((measuredWidthPt / page.width) * 100).toFixed(2));
+                calculatedWidth = Math.max(origW, newWidthPct);
+              }
+            } catch (_err) {
+              const oldLen = Math.max(1, (b.text || "").length);
+              calculatedWidth = Math.max(origW, origW * (newText.length / oldLen));
+            }
+          }
           return {
             ...b,
             text: newText,
+            width: calculatedWidth,
             isEdited: true,
             isErased,
-            origWidth: b.origWidth || b.width,
+            origWidth: origW,
             origHeight: b.origHeight || b.height,
           };
         }
@@ -572,31 +724,32 @@ export function DocumentEditorViewer({
     toast.info("मजकूर मूळ स्थितीत परत आणला.");
   };
 
-  // Dedicated Fill School Name: Automatically fits school name properly across all pages containing school header
+  // Dedicated Fill School Name: Automatically fits school name and exam details into header box
   const handleFillSchoolName = () => {
     if (pagesState.length === 0) return;
-    const trimmedName = fillSchoolNameInput.trim();
-    if (!trimmedName) {
-      toast.error("कृपया शाळेचे नाव प्रविष्ट करा.");
-      return;
-    }
-
-    const cleanSchoolName = trimmedName
+    const cleanSchoolName = (headerForm.schoolName || "")
       .replace(/^(?:शाळेचे नाव|शाळा नाव|school name)\s*[:-]?\s*/i, "")
       .trim();
 
-    setPagesState((prevPages) => {
-      const { updatedPages } = applySchoolNameToDocumentPages(prevPages, cleanSchoolName);
-      return updatedPages;
-    });
+    const finalHeader: QuestionPaperHeaderData = {
+      ...headerForm,
+      schoolName: cleanSchoolName || "जिल्हा परिषद शाळा धोंडेवाडी",
+      enabled: true,
+    };
+
+    setHeaderData(finalHeader);
+    setFillSchoolNameInput(cleanSchoolName);
 
     // Remember for this user specifically
     if (userId) {
       try {
-        localStorage.setItem(`user_question_paper_school_${userId}`, cleanSchoolName);
+        if (cleanSchoolName) {
+          localStorage.setItem(`user_question_paper_school_${userId}`, cleanSchoolName);
+        }
+        localStorage.setItem(`user_qp_header_${userId}_${documentId}`, JSON.stringify(finalHeader));
       } catch (e) { }
 
-      if (userId !== "guest_teacher") {
+      if (userId !== "guest_teacher" && cleanSchoolName) {
         try {
           import("@/lib/firebase").then(({ db }) => {
             import("firebase/firestore").then(({ doc, setDoc }) => {
@@ -612,12 +765,58 @@ export function DocumentEditorViewer({
           });
         } catch (e) { }
       }
+      if (cleanSchoolName) {
+        saveUnifiedSchoolProfile({ schoolName: cleanSchoolName });
+      }
     }
 
-    saveUnifiedSchoolProfile({ schoolName: cleanSchoolName });
+    setPagesState((prevPages) => {
+      return prevPages.map((page, pIdx) => {
+        let pHeader: QuestionPaperHeaderData | undefined =
+          page.headerBoxData || detectPageHeaderBox(page, cleanSchoolName) || undefined;
+
+        if (pHeader || pIdx === 0) {
+          const base = pHeader || finalHeader;
+          const isTargetPage =
+            editingHeaderPageIndex === null
+              ? pIdx === 0
+              : pIdx === editingHeaderPageIndex;
+
+          const updatedHeader: QuestionPaperHeaderData = isTargetPage
+            ? { ...finalHeader, isEnglish: base.isEnglish }
+            : {
+                ...base,
+                schoolName: finalHeader.schoolName,
+                studentName: finalHeader.studentName,
+                rollNo: finalHeader.rollNo,
+                obtainedMarks: finalHeader.obtainedMarks,
+                examDate: finalHeader.examDate,
+                enabled: true,
+              };
+
+          return {
+            ...page,
+            headerBoxData: updatedHeader,
+            textBlocks: page.textBlocks.map((b) => {
+              if ((b.y || 0) < 26) {
+                return {
+                  ...b,
+                  text: "",
+                  isEdited: true,
+                  isErased: true,
+                };
+              }
+              return b;
+            }),
+          };
+        }
+        return page;
+      });
+    });
+
     setHasUserEdits(true);
     setShowFillSchoolModal(false);
-    toast.success("शाळेचे नाव जिथे आवश्यक आहे तिथे व्यवस्थित बसवले!");
+    toast.success("शाळेचे नाव व परीक्षेचा सर्व तपशील सर्व पानांवरील बॉक्समध्ये व्यवस्थित बसवला!");
   };
 
   // Revert / Clear custom filled school name across all pages
@@ -625,6 +824,7 @@ export function DocumentEditorViewer({
     if (userId) {
       try {
         localStorage.removeItem(`user_question_paper_school_${userId}`);
+        localStorage.removeItem(`user_qp_header_${userId}_${documentId}`);
       } catch (e) { }
       if (userId !== "guest_teacher") {
         try {
@@ -638,6 +838,7 @@ export function DocumentEditorViewer({
       }
     }
     setFillSchoolNameInput("");
+    setHeaderData(null);
 
     if (pagesState.length === 0 || !docModel) {
       setShowFillSchoolModal(false);
@@ -647,35 +848,20 @@ export function DocumentEditorViewer({
     setPagesState((prevPages) => {
       return prevPages.map((page, pIdx) => {
         const originalPage = docModel.pages[pIdx];
-        let blocks = page.textBlocks.filter((b) => b.id !== "custom_filled_school_name");
-
-        blocks = blocks.map((b) => {
-          if (
-            b.isEdited &&
-            (b.text?.includes("शाळेचे नाव") ||
-              b.text?.includes("शाळा") ||
-              b.text?.includes("SCHOOL NAME"))
-          ) {
-            const origBlock = originalPage?.textBlocks.find((ob) => ob.id === b.id);
-            if (origBlock) {
-              return { ...origBlock, isEdited: false, isErased: false };
-            }
-          }
-          return b;
-        });
-
-        return {
-          ...page,
-          textBlocks: blocks,
-        };
+        if (page.headerBoxData) {
+          return {
+            ...page,
+            headerBoxData: undefined,
+            textBlocks: originalPage?.textBlocks || page.textBlocks,
+          };
+        }
+        return page;
       });
     });
 
     setShowFillSchoolModal(false);
-    toast.info("शाळेचे नाव पूर्ववत करण्यात आले.");
+    toast.info("शाळेचे नाव व तपशील पूर्ववत करण्यात आले.");
   };
-
-
 
   // Save Edits (User specific)
   const handleSaveEdits = async () => {
@@ -690,6 +876,7 @@ export function DocumentEditorViewer({
         textBlocks: p.textBlocks.filter(
           (b) => b.isCustom || (b as any).isEdited || (b as any).isErased
         ),
+        headerBoxData: p.headerBoxData,
       }));
 
       await saveUserDocumentEdits(
@@ -698,7 +885,8 @@ export function DocumentEditorViewer({
         userId,
         userPagesPayload,
         userRole,
-        userName
+        userName,
+        headerData || undefined
       );
 
       setHasUserEdits(true);
@@ -828,7 +1016,12 @@ export function DocumentEditorViewer({
       const exportModel: DocumentModel = {
         ...docModel,
         fileName: downloadName,
-        pages: pagesState,
+        documentType,
+        pages: pagesState.map((p) => ({
+          ...p,
+          headerBoxData: documentType === "question_paper" ? p.headerBoxData : undefined,
+        })),
+        headerBoxData: documentType === "question_paper" ? (headerData || undefined) : undefined,
       };
       await exportDocumentToPdf(exportModel, downloadName);
       toast.success("PDF यशस्वीरित्या डाउनलोड झाली!");
@@ -847,7 +1040,12 @@ export function DocumentEditorViewer({
     const printModel: DocumentModel = {
       ...docModel,
       fileName: downloadName,
-      pages: pagesState,
+      documentType,
+      pages: pagesState.map((p) => ({
+        ...p,
+        headerBoxData: documentType === "question_paper" ? p.headerBoxData : undefined,
+      })),
+      headerBoxData: documentType === "question_paper" ? (headerData || undefined) : undefined,
     };
     printDocument(printModel);
   };
@@ -968,10 +1166,17 @@ export function DocumentEditorViewer({
             </div>
           )}
 
-          {/* Fill School Name Tab Button */}
-          {canEdit && (
+          {/* Fill School Name Tab Button (only for question papers) */}
+          {canEdit && documentType === "question_paper" && (
             <button
-              onClick={() => setShowFillSchoolModal(true)}
+              onClick={() => {
+                const curIdx = Math.max(0, currentPageNum - 1);
+                const targetIdx = pagesState[curIdx]?.headerBoxData ? curIdx : 0;
+                setEditingHeaderPageIndex(targetIdx);
+                const targetHeader = pagesState[targetIdx]?.headerBoxData || headerData || computeInitialHeader();
+                setHeaderForm({ ...targetHeader });
+                setShowFillSchoolModal(true);
+              }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow-emerald-500/20 transition-all cursor-pointer border border-emerald-400/40 active:scale-95"
               title="प्रश्नपत्रिकेवर 'शाळेचे नाव' पुढे आपल्या शाळेचे नाव व्यवस्थित बसवा"
             >
@@ -1178,7 +1383,186 @@ export function DocumentEditorViewer({
 
               {/* Text Overlays Layer */}
               <div className="absolute inset-0 w-full h-full z-10 pointer-events-auto">
+                {/* 🎯 QUESTION PAPER HEADER BOX (EXACT MATCH WITH SCREENSHOT 1 & 3) */}
+                {Boolean(
+                  documentType === "question_paper" &&
+                  ((page.headerBoxData && page.headerBoxData.enabled !== false) ||
+                    (page.pageNumber === 1 &&
+                      headerData &&
+                      headerData.enabled !== false))
+                ) &&
+                  (() => {
+                    const hb = page.headerBoxData || headerData!;
+                    if (hb.enabled === false) return null;
+                    const isEng = Boolean(hb.isEnglish);
+                    const pageScale = page.width > 0 ? displayWidth / page.width : zoomScale;
+
+                    return (
+                      <React.Fragment key={`qp-header-box-layer-${page.pageNumber}`}>
+                        {/* 1. MASK OUT THE ENTIRE BACKSIDES BOX FROM THE BACKGROUND IMAGE */}
+                        <div
+                          className="absolute z-25 bg-white pointer-events-none"
+                          style={{
+                            left: "2.0%",
+                            top: "0.5%",
+                            width: "96.0%",
+                            height: "25.5%",
+                          }}
+                        />
+
+                        {/* 2. THE CLEAN RECTANGULAR HEADER BOX (EXACT SCREENSHOT 1 & 3 SPEC) */}
+                        <div
+                          className="absolute z-35 bg-white border-2 border-slate-900 rounded-none p-2.5 sm:p-3 text-slate-900 shadow-none select-none transition-none"
+                          style={{
+                            left: "4.0%",
+                            top: "1.6%",
+                            width: "92.0%",
+                            minHeight: "22.6%",
+                            fontFamily: isEng
+                              ? "system-ui, -apple-system, sans-serif"
+                              : "'Noto Sans Devanagari', -apple-system, sans-serif",
+                            boxSizing: "border-box",
+                          }}
+                          onClick={(e) => {
+                            if (mode === "edit") {
+                              e.stopPropagation();
+                              setEditingHeaderPageIndex(pageIdx);
+                              setHeaderForm({ ...hb });
+                              setShowFillSchoolModal(true);
+                            }
+                          }}
+                        >
+                          {/* Top Right Edit Button in Edit Mode */}
+                          {mode === "edit" && (
+                            <div className="absolute top-1.5 right-1.5 z-40">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingHeaderPageIndex(pageIdx);
+                                  setHeaderForm({ ...hb });
+                                  setShowFillSchoolModal(true);
+                                }}
+                                className="flex items-center gap-1 px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-xs cursor-pointer"
+                                title="तपशील संपादित करा"
+                              >
+                                <Edit3 className="size-3" />
+                                <span>बदला (Edit)</span>
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Line 1: School Name */}
+                          <div
+                            className="font-black text-slate-900 tracking-tight flex items-baseline gap-2 mb-1"
+                            style={{ fontSize: `${Math.max(13, Math.round(18 * pageScale))}px` }}
+                          >
+                            <span className="shrink-0 font-black">
+                              {isEng ? "SCHOOL NAME -" : "शाळेचे नाव :"}
+                            </span>
+                            <span className="text-slate-950 font-black">
+                              {hb.schoolName || "____________________________________"}
+                            </span>
+                          </div>
+
+                          {/* Line 2: Exam Title (Centered, bold) */}
+                          <div
+                            className="text-center font-black text-slate-900 tracking-wide my-1 uppercase"
+                            style={{ fontSize: `${Math.max(12, Math.round(16 * pageScale))}px` }}
+                          >
+                            <h2>{hb.examTitle || (isEng ? "FORMATIVE EVALUATION TEST 1" : "आकारिक मूल्यमापन चाचणी क्र. १")}</h2>
+                          </div>
+
+                          {/* Line 3: Class, Subject, Total Marks (3 columns) */}
+                          <div
+                            className="flex items-center justify-between font-bold mt-2 pt-1 border-t border-slate-200 uppercase"
+                            style={{ fontSize: `${Math.max(11, Math.round(13.5 * pageScale))}px` }}
+                          >
+                            <div>
+                              <span>{isEng ? "STD – " : "इयत्ता - "}</span>
+                              <span className="font-black">{hb.className || (isEng ? "1" : "१ ली")}</span>
+                            </div>
+                            <div className="text-center">
+                              <span>{isEng ? "SUB – " : "विषय - "}</span>
+                              <span className="font-black">{hb.subjectName || (isEng ? "MATH" : "भाषा")}</span>
+                            </div>
+                            <div className="text-right">
+                              <span>{isEng ? "TOTAL MARKS - " : "एकूण गुण - "}</span>
+                              <span className="font-black">{hb.totalMarks || (isEng ? "20" : "२०")}</span>
+                            </div>
+                          </div>
+
+                          {/* Line 4: Student Name & Roll No */}
+                          <div
+                            className="flex items-center justify-between font-semibold mt-2"
+                            style={{ fontSize: `${Math.max(10, Math.round(12.5 * pageScale))}px` }}
+                          >
+                            <div className="flex-1 flex items-center gap-1.5">
+                              <span className="font-bold">
+                                {isEng ? "STUDENT NAME :" : "विद्यार्थ्याचे नाव :-"}
+                              </span>
+                              <span className="flex-1 border-b border-slate-900 inline-block min-w-[120px] max-w-[280px] font-bold px-1 text-slate-950">
+                                {hb.studentName && hb.studentName !== "_____________________" ? hb.studentName : ""}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 pl-3 shrink-0">
+                              <span className="font-bold">
+                                {isEng ? "ROLL NO.-" : "हजेरी क्रमांक -"}
+                              </span>
+                              <div
+                                className="border-2 border-slate-900 rounded-sm flex items-center justify-center font-black bg-white"
+                                style={{
+                                  width: `${Math.max(26, Math.round(28 * pageScale))}px`,
+                                  height: `${Math.max(26, Math.round(28 * pageScale))}px`,
+                                  fontSize: `${Math.max(11, Math.round(12 * pageScale))}px`,
+                                }}
+                              >
+                                {hb.rollNo}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Line 5: Date & Marks Obtained */}
+                          <div
+                            className="flex items-center justify-between font-semibold mt-2"
+                            style={{ fontSize: `${Math.max(10, Math.round(12.5 * pageScale))}px` }}
+                          >
+                            <div className="font-bold">
+                              {hb.examDate || (isEng ? "DATE -   /   / 2026" : "दि.   /   / २०२६")}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-bold">
+                                {isEng ? "OBTAINED MARKS-" : "मिळालेले गुण -"}
+                              </span>
+                              <div
+                                className="border-2 border-slate-900 rounded-sm flex items-center justify-center font-black bg-white"
+                                style={{
+                                  width: `${Math.max(26, Math.round(28 * pageScale))}px`,
+                                  height: `${Math.max(26, Math.round(28 * pageScale))}px`,
+                                  fontSize: `${Math.max(11, Math.round(12 * pageScale))}px`,
+                                }}
+                              >
+                                {hb.obtainedMarks}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    );
+                  })()}
+
                 {page.textBlocks.map((block) => {
+                  const hasActiveHeader = Boolean(
+                    documentType === "question_paper" &&
+                    ((page.headerBoxData && page.headerBoxData.enabled !== false) ||
+                      (page.pageNumber === 1 &&
+                        headerData &&
+                        headerData.enabled !== false))
+                  );
+                  if (hasActiveHeader && (block.y || 0) < 26) {
+                    return null;
+                  }
+
                   const isEditing = activeEditingBlockId === block.id && mode === "edit";
                   const isErased = Boolean(
                     (block as any).isErased || ((block as any).isEdited && !block.text?.trim())
@@ -1196,6 +1580,9 @@ export function DocumentEditorViewer({
                     (block.text || "").includes("शाळेचे नाव") ||
                     (block.text || "").includes("SCHOOL NAME") ||
                     block.id === "custom_filled_school_name";
+                  const isMultiLine = Boolean(block.text && block.text.includes("\n"));
+                  const isSingleLine = !isMultiLine;
+                  const isSingleWord = isSingleLine && !(block.text || "").trim().includes(" ");
 
                   const origW = block.origWidth || block.width;
                   const origH = block.origHeight || block.height;
@@ -1204,12 +1591,26 @@ export function DocumentEditorViewer({
                     : Math.max(block.width, origW);
                   const blockHeightPct = isSchoolBlock
                     ? Math.max(block.height, origH, 4.5)
-                    : Math.max(block.height, origH, 2.4);
+                    : Math.max(block.height, origH);
 
                   // Scale font size strictly according to the page's actual rendering scale so that edited text remains the exact same font size as the original text on that page
                   const pageScale = page.width > 0 ? displayWidth / page.width : zoomScale;
                   const baseFontSize = block.fontSize || (isSchoolBlock ? 20 : 14);
                   const renderedFontSize = Math.max(11, Math.round(baseFontSize * pageScale));
+
+                  // Vertical offset: PDF.js y starts too high (-fontSize), which causes text to hit the top box border.
+                  // Shifting y down by ~0.22 * fontSize centers the text vertically in its box and stops the white mask from cutting the top border!
+                  const pageHeight = page.height || 792;
+                  const yOffsetPct = isSingleLine && !isSchoolBlock
+                    ? ((baseFontSize * 0.22) / pageHeight) * 100
+                    : 0;
+                  const renderTopPct = block.y + (isModified || isEditing ? yOffsetPct : 0);
+
+                  // Horizontal centering for standalone words inside boxes / columns
+                  const origCenterXPct = (block.origX ?? block.x) + (origW / 2);
+                  const renderLeftPct = isModified && isSingleWord && !isSchoolBlock && block.width > origW
+                    ? Math.max(block.x - ((block.width - origW) / 2), origCenterXPct - (block.width / 2))
+                    : block.x;
 
                   return (
                     <div
@@ -1229,24 +1630,27 @@ export function DocumentEditorViewer({
                             : "z-10"
                         }`}
                       style={{
-                        left: `${block.x}%`,
-                        top: `${block.y}%`,
-                        width: `${blockWidthPct}%`,
+                        left: `${renderLeftPct}%`,
+                        top: `${renderTopPct}%`,
+                        width: isMultiLine ? `${blockWidthPct}%` : "max-content",
                         minWidth: isEditing
-                          ? `${Math.max(blockWidthPct, 15)}%`
+                          ? `${Math.max(blockWidthPct, 8)}%`
                           : isModified
-                            ? `${blockWidthPct}%`
-                            : "20px",
-                        minHeight: `${blockHeightPct}%`,
-                        maxWidth: "96%",
+                            ? `${Math.max(blockWidthPct, origW)}%`
+                            : "16px",
+                        minHeight: isMultiLine ? `${blockHeightPct}%` : undefined,
+                        maxWidth: `${Math.min(96, 98 - renderLeftPct)}%`,
                         fontSize: `${renderedFontSize}px`,
                         fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif",
                         fontWeight: block.fontWeight || "600",
                         color: block.color || "#0f172a",
-                        lineHeight: 1.25,
+                        lineHeight: 1.15,
                         backgroundColor:
                           isModified || isEditing ? "#ffffff" : "transparent",
                         boxShadow: isEditing ? "0 0 0 2px #3b82f6" : undefined,
+                        display: isSingleWord ? "inline-flex" : undefined,
+                        alignItems: isSingleWord ? "center" : undefined,
+                        justifyContent: isSingleWord ? "center" : undefined,
                       }}
                     >
                       {isEditing ? (
@@ -1265,36 +1669,40 @@ export function DocumentEditorViewer({
                               if (e.key === "Escape") {
                                 setActiveEditingBlockId(null);
                               }
-                              if (e.key === "Enter" && !e.shiftKey && !(block.text || "").includes("\n")) {
+                              if (e.key === "Enter" && !e.shiftKey && !isMultiLine) {
                                 e.preventDefault();
                                 setActiveEditingBlockId(null);
                               }
                             }}
-                            className="w-full h-full bg-white text-slate-900 border-none outline-none p-0 m-0 resize-none font-inherit leading-tight selection:bg-blue-200"
+                            className="w-full h-full bg-white text-slate-900 border-none outline-none p-0 m-0 resize-none font-inherit selection:bg-blue-200"
                             style={{
                               fontSize: "inherit",
                               fontFamily: "inherit",
                               fontWeight: "inherit",
-                              lineHeight: 1.25,
+                              lineHeight: 1.15,
                               color: block.color || "#0f172a",
                               backgroundColor: "#ffffff",
                               display: "block",
+                              whiteSpace: isMultiLine ? "pre-wrap" : "nowrap",
+                              overflow: "hidden",
+                              textAlign: isSingleWord ? "center" : "left",
                             }}
                           />
                         </div>
                       ) : isModified ? (
                         /* MODIFIED TEXT DIRECTLY ON THE SHEET OVER SOLID WHITE BACKING (NO UNDERLYING TEXT VISIBLE) */
-                        <div className="relative group px-0.5 bg-white w-full h-full min-h-[16px] leading-tight">
+                        <div className="relative group px-1 bg-white w-full h-full leading-tight flex items-center justify-center">
                           {isErased ? (
                             <span className="block text-slate-300 text-[10px] italic select-none">
                               {mode === "edit" ? "(खोडून टाकले)" : ""}
                             </span>
                           ) : (
                             <span
-                              className={`block ${isSchoolBlock
-                                ? "whitespace-nowrap"
-                                : "whitespace-pre-wrap break-words"
-                                }`}
+                              className={`block ${
+                                !isMultiLine
+                                  ? "whitespace-nowrap"
+                                  : "whitespace-pre-wrap break-words"
+                              } ${isSingleWord ? "text-center" : ""}`}
                             >
                               {block.text}
                             </span>
@@ -1341,24 +1749,25 @@ export function DocumentEditorViewer({
 
 
 
-      {/* Fill School Name Modal */}
+      {/* Fill School Name & Exam Details Modal (All 9 Fields from Header Box) */}
       {showFillSchoolModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-lg w-full text-slate-800 shadow-2xl space-y-4 border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-xl w-full text-slate-800 shadow-2xl space-y-4 border border-slate-200 animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-700">
                   <GraduationCap className="size-5" />
                 </div>
                 <div>
                   <h3 className="font-black text-base text-slate-900 flex items-center gap-1.5">
-                    <span>शाळेचे नाव भरा</span>
+                    <span>शाळेचे नाव व परीक्षेचा तपशील भरा</span>
                     <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
-                      Auto-Fit
+                      हेडर बॉक्स (Header Box)
                     </span>
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    प्रश्नपत्रिकेवरील 'शाळेचे नाव' च्या पुढे शाळेचे नाव व्यवस्थित बसवून मूळ तुटक रेषा झाका.
+                    खालील सर्व माहिती भरा. ही माहिती थेट प्रश्नपत्रिकेवरील हेडर बॉक्समध्ये व्यवस्थित बसवली जाईल.
                   </p>
                 </div>
               </div>
@@ -1370,39 +1779,212 @@ export function DocumentEditorViewer({
               </button>
             </div>
 
-            <div className="space-y-4">
-              {/* Input for school name */}
+            {/* Scrollable Form Body */}
+            <div className="space-y-3.5 overflow-y-auto pr-1 flex-1 text-xs sm:text-sm">
+              {/* Field 1: School Name */}
               <div>
-                <label className="block font-bold text-slate-800 mb-1.5 text-sm">
-                  शाळेचे नाव (School Name):
+                <label className="block font-bold text-slate-800 mb-1 text-xs">
+                  १. शाळेचे नाव (School Name):
                 </label>
                 <input
                   type="text"
-                  value={fillSchoolNameInput}
-                  onChange={(e) => setFillSchoolNameInput(e.target.value)}
-                  placeholder="उदा. जिल्हा परिषद प्राथमिक शाळा..."
+                  value={headerForm.schoolName}
+                  onChange={(e) => setHeaderForm({ ...headerForm, schoolName: e.target.value })}
+                  placeholder="उदा. जिल्हा परिषद शाळा धोंडेवाडी"
                   autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleFillSchoolName();
-                    }
-                  }}
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-emerald-500/40 rounded-xl font-bold text-slate-900 text-sm outline-none focus:border-emerald-600 focus:bg-white shadow-xs"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-emerald-500/40 rounded-xl font-bold text-slate-900 text-sm outline-none focus:border-emerald-600 focus:bg-white shadow-xs"
                 />
-                <p className="text-[11px] text-slate-500 mt-1.5">
-                  {fillSchoolNameInput
-                    ? "✓ भरलेले शाळेचे नाव प्रश्नपत्रिकेवर १ ओळीत आपोआप व्यवस्थित (Auto-Fit) बसवले जाईल व कायम लक्षात ठेवले जाईल."
-                    : "प्रथम रिक्त राहील. आपण एकदा शाळेचे नाव भरल्यास ते आपल्यासाठी कायम लक्षात ठेवले जाईल."}
-                </p>
+              </div>
+
+              {/* Field 2: Exam / Assessment Title */}
+              <div>
+                <label className="block font-bold text-slate-800 mb-1 text-xs">
+                  २. चाचणी / परीक्षेचे नाव (Exam Title):
+                </label>
+                <input
+                  type="text"
+                  value={headerForm.examTitle}
+                  onChange={(e) => setHeaderForm({ ...headerForm, examTitle: e.target.value })}
+                  placeholder="उदा. आकारिक मूल्यमापन चाचणी क्र. १"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                />
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {[
+                    "आकारिक मूल्यमापन चाचणी क्र. १",
+                    "आकारिक मूल्यमापन चाचणी क्र. २",
+                    "संकलित मूल्यमापन चाचणी १",
+                    "संकलित मूल्यमापन चाचणी २",
+                    "द्वितीय सत्र परीक्षा",
+                  ].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setHeaderForm({ ...headerForm, examTitle: t })}
+                      className={`px-2 py-0.5 text-[11px] font-semibold rounded-lg border transition-all cursor-pointer ${
+                        headerForm.examTitle === t
+                          ? "bg-indigo-50 text-indigo-700 border-indigo-300 font-bold"
+                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Fields 3, 4, 5: Class, Subject, Total Marks */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ३. इयत्ता (Class):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.className}
+                    onChange={(e) => setHeaderForm({ ...headerForm, className: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ४. विषय (Subject):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.subjectName}
+                    onChange={(e) => setHeaderForm({ ...headerForm, subjectName: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ५. एकूण गुण (Marks):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.totalMarks}
+                    onChange={(e) => setHeaderForm({ ...headerForm, totalMarks: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Fields 6, 7: Student Name & Roll No */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ६. विद्यार्थ्याचे नाव (Student Name):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.studentName}
+                    onChange={(e) => setHeaderForm({ ...headerForm, studentName: e.target.value })}
+                    placeholder="उदा. _____________________ (किंवा विद्यार्थ्याचे नाव)"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ७. हजेरी क्रमांक (Roll No.):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.rollNo}
+                    onChange={(e) => setHeaderForm({ ...headerForm, rollNo: e.target.value })}
+                    placeholder="[   ] (रिक्त चौकट)"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white text-center"
+                  />
+                </div>
+              </div>
+
+              {/* Fields 8, 9: Date & Marks Obtained */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ८. दिनांक (Date):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.examDate}
+                    onChange={(e) => setHeaderForm({ ...headerForm, examDate: e.target.value })}
+                    placeholder="उदा. दि.   /   / २०२६"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ९. मिळालेले गुण (Obtained):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.obtainedMarks}
+                    onChange={(e) => setHeaderForm({ ...headerForm, obtainedMarks: e.target.value })}
+                    placeholder="[   ] (तपासणीसाठी)"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white text-center"
+                  />
+                </div>
+              </div>
+
+              {/* Live Preview Box (Exact Screenshot 1 match) */}
+              <div className="pt-2">
+                <div className="text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1.5">
+                  <span>👁️ थेट पूर्वावलोकन (Live Preview - बॉक्स कसा दिसेल):</span>
+                </div>
+                <div className="bg-white border-2 border-slate-900 rounded-none p-3 text-slate-900 shadow-sm select-none font-sans">
+                  {/* Line 1: School Name */}
+                  <div className="font-black text-sm tracking-tight mb-1 text-slate-900">
+                    शाळेचे नाव : <span className="text-slate-950 font-black">{headerForm.schoolName || "____________________________________"}</span>
+                  </div>
+                  {/* Line 2: Exam Title */}
+                  <div className="text-center font-black text-xs sm:text-sm my-1 text-slate-900">
+                    {headerForm.examTitle || "आकारिक मूल्यमापन चाचणी क्र. १"}
+                  </div>
+                  {/* Line 3: Class, Subject, Marks */}
+                  <div className="flex items-center justify-between text-xs font-bold mt-1.5 pt-1 border-t border-slate-200">
+                    <div>इयत्ता - <span className="font-black">{headerForm.className || "१ ली"}</span></div>
+                    <div>विषय - <span className="font-black">{headerForm.subjectName || "भाषा"}</span></div>
+                    <div>एकूण गुण - <span className="font-black">{headerForm.totalMarks || "२०"}</span></div>
+                  </div>
+                  {/* Line 4: Student Name & Roll No */}
+                  <div className="flex items-center justify-between text-xs font-semibold mt-1.5">
+                    <div className="flex-1 flex items-center gap-1">
+                      <span>विद्यार्थ्याचे नाव :-</span>
+                      <span className="flex-1 border-b border-slate-900 inline-block min-w-[100px] max-w-[200px] px-1 font-bold">
+                        {headerForm.studentName && headerForm.studentName !== "_____________________" ? headerForm.studentName : ""}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 pl-2 shrink-0">
+                      <span>हजेरी क्रमांक -</span>
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs bg-white">
+                        {headerForm.rollNo}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Line 5: Date & Marks */}
+                  <div className="flex items-center justify-between text-xs font-semibold mt-1.5">
+                    <div>{headerForm.examDate || "दि.   /   / २०२६"}</div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span>मिळालेले गुण -</span>
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs bg-white">
+                        {headerForm.obtainedMarks}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            {/* Modal Footer Actions */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 shrink-0">
               <button
                 type="button"
                 onClick={handleClearFilledSchoolName}
                 className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold cursor-pointer"
-                title="पूर्वी भरलेले शाळेचे नाव पूर्ववत करा"
+                title="पूर्वी भरलेली माहिती पूर्ववत करा"
               >
                 पूर्ववत (Clear)
               </button>
@@ -1420,7 +2002,7 @@ export function DocumentEditorViewer({
                   className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5 active:scale-95"
                 >
                   <Check className="size-4" />
-                  <span>शाळेचे नाव बसवा (Fit School Name)</span>
+                  <span>प्रश्नपत्रिकेवर बसवा (Fit Into Paper Box)</span>
                 </button>
               </div>
             </div>

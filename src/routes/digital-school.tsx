@@ -67,7 +67,7 @@ function YoutubeIcon({ className = "size-4" }: { className?: string }) {
 }
 
 export const Route = createFileRoute("/digital-school")({
-  head: () => ({ meta: [{ title: "Digital School Platform — SMART LEARNING" }] }),
+  head: () => ({ meta: [{ title: "Digital School Software Platform — SMART LEARNING" }] }),
   component: DigitalSchoolPage,
 });
 
@@ -513,7 +513,7 @@ function DigitalSchoolPage() {
       await processRazorpayPayment({
         amount: selectedPlan.amount,
         moduleId: `digital-school-${selectedPlan.id}`,
-        moduleTitle: `Digital School — ${selectedPlan.title}`,
+        moduleTitle: `Digital School Software — ${selectedPlan.title}`,
         teacherName: name || savedInquiry?.name || "School Incharge",
         teacherEmail: email || savedInquiry?.email || "",
         teacherPhone: phone || savedInquiry?.phone || "",
@@ -609,7 +609,7 @@ function DigitalSchoolPage() {
 
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-black uppercase tracking-wider">
             <Sparkles className="size-3.5 text-indigo-600" />
-            <span>Digital School</span>
+            <span>Digital School Software</span>
           </div>
         </div>
 
@@ -620,12 +620,12 @@ function DigitalSchoolPage() {
           <div className="space-y-12">
             <div className="text-center space-y-4 max-w-3xl mx-auto">
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight">
-                {lang === "mr" ? "डिजिटल स्कूल प्लॅटफॉर्म" : "Digital School Platform"}
+                {lang === "mr" ? "डिजिटल स्कूल सॉफ्टवेअर प्लॅटफॉर्म" : "Digital School Software Platform"}
               </h1>
               <p className="text-slate-600 font-semibold text-sm sm:text-base md:text-lg">
                 {lang === "mr"
-                  ? "आपल्या शाळेच्या गरजेनुसार खालीलपैकी योग्य प्लॅटफॉर्म निवडा:"
-                  : "Please select your preferred digital school learning solution below:"}
+                  ? "आपल्या शाळेच्या गरजेनुसार खालीलपैकी योग्य सॉफ्टवेअर प्लॅटफॉर्म निवडा:"
+                  : "Please select your preferred digital school software learning solution below:"}
               </p>
             </div>
 
@@ -661,7 +661,7 @@ function DigitalSchoolPage() {
                       1. Online Platform
                     </h2>
                     <p className="text-xs font-extrabold text-indigo-600 uppercase tracking-widest mt-0.5">
-                      (ऑनलाईन डिजिटल स्कूल)
+                      (ऑनलाईन डिजिटल स्कूल सॉफ्टवेअर)
                     </p>
                   </div>
 
@@ -759,8 +759,8 @@ function DigitalSchoolPage() {
                     </div>
                     <span className="text-[10px] font-bold text-indigo-200 tracking-normal normal-case">
                       {lang === "mr"
-                        ? "(ऑनलाईन डिजिटल स्कूल — मोफत नोंदणी सुरू करा)"
-                        : "(Register Online School — 100% Free)"}
+                        ? "(ऑनलाईन डिजिटल स्कूल सॉफ्टवेअर — मोफत नोंदणी सुरू करा)"
+                        : "(Register Online School Software — 100% Free)"}
                     </span>
                   </button>
                 </div>
@@ -898,7 +898,7 @@ function DigitalSchoolPage() {
                   >
                     <span>
                       {hasSubmittedInquiry
-                        ? "💻 डिजिटल स्कूल प्लॅन्स व पेमेंट उघडा"
+                        ? "💻 डिजिटल स्कूल सॉफ्टवेअर प्लॅन्स व पेमेंट उघडा"
                         : "💻 Offline Inquiry & Demo अर्ज"}
                     </span>
                   </button>
@@ -931,7 +931,7 @@ function DigitalSchoolPage() {
                 <span>Offline Software Inquiry Form</span>
               </div>
               <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-                ऑफलाईन डिजिटल स्कूल चौकशी अर्ज
+                ऑफलाईन डिजिटल स्कूल सॉफ्टवेअर चौकशी अर्ज
               </h1>
               <p className="text-slate-600 text-sm sm:text-base font-medium">
                 कृपया खालील चौकशी फॉर्म भरा. आमची टीम आपल्याशी संपर्क साधून संपूर्ण मार्गदर्शन व डेमो देईल. समाधान झाल्यानंतर आपण आपल्या आवडीचा प्लॅन निवडून पेमेंट करू शकाल.
@@ -1300,7 +1300,7 @@ function DigitalSchoolPage() {
                   {savedInquiry?.schoolName || schoolName ? (
                     <span>{savedInquiry?.schoolName || schoolName} — प्लॅन निवडा व पेमेंट करा</span>
                   ) : (
-                    <span>आपला डिजिटल स्कूल प्लॅन निवडा व पेमेंट करा</span>
+                    <span>आपला डिजिटल स्कूल सॉफ्टवेअर प्लॅन निवडा व पेमेंट करा</span>
                   )}
                 </h2>
                 <p className="text-xs text-slate-300 font-medium">
@@ -1522,7 +1522,7 @@ function DigitalSchoolPage() {
                   Payment & Plan Activated
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                  अभिनंदन! आपला डिजिटल स्कूल प्लॅन यशस्वीरित्या सक्रिय झाला आहे!
+                  अभिनंदन! आपला डिजिटल स्कूल सॉफ्टवेअर प्लॅन यशस्वीरित्या सक्रिय झाला आहे!
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 font-medium">
                   आपल्या पेमेंटची नोंद झाली असून सॉफ्टवेअर ऍक्टिव्हेशन किल्ली व सहाय्यासाठी आमची टीम आपल्याशी तत्काळ संपर्क साधेल.
@@ -1958,7 +1958,7 @@ function DigitalSchoolPage() {
                         शाळा नोंदणी यशस्वी झाली!
                       </h3>
                       <p className="text-xs font-bold text-emerald-600">
-                        🎉 आपली ७ दिवसांची मोफत ऑनलाईन डिजिटल स्कूल ट्रायल सक्रिय करण्यात आली आहे.
+                        🎉 आपली ७ दिवसांची मोफत ऑनलाईन डिजिटल स्कूल सॉफ्टवेअर ट्रायल सक्रिय करण्यात आली आहे.
                       </p>
                     </div>
 

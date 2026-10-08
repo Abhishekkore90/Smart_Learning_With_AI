@@ -46,6 +46,8 @@ import {
   School,
   Building,
   RefreshCw,
+  Smartphone,
+  Maximize2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { parseExcelData } from "@/services/fileReader/ExcelParser";
@@ -200,6 +202,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
   const [questionBankSheets, setQuestionBankSheets] = useState<ParsedSheet[]>([]);
   const [selectedQuestionBankLesson, setSelectedQuestionBankLesson] = useState<string>("all");
+  // Mobile table view mode: "fit" fits all columns to screen in A4 proportions; "scroll" allows 100% horizontal scroll
+  const [mobileTableViewMode, setMobileTableViewMode] = useState<"fit" | "scroll">("fit");
 
   // Strictly identify the current section type: "question_bank" | "monthly" | "annual"
   const currentSectionType: "question_bank" | "monthly" | "annual" = useMemo(() => {
@@ -2879,7 +2883,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       {/* Main Document Content Area */}
       <div
         ref={printContainerRef}
-        className="bg-white rounded-3xl border border-slate-300 shadow-sm overflow-hidden p-6 sm:p-8 space-y-8 print:border-none print:shadow-none print:p-0"
+        className="bg-white rounded-2xl sm:rounded-3xl border border-slate-300 shadow-sm overflow-hidden p-2 sm:p-6 md:p-8 space-y-4 sm:space-y-8 print:border-none print:shadow-none print:p-0"
       >
         {loadingWorkbook ? (
           <div className="flex flex-col items-center justify-center p-12 gap-3 text-slate-500">
@@ -2977,7 +2981,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                       return (
                         <div key={`${sheet.sheetName}-${sheetIndex}`} className="pdf-subject-section space-y-4 page-break-after">
                           {/* School Info Header Card */}
-                          <div className="pdf-school-header border-2 border-slate-900 rounded-2xl p-5 sm:p-6 bg-white space-y-3.5 text-sm sm:text-base font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900 relative">
+                          <div className="pdf-school-header border-2 border-slate-900 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 md:p-6 bg-white space-y-2.5 sm:space-y-3.5 text-xs sm:text-base font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900 relative">
                             <button
                               type="button"
                               onClick={() => {
@@ -3252,19 +3256,64 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           </div>
                         )}
 
+                        {/* Mobile View Mode Switcher for Question Bank */}
+                        <div className="flex items-center justify-between bg-slate-100 p-1.5 rounded-xl border border-slate-200 sm:hidden mb-2 gap-1 text-xs">
+                          <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-700 pl-1">
+                            <TableIcon className="size-3.5 text-indigo-600" />
+                            <span>तक्ता दृश्य:</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setMobileTableViewMode("fit")}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer ${
+                                mobileTableViewMode === "fit"
+                                  ? "bg-indigo-600 text-white shadow-xs"
+                                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                              }`}
+                            >
+                              <Smartphone className="size-3" />
+                              <span>📱 स्क्रीन फिट (A4 Fit)</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setMobileTableViewMode("scroll")}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer ${
+                                mobileTableViewMode === "scroll"
+                                  ? "bg-indigo-600 text-white shadow-xs"
+                                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                              }`}
+                            >
+                              <Maximize2 className="size-3" />
+                              <span>🔍 100% Scroll</span>
+                            </button>
+                          </div>
+                        </div>
+
                         {/* Reconstructed Question Bank Table */}
-                        <div className="overflow-x-auto rounded-2xl border-2 border-slate-900 shadow-sm bg-white">
-                          <table className="w-full border-collapse text-xs font-sans bg-white table-fixed min-w-[950px]">
+                        <div className={`rounded-xl sm:rounded-2xl border-2 border-slate-900 shadow-sm bg-white ${mobileTableViewMode === 'fit' ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
+                          <table className={`w-full border-collapse text-xs font-sans bg-white table-fixed ${mobileTableViewMode === 'fit' ? 'min-w-full' : 'min-w-[950px]'}`}>
                             {isStandard8Col && (
                               <colgroup>
-                                <col style={{ width: "30px" }} />
-                                <col style={{ width: "12%" }} />
-                                <col style={{ width: "14%" }} />
-                                <col style={{ width: "38.5%" }} />
-                                <col style={{ width: "25.5%" }} />
-                                <col style={{ width: "58px" }} />
-                                <col style={{ width: "58px" }} />
-                                <col style={{ width: "50px" }} />
+                                {mobileTableViewMode === "fit" ? [
+                                  <col key="q0" style={{ width: "6%" }} />,
+                                  <col key="q1" style={{ width: "13%" }} />,
+                                  <col key="q2" style={{ width: "15%" }} />,
+                                  <col key="q3" style={{ width: "32%" }} />,
+                                  <col key="q4" style={{ width: "22%" }} />,
+                                  <col key="q5" style={{ width: "4%" }} />,
+                                  <col key="q6" style={{ width: "4%" }} />,
+                                  <col key="q7" style={{ width: "4%" }} />,
+                                ] : [
+                                  <col key="q0" style={{ width: "30px" }} />,
+                                  <col key="q1" style={{ width: "12%" }} />,
+                                  <col key="q2" style={{ width: "14%" }} />,
+                                  <col key="q3" style={{ width: "38.5%" }} />,
+                                  <col key="q4" style={{ width: "25.5%" }} />,
+                                  <col key="q5" style={{ width: "58px" }} />,
+                                  <col key="q6" style={{ width: "58px" }} />,
+                                  <col key="q7" style={{ width: "50px" }} />,
+                                ]}
                               </colgroup>
                             )}
                             <thead>
@@ -3720,27 +3769,27 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           className={`pdf-subject-section space-y-4 my-6 ${secIdx > 0 ? "html2pdf__page-break pt-6 border-t-2 border-slate-200 print:pt-0 print:border-none" : ""}`}
                         >
                           {/* Header Title & School Info Card for THIS Subject */}
-                          <div className="pdf-school-header border-2 border-slate-900 rounded-2xl p-5 sm:p-6 bg-slate-50 space-y-3.5 text-sm sm:text-base font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900 relative">
+                          <div className="pdf-school-header border-2 border-slate-900 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 md:p-6 bg-slate-50 space-y-2 sm:space-y-3.5 text-xs sm:text-base font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900 relative">
                             <button
                               type="button"
                               onClick={() => {
                                 setSchoolFormData(schoolProfile);
                                 setIsSchoolModalOpen(true);
                               }}
-                              className="print:hidden absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-white/80 hover:bg-white text-indigo-700 text-xs font-bold border border-indigo-200 shadow-xs flex items-center gap-1.5 cursor-pointer transition-all"
+                              className="print:hidden absolute top-2.5 right-2.5 sm:top-3 sm:right-3 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-white/80 hover:bg-white text-indigo-700 text-[11px] sm:text-xs font-bold border border-indigo-200 shadow-xs flex items-center gap-1 cursor-pointer transition-all"
                               title="शाळा माहिती संपादन करा"
                             >
-                              <Edit3 className="size-3.5 text-indigo-600" />
+                              <Edit3 className="size-3 sm:size-3.5 text-indigo-600" />
                               <span>बदला</span>
                             </button>
 
-                            <div className="text-center border-b-2 border-slate-900 pb-3">
-                              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-indigo-950 uppercase tracking-wide print:text-slate-950">
+                            <div className="text-center border-b-2 border-slate-900 pb-2 sm:pb-3">
+                              <h2 className="text-base sm:text-2xl md:text-3xl font-black text-indigo-950 uppercase tracking-wide print:text-slate-950">
                                 {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
                               </h2>
                             </div>
 
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm md:text-base font-bold text-slate-900 pt-1.5">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3 text-[10px] sm:text-sm md:text-base font-bold text-slate-900 pt-1 sm:pt-1.5">
                               <div><span className="text-slate-600 font-semibold">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
                               <div className="sm:text-center"><span className="text-slate-600 font-semibold">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
                               <div className="sm:text-center"><span className="text-slate-600 font-semibold">जिल्हा:</span> <span className="font-extrabold text-slate-950">{schoolProfile.districtName || "—"}</span></div>
@@ -3752,10 +3801,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           {(() => {
                             const parts = getSectionBannerParts(sec);
                             return (
-                              <div className="pdf-subject-banner relative bg-amber-50/90 border-2 border-amber-300 text-amber-950 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-2xl flex flex-nowrap items-center justify-between gap-2 sm:gap-3 shadow-xs overflow-hidden">
-                                <div className="flex items-center gap-2 sm:gap-2.5 flex-nowrap flex-1 min-w-0 overflow-hidden">
-                                  <BookOpen className="size-4 sm:size-4.5 text-amber-600 shrink-0" />
-                                  <div className="flex items-center flex-nowrap whitespace-nowrap gap-x-1 sm:gap-x-1.5 text-xs sm:text-[13px] md:text-[13.5px] font-black text-amber-950 min-w-0">
+                              <div className="pdf-subject-banner relative bg-amber-50/90 border-2 border-amber-300 text-amber-950 px-2 sm:px-3.5 md:px-5 py-1.5 sm:py-2 md:py-2.5 rounded-xl sm:rounded-2xl flex flex-nowrap items-center justify-between gap-1.5 sm:gap-3 shadow-xs overflow-hidden">
+                                <div className="flex items-center gap-1.5 sm:gap-2.5 flex-nowrap flex-1 min-w-0 overflow-hidden">
+                                  <BookOpen className="size-3.5 sm:size-4.5 text-amber-600 shrink-0" />
+                                  <div className="flex items-center flex-nowrap whitespace-nowrap gap-x-1 sm:gap-x-1.5 text-[11px] sm:text-[13px] md:text-[13.5px] font-black text-amber-950 min-w-0">
                                     {parts.segments.map((seg, idx) => {
                                       const colonMatch = seg.match(/^(.*?)\s*(:-|:)\s*(.*)$/);
                                       const hasColon = !!colonMatch;
@@ -3804,39 +3853,97 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                             );
                           })()}
 
-                          {/* Mobile Scroll Indicator */}
-                          <div className="flex items-center justify-between text-[11px] font-extrabold text-indigo-700 bg-indigo-50/80 px-3 py-1.5 rounded-lg border border-indigo-100 sm:hidden mb-2">
-                            <span className="flex items-center gap-1">👈👉 संपूर्ण तक्ता पाहण्यासाठी डावीकडे/उजवीकडे सरकवा (Scroll horizontally)</span>
+                          {/* Mobile View Mode Switcher */}
+                          <div className="flex items-center justify-between bg-slate-100 p-1.5 rounded-xl border border-slate-200 sm:hidden mb-2 gap-1 text-xs">
+                            <div className="flex items-center gap-1.5 text-[11px] font-black text-slate-700 pl-1">
+                              <TableIcon className="size-3.5 text-indigo-600" />
+                              <span>तक्ता दृश्य:</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setMobileTableViewMode("fit")}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer ${
+                                  mobileTableViewMode === "fit"
+                                    ? "bg-indigo-600 text-white shadow-xs"
+                                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                                }`}
+                              >
+                                <Smartphone className="size-3" />
+                                <span>📱 स्क्रीन फिट (A4 Fit)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setMobileTableViewMode("scroll")}
+                                className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer ${
+                                  mobileTableViewMode === "scroll"
+                                    ? "bg-indigo-600 text-white shadow-xs"
+                                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                                }`}
+                              >
+                                <Maximize2 className="size-3" />
+                                <span>🔍 100% Scroll</span>
+                              </button>
+                            </div>
                           </div>
+
+                          {/* Mobile Scroll Indicator (only visible in scroll mode) */}
+                          {mobileTableViewMode === "scroll" && (
+                            <div className="flex items-center justify-between text-[11px] font-extrabold text-indigo-700 bg-indigo-50/80 px-3 py-1.5 rounded-lg border border-indigo-100 sm:hidden mb-2">
+                              <span className="flex items-center gap-1">👈👉 संपूर्ण तक्ता पाहण्यासाठी डावीकडे/उजवीकडे सरकवा (Scroll horizontally)</span>
+                            </div>
+                          )}
+
                           {/* Table View Container */}
-                          <div className="overflow-x-auto border border-slate-900 rounded-xl shadow-xs mb-4 pb-1">
-                            <table className="w-full min-w-[900px] table-fixed border-collapse border border-slate-900 text-xs font-sans bg-white">
+                          <div className={`border border-slate-900 rounded-xl shadow-xs mb-4 pb-0.5 ${mobileTableViewMode === 'fit' ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
+                            <table className={`w-full table-fixed border-collapse border border-slate-900 text-xs font-sans bg-white ${mobileTableViewMode === 'fit' ? 'min-w-full' : 'min-w-[900px]'}`}>
                               <colgroup>
-                                {isMonthly ? [
-                                  <col key="m0" style={{ width: "55px" }} />,
-                                  <col key="m1" style={{ width: "95px" }} />,
-                                  <col key="m2" style={{ width: "190px" }} />,
-                                  <col key="m3" style={{ width: "125px" }} />,
-                                  <col key="m4" style={{ width: "245px" }} />,
-                                  <col key="m5" style={{ width: "95px" }} />,
-                                  <col key="m6" style={{ width: "95px" }} />,
-                                  ...(isInlineEditing ? [<col key="mEdit" style={{ width: "60px" }} />] : [])
-                                ] : [
-                                  <col key="a0" style={{ width: "80px" }} />,
-                                  <col key="a1" style={{ width: "60px" }} />,
-                                  <col key="a2" style={{ width: "80px" }} />,
-                                  <col key="a3" style={{ width: "80px" }} />,
-                                  <col key="a4" style={{ width: "500px" }} />,
-                                  <col key="a5" style={{ width: "100px" }} />,
-                                  ...(isInlineEditing ? [<col key="aEdit" style={{ width: "60px" }} />] : [])
-                                ]}
+                                {isMonthly ? (
+                                  mobileTableViewMode === "fit" ? [
+                                    <col key="m0" style={{ width: "9%" }} />,
+                                    <col key="m1" style={{ width: "11%" }} />,
+                                    <col key="m2" style={{ width: "23%" }} />,
+                                    <col key="m3" style={{ width: "15%" }} />,
+                                    <col key="m4" style={{ width: "22%" }} />,
+                                    <col key="m5" style={{ width: "10%" }} />,
+                                    <col key="m6" style={{ width: "10%" }} />,
+                                    ...(isInlineEditing ? [<col key="mEdit" style={{ width: "8%" }} />] : [])
+                                  ] : [
+                                    <col key="m0" style={{ width: "55px" }} />,
+                                    <col key="m1" style={{ width: "95px" }} />,
+                                    <col key="m2" style={{ width: "190px" }} />,
+                                    <col key="m3" style={{ width: "125px" }} />,
+                                    <col key="m4" style={{ width: "245px" }} />,
+                                    <col key="m5" style={{ width: "95px" }} />,
+                                    <col key="m6" style={{ width: "95px" }} />,
+                                    ...(isInlineEditing ? [<col key="mEdit" style={{ width: "60px" }} />] : [])
+                                  ]
+                                ) : (
+                                  mobileTableViewMode === "fit" ? [
+                                    <col key="a0" style={{ width: "13%" }} />,
+                                    <col key="a1" style={{ width: "9%" }} />,
+                                    <col key="a2" style={{ width: "11%" }} />,
+                                    <col key="a3" style={{ width: "11%" }} />,
+                                    <col key="a4" style={{ width: "36%" }} />,
+                                    <col key="a5" style={{ width: "20%" }} />,
+                                    ...(isInlineEditing ? [<col key="aEdit" style={{ width: "8%" }} />] : [])
+                                  ] : [
+                                    <col key="a0" style={{ width: "80px" }} />,
+                                    <col key="a1" style={{ width: "60px" }} />,
+                                    <col key="a2" style={{ width: "80px" }} />,
+                                    <col key="a3" style={{ width: "80px" }} />,
+                                    <col key="a4" style={{ width: "500px" }} />,
+                                    <col key="a5" style={{ width: "100px" }} />,
+                                    ...(isInlineEditing ? [<col key="aEdit" style={{ width: "60px" }} />] : [])
+                                  ]
+                                )}
                               </colgroup>
                               <thead>
                                 <tr className="bg-slate-100 text-slate-900 font-black text-center text-xs border-b border-slate-400">
                                   {categoryHeaders.map((hText: string, i: number) => (
                                     <th
                                       key={i}
-                                      className="border border-slate-400 p-2 text-center font-black tracking-wide text-[11px] bg-slate-100 text-slate-900 leading-snug whitespace-pre-line"
+                                      className={`border border-slate-400 ${mobileTableViewMode === 'fit' ? 'p-1 text-[9px] sm:p-2 sm:text-[11px]' : 'p-2 text-[11px]'} text-center font-black tracking-tight sm:tracking-wide bg-slate-100 text-slate-900 leading-tight sm:leading-snug whitespace-pre-line break-words`}
                                     >
                                       {!isMonthly && i === 4
                                         ? `विषय : ${sec.subjectName}`
@@ -3850,7 +3957,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                     </th>
                                   ))}
                                   {isInlineEditing && (
-                                    <th className="border border-slate-400 p-2.5 text-center font-black tracking-wide text-xs bg-slate-100 text-slate-900">
+                                    <th className="border border-slate-400 p-1 sm:p-2.5 text-center font-black tracking-wide text-[10px] sm:text-xs bg-slate-100 text-slate-900">
                                       क्रिया
                                     </th>
                                   )}
@@ -4025,9 +4132,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                             const isExam = cellInfo?.isExam || isExamOrAssessmentText(cellInfo?.displayValue) || isExamOrAssessmentText(r[cIdx]) || isExamOrAssessmentText(cellVal);
                                             const cellText = cellVal;
 
-                                            let cellClasses = "border border-slate-300 p-2.5 sm:p-3 leading-relaxed sm:leading-6";
+                                            let cellClasses = `border border-slate-300 ${mobileTableViewMode === 'fit' ? 'p-1 text-[9.5px] sm:p-2.5 sm:text-xs md:text-[13px] leading-tight sm:leading-6' : 'p-2.5 sm:p-3 leading-relaxed sm:leading-6 text-xs sm:text-[13.5px]'} break-words`;
                                             if (isExam) {
-                                              cellClasses += " exam-assessment-cell text-center font-black text-slate-950 bg-amber-50/50 text-xs sm:text-[13.5px]";
+                                              cellClasses += " exam-assessment-cell text-center font-black text-slate-950 bg-amber-50/50 text-[10px] sm:text-xs md:text-[13.5px]";
                                             } else if (isMonthly) {
                                               cellClasses += " align-middle";
                                               if (cIdx === 0) {
@@ -4111,18 +4218,18 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                             </table>
                           </div>
                           {/* Signature Bar on EVERY Subject Page */}
-                          <div className="pdf-signature-bar pt-4 mt-6 border-t-2 border-slate-300 grid grid-cols-2 text-center text-sm sm:text-base font-black text-slate-950">
+                          <div className="pdf-signature-bar pt-3 sm:pt-4 mt-4 sm:mt-6 border-t-2 border-slate-300 grid grid-cols-2 text-center text-xs sm:text-base font-black text-slate-950">
                             <div className="flex flex-col items-center">
-                              <div className="h-10 sm:h-12 w-full" />
-                              <div className="w-48 sm:w-56 border-t border-dotted border-slate-500 mb-2" />
-                              <div className="pdf-sig-title text-sm sm:text-base font-black text-slate-950">वर्ग शिक्षक स्वाक्षरी</div>
-                              <div className="pdf-sig-name text-xs sm:text-sm text-slate-700 font-bold mt-1">({schoolProfile.teacherName || "शिक्षकाचे नाव"})</div>
+                              <div className="h-6 sm:h-12 w-full" />
+                              <div className="w-32 sm:w-56 border-t border-dotted border-slate-500 mb-1.5 sm:mb-2" />
+                              <div className="pdf-sig-title text-xs sm:text-base font-black text-slate-950">वर्ग शिक्षक स्वाक्षरी</div>
+                              <div className="pdf-sig-name text-[10px] sm:text-sm text-slate-700 font-bold mt-0.5 sm:mt-1">({schoolProfile.teacherName || "शिक्षकाचे नाव"})</div>
                             </div>
                             <div className="flex flex-col items-center">
-                              <div className="h-10 sm:h-12 w-full" />
-                              <div className="w-48 sm:w-56 border-t border-dotted border-slate-500 mb-2" />
-                              <div className="pdf-sig-title text-sm sm:text-base font-black text-slate-950">मुख्याध्यापक स्वाक्षरी व शिक्का</div>
-                              <div className="pdf-sig-name text-xs sm:text-sm text-slate-700 font-bold mt-1">({schoolProfile.headMasterName || "मुख्याध्यापक नाव"})</div>
+                              <div className="h-6 sm:h-12 w-full" />
+                              <div className="w-32 sm:w-56 border-t border-dotted border-slate-500 mb-1.5 sm:mb-2" />
+                              <div className="pdf-sig-title text-xs sm:text-base font-black text-slate-950">मुख्याध्यापक स्वाक्षरी व शिक्का</div>
+                              <div className="pdf-sig-name text-[10px] sm:text-sm text-slate-700 font-bold mt-0.5 sm:mt-1">({schoolProfile.headMasterName || "मुख्याध्यापक नाव"})</div>
                             </div>
                           </div>
                         </div>

@@ -45,13 +45,17 @@ export function getBunnyStorageUrl(publicUrl: string): string {
 
   try {
     const urlObj = new URL(publicUrl);
+    if (!urlObj.hostname.includes("b-cdn.net") && !urlObj.hostname.includes("bunnycdn.com")) {
+      return publicUrl;
+    }
     const zone = BUNNY_STORAGE_ZONE;
     const rawPath = decodeURIComponent(urlObj.pathname).replace(/^\//, "");
     const cleanPath = rawPath.startsWith(zone + "/") ? rawPath.slice(zone.length + 1) : rawPath;
+    const encodedSegments = cleanPath.split("/").map(encodeURIComponent).join("/");
 
     if (import.meta.env.DEV) {
       // DEV: use Vite proxy (vite.config.ts /api/bunny-storage → storage.bunnycdn.com)
-      return `/api/bunny-storage/${zone}/${encodeURI(cleanPath)}`;
+      return `/api/bunny-storage/${zone}/${encodedSegments}`;
     } else {
       // PROD: use our secure Vercel serverless proxy function
       return `/api/pdf-proxy?url=${encodeURIComponent(publicUrl)}`;
@@ -64,9 +68,8 @@ export function getBunnyStorageUrl(publicUrl: string): string {
 
 /**
  * Universal binary file fetcher:
- * 1. Tries direct Bunny Storage with AccessKey (CORS-enabled on storage.bunnycdn.com).
- * 2. Tries serverless proxy / Vite proxy.
- * 3. Tries original URL directly.
+ * 1. Tries serverless proxy / Vite dev proxy for Bunny CDN files (Zero CORS issues).
+ * 2. Tries public URL directly (for Firebase Storage, public CDNs, etc.).
  * Rejects HTML error / SPA fallback pages.
  */
 export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> {
@@ -82,11 +85,11 @@ export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> 
     return null;
   }
 
-  // 1. Primary: Direct Bunny Storage with AccessKey header (Zero CORS issues, works in all browsers & hosting)
-  const direct = getDirectBunnyStorageUrl(url);
-  if (direct) {
+  // 1. Primary: Serverless Proxy / Vite Dev Proxy for Bunny CDN files
+  const proxyUrl = getBunnyStorageUrl(url);
+  if (proxyUrl && proxyUrl !== url) {
     try {
-      const res = await fetch(direct.url, { headers: direct.headers });
+      const res = await fetch(proxyUrl);
       const cType = res.headers.get("content-type") || "";
       if (res.ok && !cType.includes("text/html")) {
         const ab = await res.arrayBuffer();
@@ -96,30 +99,11 @@ export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> 
         }
       }
     } catch (e) {
-      console.warn("Direct Bunny Storage fetch notice:", e);
+      console.warn("Proxy fetch notice:", e);
     }
   }
 
-  // 2. Secondary: Serverless Proxy / Vite Dev Proxy
-  try {
-    const proxyUrl = getBunnyStorageUrl(url);
-    const headers: Record<string, string> = {
-      AccessKey: BUNNY_STORAGE_API_KEY,
-    };
-    const res = await fetch(proxyUrl, { headers });
-    const cType = res.headers.get("content-type") || "";
-    if (res.ok && !cType.includes("text/html")) {
-      const ab = await res.arrayBuffer();
-      const header = new TextDecoder().decode(new Uint8Array(ab.slice(0, 50))).toLowerCase();
-      if (!header.includes("<!doctype") && !header.includes("<html")) {
-        return ab;
-      }
-    }
-  } catch (e) {
-    console.warn("Proxy fetch notice:", e);
-  }
-
-  // 3. Fallback: Direct URL fetch (for Firebase Storage, public CDNs, etc.)
+  // 2. Secondary: Direct public CDN URL / Firebase Storage without custom preflight headers
   try {
     const res = await fetch(url);
     const cType = res.headers.get("content-type") || "";

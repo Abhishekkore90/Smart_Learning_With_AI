@@ -25,7 +25,19 @@ import {
   GoogleAuthProvider,
   FacebookAuthProvider,
   signInWithPopup,
+  signInWithCredential,
 } from "firebase/auth";
+
+declare global {
+  interface Window {
+    AndroidGoogleAuth?: {
+      isNativeAvailable?: () => boolean;
+      triggerGoogleSignIn?: () => void;
+    };
+    onNativeGoogleSignInSuccess?: (idToken: string) => Promise<void> | void;
+    onNativeGoogleSignInFailure?: (error?: string) => void;
+  }
+}
 import {
   collection,
   query,
@@ -348,6 +360,159 @@ function UnifiedLoginPortal() {
     }
   };
 
+  const processGoogleUserSession = async (user: any) => {
+    // Check existing teacher or user record
+    let teacherDoc = await getDoc(doc(db, "teachers", user.uid));
+    let userDoc = await getDoc(doc(db, "users", user.uid));
+
+    let userData: any = teacherDoc.exists()
+      ? teacherDoc.data()
+      : userDoc.exists()
+        ? userDoc.data()
+        : null;
+
+    // If not found by UID, check if an existing record has this email
+    if (!userData && user.email) {
+      try {
+        const qTeacher = query(
+          collection(db, "teachers"),
+          where("email", "==", user.email)
+        );
+        const snapTeacher = await getDocs(qTeacher);
+        if (!snapTeacher.empty) {
+          userData = snapTeacher.docs[0].data();
+        } else {
+          const qUser = query(
+            collection(db, "users"),
+            where("email", "==", user.email)
+          );
+          const snapUser = await getDocs(qUser);
+          if (!snapUser.empty) {
+            userData = snapUser.docs[0].data();
+          }
+        }
+      } catch (_lookupErr) {
+        console.warn("Secondary email lookup note:", _lookupErr);
+      }
+    }
+
+    // If user does not exist yet (brand new signup via Google), create profile
+    if (!userData) {
+      userData = {
+        fullName: user.displayName || "Educator",
+        email: user.email || "",
+        udise: "",
+        schoolName: "",
+        address: "",
+        state: "Maharashtra",
+        board: "Maharashtra ZP Teacher",
+        role: "teacher",
+        createdAt: new Date().toISOString(),
+        photoURL: user.photoURL || "",
+        verified: false,
+      };
+
+      // Persist to teachers and users
+      try {
+        await setDoc(doc(db, "teachers", user.uid), userData, { merge: true });
+        await setDoc(doc(db, "users", user.uid), userData, { merge: true });
+      } catch (_docErr) {
+        console.warn("Firestore user creation note:", _docErr);
+      }
+    } else {
+      // Ensure profile has role and displayName if missing
+      if (!userData.role) userData.role = "teacher";
+      if (!userData.fullName && user.displayName) userData.fullName = user.displayName;
+    }
+
+    // Set localStorage for app-wide persistence
+    if (userData.udise) {
+      localStorage.setItem("teacher_udise", userData.udise);
+    }
+    localStorage.setItem(
+      "sqaaf_teacher_profile",
+      JSON.stringify({
+        fullName: userData.fullName || user.displayName || "Educator",
+        email: userData.email || user.email || "",
+        udise: userData.udise || "",
+        schoolName: userData.schoolName || "",
+        address: userData.address || "",
+        role: userData.role || "teacher",
+      })
+    );
+
+    // Log login session for admin monitoring
+    try {
+      await setDoc(
+        doc(db, "logged_users", user.uid),
+        {
+          uid: user.uid,
+          email: user.email || "",
+          fullName: userData.fullName || user.displayName || "Educator",
+          udise: userData.udise || "",
+          schoolName: userData.schoolName || "",
+          phone: userData.phone || user.phoneNumber || "",
+          lastLoginAt: serverTimestamp(),
+          loginCount: (userData.loginCount || 0) + 1,
+          role: userData.role || "teacher",
+          provider: "google",
+        },
+        { merge: true }
+      );
+    } catch (_e) {
+      // Non-critical
+    }
+
+    toast.success(
+      lang === "mr"
+        ? "Google द्वारे यशस्वीरित्या प्रवेश केला!"
+        : "Signed in with Google successfully!"
+    );
+
+    if (redirect) {
+      window.location.href = redirect;
+    } else {
+      window.location.href = "/teacher";
+    }
+  };
+
+  // Android Native Google Sign-In Listener
+  useEffect(() => {
+    window.onNativeGoogleSignInSuccess = async (idToken: string) => {
+      try {
+        setGoogleLoading(true);
+        const credential = GoogleAuthProvider.credential(idToken);
+        const result = await signInWithCredential(auth, credential);
+        if (result.user) {
+          await processGoogleUserSession(result.user);
+        }
+      } catch (err: any) {
+        console.error("Native Google sign-in auth error:", err);
+        toast.error(
+          err.message ||
+            (lang === "mr"
+              ? "Google प्रमाणीकरण अयशस्वी झाले. कृपया पुन्हा प्रयत्न करा."
+              : "Google sign-in failed. Please try again.")
+        );
+      } finally {
+        setGoogleLoading(false);
+      }
+    };
+
+    window.onNativeGoogleSignInFailure = (errMsg?: string) => {
+      console.warn("Native Google sign-in failure callback:", errMsg);
+      setGoogleLoading(false);
+      if (errMsg && !errMsg.toLowerCase().includes("cancel")) {
+        toast.error(errMsg);
+      }
+    };
+
+    return () => {
+      delete window.onNativeGoogleSignInSuccess;
+      delete window.onNativeGoogleSignInFailure;
+    };
+  }, [lang, redirect]);
+
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     clearUnlockedPinSections();
@@ -356,6 +521,17 @@ function UnifiedLoginPortal() {
         throw new Error("Authentication service is temporarily unavailable.");
       }
 
+      // १. Android Native Google Bridge Check
+      if (window.AndroidGoogleAuth?.isNativeAvailable?.() || (window.AndroidGoogleAuth && !window.AndroidGoogleAuth.isNativeAvailable)) {
+        window.AndroidGoogleAuth.triggerGoogleSignIn?.();
+        // Fallback safety timeout in case the native picker is closed without callback
+        setTimeout(() => {
+          setGoogleLoading(false);
+        }, 15000);
+        return;
+      }
+
+      // २. Standard Browser Flow
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
       const result = await signInWithPopup(auth, provider);
@@ -365,119 +541,7 @@ function UnifiedLoginPortal() {
         throw new Error("Google authentication failed. No user record returned.");
       }
 
-      // Check existing teacher or user record
-      let teacherDoc = await getDoc(doc(db, "teachers", user.uid));
-      let userDoc = await getDoc(doc(db, "users", user.uid));
-
-      let userData: any = teacherDoc.exists()
-        ? teacherDoc.data()
-        : userDoc.exists()
-          ? userDoc.data()
-          : null;
-
-      // If not found by UID, check if an existing record has this email
-      if (!userData && user.email) {
-        try {
-          const qTeacher = query(
-            collection(db, "teachers"),
-            where("email", "==", user.email)
-          );
-          const snapTeacher = await getDocs(qTeacher);
-          if (!snapTeacher.empty) {
-            userData = snapTeacher.docs[0].data();
-          } else {
-            const qUser = query(
-              collection(db, "users"),
-              where("email", "==", user.email)
-            );
-            const snapUser = await getDocs(qUser);
-            if (!snapUser.empty) {
-              userData = snapUser.docs[0].data();
-            }
-          }
-        } catch (_lookupErr) {
-          console.warn("Secondary email lookup note:", _lookupErr);
-        }
-      }
-
-      // If user does not exist yet (brand new signup via Google), create profile
-      if (!userData) {
-        userData = {
-          fullName: user.displayName || "Educator",
-          email: user.email || "",
-          udise: "",
-          schoolName: "",
-          address: "",
-          state: "Maharashtra",
-          board: "Maharashtra ZP Teacher",
-          role: "teacher",
-          createdAt: new Date().toISOString(),
-          photoURL: user.photoURL || "",
-          verified: false,
-        };
-
-        // Persist to teachers and users
-        try {
-          await setDoc(doc(db, "teachers", user.uid), userData, { merge: true });
-          await setDoc(doc(db, "users", user.uid), userData, { merge: true });
-        } catch (_docErr) {
-          console.warn("Firestore user creation note:", _docErr);
-        }
-      } else {
-        // Ensure profile has role and displayName if missing
-        if (!userData.role) userData.role = "teacher";
-        if (!userData.fullName && user.displayName) userData.fullName = user.displayName;
-      }
-
-      // Set localStorage for app-wide persistence
-      if (userData.udise) {
-        localStorage.setItem("teacher_udise", userData.udise);
-      }
-      localStorage.setItem(
-        "sqaaf_teacher_profile",
-        JSON.stringify({
-          fullName: userData.fullName || user.displayName || "Educator",
-          email: userData.email || user.email || "",
-          udise: userData.udise || "",
-          schoolName: userData.schoolName || "",
-          address: userData.address || "",
-          role: userData.role || "teacher",
-        })
-      );
-
-      // Log login session for admin monitoring
-      try {
-        await setDoc(
-          doc(db, "logged_users", user.uid),
-          {
-            uid: user.uid,
-            email: user.email || "",
-            fullName: userData.fullName || user.displayName || "Educator",
-            udise: userData.udise || "",
-            schoolName: userData.schoolName || "",
-            phone: userData.phone || user.phoneNumber || "",
-            lastLoginAt: serverTimestamp(),
-            loginCount: (userData.loginCount || 0) + 1,
-            role: userData.role || "teacher",
-            provider: "google",
-          },
-          { merge: true }
-        );
-      } catch (_e) {
-        // Non-critical
-      }
-
-      toast.success(
-        lang === "mr"
-          ? "Google द्वारे यशस्वीरित्या प्रवेश केला!"
-          : "Signed in with Google successfully!"
-      );
-
-      if (redirect) {
-        window.location.href = redirect;
-      } else {
-        window.location.href = "/teacher";
-      }
+      await processGoogleUserSession(user);
     } catch (error: any) {
       if (
         error?.code === "auth/popup-closed-by-user" ||
@@ -493,7 +557,9 @@ function UnifiedLoginPortal() {
             : "Google sign-in failed. Please try again.")
       );
     } finally {
-      setGoogleLoading(false);
+      if (!window.AndroidGoogleAuth?.isNativeAvailable?.()) {
+        setGoogleLoading(false);
+      }
     }
   };
 

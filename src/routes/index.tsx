@@ -111,8 +111,8 @@ function LandingPage() {
       to: "/ai-tools",
     },
     {
-      title: "Digital School",
-      desc: "Access digital school portal, student resources, and interactive learning tools.",
+      title: "Digital School Software",
+      desc: "Access digital school software portal, student resources, and interactive learning tools.",
       icon: GraduationCap,
       color: "pink",
       softBg: "bg-feature-pink/90",
@@ -120,7 +120,7 @@ function LandingPage() {
       iconBg: "bg-white",
       iconColor: "text-icon-pink",
       btnHover: "group-hover:bg-icon-pink group-hover:text-white group-hover:border-transparent",
-      actionText: "Open Digital School",
+      actionText: "Open Digital School Software",
       to: "/digital-school",
     },
     {
@@ -321,45 +321,45 @@ function LandingPage() {
                   <div className={`absolute -inset-px rounded-xl bg-gradient-to-r ${customStyles.gradient} opacity-0 group-hover:opacity-25 transition-opacity duration-500 blur z-0`} />
 
                   {/* Content */}
-                  <div className="relative z-20 p-2.5 xs:p-3 sm:p-3.5 flex flex-col justify-between w-full">
-                    <div className="flex items-start gap-2 sm:gap-3">
+                  <div
+                    onClick={() => {
+                      if ((card as any).externalUrl) {
+                        window.location.href = (card as any).externalUrl;
+                      } else if (card.to && card.to !== "#") {
+                        navigate({ to: card.to as any, search: (card as any).search });
+                      }
+                    }}
+                    className="relative z-20 p-2.5 xs:p-3 sm:p-3.5 flex flex-col w-full gap-2 cursor-pointer"
+                  >
+                    {/* Top Header: Icon & Title */}
+                    <div className="flex items-center gap-2 sm:gap-2.5">
                       {/* Transparent Soft Icon Container */}
                       <div
-                        className={`size-7 sm:size-9 shrink-0 rounded-lg bg-white/15 backdrop-blur-md text-white flex items-center justify-center shadow-sm border border-white/30 transition-all duration-500 group-hover:bg-white group-hover:text-slate-950 group-hover:shadow-md group-hover:scale-105`}
+                        className={`size-7 sm:size-8 shrink-0 rounded-lg bg-white/15 backdrop-blur-md text-white flex items-center justify-center shadow-sm border border-white/30 transition-all duration-500 group-hover:bg-white group-hover:text-slate-950 group-hover:shadow-md group-hover:scale-105`}
                       >
-                        <Icon className="size-3.5 sm:size-4 transition-transform duration-500" strokeWidth={2} />
+                        <Icon className="size-3.5 sm:size-4 transition-transform duration-500" strokeWidth={2.2} />
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <h3 className="text-xs sm:text-base md:text-lg font-black text-white tracking-tight leading-tight">
-                            {card.title}
-                          </h3>
-                        </div>
+                      <h3 className="text-xs sm:text-base font-black text-white tracking-tight leading-tight truncate flex-1">
+                        {card.title}
+                      </h3>
+                    </div>
 
-                        <p className={`text-white/90 text-[10px] xs:text-[11px] sm:text-xs font-medium leading-normal sm:leading-relaxed tracking-wide group-hover:text-white transition-all duration-300 whitespace-pre-line mt-1 ${isHeroExpanded ? "line-clamp-none text-amber-100" : "line-clamp-2 sm:line-clamp-1 group-hover:line-clamp-none"}`}>
-                          {isHeroExpanded ? card.desc : card.desc}
-                        </p>
+                    {/* Entering Action Button shifted to UPSIDE */}
+                    <div className="py-1.5 px-2.5 rounded-lg bg-white/15 group-hover:bg-white/25 border border-white/25 flex items-center justify-between gap-1.5 transition-all duration-300 group-hover:border-white/40 shadow-xs">
+                      <span className="text-[9px] xs:text-[10px] sm:text-[10.5px] font-black uppercase tracking-[0.1em] text-white">
+                        {card.actionText}
+                      </span>
+                      <div className="size-5 sm:size-6 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-300 group-hover:scale-105 shadow-sm text-white group-hover:bg-white group-hover:text-slate-950">
+                        <ArrowRight className="size-2.5 sm:size-3 group-hover:translate-x-0.5 transition-transform duration-300" />
                       </div>
                     </div>
 
-                    {/* Bottom Action Section */}
-                    <div
-                      onClick={() => {
-                        if ((card as any).externalUrl) {
-                          window.location.href = (card as any).externalUrl;
-                        } else if (card.to && card.to !== "#") {
-                          navigate({ to: card.to as any, search: (card as any).search });
-                        }
-                      }}
-                      className="pt-1.5 mt-1.5 sm:pt-2 sm:mt-2 flex items-center justify-between gap-1.5 border-t border-white/20 transition-colors duration-300 cursor-pointer hover:bg-white/10 px-1 py-0.5 rounded-lg"
-                    >
-                      <span className="text-[9px] xs:text-[10.5px] sm:text-[11px] font-black uppercase tracking-[0.1em] text-white group-hover:text-white transition-colors duration-300">
-                        {card.actionText}
-                      </span>
-                      <div className="size-5 sm:size-6.5 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-500 group-hover:scale-105 shadow-sm text-white group-hover:bg-white group-hover:text-slate-950">
-                        <ArrowRight className="size-2.5 sm:size-3 group-hover:translate-x-0.5 transition-transform duration-300" />
-                      </div>
+                    {/* Information / Description shown DOWN under the button */}
+                    <div className="pt-0.5 border-t border-white/15">
+                      <p className={`text-white/85 text-[10px] xs:text-[11px] sm:text-xs font-medium leading-normal sm:leading-relaxed tracking-wide group-hover:text-white transition-all duration-300 whitespace-pre-line mt-1 ${isHeroExpanded ? "line-clamp-none text-amber-100" : "line-clamp-2 sm:line-clamp-2 group-hover:line-clamp-none"}`}>
+                        {card.desc}
+                      </p>
                     </div>
                   </div>
                 </motion.div>

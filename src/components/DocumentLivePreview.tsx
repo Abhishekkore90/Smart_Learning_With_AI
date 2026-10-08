@@ -1122,28 +1122,27 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                 <span>👈 संपूर्ण तक्ता पाहण्यासाठी डावीकडे/उजवीकडे स्क्रोल करा</span>
                 <span className="text-amber-700 font-black">↔</span>
               </div>
-              <table className="min-w-[920px] w-full text-center text-sm border-collapse border-2 border-slate-400">
+              <table className="w-full min-w-full sm:min-w-[920px] text-center text-xs sm:text-sm border-collapse border-2 border-slate-400 table-fixed">
                 <colgroup>
-                  <col style={{ width: "55px" }} />
-                  <col style={{ width: "95px" }} />
-                  <col style={{ width: "150px" }} />
-                  <col style={{ width: "230px" }} />
-                  <col style={{ width: "200px" }} />
-                  <col style={{ width: "95px" }} />
-                  <col style={{ width: "95px" }} />
+                  <col className="w-[8%] sm:w-[55px]" />
+                  <col className="w-[14%] sm:w-[95px]" />
+                  <col className="w-[22%] sm:w-[150px]" />
+                  <col className="w-[24%] sm:w-[230px]" />
+                  <col className="w-[20%] sm:w-[200px]" />
+                  <col className="w-[6%] sm:w-[95px]" />
+                  <col className="w-[6%] sm:w-[95px]" />
                 </colgroup>
-                <thead className="bg-slate-100 text-slate-900 font-extrabold text-xs md:text-sm border-b-2 border-slate-400">
+                <thead className="bg-slate-100 text-slate-900 font-extrabold text-[10px] sm:text-xs md:text-sm border-b-2 border-slate-400">
                   <tr>
                     {(p.columnHeaders && p.columnHeaders.length > 0
                       ? p.columnHeaders
                       : ["तासिका", "विषय", "अध्ययन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती / अध्ययन दर्शक", "अध्ययनाचे स्वरूप (अनुभव / कृती)", "साधन तंत्रे", "शैक्षणिक साहित्य"]
                     ).map((header: string, hIdx: number) => {
-                      const colWidths = ["55px", "95px", "150px", "230px", "200px", "95px", "95px"];
                       return (
                         <th
                           key={hIdx}
-                          style={{ width: colWidths[hIdx], color: "#000000" }}
-                          className={`py-2.5 px-1.5 bg-slate-200 text-black font-black break-words leading-snug text-center ${hIdx === 0 ? "bg-slate-300" : ""} border-r-2 border-slate-400`}
+                          style={{ color: "#000000" }}
+                          className={`py-1.5 sm:py-2.5 px-1 sm:px-1.5 bg-slate-200 text-black font-black break-words leading-tight sm:leading-snug text-center ${hIdx === 0 ? "bg-slate-300" : ""} border-r-2 border-slate-400`}
                         >
                           {header}
                         </th>
@@ -1151,19 +1150,19 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                     })}
                   </tr>
                 </thead>
-                <tbody className="divide-y-2 divide-slate-300 font-medium text-slate-800 bg-white text-xs md:text-sm">
+                <tbody className="divide-y-2 divide-slate-300 font-medium text-slate-800 bg-white text-[9.5px] sm:text-xs md:text-sm">
                   {p.periods.map((row: any, rIdx: number) => (
                     <tr 
                       key={rIdx} 
                       className="hover:bg-indigo-50/40 transition-colors group border-b-2 border-slate-300"
                     >
-                      <td className="p-2 sm:p-3 border-r-2 border-slate-300 text-center font-black text-indigo-700 bg-indigo-50/50 align-middle break-words">{row.period}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")} className="p-2 sm:p-3 border-r-2 border-slate-300 font-bold text-slate-900 outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle break-words">{row.subject}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} className="p-2 sm:p-3 border-r-2 border-slate-300 font-semibold text-slate-800 leading-snug outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle break-words">{row.topic}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} className="p-2 sm:p-3 border-r-2 border-slate-300 font-medium text-emerald-800 leading-relaxed outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle break-words">{row.outcome}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} className="p-2 sm:p-3 border-r-2 border-slate-300 text-slate-800 leading-relaxed outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle break-words">{row.experience}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} className="p-2 sm:p-3 border-r-2 border-slate-300 text-slate-700 outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle break-words">{row.tools}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} className="p-2 sm:p-3 text-slate-700 outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle break-words">{row.materials}</td>
+                      <td className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-center font-black text-indigo-700 bg-indigo-50/50 align-middle break-words">{row.period}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-bold text-slate-900 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight">{row.subject}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-semibold text-slate-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words">{row.topic}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-medium text-emerald-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words">{row.outcome}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-slate-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words">{row.experience}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-slate-700 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight">{row.tools}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 text-slate-700 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight">{row.materials}</td>
                     </tr>
                   ))}
                 </tbody>
