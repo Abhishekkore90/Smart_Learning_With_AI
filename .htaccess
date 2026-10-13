@@ -1,6 +1,13 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+
+  # Proxy Bunny CDN / Storage files through PHP proxy (CORS support)
+  RewriteRule ^api/pdf-proxy/?$ pdf-proxy.php [L,QSA]
+  RewriteRule ^api/bunny-storage/(.*)$ pdf-proxy.php?path=$1 [L,QSA]
+  RewriteRule ^api/bunny-cdn/(.*)$ pdf-proxy.php?path=$1 [L,QSA]
+
+  # Existing files and directories
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

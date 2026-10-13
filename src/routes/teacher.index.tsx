@@ -221,46 +221,54 @@ function TeacherDashboard() {
                   >
                     <div
                       onClick={() => handleModuleAccess(item.to)}
-                      className="min-h-[17rem] h-full bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col justify-between transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer block w-full"
+                      className="min-h-[16.5rem] h-full bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-3xl sm:rounded-[2.25rem] p-5 sm:p-7 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col gap-3.5 transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer block w-full"
                     >
                       {/* Watermark background icon */}
-                      <div className="absolute right-[-10%] bottom-[-10%] opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
-                        <CardIcon className="size-48" strokeWidth={1} />
+                      <div className="absolute right-[-8%] bottom-[-8%] opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
+                        <CardIcon className="size-44" strokeWidth={1} />
                       </div>
 
-                      {/* Top Header with Icon & Mobile Info Toggle */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="size-11 sm:size-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
-                          <CardIcon className="size-5 sm:size-6 text-white" />
+                      {/* 1. Top Header: Icon & Title */}
+                      <div className="relative z-10 flex items-center gap-3">
+                        <div className="size-10 sm:size-11 bg-white/15 rounded-xl sm:rounded-2xl flex items-center justify-center border border-white/25 backdrop-blur-md shrink-0 group-hover:scale-105 group-hover:bg-white group-hover:text-purple-900 transition-all shadow-xs text-white">
+                          <CardIcon className="size-5 sm:size-5.5 text-white group-hover:text-purple-900 transition-colors" />
                         </div>
+                        <h3 className="text-base sm:text-lg font-black leading-tight tracking-tight text-white flex-1 truncate pr-1">
+                          {t[item.labelKey as keyof typeof t] || item.fallbackLabel}
+                        </h3>
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setExpandedModule(isExpanded ? null : idx);
                           }}
-                          className="sm:hidden text-[10px] font-bold text-amber-200 bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-full border border-white/20 flex items-center gap-1 shrink-0"
+                          className="sm:hidden text-[10px] font-bold text-amber-200 bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-full border border-white/20 flex items-center gap-1 shrink-0"
                         >
-                          <span>{isExpanded ? "कमी करा" : "माहिती पहा"}</span>
+                          <span>{isExpanded ? "कमी करा" : "माहिती"}</span>
                         </button>
                       </div>
 
-                      {/* Module Title & Description */}
-                      <div className="space-y-2 my-3">
-                        <h3 className="text-lg sm:text-xl font-black leading-tight tracking-tight pr-2">
-                          {t[item.labelKey as keyof typeof t] || item.fallbackLabel}
-                        </h3>
-                        <p className={`text-[11.5px] sm:text-xs text-violet-100/95 font-semibold leading-relaxed transition-all duration-300 ${isExpanded ? "line-clamp-none text-white font-medium" : "line-clamp-3 sm:line-clamp-2 group-hover:line-clamp-none"}`}>
-                          {item.description}
-                        </p>
+                      {/* 2. Entering Action Button shifted to UPSIDE (Below title/icon) */}
+                      <div className="relative z-10 py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl sm:rounded-2xl bg-white/15 group-hover:bg-white/25 border border-white/25 flex items-center justify-between gap-2 transition-all duration-300 group-hover:border-white/40 shadow-xs">
+                        <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-white">
+                          {lang === "mr" ? "विभागात प्रवेश करा" : "ENTER SECTION"}
+                        </span>
+                        <div className="size-6 sm:size-7 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-sm text-white group-hover:bg-white group-hover:text-purple-900">
+                          <ArrowRight className="size-3.5 sm:size-4 group-hover:translate-x-0.5 transition-transform duration-300" />
+                        </div>
                       </div>
 
-                      {/* Footer Arrow Action */}
-                      <div
-                        className="flex items-center justify-between text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-violet-200 mt-2 pt-2 border-t border-white/15"
-                      >
-                        <span>प्रवेश करा</span>
-                        <ArrowRight className="size-3.5 group-hover:translate-x-1.5 transition-transform duration-300" />
+                      {/* 3. Information / Description shown DOWN under the button */}
+                      <div className="relative z-10 pt-2 sm:pt-2.5 border-t border-white/20 flex-1 flex flex-col justify-start">
+                        <p
+                          className={`text-[11.5px] sm:text-xs text-violet-100/95 font-medium leading-relaxed transition-all duration-300 ${
+                            isExpanded
+                              ? "line-clamp-none text-white font-medium"
+                              : "line-clamp-3 sm:line-clamp-3 group-hover:line-clamp-none"
+                          }`}
+                        >
+                          {item.description}
+                        </p>
                       </div>
                     </div>
                   </motion.div>

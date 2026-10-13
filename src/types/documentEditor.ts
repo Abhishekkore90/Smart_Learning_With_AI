@@ -120,9 +120,13 @@ export interface HomeworkItem {
   fileType?: string;
   fileSize?: number;
 
+  wordFileUrl?: string | null;
+  wordFileName?: string | null;
+  wordFileSize?: number | null;
+
   templateId?: string;
   pageCount?: number;
-  documentType?: "pdf" | "image" | "template" | "text" | "question_paper";
+  documentType?: "pdf" | "image" | "template" | "text" | "question_paper" | "docx" | "word" | "excel" | "file";
 
   contentBlocks?: any[];
   originalFileUrl?: string;

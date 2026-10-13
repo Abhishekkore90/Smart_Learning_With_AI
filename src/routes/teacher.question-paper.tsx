@@ -44,12 +44,27 @@ import {
   orderBy,
   onSnapshot,
 } from "firebase/firestore";
-import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { getDefaultSubjectsForClass, areSubjectsEquivalent } from "@/data/cceSubjects";
 import type { QuestionPaperItem } from "@/types/documentEditor";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
 import { QuestionPaperTemplate } from "@/components/questionPaper/QuestionPaperTemplate";
 import { QuestionPaperManualEditor } from "@/components/questionPaper/QuestionPaperManualEditor";
 import { fetchUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
+import { WordQuestionPaperEditor } from "@/components/questionPaper/WordQuestionPaperEditor";
+
+const isWordPaper = (paper: any): boolean => {
+  if (!paper) return false;
+  const fName = (paper.fileName || paper.wordFileName || "").toLowerCase();
+  const fUrl = (paper.fileUrl || paper.wordFileUrl || "").toLowerCase();
+  return (
+    paper.documentType === "word" ||
+    !!paper.wordFileUrl ||
+    fName.endsWith(".docx") ||
+    fName.endsWith(".doc") ||
+    fUrl.includes(".docx") ||
+    fUrl.includes(".doc")
+  );
+};
 
 export const Route = createFileRoute("/teacher/question-paper")({
   head: () => ({
@@ -153,8 +168,8 @@ function QuestionPaperPage() {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();
 
-  // Wizard Step: "medium" -> "class" -> "subject" -> "list"
-  const [step, setStep] = useState<"medium" | "class" | "subject" | "list">("medium");
+  // Wizard Step: "medium" -> "class" -> "list"
+  const [step, setStep] = useState<"medium" | "class" | "list">("medium");
 
   const [selectedExamTab, setSelectedExamTab] = useState<string>("unit1");
   const [selectedMedium, setSelectedMedium] = useState<string>("marathi");
@@ -221,14 +236,11 @@ function QuestionPaperPage() {
   const currentClassObj = CLASS_OPTIONS.find((c) => c.id === selectedClass);
   const currentMediumObj = MEDIUM_OPTIONS.find((m) => m.id === selectedMedium);
 
-  // Filter ONLY what admin uploaded for selected medium, class, and subject
+  // Filter papers for selected medium, class, and exam type (all subjects merged in one file)
   const currentSubjectPapers = useMemo(() => {
     return paperList.filter((item) => {
       const matchMedium = item.medium === selectedMedium;
-      const matchClass = item.class === selectedClass;
-      const matchSubject =
-        !selectedSubject ||
-        item.subject?.trim().toLowerCase() === selectedSubject.trim().toLowerCase();
+      const matchClass = item.class === selectedClass || (item as any).classId === selectedClass;
 
       const matchExam = (() => {
         if (filterExamType === "all") return true;
@@ -254,10 +266,11 @@ function QuestionPaperPage() {
       const matchSearch =
         !searchTerm ||
         item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchMedium && matchClass && matchSubject && matchExam && matchSearch;
+        item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.subject?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchMedium && matchClass && matchExam && matchSearch;
     });
-  }, [paperList, selectedMedium, selectedClass, selectedSubject, filterExamType, searchTerm]);
+  }, [paperList, selectedMedium, selectedClass, filterExamType, searchTerm]);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
@@ -309,14 +322,14 @@ function QuestionPaperPage() {
                 </button>
                 <ChevronRight className="size-3.5 text-white/40" />
                 <button
-                  onClick={() => setStep("subject")}
+                  onClick={() => setStep("list")}
                   className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                    step === "subject"
+                    step === "list"
                       ? "bg-white text-blue-900 shadow-md font-black"
                       : "text-white/80 hover:text-white"
                   }`}
                 >
-                  ३. विषय
+                  ३. प्रश्नपत्रिका यादी
                 </button>
               </div>
             )}
@@ -342,7 +355,19 @@ function QuestionPaperPage() {
               </div>
             </div>
 
-            {activePaper.fileUrl ? (
+            {isWordPaper(activePaper) ? (
+              <div className="bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
+                <WordQuestionPaperEditor
+                  fileUrl={activePaper.wordFileUrl || activePaper.fileUrl}
+                  paperTitle={`${activePaper.title} — ${activePaper.class} (${activePaper.examTypeLabel || activePaper.examType})`}
+                  paperId={activePaper.id}
+                  subject={activePaper.subject || selectedSubject}
+                  userId={user?.uid || "guest_teacher"}
+                  userRole={profile?.role || "teacher"}
+                  onClose={() => setActivePaper(null)}
+                />
+              </div>
+            ) : activePaper.fileUrl ? (
               <DocumentEditorViewer
                 documentId={activePaper.id}
                 fileUrl={activePaper.fileUrl}
@@ -447,7 +472,7 @@ function QuestionPaperPage() {
                         onClick={() => {
                           setSelectedClass(cls.id);
                           setSelectedSubject("");
-                          setStep("subject");
+                          setStep("list");
                         }}
                         className={`p-6 rounded-2xl text-center transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-lg ${
                           isSelected
@@ -467,8 +492,8 @@ function QuestionPaperPage() {
               </motion.div>
             )}
 
-            {/* STEP 3: SUBJECT */}
-            {step === "subject" && (
+            {/* STEP 3: QUESTION PAPER LIST */}
+            {step === "list" && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                 {/* 4 EXAM TABS: चाचणी १ | प्रथम सत्र | चाचणी २ | द्वितीय सत्र */}
                 <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
@@ -537,61 +562,6 @@ function QuestionPaperPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-slate-800">
-                      पायरी ३: विषय निवडा (Select Subject)
-                    </h2>
-                    <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                      {currentMediumObj?.labelMr} • {currentClassObj?.mr}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setStep("class")}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 cursor-pointer"
-                  >
-                    <ChevronLeft className="size-4" /> इयत्ता बदला
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {availableSubjects.map((subj, idx) => {
-                    const IconComponent = getSubjectIcon(subj);
-                    const isSelected = selectedSubject === subj;
-                    const grad = GRADIENTS[idx % GRADIENTS.length];
-                    return (
-                      <button
-                        key={subj}
-                        onClick={() => {
-                          setSelectedSubject(subj);
-                          setStep("list");
-                        }}
-                        className={`p-5 rounded-2xl text-left transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-lg flex items-center gap-4 ${
-                          isSelected
-                            ? "bg-gradient-to-r " + grad.bg + " text-white border-transparent scale-102"
-                            : "bg-white text-slate-800 border-slate-200 hover:border-blue-400 hover:bg-blue-50/20"
-                        }`}
-                      >
-                        <div className={`size-12 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? "bg-white/20" : "bg-blue-100 text-blue-700"}`}>
-                          <IconComponent className="size-6" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-black text-base truncate">{subj}</div>
-                          <div className={`text-xs font-semibold ${isSelected ? "text-white/80" : "text-slate-400"}`}>
-                            प्रश्नपत्रिका पाहण्यासाठी क्लिक करा
-                          </div>
-                        </div>
-                        <ChevronRight className="size-5 shrink-0 opacity-60" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-
-            {/* STEP 4: QUESTION PAPER LIST */}
-            {step === "list" && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                 {/* Context Header & Filter Bar */}
                 <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                   <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
@@ -604,7 +574,7 @@ function QuestionPaperPage() {
                     </span>
                     <span className="text-slate-400">/</span>
                     <span className="px-3 py-1 rounded-lg bg-purple-100 text-purple-800 font-bold">
-                      विषय: {selectedSubject}
+                      सर्व विषय एकत्रित प्रश्नपत्रिका (All Subjects)
                     </span>
                   </div>
 
@@ -641,10 +611,11 @@ function QuestionPaperPage() {
                     </div>
 
                     <button
-                      onClick={() => setStep("subject")}
-                      className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                      onClick={() => setStep("class")}
+                      className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer flex items-center gap-1.5"
                     >
-                      विषय बदला
+                      <ChevronLeft className="size-3.5" />
+                      <span>इयत्ता बदला</span>
                     </button>
                   </div>
                 </div>
@@ -664,7 +635,7 @@ function QuestionPaperPage() {
                       कोणतीही प्रश्नपत्रिका उपलब्ध नाही
                     </h4>
                     <p className="text-xs text-slate-500 max-w-md mx-auto">
-                      {currentMediumObj?.labelMr} • {currentClassObj?.mr} • {selectedSubject} विषयासाठी ॲडमिनने अद्याप प्रश्नपत्रिका अपलोड केलेली नाही.
+                      {currentMediumObj?.labelMr} • {currentClassObj?.mr} साठी ॲडमिनने अद्याप प्रश्नपत्रिका अपलोड केलेली नाही.
                     </p>
                   </div>
                 ) : (

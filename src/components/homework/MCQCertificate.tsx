@@ -24,6 +24,8 @@ export interface MCQCertificateProps {
   percentage: number;
   dateStr?: string;
   shareableUrl?: string;
+  teacherName?: string;
+  schoolName?: string;
 }
 
 export const MCQCertificate: React.FC<MCQCertificateProps> = ({
@@ -36,6 +38,8 @@ export const MCQCertificate: React.FC<MCQCertificateProps> = ({
   percentage,
   dateStr,
   shareableUrl,
+  teacherName,
+  schoolName,
 }) => {
   const certificateRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -470,16 +474,16 @@ export const MCQCertificate: React.FC<MCQCertificateProps> = ({
               </div>
 
 
-              {/* Authority Signature */}
-              <div className="text-right space-y-1">
-                <div className="font-serif italic font-bold text-sm text-indigo-950 border-b border-slate-300 pb-0.5">
-                  SGK Brainova Academic Team
+              {/* Authority Signature: Teacher & School */}
+              <div className="text-right space-y-1 min-w-[180px] max-w-[280px]">
+                <div className="font-serif italic font-bold text-sm sm:text-base text-indigo-950 border-b border-slate-300 pb-0.5 truncate">
+                  {teacherName?.trim() || "वर्ग शिक्षक"}
                 </div>
                 <div className="text-[11px] font-bold text-slate-700">
-                  स्वाध्याय प्रमुख (Examiner)
+                  वर्ग शिक्षक (Class Teacher)
                 </div>
-                <div className="text-[10px] font-medium text-indigo-600">
-                  Smart Learning with AI
+                <div className="text-[10px] sm:text-[11px] font-extrabold text-indigo-700 truncate">
+                  {schoolName?.trim() || "स्मार्ट लर्निंग डिजिटल अकॅडमी"}
                 </div>
               </div>
             </div>

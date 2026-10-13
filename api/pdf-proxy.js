@@ -97,8 +97,10 @@ export default async function handler(req, res) {
     // Detect correct Content-Type
     const isJson = targetUrl.endsWith(".json") || contentType.includes("json");
     const isPdf = targetUrl.endsWith(".pdf") || contentType.includes("pdf");
+    const isDocx = targetUrl.endsWith(".docx") || contentType.includes("wordprocessingml") || contentType.includes("officedocument");
     const responseContentType = isJson ? "application/json; charset=utf-8"
       : isPdf ? "application/pdf"
+      : isDocx ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       : contentType;
 
     res.setHeader("Content-Type", responseContentType);

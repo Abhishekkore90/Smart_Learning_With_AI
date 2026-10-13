@@ -441,57 +441,57 @@ function LandingPage() {
                 <div className={`absolute inset-0 ${card.softBg} opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0`} />
 
                 {/* Content */}
-                <div className="relative z-20 p-5 sm:p-7 flex flex-col justify-between h-full w-full">
-                  <div>
-                    {/* Icon Badge & Mobile Expand Button */}
-                    <div className="flex items-center justify-between mb-4 sm:mb-5">
+                <div
+                  onClick={() => {
+                    if ((card as any).externalUrl) {
+                      window.location.href = (card as any).externalUrl;
+                    } else if (card.to && card.to !== "#") {
+                      navigate({ to: card.to as any, search: (card as any).search });
+                    }
+                  }}
+                  className="relative z-20 p-5 sm:p-7 flex flex-col gap-3.5 sm:gap-4 h-full w-full cursor-pointer"
+                >
+                  {/* 1. Top Header: Icon & Title & Mobile Expand Button */}
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div
-                        className={`size-10 sm:size-12 rounded-2xl ${card.softBg} ${card.iconColor} flex items-center justify-center shadow-md border border-white/50 transition-all duration-500 group-hover:bg-white group-hover:shadow-lg group-hover:scale-110 group-hover:rotate-6`}
+                        className={`size-10 sm:size-12 rounded-2xl ${card.softBg} ${card.iconColor} flex items-center justify-center shadow-md border border-white/50 transition-all duration-500 group-hover:bg-white group-hover:shadow-lg group-hover:scale-110 shrink-0`}
                       >
                         <Icon size={22} className="transition-transform duration-500" strokeWidth={2.2} />
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setGridExpandedIndex(isGridExpanded ? null : index);
-                        }}
-                        className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900 px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 transition-all"
-                      >
-                        <span>{isGridExpanded ? "कमी करा" : "सविस्तर माहिती"}</span>
-                        <ChevronDown className={`size-3 transition-transform ${isGridExpanded ? "rotate-180" : "animate-bounce"}`} />
-                      </button>
+                      <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight truncate leading-tight group-hover:text-slate-950 dark:group-hover:text-white">
+                        {card.title}
+                      </h3>
                     </div>
 
-                    <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-3 transition-colors duration-300 group-hover:text-slate-950 dark:group-hover:text-white">
-                      {card.title}
-                    </h3>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGridExpandedIndex(isGridExpanded ? null : index);
+                      }}
+                      className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900 px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 transition-all shrink-0"
+                    >
+                      <span>{isGridExpanded ? "कमी करा" : "सविस्तर माहिती"}</span>
+                      <ChevronDown className={`size-3 transition-transform ${isGridExpanded ? "rotate-180" : "animate-bounce"}`} />
+                    </button>
+                  </div>
 
-                    {/* Description text container */}
-                    <div className="transition-all duration-500 ease-in-out">
-                      <p className={`text-slate-700 dark:text-slate-300 text-xs sm:text-[13px] font-medium leading-relaxed tracking-wide group-hover:text-slate-900 dark:group-hover:text-slate-100 transition-all duration-500 whitespace-pre-line ${isGridExpanded ? "line-clamp-none text-slate-950 dark:text-white font-semibold" : "line-clamp-3 group-hover:line-clamp-none"}`}>
-                        {card.desc}
-                      </p>
+                  {/* 2. Entering Action Button shifted to UPSIDE (Below Title/Icon) */}
+                  <div className="py-2.5 px-3.5 sm:py-3 sm:px-4 rounded-xl sm:rounded-2xl bg-slate-900 dark:bg-slate-800 group-hover:bg-slate-950 dark:group-hover:bg-slate-700 text-white border border-slate-800 dark:border-slate-700 flex items-center justify-between gap-2 transition-all duration-300 shadow-sm">
+                    <span className="text-[11px] sm:text-[12px] font-black uppercase tracking-[0.12em] text-white">
+                      {card.actionText}
+                    </span>
+                    <div className="size-6 sm:size-7 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-sm text-white group-hover:bg-white group-hover:text-slate-900">
+                      <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform duration-300" strokeWidth={2.5} />
                     </div>
                   </div>
 
-                  {/* Bottom Action Footer with Sliding Arrow */}
-                  <div
-                    onClick={() => {
-                      if ((card as any).externalUrl) {
-                        window.location.href = (card as any).externalUrl;
-                      } else if (card.to && card.to !== "#") {
-                        navigate({ to: card.to as any, search: (card as any).search });
-                      }
-                    }}
-                    className="pt-4 sm:pt-5 mt-5 sm:mt-6 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800/80 group-hover:border-slate-300 dark:group-hover:border-slate-700 transition-colors duration-300 cursor-pointer"
-                  >
-                    <span className={`text-[11px] sm:text-[12px] font-black uppercase tracking-[0.15em] text-slate-700 dark:text-slate-400 group-hover:text-slate-950 dark:group-hover:text-white transition-colors duration-300`}>
-                      {card.actionText}
-                    </span>
-                    <div className={`size-8 sm:size-9 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all duration-300 group-hover:scale-115 shadow-sm text-slate-700 dark:text-slate-200 group-hover:bg-slate-900 group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-slate-950`}>
-                      <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform duration-300" strokeWidth={2.5} />
-                    </div>
+                  {/* 3. Information / Description shown DOWN under the button */}
+                  <div className="pt-2 sm:pt-2.5 border-t border-slate-200/80 dark:border-slate-800 flex-1 flex flex-col justify-start">
+                    <p className={`text-slate-700 dark:text-slate-300 text-xs sm:text-[13px] font-medium leading-relaxed tracking-wide group-hover:text-slate-900 dark:group-hover:text-slate-100 transition-all duration-500 whitespace-pre-line ${isGridExpanded ? "line-clamp-none text-slate-950 dark:text-white font-semibold" : "line-clamp-3 group-hover:line-clamp-none"}`}>
+                      {card.desc}
+                    </p>
                   </div>
                 </div>
               </motion.div>

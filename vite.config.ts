@@ -117,6 +117,55 @@ export default defineConfig({
               res.end();
             }
           });
+
+          // Dev proxy for /api/pdf-proxy and /pdf-proxy.php
+          server.middlewares.use((req: any, res: any, next: any) => {
+            if (req.url && (req.url.startsWith('/api/pdf-proxy') || req.url.startsWith('/pdf-proxy.php'))) {
+              try {
+                const parsedUrl = new URL(req.url, 'http://localhost');
+                const targetUrl = parsedUrl.searchParams.get('url') || parsedUrl.searchParams.get('path');
+                if (!targetUrl) {
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ error: 'Missing url or path' }));
+                  return;
+                }
+                const urlObj = new URL(decodeURIComponent(targetUrl));
+                const zone = process.env.VITE_BUNNY_STORAGE_ZONE || 'sgkbrainova';
+                const apiKey = process.env.VITE_BUNNY_STORAGE_API_KEY || 'bc06a0c2-aad1-436c-b88a1c197eca-d74a-44e8';
+                const rawPath = decodeURIComponent(urlObj.pathname).replace(/^\//, '');
+                const cleanPath = rawPath.startsWith(zone + '/') ? rawPath.slice(zone.length + 1) : rawPath;
+                const encodedSegments = cleanPath.split('/').map(encodeURIComponent).join('/');
+                const fetchUrl = `https://storage.bunnycdn.com/${zone}/${encodedSegments}`;
+
+                const https = require('https');
+                https.get(fetchUrl, {
+                  headers: {
+                    'AccessKey': apiKey,
+                    'Accept': '*/*'
+                  }
+                }, (bunnyRes: any) => {
+                  res.statusCode = bunnyRes.statusCode;
+                  res.setHeader('Access-Control-Allow-Origin', '*');
+                  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+                  res.setHeader('Access-Control-Allow-Headers', '*');
+                  if (targetUrl.endsWith('.docx')) {
+                    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+                  } else if (bunnyRes.headers['content-type']) {
+                    res.setHeader('Content-Type', bunnyRes.headers['content-type']);
+                  }
+                  bunnyRes.pipe(res);
+                }).on('error', (err: any) => {
+                  res.statusCode = 502;
+                  res.end(JSON.stringify({ error: err.message }));
+                });
+              } catch (e: any) {
+                res.statusCode = 500;
+                res.end(JSON.stringify({ error: e.message }));
+              }
+              return;
+            }
+            next();
+          });
         }
       }
     ],

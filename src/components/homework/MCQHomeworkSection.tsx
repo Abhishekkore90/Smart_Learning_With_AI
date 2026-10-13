@@ -47,6 +47,8 @@ export interface MCQHomeworkSectionProps {
   initialClass?: string;
   initialSubject?: string;
   initialQuizId?: string;
+  sharedTeacherName?: string;
+  sharedSchoolName?: string;
 }
 
 export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
@@ -56,6 +58,8 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
   initialClass = "all",
   initialSubject = "all",
   initialQuizId,
+  sharedTeacherName,
+  sharedSchoolName,
 }) => {
   // If specific quiz ID is active
   const [activeQuizId, setActiveQuizId] = useState<string | null>(initialQuizId || null);
@@ -151,6 +155,8 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
           <MCQQuizPlayer
             quiz={targetQuiz}
             studentName={userName}
+            teacherName={sharedTeacherName}
+            schoolName={sharedSchoolName}
             onBack={() => setActiveQuizId(null)}
             showBackBtn={true}
           />
@@ -195,25 +201,22 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
 
               {/* Action Buttons */}
               <div className="shrink-0 flex items-center flex-wrap gap-2.5">
-                {/* Admin button for Admin upload */}
-                {defaultRole === "admin" && (
+                {/* Admin button - ONLY available for Admin */}
+                {defaultRole === "admin" ? (
                   <button
                     onClick={() => setCreatorModalMode("admin")}
-                    className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black px-4 py-3 rounded-2xl shadow-xl transition-all transform active:scale-95 text-xs sm:text-sm cursor-pointer"
+                    className="flex items-center gap-2 bg-gradient-to-r from-amber-400 to-amber-300 hover:from-amber-300 hover:to-amber-200 text-amber-950 font-black px-4 sm:px-5 py-3 rounded-2xl shadow-xl transition-all transform active:scale-95 text-xs sm:text-sm cursor-pointer border border-amber-500/30"
                   >
-                    <ShieldCheck className="w-4 h-4 text-amber-900" />
-                    <span>+ ॲडमिन MCQ जोडा</span>
+                    <ShieldCheck className="w-4 h-4 text-amber-950" />
+                    <span>+ ॲडमिन अधिकृत प्रश्न तयार करा</span>
                   </button>
+                ) : (
+                  /* Teachers & Students: Notice to share questions with students */
+                  <div className="flex items-center gap-2 bg-white/15 backdrop-blur-md px-4 py-2.5 rounded-2xl text-white text-xs sm:text-sm font-semibold border border-white/20 shadow-sm">
+                    <Share2 className="w-4 h-4 text-emerald-300 shrink-0" />
+                    <span>खालील स्वाध्याय यादीतून WhatsApp द्वारे थेट विद्यार्थ्यांशी शेअर करा</span>
+                  </div>
                 )}
-
-                {/* Create Custom MCQ CTA Button */}
-                <button
-                  onClick={() => setCreatorModalMode("custom")}
-                  className="flex items-center gap-2 bg-white text-indigo-900 hover:bg-indigo-50 font-bold px-4 py-3 rounded-2xl shadow-xl transition-all transform active:scale-95 text-xs sm:text-sm cursor-pointer"
-                >
-                  <PlusCircle className="w-4 h-4 text-indigo-600" />
-                  <span>+ स्वतःचे प्रश्न तयार करा</span>
-                </button>
               </div>
             </div>
           </div>
@@ -232,7 +235,7 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
                 }`}
               >
                 <ShieldCheck className="w-4 h-4 text-amber-300" />
-                <span>१. ॲडमिनने अपलोड केलेले</span>
+                <span>{defaultRole === "admin" ? "१. ॲडमिनने अपलोड केलेले" : "१. दैनिक MCQ स्वाध्याय"}</span>
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                     activeSubTab === "admin"
@@ -244,7 +247,7 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
                 </span>
               </button>
 
-              {/* TAB 2: Create Custom */}
+              {/* TAB 2: Custom / Practice */}
               <button
                 type="button"
                 onClick={() => setActiveSubTab("custom")}
@@ -255,7 +258,7 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
                 }`}
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>२. स्वतःचे प्रश्न तयार करा (Custom)</span>
+                <span>{defaultRole === "admin" ? "२. स्वतःचे प्रश्न (Custom)" : "२. इतर सराव प्रश्न"}</span>
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                     activeSubTab === "custom"
@@ -282,7 +285,7 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
                 </button>
               )}
 
-              {activeSubTab === "custom" && (
+              {activeSubTab === "custom" && defaultRole === "admin" && (
                 <button
                   onClick={() => setCreatorModalMode("custom")}
                   className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md cursor-pointer transition-all active:scale-95"
@@ -306,6 +309,7 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
               onSelectDate={(d) => setSelectedDate(d)}
               onTakeQuiz={(id) => setActiveQuizId(id)}
               defaultRole={defaultRole}
+              userName={userName}
               onDeleteQuiz={handleDeleteQuiz}
             />
           )}
@@ -324,7 +328,8 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
             userName={userName}
             defaultClass={selectedClass !== "all" ? selectedClass : "1st"}
             defaultSubject={selectedSubject !== "all" ? selectedSubject : "मराठी"}
-            onSuccess={(newId) => {
+            onSuccess={(newId, createdAsAdmin) => {
+              setActiveSubTab(createdAsAdmin ? "admin" : "custom");
               setActiveQuizId(newId);
             }}
           />

@@ -35,6 +35,8 @@ import { DailyHomeworkTemplate } from "@/components/homework/DailyHomeworkTempla
 import { DailyHomeworkCalendar, formatISODate } from "@/components/homework/DailyHomeworkCalendar";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { MCQHomeworkSection } from "@/components/homework/MCQHomeworkSection";
+import { WordQuestionPaperEditor } from "@/components/questionPaper/WordQuestionPaperEditor";
+import { isWordHomework } from "@/utils/homeworkDocHelper";
 
 export const Route = createFileRoute("/student/homework")({
   component: StudentHomeworkPage,
@@ -183,7 +185,7 @@ function StudentHomeworkPage() {
 
                 {/* View Switcher: Document View vs Worksheet Template */}
                 <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-                  {activeHomework.fileUrl && (
+                  {(activeHomework.fileUrl || activeHomework.wordFileUrl) && (
                     <button
                       onClick={() => setPreviewTab("doc")}
                       className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
@@ -192,44 +194,61 @@ function StudentHomeworkPage() {
                           : "text-slate-600 hover:text-slate-900"
                       }`}
                     >
-                      मूळ दस्तऐवज (Document View)
+                      {isWordHomework(activeHomework)
+                        ? "Word गृहपाठ (Word Homework)"
+                        : "मूळ दस्तऐवज (Document View)"}
                     </button>
                   )}
-                  <button
-                    onClick={() => setPreviewTab("template")}
-                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                      previewTab === "template"
-                        ? "bg-amber-600 text-white shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    दैनिक कार्यपुस्तिका (Worksheet Template)
-                  </button>
+                  {!activeHomework.fileUrl && !activeHomework.wordFileUrl && (
+                    <button
+                      onClick={() => setPreviewTab("template")}
+                      className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                        previewTab === "template"
+                          ? "bg-amber-600 text-white shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      दैनिक कार्यपुस्तिका (Worksheet Template)
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {previewTab === "doc" && activeHomework.fileUrl ? (
-                <DocumentEditorViewer
-                  documentId={activeHomework.id}
-                  fileUrl={activeHomework.fileUrl}
-                  fileName={activeHomework.fileName}
-                  documentType="homework"
-                  title={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate})`}
-                  userId={user?.uid || "student_user"}
-                  userRole={profile?.role || "student"}
-                  userName={profile?.fullName || "विद्यार्थी"}
-                  canEdit={true}
-                  onBack={() => setActiveHomework(null)}
-                  metadataBadge={
-                    <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
-                      <span>दिनांक: {activeHomework.homeworkDate}</span>
-                      <span>•</span>
-                      <span>इयत्ता: {activeHomework.class}</span>
-                      <span>•</span>
-                      <span>विषय: {activeHomework.subject}</span>
-                    </div>
-                  }
-                />
+              {previewTab === "doc" && (activeHomework.fileUrl || activeHomework.wordFileUrl) ? (
+                isWordHomework(activeHomework) ? (
+                  <WordQuestionPaperEditor
+                    fileUrl={activeHomework.wordFileUrl || activeHomework.fileUrl}
+                    paperTitle={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate})`}
+                    paperId={activeHomework.id}
+                    subject={activeHomework.subject}
+                    userId={user?.uid || "student_user"}
+                    userRole={profile?.role || "student"}
+                    documentType="homework"
+                    onClose={() => setActiveHomework(null)}
+                  />
+                ) : (
+                  <DocumentEditorViewer
+                    documentId={activeHomework.id}
+                    fileUrl={activeHomework.fileUrl || ""}
+                    fileName={activeHomework.fileName}
+                    documentType="homework"
+                    title={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate})`}
+                    userId={user?.uid || "student_user"}
+                    userRole={profile?.role || "student"}
+                    userName={profile?.fullName || "विद्यार्थी"}
+                    canEdit={true}
+                    onBack={() => setActiveHomework(null)}
+                    metadataBadge={
+                      <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                        <span>दिनांक: {activeHomework.homeworkDate}</span>
+                        <span>•</span>
+                        <span>इयत्ता: {activeHomework.class}</span>
+                        <span>•</span>
+                        <span>विषय: {activeHomework.subject}</span>
+                      </div>
+                    }
+                  />
+                )
               ) : (
                 <DailyHomeworkTemplate
                   homework={activeHomework}

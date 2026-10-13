@@ -39,10 +39,13 @@ import {
 } from "@/services/mcqHomeworkService";
 import { MCQPrintDocument } from "./MCQPrintDocument";
 import { MCQCertificate } from "./MCQCertificate";
+import { MCQShareModal } from "./MCQShareModal";
 
 interface MCQQuizPlayerProps {
   quiz: MCQHomeworkSet;
   studentName?: string;
+  teacherName?: string;
+  schoolName?: string;
   onBack?: () => void;
   showBackBtn?: boolean;
 }
@@ -52,6 +55,8 @@ const OPTION_LETTERS = ["A", "B", "C", "D"];
 export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
   quiz,
   studentName = "विद्यार्थी",
+  teacherName: propsTeacherName,
+  schoolName: propsSchoolName,
   onBack,
   showBackBtn = true,
 }) => {
@@ -66,6 +71,32 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
   const scorecardRef = useRef<HTMLDivElement>(null);
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Effective Teacher Name & School Name passed from share link or local storage
+  const [effectiveTeacherName, setEffectiveTeacherName] = useState<string>(() => {
+    if (propsTeacherName && propsTeacherName.trim()) return propsTeacherName.trim();
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      const t = p.get("teacher") || p.get("t");
+      if (t && t.trim()) return t.trim();
+      const stored = localStorage.getItem("mcq_share_teacher_name");
+      if (stored && stored.trim()) return stored.trim();
+    }
+    return "";
+  });
+
+  const [effectiveSchoolName, setEffectiveSchoolName] = useState<string>(() => {
+    if (propsSchoolName && propsSchoolName.trim()) return propsSchoolName.trim();
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      const s = p.get("school") || p.get("s");
+      if (s && s.trim()) return s.trim();
+      const stored = localStorage.getItem("mcq_share_school_name");
+      if (stored && stored.trim()) return stored.trim();
+    }
+    return "";
+  });
 
   // Guest Student Name state with temporary sessionStorage (zero server/permanent storage)
   const [currentStudentName, setCurrentStudentName] = useState<string>(() => {
@@ -232,38 +263,20 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
     }
   };
 
-  // Generate shareable link
+  // Generate shareable link with encoded teacher and school info
   const shareableUrl = useMemo(() => {
     if (typeof window !== "undefined") {
-      return `${window.location.origin}/mcq?id=${quiz.id}`;
+      const url = new URL(`${window.location.origin}/mcq`);
+      url.searchParams.set("id", quiz.id);
+      if (effectiveTeacherName.trim()) url.searchParams.set("teacher", effectiveTeacherName.trim());
+      if (effectiveSchoolName.trim()) url.searchParams.set("school", effectiveSchoolName.trim());
+      return url.toString();
     }
     return "";
-  }, [quiz.id]);
+  }, [quiz.id, effectiveTeacherName, effectiveSchoolName]);
 
-  const handleShareQuiz = async () => {
-    const shareText = `🎯 *स्मार्ट लर्निंग दैनिक MCQ स्वाध्याय*\n📚 विषय: ${quiz.subject} (${quiz.classId})\n📝 शीर्षक: ${quiz.title}\n👉 खालील लिंकवर क्लिक करून विनामूल्य सोडवा (लॉगिनची गरज नाही):\n${shareableUrl}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: quiz.title,
-          text: shareText,
-          url: shareableUrl,
-        });
-        return;
-      } catch (e) {
-        // Fallback to clipboard
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(shareText);
-      setCopiedLink(true);
-      toast.success("शेअरिंग लिंक क्लिपबोर्डवर कॉपी झाली!");
-      setTimeout(() => setCopiedLink(false), 2500);
-    } catch {
-      toast.error("कृपया ही लिंक मॅन्युअली कॉपी करा: " + shareableUrl);
-    }
+  const handleShareQuiz = () => {
+    setIsShareModalOpen(true);
   };
 
   const handleShareResult = async () => {
@@ -332,6 +345,8 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
       let shareText = `🏆 *माझा स्मार्ट लर्निंग MCQ निकाल व प्रमाणपत्र*\n` +
         `━━━━━━━━━━━━━━━━━━━━\n` +
         `👤 *विद्यार्थी:* ${currentStudentName || "विद्यार्थी"}\n` +
+        (effectiveTeacherName ? `👨‍🏫 *वर्ग शिक्षक:* ${effectiveTeacherName}\n` : "") +
+        (effectiveSchoolName ? `🏫 *शाळा:* ${effectiveSchoolName}\n` : "") +
         `📚 *विषय:* ${quiz.subject} (इयत्ता: ${quiz.classId})\n` +
         `📝 *चाचणी:* ${quiz.title}\n` +
         `🎯 *मिळालेले गुण:* ${submission.score} / ${submission.totalMarks} (${submission.percentage}%)\n` +
@@ -507,6 +522,8 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
           quiz={quiz}
           submission={submission}
           studentName={currentStudentName || studentName}
+          teacherName={effectiveTeacherName}
+          schoolName={effectiveSchoolName}
         />
       </div>
 
@@ -719,6 +736,26 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
             transition={{ duration: 0.4 }}
             className="mb-8"
           >
+            {/* Teacher & School verification bar on certificate */}
+            <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-2.5 mb-3 shadow-xs flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                  प्रमाणपत्रावरील स्वाक्षरी तपशील:
+                </span>
+                <span className="text-slate-700 dark:text-slate-300 font-semibold">
+                  {effectiveTeacherName ? `वर्ग शिक्षक: ${effectiveTeacherName} • ` : "वर्ग शिक्षक (नोंद नाही) • "}
+                  {effectiveSchoolName ? `शाळा: ${effectiveSchoolName}` : "शाळा (नोंद नाही)"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShareModalOpen(true)}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 underline cursor-pointer"
+              >
+                नाव बदला किंवा शेअर करा
+              </button>
+            </div>
+
             <MCQCertificate
               studentName={currentStudentName || "विद्यार्थी"}
               quizTitle={quiz.title}
@@ -729,6 +766,8 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
               percentage={submission.percentage}
               dateStr={quiz.date || new Date().toISOString().split("T")[0]}
               shareableUrl={shareableUrl}
+              teacherName={effectiveTeacherName}
+              schoolName={effectiveSchoolName}
             />
           </motion.div>
         )}
@@ -1028,6 +1067,19 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
             </div>
           )}
         </AnimatePresence>
+
+        {/* SHARE MODAL WITH TEACHER & SCHOOL OPTIONS */}
+        <MCQShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          quiz={quiz}
+          initialTeacherName={effectiveTeacherName}
+          initialSchoolName={effectiveSchoolName}
+          onShareCompleted={(t, s) => {
+            if (t) setEffectiveTeacherName(t);
+            if (s) setEffectiveSchoolName(s);
+          }}
+        />
       </div>
     </div>
   );

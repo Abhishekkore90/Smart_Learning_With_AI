@@ -48,18 +48,28 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { toast } from "sonner";
-import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { getDefaultSubjectsForClass, areSubjectsEquivalent } from "@/data/cceSubjects";
 import { uploadFileWithProgress, deleteUploadedFile } from "@/lib/upload";
 import { extractTextFromFile } from "@/lib/contentExtractor";
 import type { QuestionPaperItem } from "@/types/documentEditor";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
 import { QuestionPaperTemplate } from "@/components/questionPaper/QuestionPaperTemplate";
 import { purgeDocumentAndAllEdits } from "@/services/documentEngine";
-import { convertPdfToDocxBlob } from "@/services/pdfToWordConverter";
-import { QuestionPaperManualEditor } from "@/components/questionPaper/QuestionPaperManualEditor";
+import { WordQuestionPaperEditor } from "@/components/questionPaper/WordQuestionPaperEditor";
 
-
-
+const isWordPaper = (paper: any): boolean => {
+  if (!paper) return false;
+  const fName = (paper.fileName || paper.wordFileName || "").toLowerCase();
+  const fUrl = (paper.fileUrl || paper.wordFileUrl || "").toLowerCase();
+  return (
+    paper.documentType === "word" ||
+    !!paper.wordFileUrl ||
+    fName.endsWith(".docx") ||
+    fName.endsWith(".doc") ||
+    fUrl.includes(".docx") ||
+    fUrl.includes(".doc")
+  );
+};
 export const Route = createFileRoute("/admin/question-paper")({
   head: () => ({
     meta: [{ title: "प्रश्नपत्रिका व्यवस्थापन (Admin Question Paper Manager) — SMART LEARNING" }],
@@ -170,8 +180,8 @@ function AdminQuestionPaperPage() {
     }
   }, [navigate]);
 
-  // Stepper: "medium" -> "class" -> "subject" -> "workspace"
-  const [step, setStep] = useState<"medium" | "class" | "subject" | "workspace">("medium");
+  // Stepper: "medium" -> "class" -> "workspace"
+  const [step, setStep] = useState<"medium" | "class" | "workspace">("medium");
 
   const [selectedExamTab, setSelectedExamTab] = useState<string>("unit1");
   const [selectedMedium, setSelectedMedium] = useState<string>("marathi");
@@ -252,10 +262,7 @@ function AdminQuestionPaperPage() {
   const filteredPapers = useMemo(() => {
     return paperList.filter((item) => {
       const matchMedium = item.medium === selectedMedium;
-      const matchClass = item.class === selectedClass;
-      const matchSubject =
-        !selectedSubject ||
-        item.subject?.trim().toLowerCase() === selectedSubject.trim().toLowerCase();
+      const matchClass = item.class === selectedClass || (item as any).classId === selectedClass;
 
       const matchExam = (() => {
         if (filterExamType === "all") return true;
@@ -283,29 +290,26 @@ function AdminQuestionPaperPage() {
         item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.subject?.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchMedium && matchClass && matchSubject && matchExam && matchSearch;
+      return matchMedium && matchClass && matchExam && matchSearch;
     });
-  }, [paperList, selectedMedium, selectedClass, selectedSubject, filterExamType, searchTerm]);
+  }, [paperList, selectedMedium, selectedClass, filterExamType, searchTerm]);
 
   // Direct File Upload & Instant Publish
   const handleDirectFileUpload = async (file: File) => {
     if (!file || isUploading) return;
-    if (!selectedSubject) {
-      toast.error("कृपया आधी विषय निवडा.");
-      return;
-    }
 
     try {
       setIsUploading(true);
       setUploadProgress(5);
 
+      const targetSubject = selectedSubject || "सर्व विषय";
       const examTypeObj = EXAM_TABS.find((t) => t.id === selectedExamTab) || {
         id: selectedExamTab,
         labelMr: "चाचणी १",
       };
 
       const baseName = file.name.replace(/\.[^/.]+$/, "").trim();
-      const generatedTitle = baseName || `${currentClassObj?.mr || selectedClass} ${selectedSubject} (${examTypeObj.labelMr})`;
+      const generatedTitle = baseName || `${currentClassObj?.mr || selectedClass} प्रश्नपत्रिका (${examTypeObj.labelMr})`;
 
       let fileUrl = "";
       let fileName = "";
@@ -320,47 +324,27 @@ function AdminQuestionPaperPage() {
 
       // 1. Upload original file (allow up to 100MB)
       const uploadResult = await uploadFileWithProgress(file, {
-        folderPath: `admin_question_papers/${selectedMedium}/${selectedClass}/${selectedSubject}`,
+        folderPath: `admin_question_papers/${selectedMedium}/${selectedClass}`,
         maxSizeBytes: 100 * 1024 * 1024,
-        onProgress: (p) => setUploadProgress(Math.round(p * 0.45)),
+        onProgress: (p: number) => setUploadProgress(Math.round(p * 0.45)),
       });
       fileUrl = uploadResult.url;
       fileName = uploadResult.fileName;
       fileSize = uploadResult.sizeBytes;
       fileType = file.type || (fileName.endsWith(".pdf") ? "application/pdf" : "image/jpeg");
 
-      // 2. If PDF, convert as-is to Word (.docx)
-      const isPdf =
-        fileType === "application/pdf" ||
-        fileName.toLowerCase().endsWith(".pdf") ||
-        file.name.toLowerCase().endsWith(".pdf");
+      const isWord =
+        fileType.includes("word") ||
+        fileType.includes("officedocument") ||
+        fileName.toLowerCase().endsWith(".docx") ||
+        fileName.toLowerCase().endsWith(".doc") ||
+        file.name.toLowerCase().endsWith(".docx") ||
+        file.name.toLowerCase().endsWith(".doc");
 
-      if (isPdf) {
-        try {
-          toast.info("PDF चे Word (.docx) फाईलमध्ये रूपांतर करत आहे...");
-          const arrayBuf = await file.arrayBuffer();
-          const convResult = await convertPdfToDocxBlob(arrayBuf, generatedTitle);
-
-          if (convResult.textContent) {
-            contentToSave = convResult.textContent;
-          }
-
-          wordFileName = `${baseName}.docx`;
-          wordFileSize = convResult.blob.size;
-
-          const wordFile = new File([convResult.blob], wordFileName, {
-            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          });
-
-          const wordUploadResult = await uploadFileWithProgress(wordFile, {
-            folderPath: `admin_question_papers/${selectedMedium}/${selectedClass}/${selectedSubject}/word`,
-            maxSizeBytes: 100 * 1024 * 1024,
-            onProgress: (p) => setUploadProgress(45 + Math.round(p * 0.5)),
-          });
-          wordFileUrl = wordUploadResult.url;
-        } catch (convErr: any) {
-          console.error("PDF to Word conversion warning:", convErr);
-        }
+      if (isWord) {
+        wordFileUrl = fileUrl;
+        wordFileName = fileName;
+        wordFileSize = fileSize;
       }
 
       const isPdfFile =
@@ -371,22 +355,22 @@ function AdminQuestionPaperPage() {
       const docData = {
         medium: selectedMedium,
         class: selectedClass,
-        subject: selectedSubject,
+        subject: targetSubject,
         examType: selectedExamTab,
         examTypeLabel: examTypeObj.labelMr,
         totalMarks: "२०",
         academicYear: "2026-27",
         title: generatedTitle,
-        description: `${currentClassObj?.mr} ${selectedSubject} - ${examTypeObj.labelMr}`,
-        content: contentToSave || `${selectedSubject} ${examTypeObj.labelMr} प्रश्नपत्रिका`,
+        description: `${currentClassObj?.mr} प्रश्नपत्रिका - ${examTypeObj.labelMr}`,
+        content: (contentToSave && contentToSave.length < 500000 ? contentToSave : "") || `${currentClassObj?.mr} ${examTypeObj.labelMr} प्रश्नपत्रिका`,
         fileUrl: fileUrl || null,
         fileName: fileName || null,
         fileType: fileType || null,
         fileSize: fileSize || null,
-        wordFileUrl: wordFileUrl || null,
-        wordFileName: wordFileName || null,
-        wordFileSize: wordFileSize || null,
-        documentType: (isPdfFile ? "pdf" : "image") as "pdf" | "image",
+        wordFileUrl: wordFileUrl || (isWord ? fileUrl : null),
+        wordFileName: wordFileName || (isWord ? fileName : null),
+        wordFileSize: wordFileSize || (isWord ? fileSize : null),
+        documentType: (isWord ? "word" : isPdfFile ? "pdf" : "image") as any,
         createdAt: new Date().toISOString(),
         uploadedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -504,7 +488,18 @@ function AdminQuestionPaperPage() {
                 </div>
 
                 <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
-                  {activePreviewPaper.fileUrl ? (
+                  {isWordPaper(activePreviewPaper) ? (
+                    <WordQuestionPaperEditor
+                      fileUrl={activePreviewPaper.wordFileUrl || activePreviewPaper.fileUrl}
+                      file={selectedFile && (activePreviewPaper.fileName === selectedFile.name || activePreviewPaper.wordFileName === selectedFile.name) ? selectedFile : null}
+                      paperTitle={`${activePreviewPaper.title} (${activePreviewPaper.class || ""})`}
+                      paperId={activePreviewPaper.id}
+                      subject={activePreviewPaper.subject || selectedSubject}
+                      userId="super_admin"
+                      userRole="admin"
+                      onClose={() => setActivePreviewPaper(null)}
+                    />
+                  ) : activePreviewPaper.fileUrl ? (
                     <DocumentEditorViewer
                       documentId={activePreviewPaper.id}
                       fileUrl={activePreviewPaper.fileUrl}
@@ -567,29 +562,14 @@ function AdminQuestionPaperPage() {
             <ChevronRight className="size-4 text-slate-400 shrink-0" />
 
             <button
-              onClick={() => setStep("subject")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
-                step === "subject"
-                  ? "bg-blue-600 text-white shadow-md"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
-            >
-              <span className="size-5 rounded-full bg-white/20 flex items-center justify-center text-xs">३</span>
-              <span>विषय {selectedSubject && `(${selectedSubject})`}</span>
-            </button>
-
-            <ChevronRight className="size-4 text-slate-400 shrink-0" />
-
-            <button
-              disabled={!selectedSubject}
               onClick={() => setStep("workspace")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer disabled:opacity-40 ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
                 step === "workspace"
                   ? "bg-blue-600 text-white shadow-md"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
-              <span className="size-5 rounded-full bg-white/20 flex items-center justify-center text-xs">४</span>
+              <span className="size-5 rounded-full bg-white/20 flex items-center justify-center text-xs">३</span>
               <span>प्रश्नपत्रिका अपलोड व यादी</span>
             </button>
           </div>
@@ -657,8 +637,8 @@ function AdminQuestionPaperPage() {
                     key={cls.id}
                     onClick={() => {
                       setSelectedClass(cls.id);
-                      setSelectedSubject("");
-                      setStep("subject");
+                      setSelectedSubject("सर्व विषय");
+                      setStep("workspace");
                     }}
                     className={`p-6 rounded-2xl text-center transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-lg ${
                       isSelected
@@ -678,9 +658,9 @@ function AdminQuestionPaperPage() {
           </motion.div>
         )}
 
-        {/* STEP 3: SUBJECT SELECTION */}
-        {step === "subject" && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+        {/* STEP 3: WORKSPACE */}
+        {step === "workspace" && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
             {/* 4 EXAM TABS: चाचणी १ | प्रथम सत्र | चाचणी २ | द्वितीय सत्र */}
             <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -748,61 +728,6 @@ function AdminQuestionPaperPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-black text-slate-800">
-                  पायरी ३: विषय निवडा (Select Subject)
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                  {currentMediumObj?.labelMr} • {currentClassObj?.mr}
-                </p>
-              </div>
-              <button
-                onClick={() => setStep("class")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 cursor-pointer"
-              >
-                <ChevronLeft className="size-4" /> इयत्ता बदला
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {availableSubjects.map((subj, idx) => {
-                const IconComponent = getSubjectIcon(subj);
-                const isSelected = selectedSubject === subj;
-                const grad = GRADIENTS[idx % GRADIENTS.length];
-                return (
-                  <button
-                    key={subj}
-                    onClick={() => {
-                      setSelectedSubject(subj);
-                      setStep("workspace");
-                    }}
-                    className={`p-5 rounded-2xl text-left transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-lg flex items-center gap-4 ${
-                      isSelected
-                        ? "bg-gradient-to-r " + grad.bg + " text-white border-transparent scale-102"
-                        : "bg-white text-slate-800 border-slate-200 hover:border-blue-400 hover:bg-blue-50/20"
-                    }`}
-                  >
-                    <div className={`size-12 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? "bg-white/20" : "bg-blue-100 text-blue-700"}`}>
-                      <IconComponent className="size-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-black text-base truncate">{subj}</div>
-                      <div className={`text-xs font-semibold ${isSelected ? "text-white/80" : "text-slate-400"}`}>
-                        प्रश्नपत्रिका जोडण्यासाठी क्लिक करा
-                      </div>
-                    </div>
-                    <ChevronRight className="size-5 shrink-0 opacity-60" />
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-
-        {/* STEP 4: WORKSPACE */}
-        {step === "workspace" && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
             {/* Context breadcrumb & Switcher */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
@@ -815,14 +740,14 @@ function AdminQuestionPaperPage() {
                 </span>
                 <span className="text-slate-400">/</span>
                 <span className="px-3 py-1 rounded-lg bg-purple-100 text-purple-800 font-bold">
-                  विषय: {selectedSubject}
+                  सर्व विषय एकत्रित प्रश्नपत्रिका (All Subjects)
                 </span>
               </div>
               <button
-                onClick={() => setStep("subject")}
+                onClick={() => setStep("class")}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer"
               >
-                <ChevronLeft className="size-4" /> विषय बदला
+                <ChevronLeft className="size-4" /> इयत्ता बदला
               </button>
             </div>
 
@@ -846,7 +771,7 @@ function AdminQuestionPaperPage() {
                       {currentClassObj?.mr}
                     </span>
                     <span className="px-3 py-1 rounded-xl bg-slate-900 text-white font-bold text-xs shadow-xs">
-                      विषय: {selectedSubject}
+                      सर्व विषय एकत्रित प्रश्नपत्रिका (All Subjects)
                     </span>
                   </div>
                 </div>
@@ -930,7 +855,7 @@ function AdminQuestionPaperPage() {
                     प्रकाशित प्रश्नपत्रिका ({filteredPapers.length})
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    या वर्गाच्या व विषयाच्या शिक्षकांना दिसणाऱ्या प्रश्नपत्रिका.
+                    या वर्गाच्या शिक्षकांना दिसणाऱ्या प्रश्नपत्रिका.
                   </p>
                 </div>
                 {/* Search & Exam Type Filter */}
@@ -972,7 +897,7 @@ function AdminQuestionPaperPage() {
                   </div>
                   <h4 className="text-base font-bold text-slate-800">कोणतीही प्रश्नपत्रिका प्रकाशित केलेली नाही</h4>
                   <p className="text-xs text-slate-500 max-w-md mx-auto">
-                    {currentMediumObj?.labelMr} • {currentClassObj?.mr} • {selectedSubject} विषयासाठी वरील फॉर्ममधून पहिली प्रश्नपत्रिका अपलोड करा.
+                    {currentMediumObj?.labelMr} • {currentClassObj?.mr} साठी वरील फॉर्ममधून पहिली प्रश्नपत्रिका अपलोड करा.
                   </p>
                 </div>
               ) : (

@@ -54,10 +54,10 @@ export function getBunnyStorageUrl(publicUrl: string): string {
     const encodedSegments = cleanPath.split("/").map(encodeURIComponent).join("/");
 
     if (import.meta.env.DEV) {
-      // DEV: use Vite proxy (vite.config.ts /api/bunny-storage → storage.bunnycdn.com)
+      // DEV: use Vite dev proxy
       return `/api/bunny-storage/${zone}/${encodedSegments}`;
     } else {
-      // PROD: use our secure Vercel serverless proxy function
+      // PROD: use PHP proxy on Hostinger / Serverless proxy on Vercel
       return `/api/pdf-proxy?url=${encodeURIComponent(publicUrl)}`;
     }
   } catch (e) {
@@ -67,10 +67,41 @@ export function getBunnyStorageUrl(publicUrl: string): string {
 }
 
 /**
+ * Validates whether an ArrayBuffer is genuine binary data and not an HTML error/SPA fallback page.
+ */
+export function isBufferValidBinary(ab: ArrayBuffer | null, isDocx: boolean = false, isPdf: boolean = false): boolean {
+  if (!ab || ab.byteLength < 16) return false;
+  const bytes = new Uint8Array(ab);
+
+  // If expected to be a Word .docx, it MUST start with ZIP magic bytes 'PK\x03\x04' or 'PK'
+  if (isDocx) {
+    return bytes[0] === 0x50 && bytes[1] === 0x4B;
+  }
+
+  // If expected to be a PDF, it MUST start with '%PDF'
+  if (isPdf) {
+    return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+  }
+
+  // Otherwise, inspect beginning to reject HTML pages
+  const slice = bytes.slice(0, Math.min(bytes.length, 120));
+  const text = new TextDecoder().decode(slice).toLowerCase();
+  if (text.includes("<!doctype") || text.includes("<html") || text.includes("<head") || text.includes("<body")) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Universal binary file fetcher:
- * 1. Tries serverless proxy / Vite dev proxy for Bunny CDN files (Zero CORS issues).
- * 2. Tries public URL directly (for Firebase Storage, public CDNs, etc.).
- * Rejects HTML error / SPA fallback pages.
+ * 1. Tries /api/pdf-proxy?url=... (Works on Vercel and Hostinger via .htaccess rewrite to pdf-proxy.php)
+ * 2. Tries /pdf-proxy.php?url=... (Direct PHP proxy on Hostinger)
+ * 3. Tries https://sgkbrainova.com/pdf-proxy.php?url=... (External fallback to hosted PHP proxy)
+ * 4. Tries Vite dev proxy /api/bunny-storage/... when in DEV
+ * 5. Tries Direct Bunny Storage with AccessKey
+ * 6. Tries public URL directly (Firebase Storage, open CDNs)
+ * Strictly verifies ArrayBuffer is valid binary and not an HTML SPA fallback.
  */
 export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> {
   if (!url) return null;
@@ -85,37 +116,68 @@ export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> 
     return null;
   }
 
-  // 1. Primary: Serverless Proxy / Vite Dev Proxy for Bunny CDN files
-  const proxyUrl = getBunnyStorageUrl(url);
-  if (proxyUrl && proxyUrl !== url) {
-    try {
-      const res = await fetch(proxyUrl);
-      const cType = res.headers.get("content-type") || "";
-      if (res.ok && !cType.includes("text/html")) {
-        const ab = await res.arrayBuffer();
-        const header = new TextDecoder().decode(new Uint8Array(ab.slice(0, 50))).toLowerCase();
-        if (!header.includes("<!doctype") && !header.includes("<html")) {
-          return ab;
-        }
+  const lowerUrl = url.toLowerCase();
+  const isDocx = lowerUrl.includes(".docx");
+  const isPdf = lowerUrl.includes(".pdf");
+  const isBunny = lowerUrl.includes("b-cdn.net") || lowerUrl.includes("bunnycdn.com");
+
+  const candidates: Array<{ url: string; headers?: Record<string, string> }> = [];
+
+  if (isBunny) {
+    // 1. Primary: Unified /api/pdf-proxy
+    candidates.push({ url: `/api/pdf-proxy?url=${encodeURIComponent(url)}` });
+
+    // 2. Direct Hostinger PHP proxy script
+    candidates.push({ url: `/pdf-proxy.php?url=${encodeURIComponent(url)}` });
+
+    // 3. Absolute hosted proxy URL (if accessing from localhost or another origin)
+    if (typeof window !== "undefined" && window.location.hostname !== "sgkbrainova.com") {
+      candidates.push({ url: `https://sgkbrainova.com/pdf-proxy.php?url=${encodeURIComponent(url)}` });
+    }
+
+    // 4. Vite proxy during DEV
+    if (import.meta.env.DEV) {
+      const direct = getDirectBunnyStorageUrl(url);
+      if (direct) {
+        const zone = BUNNY_STORAGE_ZONE;
+        const rawPath = decodeURIComponent(new URL(url).pathname).replace(/^\//, "");
+        const cleanPath = rawPath.startsWith(zone + "/") ? rawPath.slice(zone.length + 1) : rawPath;
+        candidates.push({ url: `/api/bunny-storage/${zone}/${cleanPath}` });
       }
-    } catch (e) {
-      console.warn("Proxy fetch notice:", e);
+    }
+
+    // 5. Direct Bunny Storage URL with AccessKey
+    const directStorage = getDirectBunnyStorageUrl(url);
+    if (directStorage) {
+      candidates.push({ url: directStorage.url, headers: directStorage.headers });
     }
   }
 
-  // 2. Secondary: Direct public CDN URL / Firebase Storage without custom preflight headers
-  try {
-    const res = await fetch(url);
-    const cType = res.headers.get("content-type") || "";
-    if (res.ok && !cType.includes("text/html")) {
-      const ab = await res.arrayBuffer();
-      const header = new TextDecoder().decode(new Uint8Array(ab.slice(0, 50))).toLowerCase();
-      if (!header.includes("<!doctype") && !header.includes("<html")) {
-        return ab;
+  // Always include direct URL as an attempt (e.g. Firebase Storage, or if CDN has CORS)
+  candidates.push({ url });
+
+  // Iterate candidates and return the first valid binary response
+  for (const candidate of candidates) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const res = await fetch(candidate.url, {
+        headers: candidate.headers || {},
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const cType = res.headers.get("content-type") || "";
+      if (res.ok && !cType.includes("text/html")) {
+        const ab = await res.arrayBuffer();
+        if (isBufferValidBinary(ab, isDocx, isPdf)) {
+          return ab;
+        }
       }
+    } catch (err) {
+      // Continue to next candidate
     }
-  } catch (e) {
-    console.warn("Direct URL fetch notice:", e);
   }
 
   return null;

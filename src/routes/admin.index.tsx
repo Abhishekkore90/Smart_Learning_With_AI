@@ -143,6 +143,17 @@ const adminModules = [
     status: "Active",
   },
   {
+    title: "MCQ Questions & Quizzes (ॲडमिन प्रश्नमंजुषा)",
+    desc: "Create and manage official daily MCQ questions, practice quizzes and online tests for all classes.",
+    icon: Sparkles,
+    to: "/admin/homework?tab=mcq",
+    color: "from-indigo-600 to-purple-700",
+    glow: "bg-indigo-400/20",
+    stats: "Admin & Custom MCQs",
+    trend: "Live Sync",
+    status: "Active",
+  },
+  {
     title: "Question Paper Uploader (प्रश्नपत्रिका व्यवस्थापक)",
     desc: "Upload and manage Unit Tests, Semester Exams & Practice Question Papers by class, medium and subject.",
     icon: FileText,

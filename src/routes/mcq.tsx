@@ -8,6 +8,8 @@ import logoImg from "@/assets/logo.jpeg";
 export const Route = createFileRoute("/mcq")({
   validateSearch: (search: Record<string, unknown>) => ({
     id: (search.id as string) || undefined,
+    teacher: (search.teacher as string) || (search.t as string) || undefined,
+    school: (search.school as string) || (search.s as string) || undefined,
   }),
   head: () => ({
     meta: [
@@ -20,7 +22,7 @@ export const Route = createFileRoute("/mcq")({
 });
 
 function MCQPublicPage() {
-  const { id } = Route.useSearch();
+  const { id, teacher, school } = Route.useSearch();
 
   // Clean up any guest quiz data when the visitor navigates away
   useEffect(() => {
@@ -80,6 +82,8 @@ function MCQPublicPage() {
           initialQuizId={id}
           defaultRole="user"
           userName="विद्यार्थी"
+          sharedTeacherName={teacher}
+          sharedSchoolName={school}
         />
       </main>
 

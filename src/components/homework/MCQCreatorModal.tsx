@@ -16,15 +16,17 @@ import {
   HelpCircle,
   Loader2,
   FileQuestion,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { MCQHomeworkSet, MCQQuestion } from "@/types/mcqHomework";
 import { createMCQHomework } from "@/services/mcqHomeworkService";
+import { MCQShareModal } from "./MCQShareModal";
 
 interface MCQCreatorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (newQuizId: string) => void;
+  onSuccess?: (newQuizId: string, isAdminMode?: boolean) => void;
   defaultRole?: "admin" | "teacher" | "user";
   defaultClass?: string;
   defaultSubject?: string;
@@ -55,7 +57,11 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
   userName = "शिक्षक",
   mode,
 }) => {
-  const isAdminMode = mode ? mode === "admin" : defaultRole === "admin";
+  const [quizCategory, setQuizCategory] = useState<"admin" | "custom">(() => {
+    if (mode) return mode;
+    return defaultRole === "admin" ? "admin" : "custom";
+  });
+  const isAdminMode = quizCategory === "admin";
   const isCustom = !isAdminMode;
 
   const [title, setTitle] = useState(
@@ -231,10 +237,10 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
       setCreatedQuizId(newId);
       toast.success(
         isAdminMode
-          ? "ॲडमिन MCQ स्वाध्याय यशस्वीपणे तयार झाला आणि प्रकाशित झाला!"
+          ? "ॲडमिन अधिकृत MCQ स्वाध्याय यशस्वीपणे तयार झाला आणि प्रकाशित झाला!"
           : "MCQ स्वाध्याय यशस्वीपणे तयार झाला आणि सेव्ह झाला!"
       );
-      if (onSuccess) onSuccess(newId);
+      if (onSuccess) onSuccess(newId, isAdminMode);
     } catch (err: any) {
       console.error("Error creating MCQ:", err);
       toast.error("स्वाध्याय सेव्ह करताना त्रुटी आली: " + (err.message || ""));
@@ -243,25 +249,18 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
     }
   };
 
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
   const shareableUrl = createdQuizId
     ? `${window.location.origin}/mcq?id=${createdQuizId}`
     : "";
 
   const handleCopyLink = async () => {
-    if (!shareableUrl) return;
-    try {
-      await navigator.clipboard.writeText(shareableUrl);
-      setCopiedLink(true);
-      toast.success("लिंक क्लिपबोर्डवर कॉपी झाली!");
-      setTimeout(() => setCopiedLink(false), 2500);
-    } catch {
-      toast.error("कृपया लिंक मॅन्युअली कॉपी करा.");
-    }
+    setIsShareModalOpen(true);
   };
 
   const handleShareWhatsApp = () => {
-    const text = `🎯 *नवीन MCQ स्वाध्याय सोडवा!* 📚\nविषय: ${subject} (${classId})\nशीर्षक: ${title}\n👉 विनामूल्य सोडवण्यासाठी येथे क्लिक करा (लॉगिनची गरज नाही):\n${shareableUrl}`;
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
+    setIsShareModalOpen(true);
   };
 
   return (
@@ -385,6 +384,66 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
             </div>
           ) : (
             <>
+              {/* Category Selector (Admin only) */}
+              {defaultRole === "admin" && (
+                <div className="bg-gradient-to-r from-amber-50 to-indigo-50 dark:from-slate-800/80 dark:to-slate-800/80 p-3.5 sm:p-4 rounded-2xl border border-amber-200/80 dark:border-slate-700 space-y-2.5">
+                  <label className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck className="size-4 text-amber-600 dark:text-amber-400" />
+                      <span>स्वाध्याय प्रकार (Publishing Section):</span>
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-normal">हा प्रश्न कोठे दिसावा ते निवडा</span>
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuizCategory("admin");
+                        if (title.startsWith("माझी सराव")) {
+                          setTitle(`दैनिक MCQ स्वाध्याय - ${subject}`);
+                        }
+                      }}
+                      className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        quizCategory === "admin"
+                          ? "bg-amber-400 text-amber-950 border-amber-500 font-black shadow-md ring-2 ring-amber-300"
+                          : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <ShieldCheck className={`size-5 shrink-0 mt-0.5 ${quizCategory === "admin" ? "text-amber-950" : "text-amber-600"}`} />
+                      <div>
+                        <div className="text-xs font-bold leading-tight">१. ॲडमिन अधिकृत स्वाध्याय (Admin Section)</div>
+                        <div className={`text-[10px] mt-0.5 ${quizCategory === "admin" ? "text-amber-900 font-semibold" : "text-slate-400"}`}>
+                          सर्व विद्यार्थ्यांसाठी मुख्य ॲडमिन टॅबमध्ये दिसेल
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuizCategory("custom");
+                        if (title.startsWith("दैनिक MCQ स्वाध्याय")) {
+                          setTitle(`माझी सराव प्रश्नमंजुषा - ${subject}`);
+                        }
+                      }}
+                      className={`flex items-start gap-2.5 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        quizCategory === "custom"
+                          ? "bg-purple-600 text-white border-purple-700 font-black shadow-md ring-2 ring-purple-300"
+                          : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <Sparkles className={`size-5 shrink-0 mt-0.5 ${quizCategory === "custom" ? "text-amber-300" : "text-purple-600"}`} />
+                      <div>
+                        <div className="text-xs font-bold leading-tight">२. कस्टम स्वाध्याय (Custom Section)</div>
+                        <div className={`text-[10px] mt-0.5 ${quizCategory === "custom" ? "text-purple-100 font-semibold" : "text-slate-400"}`}>
+                          कस्टम स्वाध्याय टॅबमध्ये दिसेल
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Basic Meta Settings */}
               <div className="bg-slate-50 dark:bg-slate-850 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -655,6 +714,20 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
           </div>
         )}
       </motion.div>
+
+      {/* Share Modal */}
+      {createdQuizId && (
+        <MCQShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          quiz={{
+            id: createdQuizId,
+            title: title || "MCQ स्वाध्याय",
+            subject,
+            classId,
+          }}
+        />
+      )}
     </div>
   );
 };

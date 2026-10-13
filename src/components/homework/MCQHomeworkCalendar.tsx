@@ -10,8 +10,12 @@ import {
   Trash2,
   CheckCircle2,
   FileQuestion,
+  ShieldCheck,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { MCQHomeworkSet } from "@/types/mcqHomework";
+import { updateMCQHomework } from "@/services/mcqHomeworkService";
+import { MCQShareModal } from "./MCQShareModal";
 
 export interface MCQHomeworkCalendarProps {
   quizzes: MCQHomeworkSet[];
@@ -20,6 +24,7 @@ export interface MCQHomeworkCalendarProps {
   onTakeQuiz: (quizId: string) => void;
   defaultRole?: "admin" | "teacher" | "student" | "user";
   onDeleteQuiz?: (id: string, title: string) => void;
+  userName?: string;
 }
 
 const MARATHI_MONTHS = [
@@ -61,7 +66,9 @@ export const MCQHomeworkCalendar: React.FC<MCQHomeworkCalendarProps> = ({
   onTakeQuiz,
   defaultRole = "student",
   onDeleteQuiz,
+  userName = "शिक्षक",
 }) => {
+  const [sharingQuiz, setSharingQuiz] = useState<MCQHomeworkSet | null>(null);
   const todayStr = useMemo(() => formatISODate(new Date()), []);
   const initialDate = selectedDate && selectedDate !== "all" ? parseISODate(selectedDate) : new Date();
 
@@ -186,6 +193,34 @@ export const MCQHomeworkCalendar: React.FC<MCQHomeworkCalendarProps> = ({
       return activeDate;
     }
   }, [activeDate]);
+
+  const handleToggleAdminStatus = async (quiz: MCQHomeworkSet) => {
+    const isCurrentlyAdmin = !quiz.isCustom || quiz.createdBy?.role === "admin";
+    const targetStatus = !isCurrentlyAdmin;
+    const confirmMsg = targetStatus
+      ? `"${quiz.title}" हा प्रश्न संच 'ॲडमिन अधिकृत' विभागात हलवायचा आहे का?`
+      : `"${quiz.title}" हा प्रश्न संच 'कस्टम' विभागात हलवायचा आहे का?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await updateMCQHomework(quiz.id, {
+        isCustom: !targetStatus,
+        createdBy: {
+          ...quiz.createdBy,
+          role: targetStatus ? "admin" : "user",
+          name: quiz.createdBy?.name || (targetStatus ? "सुपर ॲडमिन" : "शिक्षक"),
+        },
+      });
+      toast.success(
+        targetStatus
+          ? "स्वाध्याय यशस्वीपणे ॲडमिन विभागात हलवला गेला!"
+          : "स्वाध्याय कस्टम विभागात हलवला गेला!"
+      );
+    } catch (err: any) {
+      toast.error("बदल करताना त्रुटी आली: " + (err.message || ""));
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-7 shadow-sm space-y-6">
@@ -385,7 +420,31 @@ export const MCQHomeworkCalendar: React.FC<MCQHomeworkCalendarProps> = ({
                   </div>
 
                   {/* Action buttons */}
-                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
+                    {defaultRole === "admin" && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleAdminStatus(quiz)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border shadow-xs ${
+                          quiz.isCustom && quiz.createdBy?.role !== "admin"
+                            ? "bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200"
+                            : "bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950/60 dark:text-purple-200"
+                        }`}
+                        title={
+                          quiz.isCustom && quiz.createdBy?.role !== "admin"
+                            ? "हा प्रश्न संच '१. ॲडमिन' अधिकृत विभागात हलवा"
+                            : "हा प्रश्न संच '२. कस्टम' विभागात हलवा"
+                        }
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                        <span>
+                          {quiz.isCustom && quiz.createdBy?.role !== "admin"
+                            ? "ॲडमिनमध्ये हलवा"
+                            : "कस्टममध्ये हलवा"}
+                        </span>
+                      </button>
+                    )}
+
                     {defaultRole === "admin" && onDeleteQuiz && (
                       <button
                         type="button"
@@ -399,15 +458,12 @@ export const MCQHomeworkCalendar: React.FC<MCQHomeworkCalendarProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => {
-                        const url = `${window.location.origin}/mcq?id=${quiz.id}`;
-                        navigator.clipboard.writeText(url);
-                        alert("स्वाध्याय लिंक कॉपी झाली!");
-                      }}
-                      className="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                      title="लिंक कॉपी करा"
+                      onClick={() => setSharingQuiz(quiz)}
+                      className="px-3.5 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
+                      title="स्वाध्याय लिंक WhatsApp वर शेअर करा"
                     >
-                      <Share2 className="w-4 h-4" />
+                      <Share2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span>शेअर करा</span>
                     </button>
 
                     <button
@@ -425,6 +481,16 @@ export const MCQHomeworkCalendar: React.FC<MCQHomeworkCalendarProps> = ({
           )}
         </div>
       </div>
+
+      {/* Share Modal */}
+      {sharingQuiz && (
+        <MCQShareModal
+          isOpen={Boolean(sharingQuiz)}
+          onClose={() => setSharingQuiz(null)}
+          quiz={sharingQuiz}
+          initialTeacherName={defaultRole === "teacher" ? userName : ""}
+        />
+      )}
     </div>
   );
 };

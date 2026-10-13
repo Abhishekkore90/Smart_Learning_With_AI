@@ -34,10 +34,23 @@ declare global {
       isNativeAvailable?: () => boolean;
       triggerGoogleSignIn?: () => void;
     };
-    onNativeGoogleSignInSuccess?: (idToken: string) => Promise<void> | void;
-    onNativeGoogleSignInFailure?: (error?: string) => void;
+    onNativeGoogleSignInSuccess?: (
+      idToken: string,
+      email: string,
+      name: string,
+      photoUrl: string
+    ) => Promise<void> | void;
+    onNativeGoogleSignInFailure?: (errorMessage: string) => void;
   }
 }
+
+const isAndroidNativeApp = (): boolean => {
+  return (
+    typeof (window as any).AndroidGoogleAuth !== 'undefined' &&
+    typeof (window as any).AndroidGoogleAuth.isNativeAvailable === 'function' &&
+    (window as any).AndroidGoogleAuth.isNativeAvailable() === true
+  );
+};
 import {
   collection,
   query,
@@ -478,60 +491,68 @@ function UnifiedLoginPortal() {
 
   // Android Native Google Sign-In Listener
   useEffect(() => {
-    window.onNativeGoogleSignInSuccess = async (idToken: string) => {
+    // Success: Android app calls this after Google account selection
+    (window as any).onNativeGoogleSignInSuccess = async (
+      idToken: string,
+      email: string,
+      name: string,
+      photoUrl: string
+    ) => {
       try {
         setGoogleLoading(true);
+        // Use the idToken with Firebase Auth
         const credential = GoogleAuthProvider.credential(idToken);
         const result = await signInWithCredential(auth, credential);
-        if (result.user) {
-          await processGoogleUserSession(result.user);
-        }
-      } catch (err: any) {
-        console.error("Native Google sign-in auth error:", err);
+        const user = result.user;
+
+        // Existing post-login logic (Firestore lookup/creation, localStorage, redirect)
+        await processGoogleUserSession(user);
+      } catch (error: any) {
+        console.error("Native Google sign-in error:", error);
         toast.error(
-          err.message ||
+          error.message ||
             (lang === "mr"
               ? "Google प्रमाणीकरण अयशस्वी झाले. कृपया पुन्हा प्रयत्न करा."
-              : "Google sign-in failed. Please try again.")
+              : "Native Google sign-in failed. Please try again.")
         );
       } finally {
         setGoogleLoading(false);
       }
     };
 
-    window.onNativeGoogleSignInFailure = (errMsg?: string) => {
-      console.warn("Native Google sign-in failure callback:", errMsg);
+    // Failure: Android app calls this if user cancels or something goes wrong
+    (window as any).onNativeGoogleSignInFailure = (errorMessage: string) => {
+      console.warn("Native Google sign-in failed:", errorMessage);
       setGoogleLoading(false);
-      if (errMsg && !errMsg.toLowerCase().includes("cancel")) {
-        toast.error(errMsg);
+      if (errorMessage && !errorMessage.toLowerCase().includes("cancel")) {
+        toast.error(errorMessage);
       }
     };
 
+    // Cleanup on unmount
     return () => {
-      delete window.onNativeGoogleSignInSuccess;
-      delete window.onNativeGoogleSignInFailure;
+      delete (window as any).onNativeGoogleSignInSuccess;
+      delete (window as any).onNativeGoogleSignInFailure;
     };
   }, [lang, redirect]);
 
   const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
     clearUnlockedPinSections();
+
+    if (isAndroidNativeApp()) {
+      setGoogleLoading(true);
+      // Let the Android app handle it natively
+      (window as any).AndroidGoogleAuth.triggerGoogleSignIn();
+      return; // Android will call window.onNativeGoogleSignInSuccess when done
+    }
+
+    // --- EXISTING WEB BROWSER GOOGLE SIGN-IN FLOW (keep as-is) ---
+    setGoogleLoading(true);
     try {
       if (!auth) {
         throw new Error("Authentication service is temporarily unavailable.");
       }
 
-      // १. Android Native Google Bridge Check
-      if (window.AndroidGoogleAuth?.isNativeAvailable?.() || (window.AndroidGoogleAuth && !window.AndroidGoogleAuth.isNativeAvailable)) {
-        window.AndroidGoogleAuth.triggerGoogleSignIn?.();
-        // Fallback safety timeout in case the native picker is closed without callback
-        setTimeout(() => {
-          setGoogleLoading(false);
-        }, 15000);
-        return;
-      }
-
-      // २. Standard Browser Flow
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
       const result = await signInWithPopup(auth, provider);
@@ -557,7 +578,7 @@ function UnifiedLoginPortal() {
             : "Google sign-in failed. Please try again.")
       );
     } finally {
-      if (!window.AndroidGoogleAuth?.isNativeAvailable?.()) {
+      if (!isAndroidNativeApp()) {
         setGoogleLoading(false);
       }
     }

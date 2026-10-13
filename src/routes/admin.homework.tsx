@@ -56,6 +56,8 @@ import { DailyHomeworkCalendar, formatISODate } from "@/components/homework/Dail
 import { QuestionPaperRenderer } from "@/components/homework/QuestionPaperRenderer";
 import { MCQHomeworkSection } from "@/components/homework/MCQHomeworkSection";
 import { purgeDocumentAndAllEdits } from "@/services/documentEngine";
+import { WordQuestionPaperEditor } from "@/components/questionPaper/WordQuestionPaperEditor";
+import { isWordHomework } from "@/utils/homeworkDocHelper";
 
 export const Route = createFileRoute("/admin/homework")({
   head: () => ({
@@ -131,7 +133,13 @@ function AdminHomeworkPage() {
   }, [navigate]);
 
   // Main Co-Tabs: Regular Homework vs MCQ Homework (same as Teacher panel)
-  const [mainTab, setMainTab] = useState<"homework" | "mcq">("homework");
+  const [mainTab, setMainTab] = useState<"homework" | "mcq">(() => {
+    if (typeof window !== "undefined") {
+      const tab = new URLSearchParams(window.location.search).get("tab");
+      if (tab === "mcq") return "mcq";
+    }
+    return "homework";
+  });
 
   // Stepper state: "medium" -> "class" -> "list" (same clean flow as Teacher panel)
   const [step, setStep] = useState<"medium" | "class" | "list">("medium");
@@ -263,20 +271,14 @@ function AdminHomeworkPage() {
 
     try {
       setIsExtracting(true);
-      toast.info("फाईलमधून मजकूर वाचत आहे...");
       const extractedText = await extractTextFromFile(file);
       if (extractedText && extractedText.trim()) {
         setContent(extractedText.trim());
-        setExtractedPreviewText(extractedText.trim());
-        toast.success("फाईलमधील मजकूर यशस्वीरित्या वाचला गेला!");
-      } else if (isImage) {
-        toast.success("इमेज फाईल निवडली गेली!");
-      } else {
-        toast.info("फाईल जोडली गेली.");
       }
+      toast.success("फाईल यशस्वीरित्या जोडली गेली!");
     } catch (err: any) {
-      console.warn("Extraction error:", err);
-      toast.warning("मजकूर आपोआप वाचता आला नाही, परंतु फाईल यशस्वीरित्या जोडली गेली आहे.");
+      console.warn("Extraction notice:", err);
+      toast.success("फाईल जोडली गेली.");
     } finally {
       setIsExtracting(false);
     }
@@ -366,6 +368,9 @@ function AdminHomeworkPage() {
         fileType: fileType || null,
         fileSize: fileSize || null,
         documentType,
+        wordFileUrl: isWord ? fileUrl : null,
+        wordFileName: isWord ? fileName : null,
+        wordFileSize: isWord ? fileSize : null,
         originalFileUrl: fileUrl || null,
         createdAt: new Date().toISOString(),
         uploadedAt: new Date().toISOString(),
@@ -546,7 +551,7 @@ function AdminHomeworkPage() {
                   </button>
 
                   <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200">
-                    {activeHomework.fileUrl && (
+                    {(activeHomework.fileUrl || activeHomework.wordFileUrl) && (
                       <button
                         onClick={() => setPreviewTab("doc")}
                         className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
@@ -555,7 +560,9 @@ function AdminHomeworkPage() {
                             : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
-                        मूळ दस्तऐवज (Document)
+                        {isWordHomework(activeHomework)
+                          ? "Word गृहपाठ (Word Homework)"
+                          : "मूळ दस्तऐवज (Document)"}
                       </button>
                     )}
                     {activeHomework.questionPaperData && (
@@ -570,41 +577,57 @@ function AdminHomeworkPage() {
                         चाचणी प्रश्नपत्रिका (Question Paper)
                       </button>
                     )}
-                    <button
-                      onClick={() => setPreviewTab("template")}
-                      className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                        previewTab === "template"
-                          ? "bg-amber-600 text-white shadow-xs"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
-                    >
-                      दैनिक कार्यपुस्तिका (Worksheet)
-                    </button>
+                    {!activeHomework.fileUrl && !activeHomework.wordFileUrl && (
+                      <button
+                        onClick={() => setPreviewTab("template")}
+                        className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                          previewTab === "template"
+                            ? "bg-amber-600 text-white shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        दैनिक कार्यपुस्तिका (Worksheet)
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {previewTab === "doc" && activeHomework.fileUrl ? (
-                  <DocumentEditorViewer
-                    documentId={activeHomework.id}
-                    fileUrl={activeHomework.fileUrl}
-                    fileName={activeHomework.fileName}
-                    documentType="homework"
-                    title={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate || "दैनिक"})`}
-                    userId="super_admin"
-                    userRole="admin"
-                    userName="सुपर ॲडमिन"
-                    canEdit={true}
-                    onBack={() => setActiveHomework(null)}
-                    metadataBadge={
-                      <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
-                        <span>दिनांक: {activeHomework.homeworkDate}</span>
-                        <span>•</span>
-                        <span>इयत्ता: {activeHomework.class}</span>
-                        <span>•</span>
-                        <span>विषय: {activeHomework.subject}</span>
-                      </div>
-                    }
-                  />
+                {previewTab === "doc" && (activeHomework.fileUrl || activeHomework.wordFileUrl) ? (
+                  isWordHomework(activeHomework) ? (
+                    <WordQuestionPaperEditor
+                      fileUrl={activeHomework.wordFileUrl || activeHomework.fileUrl}
+                      file={selectedFile && (activeHomework.fileName === selectedFile.name || activeHomework.wordFileName === selectedFile.name) ? selectedFile : null}
+                      paperTitle={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate || "दैनिक"})`}
+                      paperId={activeHomework.id}
+                      subject={activeHomework.subject}
+                      userId="super_admin"
+                      userRole="admin"
+                      documentType="homework"
+                      onClose={() => setActiveHomework(null)}
+                    />
+                  ) : (
+                    <DocumentEditorViewer
+                      documentId={activeHomework.id}
+                      fileUrl={activeHomework.fileUrl || ""}
+                      fileName={activeHomework.fileName}
+                      documentType="homework"
+                      title={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate || "दैनिक"})`}
+                      userId="super_admin"
+                      userRole="admin"
+                      userName="सुपर ॲडमिन"
+                      canEdit={true}
+                      onBack={() => setActiveHomework(null)}
+                      metadataBadge={
+                        <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                          <span>दिनांक: {activeHomework.homeworkDate}</span>
+                          <span>•</span>
+                          <span>इयत्ता: {activeHomework.class}</span>
+                          <span>•</span>
+                          <span>विषय: {activeHomework.subject}</span>
+                        </div>
+                      }
+                    />
+                  )
                 ) : previewTab === "qp" && activeHomework.questionPaperData ? (
                   <QuestionPaperRenderer
                     initialData={activeHomework.questionPaperData}
@@ -1161,52 +1184,19 @@ function AdminHomeworkPage() {
                           </div>
                         </div>
                       )}
-
-                      {isExtracting && (
-                        <div className="mt-3 flex items-center justify-center gap-2 text-xs font-bold text-amber-700 animate-pulse bg-amber-100/60 py-2 px-3 rounded-xl">
-                          <Loader2 className="size-4 animate-spin" />
-                          <span>फाईलमधील मजकूर वाचत आहे (Reading & Extracting File Content)...</span>
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  {/* PREVIEW OF EXTRACTED FILE CONTENT / IMAGE */}
-                  {(previewImageUrl || extractedPreviewText) && (
-                    <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-3">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="size-4 text-emerald-600" />
-                          <span className="text-xs font-black text-slate-800">
-                            फाईल वाचली गेली — पूर्वावलोकन (Extracted Content Preview)
-                          </span>
-                        </div>
-                        {extractedPreviewText && (
-                          <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                            {extractedPreviewText.length} अक्षरे • {extractedPreviewText.split("\n").length} ओळी
-                          </span>
-                        )}
+                  {/* Image Preview only if an image is uploaded */}
+                    {previewImageUrl && (
+                      <div className="rounded-xl overflow-hidden border border-slate-200 bg-white p-2 max-h-56 flex items-center justify-center">
+                        <img
+                          src={previewImageUrl}
+                          alt="Uploaded Homework Preview"
+                          className="max-h-52 object-contain rounded-lg"
+                        />
                       </div>
-
-                      {/* Image Preview if image uploaded */}
-                      {previewImageUrl && (
-                        <div className="rounded-xl overflow-hidden border border-slate-200 bg-white p-2 max-h-56 flex items-center justify-center">
-                          <img
-                            src={previewImageUrl}
-                            alt="Uploaded Homework Preview"
-                            className="max-h-52 object-contain rounded-lg"
-                          />
-                        </div>
-                      )}
-
-                      {/* Text Preview if Word, PDF, or Excel extracted */}
-                      {extractedPreviewText && (
-                        <div className="bg-white rounded-xl p-3 border border-slate-200 max-h-48 overflow-y-auto text-xs font-mono text-slate-700 whitespace-pre-wrap leading-relaxed custom-scrollbar shadow-inner">
-                          {extractedPreviewText}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
 
                   {/* Progress bar */}
                   {isUploading && uploadProgress > 0 && (

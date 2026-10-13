@@ -7,10 +7,12 @@ export interface MCQPrintDocumentProps {
   quiz: MCQHomeworkSet;
   submission?: LocalMCQSubmission | null;
   studentName?: string;
+  teacherName?: string;
+  schoolName?: string;
 }
 
 export const MCQPrintDocument = forwardRef<HTMLDivElement, MCQPrintDocumentProps>(
-  ({ quiz, submission, studentName }, ref) => {
+  ({ quiz, submission, studentName, teacherName, schoolName }, ref) => {
     const totalMarks = submission ? submission.totalMarks : quiz.totalMarks || quiz.questions?.length || 1;
     const score = submission ? submission.score : 0;
     const percentage = submission
@@ -195,16 +197,16 @@ export const MCQPrintDocument = forwardRef<HTMLDivElement, MCQPrintDocumentProps
             </div>
 
 
-            {/* Authority Signature */}
-            <div className="text-right space-y-1">
-              <div className="font-serif italic font-bold text-sm text-indigo-950 border-b border-slate-300 pb-0.5">
-                SGK Brainova Academic Team
+            {/* Authority Signature: Teacher & School */}
+            <div className="text-right space-y-1 min-w-[180px] max-w-[280px]">
+              <div className="font-serif italic font-bold text-sm text-indigo-950 border-b border-slate-300 pb-0.5 truncate">
+                {teacherName?.trim() || "वर्ग शिक्षक"}
               </div>
               <div className="text-[11px] font-bold text-slate-700">
-                स्वाध्याय प्रमुख (Examiner)
+                वर्ग शिक्षक (Class Teacher)
               </div>
-              <div className="text-[10px] font-medium text-indigo-600">
-                Smart Learning with AI
+              <div className="text-[10px] font-extrabold text-indigo-700 truncate">
+                {schoolName?.trim() || "स्मार्ट लर्निंग डिजिटल अकॅडमी"}
               </div>
             </div>
           </div>

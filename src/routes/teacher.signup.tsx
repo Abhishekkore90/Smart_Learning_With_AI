@@ -29,7 +29,16 @@ import {
   GoogleAuthProvider,
   FacebookAuthProvider,
   signInWithPopup,
+  signInWithCredential,
 } from "firebase/auth";
+
+const isAndroidNativeApp = (): boolean => {
+  return (
+    typeof (window as any).AndroidGoogleAuth !== 'undefined' &&
+    typeof (window as any).AndroidGoogleAuth.isNativeAvailable === 'function' &&
+    (window as any).AndroidGoogleAuth.isNativeAvailable() === true
+  );
+};
 import { auth, db } from "@/lib/firebase";
 import {
   doc,
@@ -123,7 +132,135 @@ function TeacherSignupPage() {
     }
   };
 
+  const processGoogleSignupSession = async (user: any) => {
+    // Check existing teacher or user record
+    let teacherDoc = await getDoc(doc(db, "teachers", user.uid));
+    let userDoc = await getDoc(doc(db, "users", user.uid));
+
+    let userData: any = teacherDoc.exists()
+      ? teacherDoc.data()
+      : userDoc.exists()
+        ? userDoc.data()
+        : null;
+
+    if (!userData && user.email) {
+      try {
+        const qTeacher = query(
+          collection(db, "teachers"),
+          where("email", "==", user.email)
+        );
+        const snapTeacher = await getDocs(qTeacher);
+        if (!snapTeacher.empty) {
+          userData = snapTeacher.docs[0].data();
+        }
+      } catch (_err) {}
+    }
+
+    if (!userData) {
+      userData = {
+        fullName: user.displayName || "Educator",
+        email: user.email || "",
+        udise: "",
+        schoolName: "",
+        address: "",
+        state: "Maharashtra",
+        board: "Maharashtra ZP Teacher",
+        role: "teacher",
+        createdAt: new Date().toISOString(),
+        photoURL: user.photoURL || "",
+        verified: false,
+      };
+
+      try {
+        await setDoc(doc(db, "teachers", user.uid), userData, { merge: true });
+        await setDoc(doc(db, "users", user.uid), userData, { merge: true });
+      } catch (_docErr) {
+        console.warn("Firestore user creation note:", _docErr);
+      }
+    }
+
+    if (userData.udise) {
+      localStorage.setItem("teacher_udise", userData.udise);
+    }
+    localStorage.setItem(
+      "sqaaf_teacher_profile",
+      JSON.stringify({
+        fullName: userData.fullName || user.displayName || "Educator",
+        email: userData.email || user.email || "",
+        udise: userData.udise || "",
+        schoolName: userData.schoolName || "",
+        address: userData.address || "",
+        role: userData.role || "teacher",
+      })
+    );
+
+    try {
+      await setDoc(
+        doc(db, "logged_users", user.uid),
+        {
+          uid: user.uid,
+          email: user.email || "",
+          fullName: userData.fullName || user.displayName || "Educator",
+          udise: userData.udise || "",
+          schoolName: userData.schoolName || "",
+          phone: userData.phone || user.phoneNumber || "",
+          lastLoginAt: serverTimestamp(),
+          loginCount: (userData.loginCount || 0) + 1,
+          role: "teacher",
+          provider: "google",
+        },
+        { merge: true }
+      );
+    } catch (_e) {}
+
+    toast.success("Signed in with Google successfully!");
+    window.location.href = "/teacher";
+  };
+
+  // Android Native Google Sign-In Listener
+  useEffect(() => {
+    (window as any).onNativeGoogleSignInSuccess = async (
+      idToken: string,
+      _email?: string,
+      _name?: string,
+      _photoUrl?: string
+    ) => {
+      try {
+        setGoogleLoading(true);
+        const credential = GoogleAuthProvider.credential(idToken);
+        const result = await signInWithCredential(auth, credential);
+        if (result.user) {
+          await processGoogleSignupSession(result.user);
+        }
+      } catch (error: any) {
+        console.error("Native Google sign-up error:", error);
+        toast.error(error.message || "Native Google sign-in failed. Please try again.");
+      } finally {
+        setGoogleLoading(false);
+      }
+    };
+
+    (window as any).onNativeGoogleSignInFailure = (errorMessage: string) => {
+      console.warn("Native Google sign-up failed:", errorMessage);
+      setGoogleLoading(false);
+      if (errorMessage && !errorMessage.toLowerCase().includes("cancel")) {
+        toast.error(errorMessage);
+      }
+    };
+
+    return () => {
+      delete (window as any).onNativeGoogleSignInSuccess;
+      delete (window as any).onNativeGoogleSignInFailure;
+    };
+  }, []);
+
   const handleGoogleSignup = async () => {
+    if (isAndroidNativeApp()) {
+      setGoogleLoading(true);
+      (window as any).AndroidGoogleAuth.triggerGoogleSignIn();
+      return;
+    }
+
     setGoogleLoading(true);
     try {
       if (!auth) {
@@ -139,88 +276,7 @@ function TeacherSignupPage() {
         throw new Error("Google authentication failed. No user record returned.");
       }
 
-      // Check existing teacher or user record
-      let teacherDoc = await getDoc(doc(db, "teachers", user.uid));
-      let userDoc = await getDoc(doc(db, "users", user.uid));
-
-      let userData: any = teacherDoc.exists()
-        ? teacherDoc.data()
-        : userDoc.exists()
-          ? userDoc.data()
-          : null;
-
-      if (!userData && user.email) {
-        try {
-          const qTeacher = query(
-            collection(db, "teachers"),
-            where("email", "==", user.email)
-          );
-          const snapTeacher = await getDocs(qTeacher);
-          if (!snapTeacher.empty) {
-            userData = snapTeacher.docs[0].data();
-          }
-        } catch (_err) {}
-      }
-
-      if (!userData) {
-        userData = {
-          fullName: user.displayName || "Educator",
-          email: user.email || "",
-          udise: "",
-          schoolName: "",
-          address: "",
-          state: "Maharashtra",
-          board: "Maharashtra ZP Teacher",
-          role: "teacher",
-          createdAt: new Date().toISOString(),
-          photoURL: user.photoURL || "",
-          verified: false,
-        };
-
-        try {
-          await setDoc(doc(db, "teachers", user.uid), userData, { merge: true });
-          await setDoc(doc(db, "users", user.uid), userData, { merge: true });
-        } catch (_docErr) {
-          console.warn("Firestore user creation note:", _docErr);
-        }
-      }
-
-      if (userData.udise) {
-        localStorage.setItem("teacher_udise", userData.udise);
-      }
-      localStorage.setItem(
-        "sqaaf_teacher_profile",
-        JSON.stringify({
-          fullName: userData.fullName || user.displayName || "Educator",
-          email: userData.email || user.email || "",
-          udise: userData.udise || "",
-          schoolName: userData.schoolName || "",
-          address: userData.address || "",
-          role: userData.role || "teacher",
-        })
-      );
-
-      try {
-        await setDoc(
-          doc(db, "logged_users", user.uid),
-          {
-            uid: user.uid,
-            email: user.email || "",
-            fullName: userData.fullName || user.displayName || "Educator",
-            udise: userData.udise || "",
-            schoolName: userData.schoolName || "",
-            phone: userData.phone || user.phoneNumber || "",
-            lastLoginAt: serverTimestamp(),
-            loginCount: (userData.loginCount || 0) + 1,
-            role: "teacher",
-            provider: "google",
-          },
-          { merge: true }
-        );
-      } catch (_e) {}
-
-      toast.success("Signed in with Google successfully!");
-      window.location.href = "/teacher";
+      await processGoogleSignupSession(user);
     } catch (error: any) {
       if (
         error?.code === "auth/popup-closed-by-user" ||
@@ -231,7 +287,9 @@ function TeacherSignupPage() {
       console.error("Google sign up error:", error);
       toast.error(error.message || "Google registration failed. Please try again.");
     } finally {
-      setGoogleLoading(false);
+      if (!isAndroidNativeApp()) {
+        setGoogleLoading(false);
+      }
     }
   };
 
