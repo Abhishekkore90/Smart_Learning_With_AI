@@ -10,8 +10,11 @@ import {
   Building2,
   Sparkles,
   ExternalLink,
+  Save,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { updateMCQHomeworkShareDetails } from "@/services/mcqHomeworkService";
 
 export interface MCQShareModalProps {
   isOpen: boolean;
@@ -38,6 +41,30 @@ export const MCQShareModal: React.FC<MCQShareModalProps> = ({
   const [teacherName, setTeacherName] = useState("");
   const [schoolName, setSchoolName] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Explicit Save Information Button Handler
+  const handleSaveInformation = async () => {
+    setIsSaving(true);
+    const t = teacherName.trim();
+    const s = schoolName.trim();
+    try {
+      localStorage.setItem("mcq_share_teacher_name", t);
+      localStorage.setItem("mcq_share_school_name", s);
+      if (quiz?.id) {
+        await updateMCQHomeworkShareDetails(quiz.id, t, s);
+      }
+      if (onShareCompleted) onShareCompleted(t, s);
+      setIsSaved(true);
+      toast.success("शिक्षक व शाळा माहिती यशस्वीपणे सेव्ह झाली! ✓");
+      setTimeout(() => setIsSaved(false), 3000);
+    } catch {
+      toast.error("माहिती सेव्ह करताना त्रुटी आली.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Load remembered teacher and school name for sharing
   useEffect(() => {
@@ -52,26 +79,21 @@ export const MCQShareModal: React.FC<MCQShareModalProps> = ({
     }
   }, [isOpen, initialTeacherName, initialSchoolName]);
 
-  // Construct full shareable URL with encoded teacher and school parameters
+  // Construct clean, compact shareable URL (without long Unicode encoded query strings)
   const shareableUrl = useMemo(() => {
     if (typeof window === "undefined" || !quiz?.id) return "";
-    const url = new URL(`${window.location.origin}/mcq`);
-    url.searchParams.set("id", quiz.id);
+    return `${window.location.origin}/mcq?id=${quiz.id}`;
+  }, [quiz?.id]);
 
-    const t = teacherName.trim();
-    const s = schoolName.trim();
-    if (t) url.searchParams.set("teacher", t);
-    if (s) url.searchParams.set("school", s);
-
-    return url.toString();
-  }, [quiz?.id, teacherName, schoolName]);
-
-  // Save current values to localStorage
+  // Save current values to localStorage and persist into Firestore quiz doc
   const saveShareProfile = () => {
     const t = teacherName.trim();
     const s = schoolName.trim();
     if (t) localStorage.setItem("mcq_share_teacher_name", t);
     if (s) localStorage.setItem("mcq_share_school_name", s);
+    if (quiz?.id) {
+      updateMCQHomeworkShareDetails(quiz.id, t, s);
+    }
     if (onShareCompleted) onShareCompleted(t, s);
   };
 
@@ -219,6 +241,32 @@ export const MCQShareModal: React.FC<MCQShareModalProps> = ({
               <p className="text-[11px] text-slate-400">
                 💡 हे शाळेचे नाव प्रमाणपत्रावर वर्ग शिक्षकाच्या हुद्द्याखाली स्पष्टपणे छापले जाईल.
               </p>
+            </div>
+
+            {/* Explicit Save Information Button */}
+            <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 gap-3">
+              <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium leading-tight">
+                <span>शिक्षक व शाळा नाव स्वाध्यायासोबत कायम सेव्ह करा:</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveInformation}
+                disabled={isSaving}
+                className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all active:scale-95 cursor-pointer shadow-sm shrink-0 ${
+                  isSaved
+                    ? "bg-emerald-600 text-white shadow-emerald-200 dark:shadow-none"
+                    : "bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white shadow-indigo-200 dark:shadow-none"
+                }`}
+              >
+                {isSaving ? (
+                  <Loader2 className="size-3.5 animate-spin text-white" />
+                ) : isSaved ? (
+                  <Check className="size-3.5 text-white" />
+                ) : (
+                  <Save className="size-3.5 text-indigo-200" />
+                )}
+                <span>{isSaving ? "सेव्ह होत आहे..." : isSaved ? "माहिती सेव्ह झाली ✓" : "माहिती सेव्ह करा (Save)"}</span>
+              </button>
             </div>
 
             {/* Generated Link Preview */}

@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
+import { ChevronLeft } from "lucide-react";
 
 export const Route = createFileRoute("/teacher/timetable/teacher")({
   component: TeacherTimetablePage,
@@ -23,6 +24,14 @@ function TeacherTimetablePage() {
         <TeacherSidebar />
         <main className="flex-1 lg:pl-0 p-6">
           <div className="max-w-full mx-auto space-y-8 pt-4">
+            <div className="flex items-center">
+              <Link
+                to="/teacher/timetable"
+                className="inline-flex items-center gap-1.5 text-xs font-black text-slate-500 hover:text-indigo-600 uppercase tracking-widest transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="size-4" /> Back to Timetable / वेळापत्रकावर मागे जा
+              </Link>
+            </div>
             <div className="text-center space-y-4">
               <h1 className="text-xl font-medium text-slate-800">
                 Teacher Timetable

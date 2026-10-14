@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
   FileSpreadsheet,
@@ -15,6 +15,7 @@ import {
   Percent,
   Award,
   BookOpen,
+  ArrowLeft,
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
@@ -568,6 +569,18 @@ function TeacherResultsPage() {
                 >
                   ← मुख्यपृष्ठ (Back to Dashboard)
                 </button>
+              </div>
+            )}
+
+            {activeTab === "dashboard" && (
+              <div className="mb-4">
+                <Link
+                  to="/teacher"
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+                >
+                  <ArrowLeft className="size-4 text-indigo-600" />
+                  <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+                </Link>
               </div>
             )}
 

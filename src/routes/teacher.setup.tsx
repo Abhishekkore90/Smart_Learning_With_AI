@@ -7,6 +7,7 @@ import {
   School,
   Landmark,
   Sparkles,
+  ArrowLeft,
 } from "lucide-react";
 import { useState } from "react";
 import { showToast as toast } from "@/lib/custom-toast";
@@ -51,6 +52,16 @@ function TeacherSetupPage() {
   return (
     <div className="min-h-screen bg-[#FDFDFF] text-[#111827] selection:bg-teal-500/10 flex items-center justify-center p-6">
       <div className="max-w-xl w-full">
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/teacher" })}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+          >
+            <ArrowLeft className="size-4 text-teal-600" />
+            <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+          </button>
+        </div>
         <div className="text-center mb-12 space-y-4">
           <div className="size-16 bg-teal-50 rounded-[1.5rem] flex items-center justify-center text-teal-600 mx-auto shadow-sm">
             <Landmark className="size-8" />

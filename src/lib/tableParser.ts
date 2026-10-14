@@ -40,7 +40,7 @@ export const isColumnHeaderRow = (row: ParsedTableCell[]): boolean => {
   ) {
     return false;
   }
-  
+
   const hasMonth = joined.includes("महिना") || joined.includes("month");
   const hasHeaderKeywords =
     joined.includes("आठवडा") ||
@@ -67,13 +67,25 @@ export const isSubjectHeaderRow = (row: ParsedTableCell[]): boolean => {
     joined.includes("विषय :") ||
     joined.includes("विषय:") ||
     joined.includes("विषय-") ||
+    joined.includes("विषय :-") ||
+    joined.includes("विषय:-") ||
     joined.includes("subject:") ||
     joined.includes("subject :") ||
     joined.includes("इयत्ता :") ||
     joined.includes("इयत्ता:") ||
     joined.includes("इयत्ता-") ||
+    joined.includes("इयत्ता :-") ||
+    joined.includes("इयत्ता:-") ||
+    joined.includes("महिना :") ||
+    joined.includes("महिना:") ||
+    joined.includes("महिना-") ||
+    joined.includes("महिना :-") ||
+    joined.includes("महिना:-") ||
+    joined.includes("मासिक घटक नियोजन") ||
     joined.includes("मासिक व घटक नियोजन") ||
-    joined.includes("अभ्यासक्रमाचे मासिक")
+    joined.includes("अभ्यासक्रमाचे मासिक") ||
+    joined.includes("monthly & unit planning") ||
+    joined.includes("monthly and unit planning")
   );
 };
 
@@ -87,97 +99,120 @@ export async function parseExcelFile(file: File): Promise<ParsedTableResult> {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(arrayBuffer, { type: "array", cellStyles: true });
-    const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) {
+    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
       return createEmptyResult("excel", "Excel document has no readable sheet.");
     }
 
-    const worksheet = workbook.Sheets[firstSheetName];
-    if (!worksheet || !worksheet["!ref"]) {
-      return createEmptyResult("excel", "Excel sheet is empty.");
-    }
+    const allSheetsGrid: ParsedTableCell[][] = [];
 
-    // Decode full sheet range
-    const range = XLSX.utils.decode_range(worksheet["!ref"]);
-    const startRow = range.s.r;
-    const endRow = range.e.r;
-    const startCol = range.s.c;
-    const endCol = range.e.c;
+    workbook.SheetNames.forEach((sheetName) => {
+      const worksheet = workbook.Sheets[sheetName];
+      if (!worksheet || !worksheet["!ref"]) return;
 
-    const rowCount = endRow - startRow + 1;
-    const colCount = endCol - startCol + 1;
+      // Decode full sheet range
+      const range = XLSX.utils.decode_range(worksheet["!ref"]);
+      const startRow = range.s.r;
+      const endRow = range.e.r;
+      const startCol = range.s.c;
+      const endCol = range.e.c;
 
-    if (rowCount === 0 || colCount === 0) {
-      return createEmptyResult("excel", "No rows found in sheet.");
-    }
+      const rowCount = endRow - startRow + 1;
+      const colCount = endCol - startCol + 1;
 
-    // ── Step 1: Initialize full matrix for ALL sheet rows ──────────────────────
-    const grid: ParsedTableCell[][] = Array.from({ length: rowCount }, () =>
-      Array.from({ length: colCount }, () => ({
-        value: "",
-        rowspan: 1,
-        colspan: 1,
-        isMergedHidden: false,
-      }))
-    );
+      if (rowCount === 0 || colCount === 0) return;
 
-    // Read raw text values into grid
-    for (let r = 0; r < rowCount; r++) {
-      for (let c = 0; c < colCount; c++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: startRow + r, c: startCol + c });
-        const cell = worksheet[cellAddress];
-        let val = "";
-        if (cell && cell.v !== undefined && cell.v !== null) {
-          val = String(cell.w || cell.v).trim();
-          if (val.includes("$")) {
-            val = val.replace(/\$\s*/g, "").trim();
+      // ── Step 1: Initialize full matrix for ALL sheet rows ──────────────────────
+      const grid: ParsedTableCell[][] = Array.from({ length: rowCount }, () =>
+        Array.from({ length: colCount }, () => ({
+          value: "",
+          rowspan: 1,
+          colspan: 1,
+          isMergedHidden: false,
+        }))
+      );
+
+      // Read raw text values into grid
+      for (let r = 0; r < rowCount; r++) {
+        for (let c = 0; c < colCount; c++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: startRow + r, c: startCol + c });
+          const cell = worksheet[cellAddress];
+          let val = "";
+          if (cell && cell.v !== undefined && cell.v !== null) {
+            val = String(cell.w || cell.v).trim();
+            if (val.includes("$")) {
+              val = val.replace(/\$\s*/g, "").trim();
+            }
           }
+          grid[r][c].value = val;
         }
-        grid[r][c].value = val;
       }
-    }
 
-    // ── Step 2: Handle Merged Cell Ranges (!merges) ─────────────────────────────
-    const merges = worksheet["!merges"] || [];
-    for (const merge of merges) {
-      const mStartRow = merge.s.r - startRow;
-      const mEndRow = merge.e.r - startRow;
-      const mStartCol = merge.s.c - startCol;
-      const mEndCol = merge.e.c - startCol;
+      // ── Step 2: Handle Merged Cell Ranges (!merges) ─────────────────────────────
+      const merges = worksheet["!merges"] || [];
+      for (const merge of merges) {
+        const mStartRow = merge.s.r - startRow;
+        const mEndRow = merge.e.r - startRow;
+        const mStartCol = merge.s.c - startCol;
+        const mEndCol = merge.e.c - startCol;
 
-      if (
-        mStartRow >= 0 &&
-        mStartRow < rowCount &&
-        mStartCol >= 0 &&
-        mStartCol < colCount
-      ) {
-        const rowspan = Math.max(1, mEndRow - mStartRow + 1);
-        const colspan = Math.max(1, mEndCol - mStartCol + 1);
+        if (
+          mStartRow >= 0 &&
+          mStartRow < rowCount &&
+          mStartCol >= 0 &&
+          mStartCol < colCount
+        ) {
+          const rowspan = Math.max(1, mEndRow - mStartRow + 1);
+          const colspan = Math.max(1, mEndCol - mStartCol + 1);
 
-        grid[mStartRow][mStartCol].rowspan = rowspan;
-        grid[mStartRow][mStartCol].colspan = colspan;
+          grid[mStartRow][mStartCol].rowspan = rowspan;
+          grid[mStartRow][mStartCol].colspan = colspan;
 
-        const mainVal = grid[mStartRow][mStartCol].value;
+          const mainVal = grid[mStartRow][mStartCol].value;
 
-        // Mark hidden covered cells & forward fill context into matrix
-        for (let r = mStartRow; r <= mEndRow && r < rowCount; r++) {
-          for (let c = mStartCol; c <= mEndCol && c < colCount; c++) {
-            if (r === mStartRow && c === mStartCol) continue;
-            grid[r][c].isMergedHidden = true;
-            if (!grid[r][c].value) {
-              grid[r][c].value = mainVal; // Forward fill merged value
+          // Mark hidden covered cells & forward fill context into matrix
+          for (let r = mStartRow; r <= mEndRow && r < rowCount; r++) {
+            for (let c = mStartCol; c <= mEndCol && c < colCount; c++) {
+              if (r === mStartRow && c === mStartCol) continue;
+              grid[r][c].isMergedHidden = true;
+              if (!grid[r][c].value) {
+                grid[r][c].value = mainVal; // Forward fill merged value
+              }
             }
           }
         }
       }
+
+      const isRowEmpty = (row: ParsedTableCell[]): boolean => {
+        return row.every((cell) => !cell.value || cell.value.trim() === "");
+      };
+
+      const activeSheetGrid = grid.filter((row) => !isRowEmpty(row));
+      if (activeSheetGrid.length === 0) return;
+
+      // If workbook has multiple sheets, prepend a banner row identifying the sheet/month
+      if (workbook.SheetNames.length > 1) {
+        const bannerRow: ParsedTableCell[] = [
+          {
+            value: `✨ अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - ${sheetName}`,
+            rowspan: 1,
+            colspan: colCount,
+            isMergedHidden: false,
+          },
+        ];
+        for (let c = 1; c < colCount; c++) {
+          bannerRow.push({ value: "", rowspan: 1, colspan: 1, isMergedHidden: true });
+        }
+        allSheetsGrid.push(bannerRow);
+      }
+
+      allSheetsGrid.push(...activeSheetGrid);
+    });
+
+    if (allSheetsGrid.length === 0) {
+      return createEmptyResult("excel", "No valid rows found after parsing.");
     }
 
-    // ── Step 3: Filter out all completely blank rows (all cells empty or whitespace) ──
-    const isRowEmpty = (row: ParsedTableCell[]): boolean => {
-      return row.every((cell) => !cell.value || cell.value.trim() === "");
-    };
-
-    let activeGrid = grid.filter((row) => !isRowEmpty(row));
+    let activeGrid = allSheetsGrid;
 
     // Trim trailing empty columns on far right
     let maxUsedCol = 0;
@@ -214,7 +249,7 @@ export async function parseExcelFile(file: File): Promise<ParsedTableResult> {
 
     // ── Step 5: Build Clean HTML Table (Header ONLY once in <thead>) ───────────
     let html = `<table class="w-full border-collapse border border-slate-300 text-sm font-sans my-0">`;
-    
+
     // Build explicit sticky header <thead> - ONCE AT THE VERY TOP
     html += `<thead class="sticky top-0 z-20 bg-amber-100 shadow-sm border-b-2 border-amber-300">`;
     html += `<tr class="bg-amber-100 text-amber-950 font-bold">`;
@@ -244,6 +279,7 @@ export async function parseExcelFile(file: File): Promise<ParsedTableResult> {
         html += `</tr>`;
         return;
       }
+      html += `<tr class="border-b border-slate-300">`;
       row.forEach((cell) => {
         if (cell.isMergedHidden) return;
 

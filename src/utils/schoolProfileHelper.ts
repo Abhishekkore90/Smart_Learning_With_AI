@@ -57,6 +57,36 @@ export const getUnifiedSchoolProfile = (): UnifiedSchoolProfile => {
     }
   } catch (e) {}
 
+  // 1b. Check homework v2 header keys (hw_v2_*) & dashboard profile
+  try {
+    const hwSchool = localStorage.getItem("hw_v2_school") || localStorage.getItem("user_school_name");
+    if (!profile.schoolName && hwSchool && !hwSchool.includes("___")) profile.schoolName = hwSchool;
+    const hwKendra = localStorage.getItem("hw_v2_kendra");
+    if (!profile.kendra && hwKendra) profile.kendra = hwKendra;
+    const hwTaluka = localStorage.getItem("hw_v2_taluka");
+    if (!profile.taluka && hwTaluka) profile.taluka = hwTaluka;
+    const hwDistrict = localStorage.getItem("hw_v2_district");
+    if (!profile.jilha && hwDistrict) profile.jilha = hwDistrict;
+    const hwTeacher = localStorage.getItem("hw_v2_teacher");
+    if (!profile.teacherName && hwTeacher) profile.teacherName = hwTeacher;
+    const hwHeadmaster = localStorage.getItem("hw_v2_headmaster");
+    if (!profile.headmaster && hwHeadmaster) profile.headmaster = hwHeadmaster;
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k) {
+        if (!profile.schoolName && k.startsWith("hw_v2_school_")) {
+          const val = localStorage.getItem(k);
+          if (val && !val.includes("___")) profile.schoolName = val;
+        }
+        if (!profile.teacherName && k.startsWith("hw_v2_teacher_")) {
+          const val = localStorage.getItem(k);
+          if (val) profile.teacherName = val;
+        }
+      }
+    }
+  } catch (e) {}
+
   // 2. Check sqaaf_teacher_profile
   try {
     const sqaafRaw = localStorage.getItem("sqaaf_teacher_profile");

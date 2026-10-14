@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { ModulePaywall } from "@/components/teacher/ModulePaywall";
@@ -8829,6 +8829,13 @@ function TeacherSqaafPage() {
                 <div className="bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500 px-8 py-8 flex items-center justify-between text-white border-b border-black/5 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-64 h-full bg-white/10 rounded-full blur-3xl pointer-events-none" />
                   <div className="flex items-center gap-4">
+                    <Link
+                      to="/teacher"
+                      className="p-2.5 rounded-2xl bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer border border-white/20 active:scale-95 shrink-0"
+                      title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
+                    >
+                      <ArrowLeft className="size-5" />
+                    </Link>
                     <div className="size-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
                       <School className="size-6 text-white" />
                     </div>

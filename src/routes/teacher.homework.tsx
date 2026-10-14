@@ -28,6 +28,10 @@ import {
   RotateCcw,
   ArrowLeft,
   Filter,
+  Building2,
+  X,
+  School,
+  User,
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
@@ -42,7 +46,12 @@ import { DailyHomeworkTemplate } from "@/components/homework/DailyHomeworkTempla
 import { DailyHomeworkCalendar, formatISODate } from "@/components/homework/DailyHomeworkCalendar";
 import { MCQHomeworkSection } from "@/components/homework/MCQHomeworkSection";
 import { WordQuestionPaperEditor } from "@/components/questionPaper/WordQuestionPaperEditor";
-import { isWordHomework } from "@/utils/homeworkDocHelper";
+import {
+  isWordHomework,
+  getHomeworkHeaderProfile,
+  saveHomeworkHeaderProfile,
+  type HomeworkHeaderProfile,
+} from "@/utils/homeworkDocHelper";
 
 export const Route = createFileRoute("/teacher/homework")({
   head: () => ({
@@ -124,6 +133,53 @@ function HomeworkPage() {
   const [activeHomework, setActiveHomework] = useState<HomeworkItem | null>(null);
   const [previewTab, setPreviewTab] = useState<"doc" | "template">("doc");
 
+  // Homework Header Profile (School & Teacher info once filled for dashboard)
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [hwProfile, setHwProfile] = useState<HomeworkHeaderProfile>(() =>
+    getHomeworkHeaderProfile(user?.uid || "guest")
+  );
+
+  // Form fields inside modal (School, Kendra, Taluka, District, Teacher Name, Headmaster Name)
+  // Day, Date, and Class are NOT in this form as they come dynamically from admin-uploaded homework
+  const [formSchoolName, setFormSchoolName] = useState("");
+  const [formKendra, setFormKendra] = useState("");
+  const [formTaluka, setFormTaluka] = useState("");
+  const [formDistrict, setFormDistrict] = useState("");
+  const [formTeacherName, setFormTeacherName] = useState("");
+  const [formHeadmasterName, setFormHeadmasterName] = useState("");
+
+  // Sync profile when user changes
+  useEffect(() => {
+    const prof = getHomeworkHeaderProfile(user?.uid || "guest");
+    setHwProfile(prof);
+  }, [user?.uid]);
+
+  const openProfileModal = () => {
+    const prof = getHomeworkHeaderProfile(user?.uid || "guest");
+    setFormSchoolName(prof.schoolName);
+    setFormKendra(prof.kendra);
+    setFormTaluka(prof.taluka);
+    setFormDistrict(prof.district);
+    setFormTeacherName(prof.teacherName || profile?.fullName || "");
+    setFormHeadmasterName(prof.headmasterName);
+    setShowProfileModal(true);
+  };
+
+  const handleSaveProfile = () => {
+    const updated: HomeworkHeaderProfile = {
+      schoolName: formSchoolName.trim(),
+      kendra: formKendra.trim(),
+      taluka: formTaluka.trim(),
+      district: formDistrict.trim(),
+      teacherName: formTeacherName.trim(),
+      headmasterName: formHeadmasterName.trim(),
+    };
+    saveHomeworkHeaderProfile(user?.uid || "guest", updated);
+    setHwProfile(updated);
+    setShowProfileModal(false);
+    toast.success("शाळा व शिक्षक माहिती सेव्ह झाली! आता सर्व दैनिक गृहपाठांवर ही माहिती आपोआप दिसेल.");
+  };
+
   // Auth guard
   useEffect(() => {
     if (!authLoading) {
@@ -188,38 +244,195 @@ function HomeworkPage() {
       </div>
 
       <main className="pt-20 pb-16 px-3 sm:px-6 max-w-7xl mx-auto space-y-6">
-        {/* Top Co-Tabs: Regular Homework vs MCQ Homework */}
-        <div className="no-print flex items-center gap-2 p-1.5 bg-slate-200/90 rounded-2xl w-fit shadow-xs">
-          <button
-            type="button"
-            onClick={() => setMainTab("homework")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
-              mainTab === "homework"
-                ? "bg-white text-emerald-800 shadow-md font-black"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <BookOpen className="size-4 text-emerald-600" />
-            <span>दैनिक गृहपाठ (Daily Homework)</span>
-          </button>
+        {/* Back to Dashboard Button */}
+        {!activeHomework && (
+          <div className="no-print">
+            <Link
+              to="/teacher"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+            >
+              <ArrowLeft className="size-4 text-indigo-600" />
+              <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+            </Link>
+          </div>
+        )}
 
-          <button
-            type="button"
-            onClick={() => setMainTab("mcq")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
-              mainTab === "mcq"
-                ? "bg-indigo-600 text-white shadow-md font-black"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Sparkles className="size-4 text-amber-300" />
-            <span>MCQ स्वाध्याय (MCQ Quiz & Questions)</span>
-            <span className="bg-amber-400 text-amber-950 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
-              नवीन
-            </span>
-          </button>
-        </div>
+        {/* SECTION 1: Top Dashboard Banner (Screenshot 2 moved to TOP of page) */}
+        {!activeHomework && (
+          <div className="no-print bg-gradient-to-r from-teal-800 via-emerald-800 to-indigo-950 rounded-2xl sm:rounded-3xl p-4 sm:p-7 text-white shadow-xl relative overflow-hidden border border-emerald-600/30">
+            <div className="absolute top-0 right-0 size-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-200 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                  <BookOpen className="size-3.5" /> दैनिक गृहपाठ पोर्टल (Daily Homework)
+                </div>
+                <h1 className="text-xl sm:text-3xl font-black tracking-tight">
+                  गृहपाठ व्यवस्थापन (Homework Viewer & Editor)
+                </h1>
+                <p className="text-xs sm:text-sm text-emerald-100 max-w-2xl font-medium">
+                  इयत्ता १ ली ते ८ वी मराठी व सेमी माध्यमासाठी तारीखनिहाय गृहपाठ पहा, मूळ डिझाइन सुरक्षित ठेवून मजकूर संपादित करा, प्रिंट काढा किंवा PDF डाउनलोड करा.
+                </p>
 
+                {/* Saved Profile Summary Pill & Button on Dashboard */}
+                <div className="pt-1 flex items-center gap-2 flex-wrap text-xs">
+                  <button
+                    type="button"
+                    onClick={openProfileModal}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white font-bold transition-all shadow-xs cursor-pointer active:scale-95 text-xs backdrop-blur-md"
+                    title="शाळा, शिक्षक व मुख्याध्यापक माहिती सेट करा किंवा बदला"
+                  >
+                    <Building2 className="size-3.5 text-amber-300" />
+                    <span>
+                      {hwProfile.schoolName
+                        ? `शाळा: ${hwProfile.schoolName} ${hwProfile.teacherName ? `• शिक्षक: ${hwProfile.teacherName}` : ""}`
+                        : "शाळा व शिक्षक माहिती सेट करा (Set Header Info)"}
+                    </span>
+                    <Edit3 className="size-3 text-amber-300 ml-1" />
+                  </button>
+                  {hwProfile.schoolName && (
+                    <span className="text-[11px] text-emerald-200 font-medium">
+                      ✓ सर्व दैनिक गृहपाठांवर आपोआप लागू होईल
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Stepper Wizard Bar */}
+              <div className="flex items-center gap-1 sm:gap-2 bg-white/10 backdrop-blur-md p-1.5 sm:p-2 rounded-2xl border border-white/15 text-[11px] sm:text-xs font-bold overflow-x-auto touch-pan-x max-w-full shrink-0">
+                <button
+                  type="button"
+                  onClick={openProfileModal}
+                  className="px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black shadow-md flex items-center gap-1.5 active:scale-95"
+                  title="शाळा व शिक्षक माहिती भरा"
+                >
+                  <Building2 className="size-3.5" />
+                  <span>माहिती भरा</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setMainTab("homework");
+                    setStep("medium");
+                  }}
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${
+                    mainTab === "homework" && step === "medium"
+                      ? "bg-white text-emerald-900 shadow-md font-black"
+                      : "text-white/80 hover:text-white"
+                  }`}
+                >
+                  १. माध्यम
+                </button>
+                <ChevronRight className="size-3.5 text-white/40 shrink-0" />
+                <button
+                  onClick={() => {
+                    setMainTab("homework");
+                    setStep("class");
+                  }}
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${
+                    mainTab === "homework" && step === "class"
+                      ? "bg-white text-emerald-900 shadow-md font-black"
+                      : "text-white/80 hover:text-white"
+                  }`}
+                >
+                  २. इयत्ता
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION 2: Colorful & Recognizable Co-Tabs (Screenshot 3 taken DOWN below the Banner) */}
+        {!activeHomework && (
+          <div className="no-print bg-white/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl sm:rounded-3xl border-2 border-slate-200/90 shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 flex-wrap sm:flex-nowrap">
+              {/* Tab 1: दैनिक गृहपाठ (Daily Homework) */}
+              <button
+                type="button"
+                onClick={() => setMainTab("homework")}
+                className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all duration-300 cursor-pointer shadow-sm active:scale-98 ${
+                  mainTab === "homework"
+                    ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/60 scale-[1.02]"
+                    : "bg-emerald-50/70 hover:bg-emerald-100/90 text-emerald-950 border border-emerald-200/80 hover:border-emerald-400 hover:scale-[1.01]"
+                }`}
+              >
+                <div
+                  className={`size-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    mainTab === "homework"
+                      ? "bg-white/20 text-white shadow-xs"
+                      : "bg-emerald-600 text-white shadow-xs"
+                  }`}
+                >
+                  <BookOpen className="size-4.5" />
+                </div>
+                <div className="text-left">
+                  <div className="font-black leading-tight flex items-center gap-1.5">
+                    <span>दैनिक गृहपाठ</span>
+                    <span className="text-[10px] font-bold opacity-80">(Daily Homework)</span>
+                  </div>
+                  <div
+                    className={`text-[10px] font-semibold mt-0.5 ${
+                      mainTab === "homework" ? "text-emerald-100" : "text-emerald-700"
+                    }`}
+                  >
+                    कार्यपुस्तिका, Word व PDF गृहपाठ
+                  </div>
+                </div>
+              </button>
+
+              {/* Tab 2: MCQ स्वाध्याय (MCQ Quiz) */}
+              <button
+                type="button"
+                onClick={() => setMainTab("mcq")}
+                className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all duration-300 cursor-pointer shadow-sm active:scale-98 ${
+                  mainTab === "mcq"
+                    ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30 ring-2 ring-purple-400/60 scale-[1.02]"
+                    : "bg-indigo-50/70 hover:bg-indigo-100/90 text-indigo-950 border border-indigo-200/80 hover:border-indigo-400 hover:scale-[1.01]"
+                }`}
+              >
+                <div
+                  className={`size-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    mainTab === "mcq"
+                      ? "bg-white/20 text-amber-300 shadow-xs"
+                      : "bg-indigo-600 text-amber-300 shadow-xs"
+                  }`}
+                >
+                  <Sparkles className="size-4.5" />
+                </div>
+                <div className="text-left">
+                  <div className="font-black leading-tight flex items-center gap-2">
+                    <span>MCQ स्वाध्याय</span>
+                    <span className="text-[10px] font-bold opacity-80">(MCQ Quiz)</span>
+                    <span className="bg-gradient-to-r from-amber-400 to-orange-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider shadow-xs animate-pulse">
+                      नवीन
+                    </span>
+                  </div>
+                  <div
+                    className={`text-[10px] font-semibold mt-0.5 ${
+                      mainTab === "mcq" ? "text-indigo-100" : "text-indigo-700"
+                    }`}
+                  >
+                    ऑनलाइन टेस्ट, क्विझ व निकाल
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Status indicator on right */}
+            <div className="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100/90 border border-slate-200 text-xs font-bold text-slate-700 shrink-0">
+              <span
+                className={`size-2.5 rounded-full ${
+                  mainTab === "homework" ? "bg-emerald-500 animate-ping" : "bg-purple-500 animate-ping"
+                }`}
+              />
+              <span>
+                {mainTab === "homework"
+                  ? "दैनिक गृहपाठ विभाग सक्रिय"
+                  : "MCQ स्वाध्याय विभाग सक्रिय"}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION 3: Content based on mainTab */}
         {mainTab === "mcq" ? (
           <MCQHomeworkSection
             defaultRole="teacher"
@@ -229,50 +442,6 @@ function HomeworkPage() {
           />
         ) : (
           <>
-            {/* Banner */}
-        <div className="no-print bg-gradient-to-r from-teal-700 via-emerald-800 to-indigo-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 size-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-200 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-                <BookOpen className="size-3.5" /> दैनिक गृहपाठ पोर्टल (Daily Homework)
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-                गृहपाठ व्यवस्थापन (Homework Viewer & Editor)
-              </h1>
-              <p className="text-xs sm:text-sm text-emerald-100 max-w-2xl font-medium">
-                इयत्ता १ ली ते ८ वी मराठी व सेमी माध्यमासाठी तारीखनिहाय गृहपाठ पहा, मूळ डिझाइन सुरक्षित ठेवून मजकूर संपादित करा, प्रिंट काढा किंवा PDF डाउनलोड करा.
-              </p>
-            </div>
-
-            {/* Stepper Wizard Bar */}
-            {!activeHomework && (
-              <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/15 text-xs font-bold">
-                <button
-                  onClick={() => setStep("medium")}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                    step === "medium"
-                      ? "bg-white text-emerald-900 shadow-md font-black"
-                      : "text-white/80 hover:text-white"
-                  }`}
-                >
-                  १. माध्यम
-                </button>
-                <ChevronRight className="size-3.5 text-white/40" />
-                <button
-                  onClick={() => setStep("class")}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                    step === "class"
-                      ? "bg-white text-emerald-900 shadow-md font-black"
-                      : "text-white/80 hover:text-white"
-                  }`}
-                >
-                  २. इयत्ता
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* ACTIVE DOCUMENT VIEWER / TEMPLATE MODE */}
         {activeHomework ? (
@@ -323,9 +492,11 @@ function HomeworkPage() {
                   paperTitle={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate || "दैनिक"})`}
                   paperId={activeHomework.id}
                   subject={activeHomework.subject}
-                  userId={user?.uid || "guest_teacher"}
+                  userId={user?.uid || "guest"}
                   userRole={profile?.role || "teacher"}
                   documentType="homework"
+                  homeworkDate={activeHomework.homeworkDate}
+                  homeworkClass={activeHomework.class}
                   onClose={() => setActiveHomework(null)}
                 />
               ) : (
@@ -335,7 +506,7 @@ function HomeworkPage() {
                   fileName={activeHomework.fileName}
                   documentType="homework"
                   title={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate || "दैनिक"})`}
-                  userId={user?.uid || "guest_teacher"}
+                  userId={user?.uid || "guest"}
                   userRole={profile?.role || "teacher"}
                   userName={profile?.fullName || "शिक्षक"}
                   canEdit={true}
@@ -650,6 +821,176 @@ function HomeworkPage() {
           </div>
         )}
         </>
+        )}
+        {/* Homework Dashboard Header Setup Modal */}
+        {showProfileModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150">
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full p-4 sm:p-6 space-y-4 max-h-[92vh] flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-9 sm:size-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                    <Building2 className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-800">
+                      गृहपाठ शीर्षक माहिती सेट करा (Homework Header Setup)
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
+                      येथे एकदा भरलेली माहिती सर्व दैनिक गृहपाठांवर आपोआप लागू होईल (वार, दिनांक व इयत्ता ॲडमिन कडून आपोआप येईल)
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowProfileModal(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4 overflow-y-auto pr-1 flex-1 custom-scrollbar">
+                {/* Section 1: शाळा व ठिकाण तपशील */}
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 space-y-3">
+                  <div className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                    <Building2 className="size-3.5 text-emerald-600" />
+                    <span>शाळा व ठिकाण तपशील (School & Location Details)</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    {/* शाळेचे नाव */}
+                    <div className="sm:col-span-2 md:col-span-4 space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Building2 className="size-3 text-amber-500" />
+                          <span>शाळेचे नाव (School Name)</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-normal">उदा. जि. प. प्राथमिक शाळा...</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formSchoolName}
+                        onChange={(e) => setFormSchoolName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveProfile(); }}
+                        placeholder="येथे शाळेचे संपूर्ण नाव टाईप करा..."
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 text-xs font-semibold outline-none transition-all bg-white"
+                      />
+                    </div>
+
+                    {/* केंद्र */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700">केंद्र (Kendra)</label>
+                      <input
+                        type="text"
+                        value={formKendra}
+                        onChange={(e) => setFormKendra(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveProfile(); }}
+                        placeholder="उदा. बोरगाव"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 text-xs font-semibold outline-none transition-all bg-white"
+                      />
+                    </div>
+
+                    {/* तालुका */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700">तालुका (Taluka)</label>
+                      <input
+                        type="text"
+                        value={formTaluka}
+                        onChange={(e) => setFormTaluka(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveProfile(); }}
+                        placeholder="उदा. मिरज"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 text-xs font-semibold outline-none transition-all bg-white"
+                      />
+                    </div>
+
+                    {/* जिल्हा */}
+                    <div className="sm:col-span-2 md:col-span-2 space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700">जिल्हा (District)</label>
+                      <input
+                        type="text"
+                        value={formDistrict}
+                        onChange={(e) => setFormDistrict(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveProfile(); }}
+                        placeholder="उदा. सांगली"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 text-xs font-semibold outline-none transition-all bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: शिक्षक व मुख्याध्यापक तपशील */}
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 space-y-3">
+                  <div className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                    <User className="size-3.5 text-indigo-600" />
+                    <span>शिक्षक, मुख्याध्यापक व स्वाक्षरी तपशील (Teacher & Headmaster Details)</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* शिक्षकाचे नाव */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <User className="size-3 text-indigo-500" />
+                          <span>शिक्षकाचे नाव (Teacher Name)</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-normal">उदा. बाळासाहेब केंद्रे</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formTeacherName}
+                        onChange={(e) => setFormTeacherName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveProfile(); }}
+                        placeholder="येथे वर्गशिक्षकाचे नाव टाका..."
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 text-xs font-semibold outline-none transition-all bg-white"
+                      />
+                    </div>
+
+                    {/* मुख्याध्यापकाचे नाव */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <School className="size-3 text-emerald-500" />
+                          <span>मुख्याध्यापकाचे नाव (Headmaster Name)</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-normal">उदा. मुख्याध्यापक नाव</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formHeadmasterName}
+                        onChange={(e) => setFormHeadmasterName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveProfile(); }}
+                        placeholder="येथे मुख्याध्यापकाचे नाव टाका..."
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 text-xs font-semibold outline-none transition-all bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Note banner */}
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2">
+                  <Sparkles className="size-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[11.5px] leading-relaxed">
+                    <strong>टीप:</strong> वार, दिनांक व इयत्ता ॲडमिन कडून अपलोड केलेल्या गृहपाठ फाईलनुसार आपोआप घेतली जाईल. त्यामुळे ती रोज भरण्याची आवश्यकता नाही.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowProfileModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  रद्द करा
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveProfile}
+                  className="px-5 py-2 rounded-xl text-xs font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-500/20 transition-all cursor-pointer active:scale-95"
+                >
+                  माहिती जतन करा
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>

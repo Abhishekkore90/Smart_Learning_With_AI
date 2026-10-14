@@ -10,6 +10,8 @@ import {
   GraduationCap,
   X,
   Check,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import type { QuestionPaperItem } from "@/types/documentEditor";
@@ -130,6 +132,12 @@ export function QuestionPaperTemplate({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showFillSchoolModal, setShowFillSchoolModal] = useState(false);
+  const [mobileFitWidth, setMobileFitWidth] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth < 768;
+    }
+    return false;
+  });
   const [headerForm, setHeaderForm] = useState({
     schoolName: "",
     examTitle: "आकारिक मूल्यमापन चाचणी क्र. १",
@@ -265,29 +273,51 @@ export function QuestionPaperTemplate({
   return (
     <div className="flex flex-col w-full bg-slate-900 rounded-3xl shadow-2xl border border-slate-800 overflow-hidden font-sans text-slate-100">
       {/* Top Toolbar */}
-      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-3 no-print">
-        <div className="flex items-center gap-3">
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer"
-              title="मागे जा"
-            >
-              <ChevronLeft className="size-5" />
-            </button>
-          )}
-          <div>
-            <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
-              <span>{data.examTitle}</span>
-              <span className="text-amber-400 text-xs font-semibold">({data.className})</span>
-            </h2>
-            <p className="text-[11px] text-slate-400">
-              महाराष्ट्र राज्य अभ्यासक्रम - इयत्ता १ ली आकारिक मूल्यमापन साचा
-            </p>
+      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 px-3 py-2.5 sm:px-6 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-2.5 no-print">
+        <div className="flex items-center justify-between gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="p-1.5 sm:p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer shrink-0"
+                title="मागे जा"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+            )}
+            <div className="min-w-0 truncate">
+              <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2 truncate">
+                <span className="truncate">{data.examTitle}</span>
+                <span className="text-amber-400 text-xs font-semibold shrink-0">({data.className})</span>
+              </h2>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                महाराष्ट्र राज्य अभ्यासक्रम - इयत्ता १ ली आकारिक मूल्यमापन साचा
+              </p>
+            </div>
           </div>
+
+          {/* Quick mobile fit toggle for small screens */}
+          <button
+            onClick={() => setMobileFitWidth(!mobileFitWidth)}
+            className="md:hidden flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800 border border-slate-700 text-amber-400 shrink-0 cursor-pointer"
+            title={mobileFitWidth ? "मूळ आकार (100% Zoom)" : "स्क्रीनवर बसवा (Fit Width)"}
+          >
+            {mobileFitWidth ? <Maximize2 className="size-3" /> : <Minimize2 className="size-3" />}
+            <span>{mobileFitWidth ? "१००%" : "स्क्रीनवर"}</span>
+          </button>
         </div>
 
-        <div className="flex items-center flex-wrap gap-2">
+        <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
+          {/* Fit button for larger screens */}
+          <button
+            onClick={() => setMobileFitWidth(!mobileFitWidth)}
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
+            title={mobileFitWidth ? "मूळ आकार दाखवा (100% Zoom)" : "स्क्रीनवर व्यवस्थित बसवा (Fit Screen)"}
+          >
+            {mobileFitWidth ? <Maximize2 className="size-3.5 text-amber-400" /> : <Minimize2 className="size-3.5 text-amber-400" />}
+            <span>{mobileFitWidth ? "१००% आकार" : "स्क्रीनवर बसवा"}</span>
+          </button>
+
           {canEdit && (
             <button
               onClick={() => {
@@ -308,7 +338,7 @@ export function QuestionPaperTemplate({
               title="शाळेचे नाव व परीक्षेचा सर्व तपशील भरा"
             >
               <GraduationCap className="size-3.5 text-emerald-100" />
-              <span>शाळेचे नाव भरा (Fill School Name)</span>
+              <span>शाळेचे नाव भरा</span>
             </button>
           )}
 
@@ -322,7 +352,7 @@ export function QuestionPaperTemplate({
               }`}
             >
               {isEditing ? <CheckCircle2 className="size-3.5" /> : <Edit3 className="size-3.5" />}
-              <span>{isEditing ? "संपादन पूर्ण करा" : "मजकूर संपादित करा (Edit)"}</span>
+              <span>{isEditing ? "पूर्ण करा" : "संपादन"}</span>
             </button>
           )}
 
@@ -346,8 +376,6 @@ export function QuestionPaperTemplate({
             </>
           )}
 
-
-
           <button
             onClick={handleDownloadPdf}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
@@ -358,123 +386,139 @@ export function QuestionPaperTemplate({
         </div>
       </div>
 
+      <style>{`
+        @media screen and (max-width: 768px) {
+          #balbharati-question-paper-print.mobile-fit-active {
+            transform: scale(calc((100vw - 24px) / 800));
+            transform-origin: top center;
+            margin-bottom: calc((800px - (100vw - 24px)) * -1.05);
+          }
+        }
+        @media print {
+          #balbharati-question-paper-print.mobile-fit-active {
+            transform: none !important;
+            margin-bottom: 0 !important;
+          }
+        }
+      `}</style>
+
       {/* Main Printable Question Paper Body */}
-      <div className="p-4 sm:p-8 flex justify-center overflow-x-auto bg-slate-950/60">
+      <div className="p-1 sm:p-8 flex justify-center overflow-x-hidden bg-slate-950/60 w-full">
         <div
           id="balbharati-question-paper-print"
-          className="w-full max-w-[800px] bg-white text-slate-900 rounded-xl shadow-2xl p-6 sm:p-10 border-4 border-slate-900 min-h-[1050px] font-sans selection:bg-amber-100"
+          className="w-full max-w-[800px] bg-white text-slate-900 rounded-xl shadow-2xl p-3 sm:p-10 border-2 sm:border-4 border-slate-900 min-h-[1050px] font-sans selection:bg-amber-100 transition-all box-border overflow-hidden"
           style={{ fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif" }}
         >
           {/* Header Box */}
-          <div className="border-2 border-slate-900 rounded-none p-4 mb-6">
+          <div className="border-2 border-slate-900 rounded-none p-2.5 sm:p-4 mb-4 sm:mb-6 w-full box-border overflow-hidden">
             {/* School Name */}
-            <div className="mb-3 text-center sm:text-left">
+            <div className="mb-2 sm:mb-3">
               {isEditing ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-base sm:text-lg font-black text-slate-900 shrink-0">शाळेचे नाव :</span>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="text-xs sm:text-base font-black text-slate-900 whitespace-nowrap shrink-0">शाळेचे नाव :</span>
                   <input
                     type="text"
                     value={data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "")}
                     onChange={(e) => setData({ ...data, schoolName: e.target.value })}
-                    className="flex-1 text-base sm:text-lg font-black text-slate-900 border-b-2 border-indigo-500 outline-none pb-0.5 bg-amber-50/50"
+                    className="flex-1 min-w-0 text-xs sm:text-base font-black text-slate-900 border-b-2 border-indigo-500 outline-none pb-0.5 bg-amber-50/50"
                     placeholder="येथे शाळेचे नाव भरा"
                   />
                 </div>
               ) : (
-                <div className="text-base sm:text-xl font-black text-slate-900 tracking-tight flex items-baseline gap-2 flex-wrap">
-                  <span className="shrink-0 text-slate-900 font-black">शाळेचे नाव :</span>
-                  <span className="text-slate-950 font-black">
+                <div className="text-xs sm:text-lg font-black text-slate-900 tracking-tight flex items-baseline gap-1.5 min-w-0">
+                  <span className="shrink-0 text-slate-900 font-black whitespace-nowrap">शाळेचे नाव :</span>
+                  <span className="flex-1 min-w-0 text-slate-950 font-black border-b border-dotted border-slate-500 pb-0.5 truncate px-1">
                     {data.schoolName
                       ? data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "")
-                      : "____________________________________"}
+                      : ""}
                   </span>
                 </div>
               )}
             </div>
 
             {/* Exam Title */}
-            <div className="text-center my-2">
+            <div className="text-center my-1.5 sm:my-2">
               {isEditing ? (
                 <input
                   type="text"
                   value={data.examTitle}
                   onChange={(e) => setData({ ...data, examTitle: e.target.value })}
-                  className="w-full text-center text-base sm:text-lg font-black text-indigo-900 border-b border-indigo-400 outline-none bg-amber-50/50"
+                  className="w-full text-center text-xs sm:text-base font-black text-indigo-900 border-b border-indigo-400 outline-none bg-amber-50/50"
                 />
               ) : (
-                <h1 className="text-base sm:text-xl font-black text-slate-900 underline decoration-2 underline-offset-4">
+                <h1 className="text-xs sm:text-lg font-black text-slate-900 underline decoration-2 underline-offset-4 truncate">
                   {data.examTitle}
                 </h1>
               )}
             </div>
 
             {/* Class, Subject, Total Marks */}
-            <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-300 text-xs sm:text-sm font-bold">
+            <div className="grid grid-cols-3 gap-1 sm:gap-2 mt-2 pt-2 border-t border-slate-300 text-[11px] sm:text-sm font-bold">
               <div>
-                <span>इयत्ता - </span>
+                <span className="whitespace-nowrap">इयत्ता - </span>
                 {isEditing ? (
                   <input
                     type="text"
                     value={data.className}
                     onChange={(e) => setData({ ...data, className: e.target.value })}
-                    className="w-20 border-b border-slate-400 outline-none font-bold"
+                    className="w-16 sm:w-20 border-b border-slate-400 outline-none font-bold"
                   />
                 ) : (
-                  <span>{data.className}</span>
+                  <span className="font-black">{data.className}</span>
                 )}
               </div>
               <div className="text-center">
-                <span>विषय - </span>
+                <span className="whitespace-nowrap">विषय - </span>
                 {isEditing ? (
                   <input
                     type="text"
                     value={data.subjectName}
                     onChange={(e) => setData({ ...data, subjectName: e.target.value })}
-                    className="w-28 border-b border-slate-400 outline-none font-bold"
+                    className="w-20 sm:w-28 border-b border-slate-400 outline-none font-bold"
                   />
                 ) : (
-                  <span>{data.subjectName}</span>
+                  <span className="font-black">{data.subjectName}</span>
                 )}
               </div>
               <div className="text-right">
-                <span>एकूण गुण - </span>
+                <span className="whitespace-nowrap">एकूण गुण - </span>
                 {isEditing ? (
                   <input
                     type="text"
                     value={data.totalMarks}
                     onChange={(e) => setData({ ...data, totalMarks: e.target.value })}
-                    className="w-12 border-b border-slate-400 outline-none font-bold text-right"
+                    className="w-10 sm:w-12 border-b border-slate-400 outline-none font-bold text-right"
                   />
                 ) : (
-                  <span className="text-amber-900">{data.totalMarks}</span>
+                  <span className="text-amber-900 font-black">{data.totalMarks}</span>
                 )}
               </div>
             </div>
 
             {/* Student Name & Roll No (Row 4) */}
-            <div className="flex items-center justify-between text-xs sm:text-sm font-semibold mt-3 pt-2 border-t border-dashed border-slate-200">
-              <div className="flex-1 flex items-center gap-1.5">
-                <span className="font-bold">विद्यार्थ्याचे नाव :-</span>
-                <span className="flex-1 border-b border-slate-900 inline-block min-w-[120px] max-w-[280px] font-bold px-1 text-slate-950">
+            <div className="flex items-center justify-between text-[11px] sm:text-sm font-semibold mt-2 pt-1.5 border-t border-dashed border-slate-200 gap-1.5">
+              <div className="flex-1 min-w-0 flex items-center gap-1">
+                <span className="font-bold whitespace-nowrap shrink-0">विद्यार्थ्याचे नाव :-</span>
+                <span className="flex-1 border-b border-slate-900 inline-block min-w-0 font-bold px-1 text-slate-950 truncate">
                   {data.studentNamePlaceholder && data.studentNamePlaceholder !== "_____________________" ? data.studentNamePlaceholder : ""}
                 </span>
               </div>
-              <div className="flex items-center gap-2 pl-3 shrink-0">
-                <span className="font-bold">हजेरी क्रमांक -</span>
-                <div className="w-7 h-7 sm:w-8 sm:h-8 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs sm:text-sm bg-white">
+              <div className="flex items-center gap-1.5 pl-1 shrink-0">
+                <span className="font-bold whitespace-nowrap text-[11px] sm:text-xs">हजेरी क्रमांक -</span>
+                <div className="w-6 h-6 sm:w-8 sm:h-8 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs sm:text-sm bg-white shrink-0">
                   {data.rollNo}
                 </div>
               </div>
             </div>
 
             {/* Date & Marks Obtained (Row 5) */}
-            <div className="flex items-center justify-between text-xs sm:text-sm font-semibold mt-2">
-              <div className="font-bold">
+            <div className="flex items-center justify-between text-[11px] sm:text-sm font-semibold mt-1.5 sm:mt-2 gap-1.5">
+              <div className="font-bold whitespace-nowrap text-[11px] sm:text-xs">
                 {data.examDate || "दि.   /   / २०२६"}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="font-bold">मिळालेले गुण -</span>
-                <div className="w-7 h-7 sm:w-8 sm:h-8 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs sm:text-sm bg-white">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="font-bold whitespace-nowrap text-[11px] sm:text-xs">मिळालेले गुण -</span>
+                <div className="w-6 h-6 sm:w-8 sm:h-8 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs sm:text-sm bg-white shrink-0">
                   {data.obtainedMarks}
                 </div>
               </div>

@@ -231,11 +231,12 @@ export function detectPageHeaderBox(
 ): QuestionPaperHeaderData | null {
   if (!page.textBlocks || page.textBlocks.length === 0) return null;
 
-  // Filter text blocks in the top 26% header area
-  const topBlocks = page.textBlocks.filter((b) => (b.y || 0) < 26 && b.text && b.text.trim());
+  // Filter text blocks in the top 32% header area
+  const topBlocks = page.textBlocks.filter((b) => (b.y || 0) < 32 && b.text && b.text.trim());
   if (topBlocks.length === 0) return null;
 
   const combined = topBlocks.map((b) => b.text.trim()).join(" ");
+  const combinedUpper = combined.toUpperCase();
 
   const isMarathiHeader =
     combined.includes("शाळेचे नाव") ||
@@ -244,11 +245,12 @@ export function detectPageHeaderBox(
     ((combined.includes("मूल्यमापन") || combined.includes("मू¨यमापन")) && (combined.includes("विषय") || combined.includes("िवषय")));
 
   const isEnglishHeader =
-    combined.includes("SCHOOL NAME") ||
-    (combined.includes("SCHOOL") && combined.includes("NAME")) ||
-    (combined.includes("EVALUATION") && (combined.includes("STD") || combined.includes("SUB"))) ||
-    (combined.includes("STUDENT NAME") && (combined.includes("ROLL") || combined.includes("NO"))) ||
-    (combined.includes("FORMATIVE") && combined.includes("SUB"));
+    combinedUpper.includes("SCHOOL NAME") ||
+    (combinedUpper.includes("SCHOOL") && combinedUpper.includes("NAME")) ||
+    (combinedUpper.includes("EVALUATION") && (combinedUpper.includes("STD") || combinedUpper.includes("SUB"))) ||
+    (combinedUpper.includes("STUDENT NAME") && (combinedUpper.includes("ROLL") || combinedUpper.includes("NO"))) ||
+    (combinedUpper.includes("FORMATIVE") && combinedUpper.includes("SUB")) ||
+    (combinedUpper.includes("MATH") && (combinedUpper.includes("MARKS") || combinedUpper.includes("TEST")));
 
   if (!isMarathiHeader && !isEnglishHeader) return null;
 
@@ -258,10 +260,10 @@ export function detectPageHeaderBox(
   let totalMarks = "";
 
   if (isEnglishHeader) {
-    if (combined.includes("FORMATIVE EVALUATION TEST 1")) examTitle = "FORMATIVE EVALUATION TEST 1";
-    else if (combined.includes("FORMATIVE EVALUATION TEST 2")) examTitle = "FORMATIVE EVALUATION TEST 2";
-    else if (combined.includes("SUMMATIVE EVALUATION TEST 1")) examTitle = "SUMMATIVE EVALUATION TEST 1";
-    else if (combined.includes("SUMMATIVE EVALUATION TEST 2")) examTitle = "SUMMATIVE EVALUATION TEST 2";
+    if (combinedUpper.includes("FORMATIVE EVALUATION TEST 1")) examTitle = "FORMATIVE EVALUATION TEST 1";
+    else if (combinedUpper.includes("FORMATIVE EVALUATION TEST 2")) examTitle = "FORMATIVE EVALUATION TEST 2";
+    else if (combinedUpper.includes("SUMMATIVE EVALUATION TEST 1")) examTitle = "SUMMATIVE EVALUATION TEST 1";
+    else if (combinedUpper.includes("SUMMATIVE EVALUATION TEST 2")) examTitle = "SUMMATIVE EVALUATION TEST 2";
     else {
       const titleMatch = combined.match(/([A-Z\s]+EVALUATION\s+TEST\s+[0-9]+)/i);
       examTitle = titleMatch ? titleMatch[1].trim() : "FORMATIVE EVALUATION TEST 1";
@@ -1275,8 +1277,8 @@ export function printDocument(model: DocumentModel): void {
             <div style="position: absolute; left: 2.0%; top: 0.5%; width: 96.0%; height: 25.5%; background: white; z-index: 45;"></div>
             <!-- 1. Clean rectangular header box -->
             <div style="position: absolute; left: 4.0%; top: 1.6%; width: 92.0%; min-height: 22.6%; background: white; border: 2px solid #0f172a; border-radius: 0px; padding: 10px 14px; box-sizing: border-box; font-family: 'Noto Sans Devanagari', sans-serif; z-index: 50; color: #0f172a;">
-              <div style="font-size: 17px; font-weight: 800; margin-bottom: 4px;">
-                ${isEng ? 'SCHOOL NAME :' : 'शाळेचे नाव :'} ${escapeHtml(hb.schoolName || '')}
+              <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <span style="white-space: nowrap;">${isEng ? 'SCHOOL NAME :' : 'शाळेचे नाव :'}</span> ${escapeHtml(hb.schoolName || '')}
               </div>
               <div style="font-size: 15px; font-weight: 800; text-align: center; margin: 4px 0;">
                 ${escapeHtml(hb.examTitle || (isEng ? 'FORMATIVE EVALUATION TEST 1' : 'आकारिक मूल्यमापन चाचणी क्र. १'))}

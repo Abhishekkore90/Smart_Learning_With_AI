@@ -286,25 +286,33 @@ export function DocumentEditorViewer({
 
   // Compute smart initial defaults based on title and user
   const computeInitialHeader = (initialSchool?: string): QuestionPaperHeaderData => {
-    let guessedClass = "१ ली";
-    if (title?.includes("२ री") || title?.includes("2nd")) guessedClass = "२ री";
-    else if (title?.includes("३ री") || title?.includes("3rd")) guessedClass = "३ री";
-    else if (title?.includes("४ थी") || title?.includes("4th")) guessedClass = "४ थी";
-    else if (title?.includes("५ वी") || title?.includes("5th")) guessedClass = "५ वी";
-    else if (title?.includes("६ वी") || title?.includes("6th")) guessedClass = "६ वी";
-    else if (title?.includes("७ वी") || title?.includes("7th")) guessedClass = "७ वी";
-    else if (title?.includes("८ वी") || title?.includes("8th")) guessedClass = "८ वी";
+    const isEngDoc = Boolean(
+      title?.toLowerCase().includes("math") ||
+      title?.toLowerCase().includes("semi") ||
+      title?.toLowerCase().includes("eng") ||
+      fileName?.toLowerCase().includes("math") ||
+      fileName?.toLowerCase().includes("semi")
+    );
 
-    let guessedSubject = "भाषा";
-    if (title?.includes("गणित") || title?.toLowerCase().includes("math")) guessedSubject = "गणित";
-    else if (title?.includes("इंग्रजी") || title?.toLowerCase().includes("eng")) guessedSubject = "इंग्रजी";
+    let guessedClass = isEngDoc ? "1" : "१ ली";
+    if (title?.includes("२ री") || title?.includes("2nd") || title?.includes("std 2")) guessedClass = isEngDoc ? "2" : "२ री";
+    else if (title?.includes("३ री") || title?.includes("3rd") || title?.includes("std 3")) guessedClass = isEngDoc ? "3" : "३ री";
+    else if (title?.includes("४ थी") || title?.includes("4th") || title?.includes("std 4")) guessedClass = isEngDoc ? "4" : "४ थी";
+    else if (title?.includes("५ वी") || title?.includes("5th") || title?.includes("std 5")) guessedClass = isEngDoc ? "5" : "५ वी";
+    else if (title?.includes("६ वी") || title?.includes("6th") || title?.includes("std 6")) guessedClass = isEngDoc ? "6" : "६ वी";
+    else if (title?.includes("७ वी") || title?.includes("7th") || title?.includes("std 7")) guessedClass = isEngDoc ? "7" : "७ वी";
+    else if (title?.includes("८ वी") || title?.includes("8th") || title?.includes("std 8")) guessedClass = isEngDoc ? "8" : "८ वी";
+
+    let guessedSubject = isEngDoc ? "MATH" : "भाषा";
+    if (title?.includes("गणित") || title?.toLowerCase().includes("math")) guessedSubject = isEngDoc ? "MATH" : "गणित";
+    else if (title?.includes("इंग्रजी") || title?.toLowerCase().includes("eng")) guessedSubject = isEngDoc ? "ENGLISH" : "इंग्रजी";
     else if (title?.includes("परिसर अभ्यास")) guessedSubject = "परिसर अभ्यास";
     else if (title?.includes("मराठी")) guessedSubject = "भाषा";
 
-    let guessedExam = "आकारिक मूल्यमापन चाचणी क्र. १";
-    if (title?.includes("चाचणी २") || title?.includes("unit2")) guessedExam = "आकारिक मूल्यमापन चाचणी क्र. २";
-    else if (title?.includes("संकलित") && (title?.includes("२") || title?.includes("2"))) guessedExam = "संकलित मूल्यमापन चाचणी २";
-    else if (title?.includes("संकलित")) guessedExam = "संकलित मूल्यमापन चाचणी १";
+    let guessedExam = isEngDoc ? "FORMATIVE EVALUATION TEST 1" : "आकारिक मूल्यमापन चाचणी क्र. १";
+    if (title?.includes("चाचणी २") || title?.includes("unit2") || title?.includes("test 2")) guessedExam = isEngDoc ? "FORMATIVE EVALUATION TEST 2" : "आकारिक मूल्यमापन चाचणी क्र. २";
+    else if (title?.includes("संकलित २") || title?.includes("summative 2")) guessedExam = isEngDoc ? "SUMMATIVE EVALUATION TEST 2" : "संकलित मूल्यमापन चाचणी २";
+    else if (title?.includes("संकलित") || title?.includes("summative")) guessedExam = isEngDoc ? "SUMMATIVE EVALUATION TEST 1" : "संकलित मूल्यमापन चाचणी १";
     else if (title?.includes("सत्र")) guessedExam = "द्वितीय सत्र परीक्षा";
 
     const sName = initialSchool || getUserSavedQPSchool(userId) || getUnifiedSchoolProfile()?.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी";
@@ -314,12 +322,13 @@ export function DocumentEditorViewer({
       examTitle: guessedExam,
       className: guessedClass,
       subjectName: guessedSubject,
-      totalMarks: "२०",
+      totalMarks: isEngDoc ? "20" : "२०",
       studentName: "_____________________",
       rollNo: "",
-      examDate: "दि.   /   / २०२६",
+      examDate: isEngDoc ? "DATE -   /   / 2026" : "दि.   /   / २०२६",
       obtainedMarks: "",
       enabled: true,
+      isEnglish: isEngDoc,
     };
   };
 
@@ -1412,11 +1421,11 @@ export function DocumentEditorViewer({
 
                         {/* 2. THE CLEAN RECTANGULAR HEADER BOX (EXACT SCREENSHOT 1 & 3 SPEC) */}
                         <div
-                          className="absolute z-35 bg-white border-2 border-slate-900 rounded-none p-2.5 sm:p-3 text-slate-900 shadow-none select-none transition-none"
+                          className="absolute z-35 bg-white border-2 border-slate-900 rounded-none p-2 sm:p-3 text-slate-900 shadow-none select-none transition-none overflow-hidden"
                           style={{
-                            left: "4.0%",
+                            left: "3.5%",
                             top: "1.6%",
-                            width: "92.0%",
+                            width: "93.0%",
                             minHeight: "22.6%",
                             fontFamily: isEng
                               ? "system-ui, -apple-system, sans-serif"
@@ -1454,67 +1463,67 @@ export function DocumentEditorViewer({
 
                           {/* Line 1: School Name */}
                           <div
-                            className="font-black text-slate-900 tracking-tight flex items-baseline gap-2 mb-1"
-                            style={{ fontSize: `${Math.max(13, Math.round(18 * pageScale))}px` }}
+                            className="font-black text-slate-900 tracking-tight flex items-baseline gap-2 mb-1 min-w-0"
+                            style={{ fontSize: `${Math.max(12, Math.round(18 * pageScale))}px` }}
                           >
-                            <span className="shrink-0 font-black">
+                            <span className="shrink-0 font-black whitespace-nowrap">
                               {isEng ? "SCHOOL NAME -" : "शाळेचे नाव :"}
                             </span>
-                            <span className="text-slate-950 font-black">
-                              {hb.schoolName || "____________________________________"}
+                            <span className="flex-1 min-w-0 text-slate-950 font-black border-b border-dotted border-slate-500 pb-0.5 truncate px-1">
+                              {hb.schoolName || ""}
                             </span>
                           </div>
 
                           {/* Line 2: Exam Title (Centered, bold) */}
                           <div
-                            className="text-center font-black text-slate-900 tracking-wide my-1 uppercase"
-                            style={{ fontSize: `${Math.max(12, Math.round(16 * pageScale))}px` }}
+                            className="text-center font-black text-slate-900 tracking-wide my-1 uppercase truncate"
+                            style={{ fontSize: `${Math.max(11, Math.round(16 * pageScale))}px` }}
                           >
                             <h2>{hb.examTitle || (isEng ? "FORMATIVE EVALUATION TEST 1" : "आकारिक मूल्यमापन चाचणी क्र. १")}</h2>
                           </div>
 
                           {/* Line 3: Class, Subject, Total Marks (3 columns) */}
                           <div
-                            className="flex items-center justify-between font-bold mt-2 pt-1 border-t border-slate-200 uppercase"
-                            style={{ fontSize: `${Math.max(11, Math.round(13.5 * pageScale))}px` }}
+                            className="flex items-center justify-between font-bold mt-2 pt-1 border-t border-slate-200 uppercase gap-1"
+                            style={{ fontSize: `${Math.max(10, Math.round(13.5 * pageScale))}px` }}
                           >
                             <div>
-                              <span>{isEng ? "STD – " : "इयत्ता - "}</span>
+                              <span className="whitespace-nowrap">{isEng ? "STD – " : "इयत्ता - "}</span>
                               <span className="font-black">{hb.className || (isEng ? "1" : "१ ली")}</span>
                             </div>
                             <div className="text-center">
-                              <span>{isEng ? "SUB – " : "विषय - "}</span>
+                              <span className="whitespace-nowrap">{isEng ? "SUB – " : "विषय - "}</span>
                               <span className="font-black">{hb.subjectName || (isEng ? "MATH" : "भाषा")}</span>
                             </div>
                             <div className="text-right">
-                              <span>{isEng ? "TOTAL MARKS - " : "एकूण गुण - "}</span>
+                              <span className="whitespace-nowrap">{isEng ? "TOTAL MARKS - " : "एकूण गुण - "}</span>
                               <span className="font-black">{hb.totalMarks || (isEng ? "20" : "२०")}</span>
                             </div>
                           </div>
 
                           {/* Line 4: Student Name & Roll No */}
                           <div
-                            className="flex items-center justify-between font-semibold mt-2"
+                            className="flex items-center justify-between font-semibold mt-2 gap-1.5"
                             style={{ fontSize: `${Math.max(10, Math.round(12.5 * pageScale))}px` }}
                           >
-                            <div className="flex-1 flex items-center gap-1.5">
-                              <span className="font-bold">
+                            <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                              <span className="font-bold whitespace-nowrap shrink-0">
                                 {isEng ? "STUDENT NAME :" : "विद्यार्थ्याचे नाव :-"}
                               </span>
-                              <span className="flex-1 border-b border-slate-900 inline-block min-w-[120px] max-w-[280px] font-bold px-1 text-slate-950">
+                              <span className="flex-1 border-b border-slate-900 inline-block min-w-0 font-bold px-1 text-slate-950 truncate">
                                 {hb.studentName && hb.studentName !== "_____________________" ? hb.studentName : ""}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 pl-3 shrink-0">
-                              <span className="font-bold">
+                            <div className="flex items-center gap-1.5 pl-1.5 shrink-0">
+                              <span className="font-bold whitespace-nowrap">
                                 {isEng ? "ROLL NO.-" : "हजेरी क्रमांक -"}
                               </span>
                               <div
-                                className="border-2 border-slate-900 rounded-sm flex items-center justify-center font-black bg-white"
+                                className="border-2 border-slate-900 rounded-sm flex items-center justify-center font-black bg-white shrink-0"
                                 style={{
-                                  width: `${Math.max(26, Math.round(28 * pageScale))}px`,
-                                  height: `${Math.max(26, Math.round(28 * pageScale))}px`,
-                                  fontSize: `${Math.max(11, Math.round(12 * pageScale))}px`,
+                                  width: `${Math.max(24, Math.round(28 * pageScale))}px`,
+                                  height: `${Math.max(24, Math.round(28 * pageScale))}px`,
+                                  fontSize: `${Math.max(10, Math.round(12 * pageScale))}px`,
                                 }}
                               >
                                 {hb.rollNo}
@@ -1524,22 +1533,22 @@ export function DocumentEditorViewer({
 
                           {/* Line 5: Date & Marks Obtained */}
                           <div
-                            className="flex items-center justify-between font-semibold mt-2"
+                            className="flex items-center justify-between font-semibold mt-2 gap-1.5"
                             style={{ fontSize: `${Math.max(10, Math.round(12.5 * pageScale))}px` }}
                           >
-                            <div className="font-bold">
+                            <div className="font-bold whitespace-nowrap">
                               {hb.examDate || (isEng ? "DATE -   /   / 2026" : "दि.   /   / २०२६")}
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="font-bold">
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="font-bold whitespace-nowrap">
                                 {isEng ? "OBTAINED MARKS-" : "मिळालेले गुण -"}
                               </span>
                               <div
-                                className="border-2 border-slate-900 rounded-sm flex items-center justify-center font-black bg-white"
+                                className="border-2 border-slate-900 rounded-sm flex items-center justify-center font-black bg-white shrink-0"
                                 style={{
-                                  width: `${Math.max(26, Math.round(28 * pageScale))}px`,
-                                  height: `${Math.max(26, Math.round(28 * pageScale))}px`,
-                                  fontSize: `${Math.max(11, Math.round(12 * pageScale))}px`,
+                                  width: `${Math.max(24, Math.round(28 * pageScale))}px`,
+                                  height: `${Math.max(24, Math.round(28 * pageScale))}px`,
+                                  fontSize: `${Math.max(10, Math.round(12 * pageScale))}px`,
                                 }}
                               >
                                 {hb.obtainedMarks}

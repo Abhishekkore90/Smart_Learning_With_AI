@@ -231,6 +231,15 @@ export function isMarathiMonth(cellText: string): boolean {
   return MARATHI_MONTHS.some((m) => clean === m.toLowerCase() || clean.startsWith(m.toLowerCase()));
 }
 
+export function normalizeForCompare(val: any): string {
+  if (val === null || val === undefined) return "";
+  return String(val)
+    .replace(/[\u00a0\r\n\t]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
 export function normalizeSubjectName(rawName: string): string {
   if (!rawName) return "सामान्य";
   const clean = rawName.trim();
@@ -341,10 +350,14 @@ export function normalizeSubjectName(rawName: string): string {
 // Helper to check if a row is a signature/footer row from Excel
 export const isSignatureRow = (row: any[]): boolean => {
   if (!row || !Array.isArray(row) || row.length === 0) return false;
-  const line = row.map((c) => String(c || "")).join(" ").trim().toLowerCase();
-  if (!line) return false;
+  const nonEmpties = row.map((c) => String(c || "").trim()).filter(Boolean);
+  if (nonEmpties.length === 0) return false;
 
+  const line = nonEmpties.join(" ").trim().toLowerCase();
   const lineNoSpace = line.replace(/\s+/g, "");
+
+  // If row has more than 3 non-empty cells or long text (e.g. normal lesson row), it is NOT a signature row!
+  if (nonEmpties.length > 3 || line.length > 80) return false;
 
   // Marathi Signature terms
   if (line.includes("स्वाक्षरी") || line.includes("शिक्का")) return true;
@@ -362,13 +375,44 @@ export const isSignatureRow = (row: any[]): boolean => {
   return false;
 };
 
+// Helper to check if a row is a Month / Title Banner Row (e.g. मासिक घटक नियोजन, महिना :- ऑगस्ट विषय :- कलाशिक्षण)
+export const isMonthBannerRow = (row: any[]): boolean => {
+  if (!row || !Array.isArray(row) || row.length === 0) return false;
+  const nonEmpties = row.map((c) => String(c || "").trim()).filter(Boolean);
+  if (nonEmpties.length === 0) return false;
+  const line = nonEmpties.join(" ").trim().toLowerCase();
+
+  if (
+    line.includes("मासिक घटक नियोजन") ||
+    line.includes("मासिक व घटक नियोजन") ||
+    line.includes("अभ्यासक्रमाचे मासिक") ||
+    line.includes("monthly & unit planning") ||
+    line.includes("monthly and unit planning") ||
+    (/महिना\s*[:-–]/i.test(line) && (/विषय/i.test(line) || /इयत्ता/i.test(line))) ||
+    (/महिना\s*[:-–]\s*(?:जून|जुलै|ऑगस्ट|सप्टेंबर|ऑक्टोबर|नोव्हेंबर|डिसेंबर|जानेवारी|फेब्रुवारी|मार्च|एप्रिल)/i.test(line))
+  ) {
+    return true;
+  }
+  return false;
+};
+
 // Helper to check if a row is a Metadata Header Row (Class : 2 nd Available Period :, Sub : English Working days :, etc.)
 export const isMetadataRow = (row: any[]): boolean => {
   if (!row || !Array.isArray(row) || row.length === 0) return false;
-  const line = row.map((c) => String(c || "")).join(" ").trim().toLowerCase();
-  if (!line) return false;
+  const nonEmpties = row.map((c) => String(c || "").trim()).filter(Boolean);
+  if (nonEmpties.length === 0) return false;
 
+  const line = nonEmpties.join(" ").trim().toLowerCase();
+  if (!line) return false;
   const lineNoSpace = line.replace(/\s+/g, "");
+
+  // Section / month banners that can be longer than 40 characters
+  if (isMonthBannerRow(row)) {
+    return true;
+  }
+
+  // If any cell contains long descriptions or multiple full sentences, it's a data row, NOT metadata!
+  if (row.some((c) => String(c || "").trim().length > 40)) return false;
 
   if (
     line.includes("class :") ||
@@ -385,9 +429,16 @@ export const isMetadataRow = (row: any[]): boolean => {
     line.includes("नियोजित तासिका") ||
     line.includes("प्राप्त तासिका") ||
     line.includes("एकूण तासिका") ||
-    line.includes("कामाचे दिवस") ||
+    (line.includes("कामाचे दिवस") && line.length < 50) ||
     line.includes("इयत्ता :") ||
+    line.includes("इयत्ता :-") ||
+    line.includes("इयत्ता:-") ||
     line.includes("विषय :") ||
+    line.includes("विषय :-") ||
+    line.includes("विषय:-") ||
+    line.includes("महिना :") ||
+    line.includes("महिना :-") ||
+    line.includes("महिना:-") ||
     lineNoSpace.includes("class:") ||
     lineNoSpace.includes("availableperiod")
   ) {
@@ -400,7 +451,15 @@ export const isMetadataRow = (row: any[]): boolean => {
 // Helper to check if a row is a Table Column Header Row (Day, Lesson / Point, Teaching Point / Aims, etc.)
 export const isTableColumnHeaderRow = (row: any[]): boolean => {
   if (!row || !Array.isArray(row) || row.length === 0) return false;
-  const line = row.map((c) => String(c || "")).join(" ").trim().toLowerCase();
+  const nonEmpties = row.map((c) => String(c || "").trim()).filter(Boolean);
+  if (nonEmpties.length === 0) return false;
+
+  // IMPORTANT: If ANY cell has long sentence/description (> 40 chars), it is NEVER a column header row!
+  if (row.some((c) => String(c || "").trim().length > 40)) {
+    return false;
+  }
+
+  const line = nonEmpties.join(" ").trim().toLowerCase();
   if (!line) return false;
 
   // IMPORTANT: Any Exam / Assessment row or Vacation row is NEVER a column header row!
@@ -436,12 +495,7 @@ export const isTableColumnHeaderRow = (row: any[]): boolean => {
     line.includes("दिवस") ||
     line.includes("महिना") ||
     line.includes("आठवडा") ||
-    line.includes(" वार ") ||
-    line.startsWith("वार ") ||
-    line.endsWith(" वार") ||
     line === "वार" ||
-    line.includes("वार/") ||
-    line.includes("/वार") ||
     line.includes("day") ||
     line.includes("date");
 
@@ -461,7 +515,7 @@ export const isTableColumnHeaderRow = (row: any[]): boolean => {
     return true;
   }
 
-  // Multi-keyword check: if 3 or more standard planning column keywords are in this row, it is a header row
+  // Multi-keyword check: only for short labels (< 30 chars per cell)
   const headerKeywords = [
     "दिवस", "दिनांक", "पाठ", "उपघटक", "अध्ययन", "निष्पत्ती",
     "मुद्दे", "उद्देश", "स्वरूप", "साधन", "तंत्रे", "साहित्य", "तपशील",
@@ -470,7 +524,7 @@ export const isTableColumnHeaderRow = (row: any[]): boolean => {
   let kwCount = 0;
   for (const cell of row) {
     const c = String(cell || "").trim().toLowerCase();
-    if (headerKeywords.some((kw) => c.includes(kw))) {
+    if (c.length < 30 && headerKeywords.some((kw) => c === kw || c.includes(kw))) {
       kwCount++;
     }
   }
@@ -622,6 +676,8 @@ export async function extractSubjectSectionsFromExcel(
     "Social Sciences",
   ];
 
+  const sheetMonthlySectionsMap: Record<string, MonthlySection> = {};
+
   // Iterate over all sheets in the workbook
   workbook.SheetNames.forEach((sheetName) => {
     const worksheet = workbook.Sheets[sheetName];
@@ -637,6 +693,55 @@ export async function extractSubjectSectionsFromExcel(
     );
 
     if (rawGrid.length === 0) return;
+
+    // Check if sheetName is a month (e.g. "जून", "जुलै", "July", "माहे ऑगस्ट", etc.)
+    let sheetMonth =
+      extractCleanMonthNameFromLine(sheetName) ||
+      (isMarathiMonth(sheetName) ? canonicalizeMarathiMonth(sheetName) + " २०२६" : null);
+
+    // Check first 6 rows for month, subject, and class
+    let sheetSubject = "";
+    let sheetClass = "";
+    for (let r = 0; r < Math.min(rawGrid.length, 6); r++) {
+      const line = rawGrid[r].join(" ").trim();
+      if (!sheetMonth) {
+        const m = extractCleanMonthNameFromLine(line);
+        if (m) sheetMonth = m;
+      }
+      const subjMatch = line.match(/विषय\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+      if (subjMatch) sheetSubject = normalizeSubjectName(subjMatch[1]);
+      const classMatch = line.match(/इयत्ता\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+      if (classMatch) sheetClass = classMatch[0].trim();
+    }
+
+    if (sheetMonth) {
+      // Ensure rawGrid has an explicit month banner row at top
+      const firstRowLine = (rawGrid[0] || []).join(" ").trim();
+      if (!firstRowLine.includes(sheetMonth)) {
+        rawGrid.unshift([`मासिक व घटक नियोजन माहे - ${sheetMonth}`, "", "", "", "", ""]);
+      }
+
+      // Directly register in sheetMonthlySectionsMap
+      const dataRows = rawGrid.filter(
+        (r) => !isTableColumnHeaderRow(r) && !isSignatureRow(r) && !isMetadataRow(r) && !isMonthBannerRow(r)
+      );
+      const normalizedRows = normalizeMonthlyPlanningRows(dataRows.length > 0 ? dataRows : rawGrid, sheetMonth);
+      if (!sheetMonthlySectionsMap[sheetMonth]) {
+        sheetMonthlySectionsMap[sheetMonth] = {
+          monthName: sheetMonth,
+          displayMonthName: `अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - ${sheetMonth}`,
+          classTitle: sheetClass || classTitle,
+          subjectTitle: sheetSubject || "",
+          plannedPeriods: "",
+          workingDays: "",
+          headers: DEFAULT_MONTHLY_HEADERS,
+          rows: normalizedRows,
+        };
+      } else {
+        sheetMonthlySectionsMap[sheetMonth].rows.push(...normalizedRows);
+      }
+    }
+
     combinedRawGrid.push(...rawGrid);
 
     // Detect if column 0 in this sheet is a Serial Number column (अ.क्र., 1, 2, 3...)
@@ -856,7 +961,21 @@ export async function extractSubjectSectionsFromExcel(
     return a.localeCompare(b);
   });
 
-  const monthlySections = splitRowsIntoMonthlySections(combinedRawGrid);
+  const monthlyFromCombined = splitRowsIntoMonthlySections(combinedRawGrid);
+  const monthlySections: Record<string, MonthlySection> = {};
+  if (Object.keys(sheetMonthlySectionsMap).length > 1) {
+    Object.assign(monthlySections, sheetMonthlySectionsMap);
+    // Also include any extra months discovered from combined grid
+    for (const [k, v] of Object.entries(monthlyFromCombined)) {
+      if (!monthlySections[k]) {
+        monthlySections[k] = v;
+      }
+    }
+  } else if (Object.keys(monthlyFromCombined).length > 0) {
+    Object.assign(monthlySections, monthlyFromCombined);
+  } else if (Object.keys(sheetMonthlySectionsMap).length > 0) {
+    Object.assign(monthlySections, sheetMonthlySectionsMap);
+  }
 
   return {
     classTitle,
@@ -1160,10 +1279,12 @@ export function extractCleanMonthNameFromLine(line: string): string | null {
   // Guard against regular exercise/reading lines that casually contain a month word
   const isBannerCandidate =
     /monthly\s*(?:&|and)?\s*unit\s*planning/i.test(l) ||
-    /मासिक\s+व\s+घटक\s+नियोजन/i.test(l) ||
-    /\bmonth\s*[:\-–]?\s*[a-z]/i.test(l) ||
-    /माहे\s*[:\-–]?\s*[\u0900-\u097F]/i.test(l) ||
-    (l.length < 50 && (isMarathiMonth(l) || /\b(june|july|august|september|semptember|october|november|novembar|december|decembar|january|february|march|april)\b/i.test(l)));
+    /मासिक\s*(?:व|आणि)?\s*घटक\s*नियोजन/i.test(l) ||
+    /\bmonth\s*[:\-–]?/i.test(l) ||
+    /माहे\s*[:\-–]?/i.test(l) ||
+    /महिना\s*[:\-–]?/i.test(l) ||
+    (/विषय\s*[:\-–]/i.test(l) && (/जुन|जून|जुलै|ऑगस्ट|सप्टेंबर|ऑक्टोबर|नोव्हेंबर|डिसेंबर|जानेवारी|फेब्रुवारी|मार्च|एप्रिल/i.test(l))) ||
+    (l.length < 60 && (isMarathiMonth(l) || /\b(june|july|august|september|semptember|october|november|novembar|december|decembar|january|february|march|april)\b/i.test(l)));
 
   if (!isBannerCandidate) return null;
 
@@ -1238,19 +1359,61 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
   };
 
   rawRows.forEach((row) => {
-    const line = (row || []).map((c) => String(c || "")).join(" ").trim();
-    if (!line) return;
+    if (!row || !Array.isArray(row)) return;
+    const nonEmpties = row.map((c) => String(c !== undefined && c !== null ? c : "").trim()).filter(Boolean);
+    if (nonEmpties.length === 0) return;
+    const line = nonEmpties.join(" ").trim();
 
     // Check for Clean Month Header Banner
-    const detectedMonth = extractCleanMonthNameFromLine(line);
-    if (detectedMonth) {
-      flushCurrentMonth();
-      currentMonthName = detectedMonth;
-      currentRows = [];
+    const hasMonthKeyword =
+      /मासिक\s*(?:व|आणि)?\s*घटक\s*नियोजन/i.test(line) ||
+      /monthly\s*(?:&|and)?\s*unit\s*planning/i.test(line) ||
+      /\bmonth\s*[:\-–]?/i.test(line) ||
+      /माहे\s*[:\-–]?/i.test(line) ||
+      /महिना\s*[:\-–]?/i.test(line);
+
+    const isBanner = isMonthBannerRow(row);
+    const isMonthBannerCandidate =
+      isBanner ||
+      hasMonthKeyword ||
+      nonEmpties.length <= 4 ||
+      row.some((c) => isMarathiMonth(c) || /\b(june|july|august|september|october|november|december|january|february|march|april)\b/i.test(String(c)));
+
+    if (isMonthBannerCandidate && !isTableColumnHeaderRow(row)) {
+      let detectedMonth = extractCleanMonthNameFromLine(line);
+      if (!detectedMonth) {
+        for (let c = 0; c < Math.min(row.length, 3); c++) {
+          const cVal = String(row[c] || "").trim();
+          if (cVal && (isMarathiMonth(cVal) || /\b(june|july|august|september|october|november|december|january|february|march|april)\b/i.test(cVal))) {
+            detectedMonth = extractCleanMonthNameFromLine(cVal);
+            if (detectedMonth) break;
+          }
+        }
+      }
+
+      if (detectedMonth) {
+        if (normalizeForCompare(detectedMonth) !== normalizeForCompare(currentMonthName)) {
+          flushCurrentMonth();
+          currentMonthName = detectedMonth;
+          currentRows = [];
+        }
+        const subjMatch = line.match(/विषय\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+        if (subjMatch) currentSubjectTitle = normalizeSubjectName(subjMatch[1]);
+        const classMatch = line.match(/इयत्ता\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+        if (classMatch) currentClassTitle = classMatch[0].trim();
+        return;
+      }
+    }
+
+    if (isBanner) {
+      const subjMatch = line.match(/विषय\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+      if (subjMatch) currentSubjectTitle = normalizeSubjectName(subjMatch[1]);
+      const classMatch = line.match(/इयत्ता\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+      if (classMatch) currentClassTitle = classMatch[0].trim();
       return;
     }
 
-    // Check for Metadata Header: "Class : 2 nd Available Period :" or "Sub : English Working days :"
+    // Check for Metadata Header
     if (isMetadataRow(row)) {
       for (const cell of row) {
         const cStr = String(cell || "").trim();
@@ -1272,12 +1435,13 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
       return;
     }
 
-    // Regular Data Row: ensure 7 columns
-    if (!currentMonthName) currentMonthName = "June 2026";
+    // Regular Data Row: ensure all columns are preserved
+    if (!currentMonthName) currentMonthName = "जून २०२६";
 
     // If row starts with April divider inside a March block (ONLY if not already March + April combined)
     const cell0 = String(row[0] || "").trim();
     if (
+      nonEmpties.length <= 2 &&
       (cell0.includes("एप्रिल") || cell0.toLowerCase().includes("april")) &&
       (currentMonthName.includes("मार्च") || currentMonthName.toLowerCase().includes("march")) &&
       !currentMonthName.includes("एप्रिल") &&
@@ -1287,26 +1451,11 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
       flushCurrentMonth();
       currentMonthName = currentMonthName.toLowerCase().includes("march") ? "April 2027" : "एप्रिल २०२७";
       currentRows = [];
+      return;
     }
 
-    const r7 = normalizeMonthlyPlanningRow([
-      String(row[0] || "").trim(), // दिनांक
-      String(row[1] || "").trim(), // पाठ/घटक/उपघटक
-      String(row[2] || "").trim(), // अध्ययन निष्पत्ती
-      String(row[3] || "").trim(), // अध्ययन मुद्दे/पाठ्यांश उद्देश
-      String(row[4] || "").trim(), // अध्ययन अनुभवाचे स्वरूप
-      String(row[5] || "").trim(), // उपयोगात आणावयाची साधन तंत्रे
-      String(row[6] || "").trim(), // आवश्यक साहित्य
-    ]);
-
-    const hasMeaningfulContent = r7.some((c) => {
-      const s = c.trim();
-      return s !== "" && s !== "-" && s !== "null" && s !== "undefined";
-    });
-
-    if (hasMeaningfulContent) {
-      currentRows.push(r7);
-    }
+    const rowClean = normalizeMonthlyPlanningRow(row);
+    currentRows.push(rowClean);
   });
 
   flushCurrentMonth();
@@ -1378,156 +1527,27 @@ const COMMON_TOOLS_LIST = [
 ];
 
 /**
- * Normalizes monthly planning rows to ensure contents are in their rightful columns:
- * 1. Never allows month names to appear in Col 0 (दिनांक).
- * 2. Detects and restores shifted columns (e.g. outcome in Col 1, tool in Col 2, material in Col 3).
- * 3. Moves misplaced "अध्ययन निष्पत्ती" text from Col 3 / Col 4 into Col 2.
- * 4. Moves lesson titles misplaced in Col 0 (Date) into Col 1.
- * 5. Removes duplicate teaching points from Col 1 (Lesson) to allow clean lesson row grouping.
+ * Normalizes monthly planning rows:
+ * PRESERVES EVERY SINGLE WORD! Never erases, drops, or clears any cell content.
+ * Ensures at least 7 columns for monthly layout, while keeping all extra columns if present.
  */
 export function normalizeMonthlyPlanningRow(row: string[]): string[] {
-  if (!row || row.length === 0) return row;
-  const r7 = [
-    String(row[0] || "").trim(), // 0: दिनांक
-    String(row[1] || "").trim(), // 1: पाठ / घटक / उपघटक
-    String(row[2] || "").trim(), // 2: अध्ययन निष्पत्ती
-    String(row[3] || "").trim(), // 3: अध्ययन मुद्दे / पाठ्यांश उद्देश
-    String(row[4] || "").trim(), // 4: अध्ययन अनुभवाचे स्वरूप
-    String(row[5] || "").trim(), // 5: उपयोगात आणावयाची साधन तंत्रे
-    String(row[6] || "").trim(), // 6: आवश्यक साहित्य
-  ];
-
-  let [c0, c1, c2, c3, c4, c5, c6] = r7;
-
-  // 1. Month names in Col 0 (Date) should NEVER be displayed as a date value
-  if (isMarathiMonth(c0) || /^(मार्च|एप्रिल|मे|जून|जुन|जुलै|ऑगस्ट|सप्टेंबर|ऑक्टोबर|ऑक्टोंबर|नोव्हेंबर|डिसेंबर|जानेवारी|फेब्रुवारी)$/i.test(c0)) {
-    c0 = "-";
+  if (!row || !Array.isArray(row)) return [];
+  const targetLen = Math.max(7, row.length);
+  const result: string[] = [];
+  for (let i = 0; i < targetLen; i++) {
+    const val = row[i];
+    result.push(val !== undefined && val !== null ? String(val).trim() : "");
   }
-
-  // 2. Check if lesson title was mistakenly placed in Col 0 (Date)
-  // e.g. "दिवाळी (चित्रवर्णन) ९.३ / ९.३.२ / ९.४"
-  const isDate =
-    c0 === "" ||
-    c0 === "-" ||
-    /^[\d\s\-–,/ते]+$/.test(c0) ||
-    /सप्ताह|आठवडा|दिवस|महिना/i.test(c0);
-
-  if (!isDate && c0.length > 3 && !/इयत्ता|विषय|नियोजन|दिनांक|शिक्षक|मुख्याध्यापक|सुट्टी|सुट्ट्या/i.test(c0)) {
-    if (!c1 || c1 === "-" || c1 === c3) {
-      c1 = c0;
-      c0 = "-";
-    }
-  }
-
-  // 3. Detect and fix shifted rows where Col 1 is an outcome, Col 2 is a tool, Col 3 is material
-  // e.g. [19, "साखरेपासून तयार होणाऱ्या पदार्थांची नावे सांगतात.", "निरीक्षण", "साखर पदार्थ", "", "", ""]
-  const c1IsOutcome =
-    /सांगतात|करतात|ओळखतात|दर्शवतात|वाचतात|लिहितात|शोधतात|दाखवतात|समजतात|अध्ययन\s*निष्पत्ती/i.test(c1) ||
-    /^C-|^M-|^E-/i.test(c1);
-  const c2IsTool = COMMON_TOOLS_LIST.some((t) => c2.includes(t));
-
-  if ((c1IsOutcome || c2IsTool) && (!c4 || c4 === "-") && (!c5 || c5 === "-")) {
-    c6 = c3 && c3 !== "-" ? c3 : c6;
-    c5 = c2 && c2 !== "-" ? c2 : c5;
-    c2 = c1.replace(/अध्ययन\s*निष्पत्ती\s*[:\-–]?/gi, "").trim();
-    c1 = "";
-    c3 = "-";
-    c4 = "-";
-  }
-
-  // 4. Check if Col 1 is duplicate of Col 3 (teaching point mistakenly placed into lesson column)
-  if (c1 && c3 && c1 === c3 && c1.length < 25 && !/स्वागत|पूर्वतयारी|उजळणी|सराव|चाचणी|मूल्यमापन|परीक्षा/i.test(c1)) {
-    c1 = "";
-  }
-
-  // 5. Fix misplaced "अध्ययन निष्पत्ती" (Learning Outcomes)
-  // Teacher put "अध्ययन निष्पत्ती" label into Col 3 and the actual outcome text into Col 4
-  if (/अध्ययन\s*निष्पत्ती|निष्पती/i.test(c3)) {
-    const outcomeText = c4 && c4 !== "-" ? c4 : c3.replace(/अध्ययन\s*निष्पत्ती\s*[:\-–]?/gi, "").trim();
-    if (outcomeText) {
-      if (!c2 || c2 === "-") {
-        c2 = outcomeText;
-      } else if (!c2.includes(outcomeText)) {
-        c2 = `${c2}\n${outcomeText}`;
-      }
-    }
-    c3 = "-";
-    if (c4 === outcomeText) {
-      c4 = "-";
-    }
-  }
-
-  // If Col 4 has "अध्ययन निष्पत्ती" label
-  if (/अध्ययन\s*निष्पत्ती|निष्पती/i.test(c4)) {
-    const cleanText = c4.replace(/अध्ययन\s*निष्पत्ती\s*[:\-–]?/gi, "").trim();
-    if (cleanText) {
-      if (!c2 || c2 === "-") {
-        c2 = cleanText;
-      } else if (!c2.includes(cleanText)) {
-        c2 = `${c2}\n${cleanText}`;
-      }
-    }
-    c4 = "-";
-  }
-
-  // If Col 1 has "अध्ययन निष्पत्ती" label
-  if (/अध्ययन\s*निष्पत्ती|निष्पती/i.test(c1)) {
-    const cleanText = c1.replace(/अध्ययन\s*निष्पत्ती\s*[:\-–]?/gi, "").trim();
-    if (cleanText && (!c2 || c2 === "-")) {
-      c2 = cleanText;
-    }
-    c1 = "";
-  }
-
-  // Clean label from Col 2 if present
-  if (c2 && /अध्ययन\s*निष्पत्ती\s*[:\-–]?/i.test(c2)) {
-    const cleaned = c2.replace(/अध्ययन\s*निष्पत्ती\s*[:\-–]?/gi, "").trim();
-    if (cleaned) c2 = cleaned;
-  }
-
-  return [c0, c1, c2, c3, c4, c5, c6];
+  return result;
 }
 
 /**
  * Normalizes an array of monthly planning rows:
- * 1. Normalizes each individual row.
- * 2. If the month has NO dates (or almost no dates, e.g. March/April where Excel had only month text or hyphens),
- *    auto-populates sequential school working dates for that month.
- * 3. Aligns lesson-level outcomes: if a lesson block has an outcome on its last row
- *    and no outcome on its first row, promotes it to the start row so it spans the entire lesson.
+ * Preserves 100% of rows and cells without deleting or erasing any word.
  */
 export function normalizeMonthlyPlanningRows(rows: string[][], monthName: string = "मार्च २०२६"): string[][] {
-  const normalized = rows.map((r) => normalizeMonthlyPlanningRow(r));
-
-  // Use days strictly as per Excel - no synthetic date generation logic
-
-  let i = 0;
-  while (i < normalized.length) {
-    const lessonTitle = normalized[i][1]?.trim();
-    if (lessonTitle && lessonTitle !== "-") {
-      let j = i + 1;
-      while (j < normalized.length && (!normalized[j][1] || normalized[j][1] === "-")) {
-        j++;
-      }
-
-      // If the lesson start row doesn't have an outcome, look for one inside this lesson block
-      if (!normalized[i][2] || normalized[i][2] === "-") {
-        for (let k = i + 1; k < j; k++) {
-          if (normalized[k][2] && normalized[k][2] !== "-") {
-            normalized[i][2] = normalized[k][2];
-            normalized[k][2] = "";
-            break;
-          }
-        }
-      }
-
-      i = j;
-    } else {
-      i++;
-    }
-  }
-
-  return normalized;
+  return rows.map((r) => normalizeMonthlyPlanningRow(r));
 }
 
 /**

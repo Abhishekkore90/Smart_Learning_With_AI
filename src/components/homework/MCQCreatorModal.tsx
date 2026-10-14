@@ -19,6 +19,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { auth } from "@/lib/firebase";
 import type { MCQHomeworkSet, MCQQuestion } from "@/types/mcqHomework";
 import { createMCQHomework } from "@/services/mcqHomeworkService";
 import { MCQShareModal } from "./MCQShareModal";
@@ -32,6 +34,7 @@ interface MCQCreatorModalProps {
   defaultSubject?: string;
   userName?: string;
   mode?: "admin" | "custom";
+  defaultDate?: string;
 }
 
 const SUBJECT_OPTIONS = [
@@ -56,7 +59,9 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
   defaultSubject = "मराठी",
   userName = "शिक्षक",
   mode,
+  defaultDate,
 }) => {
+  const { user, profile } = useAuth();
   const [quizCategory, setQuizCategory] = useState<"admin" | "custom">(() => {
     if (mode) return mode;
     return defaultRole === "admin" ? "admin" : "custom";
@@ -70,7 +75,7 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
   const [classId, setClassId] = useState(defaultClass);
   const [subject, setSubject] = useState(defaultSubject);
   const [medium, setMedium] = useState<"marathi" | "semi">("marathi");
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(() => defaultDate || new Date().toISOString().split("T")[0]);
   const [instructions, setInstructions] = useState(
     "सर्व प्रश्न सोडवणे अनिवार्य आहे. अचूक पर्यायावर क्लिक करा."
   );
@@ -217,9 +222,19 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
         timeLimitMinutes: Number(timeLimitMinutes) || 0,
         questions: questionsToSave,
         totalMarks: questionsToSave.reduce((sum, q) => sum + (q.marks || 1), 0),
+        teacherName:
+          (typeof window !== "undefined" && (localStorage.getItem("mcq_share_teacher_name") || localStorage.getItem("hw_v2_teacher"))) ||
+          userName ||
+          "",
+        schoolName:
+          (typeof window !== "undefined" && (localStorage.getItem("mcq_share_school_name") || localStorage.getItem("hw_v2_school"))) ||
+          "",
         createdBy: {
+          uid: user?.uid || auth?.currentUser?.uid || "",
           name:
             userName ||
+            profile?.fullName ||
+            user?.displayName ||
             (isAdminMode
               ? "सुपर ॲडमिन"
               : defaultRole === "teacher"

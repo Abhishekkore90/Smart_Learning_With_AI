@@ -23,6 +23,7 @@ import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 
 import { QuestionPaperRenderer } from "@/components/homework/QuestionPaperRenderer";
+import { getHomeworkHeaderProfile } from "@/utils/homeworkDocHelper";
 
 interface DailyHomeworkTemplateProps {
   homework: HomeworkItem;
@@ -54,51 +55,61 @@ export function DailyHomeworkTemplate({
 
   // Initialize dynamic variables from homework record or fallback defaults
   const [variables, setVariables] = useState<DailyHomeworkVariables>(() => {
-    return (
-      homework.variables || {
-        weekday: getMarathiWeekday(homework.homeworkDate || new Date().toISOString()),
-        date: formatMarathiDate(homework.homeworkDate || new Date().toISOString()),
-        schoolName: "जिल्हा परिषद प्राथमिक शाळा",
-        kendra: "केंद्र शाळा",
-        marathi: {
-          subjectName: "मराठी (Language)",
-          topic: "पाठ वाचन व शब्दलेखन",
-          instructions: "खालील दिलेले शब्द वाचा आणि सुंदर हस्ताक्षरात वहीत लिहा:",
-          questions: [
-            "१. खालील शब्दांचे जोडाक्षर ओळखा व लिहा: पुस्तक, रस्ता, चष्मा",
-            "२. दिलेल्या अक्षरांपासून अर्थपूर्ण शब्द बनवा: क, म, ळ",
-            "३. तुमच्या आवडीच्या फळाचे नाव लिहून त्याचे चित्र काढा.",
-          ],
-          examples: ["उदा: घर -> घरटे, झाड -> झाडे"],
-        },
-        english: {
-          subjectName: "English",
-          topic: "Action Words & Simple Sentences",
-          instructions: "Read the words and write 2 lines for each action:",
-          questions: [
-            "1. Write 3 action words that you do daily (e.g. Read, Write, Play).",
-            "2. Fill in the blanks: The sun rises in the ____ (East/West).",
-            "3. Match the rhyming words: Cat - Mat, Sun - Fun.",
-          ],
-        },
-        maths: {
-          subjectName: "गणित (Mathematics)",
-          topic: "संख्या ज्ञान व बेरीज-वजाबाकी",
-          instructions: "खालील उदाहरणे समजून घेऊन सोडवा:",
-          questions: [
-            "१. योग्य संख्या लिहा: २५ + १५ = [   ]",
-            "२. लहान-मोठेपणा ओळखा (> किंवा <): ४२ [   ] ५८",
-            "३. चढत्या क्रमाने मांडा: १२, ४५, २३, ९",
-          ],
-          examples: ["उदा: १० + ५ = १५"],
-        },
-        activity: {
-          title: "दैनिक उपक्रम / खेळ (Daily Activity)",
-          description: "आज घरातील कोणत्याही ५ वस्तूंची नावे मराठी व इंग्रजीमध्ये सांगा व पालकांना दाखवा.",
-          instructions: "पालकांनी मुलांचा अभ्यास तपासून शेरा द्यावा.",
-        },
-      }
-    );
+    const prof = getHomeworkHeaderProfile(userId);
+    const base: DailyHomeworkVariables = homework.variables
+      ? { ...homework.variables }
+      : {
+          weekday: getMarathiWeekday(homework.homeworkDate || new Date().toISOString()),
+          date: formatMarathiDate(homework.homeworkDate || new Date().toISOString()),
+          schoolName: prof.schoolName || "जिल्हा परिषद प्राथमिक शाळा",
+          kendra: prof.kendra || "केंद्र शाळा",
+          marathi: {
+            subjectName: "मराठी (Language)",
+            topic: "पाठ वाचन व शब्दलेखन",
+            instructions: "खालील दिलेले शब्द वाचा आणि सुंदर हस्ताक्षरात वहीत लिहा:",
+            questions: [
+              "१. खालील शब्दांचे जोडाक्षर ओळखा व लिहा: पुस्तक, रस्ता, चष्मा",
+              "२. दिलेल्या अक्षरांपासून अर्थपूर्ण शब्द बनवा: क, म, ळ",
+              "३. तुमच्या आवडीच्या फळाचे नाव लिहून त्याचे चित्र काढा.",
+            ],
+            examples: ["उदा: घर -> घरटे, झाड -> झाडे"],
+          },
+          english: {
+            subjectName: "English",
+            topic: "Action Words & Simple Sentences",
+            instructions: "Read the words and write 2 lines for each action:",
+            questions: [
+              "1. Write 3 action words that you do daily (e.g. Read, Write, Play).",
+              "2. Fill in the blanks: The sun rises in the ____ (East/West).",
+              "3. Match the rhyming words: Cat - Mat, Sun - Fun.",
+            ],
+          },
+          maths: {
+            subjectName: "गणित (Mathematics)",
+            topic: "संख्या ज्ञान व बेरीज-वजाबाकी",
+            instructions: "खालील उदाहरणे समजून घेऊन सोडवा:",
+            questions: [
+              "१. योग्य संख्या लिहा: २५ + १५ = [   ]",
+              "२. लहान-मोठेपणा ओळखा (> किंवा <): ४२ [   ] ५८",
+              "३. चढत्या क्रमाने मांडा: १२, ४५, २३, ९",
+            ],
+            examples: ["उदा: १० + ५ = १५"],
+          },
+          activity: {
+            title: "दैनिक उपक्रम / खेळ (Daily Activity)",
+            description: "आज घरातील कोणत्याही ५ वस्तूंची नावे मराठी व इंग्रजीमध्ये सांगा व पालकांना दाखवा.",
+            instructions: "पालकांनी मुलांचा अभ्यास तपासून शेरा द्यावा.",
+          },
+        };
+
+    if (prof.schoolName && (!base.schoolName || base.schoolName === "जिल्हा परिषद प्राथमिक शाळा")) {
+      base.schoolName = prof.schoolName;
+    }
+    if (prof.kendra && (!base.kendra || base.kendra === "केंद्र शाळा")) {
+      base.kendra = prof.kendra;
+    }
+
+    return base;
   });
 
   const [mode, setMode] = useState<"view" | "edit">("view");
@@ -205,51 +216,52 @@ export function DailyHomeworkTemplate({
   return (
     <div className="flex flex-col w-full bg-slate-900 rounded-3xl shadow-2xl border border-slate-800 overflow-hidden text-slate-100 font-sans">
       {/* Top Toolbar */}
-      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-3 shadow-md">
-        <div className="flex items-center gap-3">
+      <div className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 px-3 py-2.5 sm:px-6 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-2.5 shadow-md no-print">
+        <div className="flex items-center gap-2.5 min-w-0">
           {onBack && (
             <button
               onClick={onBack}
-              className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer"
+              className="p-1.5 sm:p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer shrink-0"
+              title="मागे जा"
             >
               <ChevronLeft className="size-5" />
             </button>
           )}
-          <div>
-            <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
-              <BookOpen className="size-4 text-amber-400" />
-              <span>दैनिक गृहपाठ (Daily Homework Worksheet)</span>
+          <div className="min-w-0 truncate">
+            <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-1.5 truncate">
+              <BookOpen className="size-4 text-amber-400 shrink-0" />
+              <span className="truncate">दैनिक गृहपाठ (Daily Homework)</span>
             </h2>
-            <p className="text-[11px] text-amber-200/80 font-medium">
+            <p className="text-[10px] sm:text-[11px] text-amber-200/80 font-medium truncate">
               {homework.class} • {homework.medium === "marathi" ? "मराठी माध्यम" : "सेमी माध्यम"} • {variables.date} ({variables.weekday})
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
           {canEdit && (
             <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
               <button
                 onClick={() => setMode("view")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   mode === "view"
                     ? "bg-amber-600 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
                 }`}
               >
                 <Eye className="size-3.5" />
-                <span>पहा (View)</span>
+                <span>पहा</span>
               </button>
               <button
                 onClick={() => setMode("edit")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   mode === "edit"
                     ? "bg-indigo-600 text-white shadow-sm"
                     : "text-slate-400 hover:text-white"
                 }`}
               >
                 <Edit3 className="size-3.5" />
-                <span>संपादित करा (Edit)</span>
+                <span>संपादित करा</span>
               </button>
             </div>
           )}
@@ -261,13 +273,13 @@ export function DailyHomeworkTemplate({
               className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
             >
               <Save className="size-3.5" />
-              <span>सेव्ह करा</span>
+              <span>सेव्ह</span>
             </button>
           )}
 
           <button
             onClick={handleReset}
-            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-all cursor-pointer"
+            className="p-1.5 sm:p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-all cursor-pointer"
             title="मूळ स्वरूपात आणा"
           >
             <RotateCcw className="size-4" />
@@ -275,7 +287,7 @@ export function DailyHomeworkTemplate({
 
           <button
             onClick={handlePrint}
-            className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-all cursor-pointer"
+            className="p-1.5 sm:p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-all cursor-pointer"
             title="प्रिंट"
           >
             <Printer className="size-4" />
@@ -293,24 +305,24 @@ export function DailyHomeworkTemplate({
       </div>
 
       {/* Printable / Renderable Worksheet Container */}
-      <div className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center bg-slate-800/80 custom-scrollbar">
+      <div className="flex-1 overflow-x-auto touch-pan-x p-2 sm:p-8 flex justify-center bg-slate-800/80 custom-scrollbar">
         <div
           ref={worksheetRef}
-          className="w-full max-w-[760px] bg-white text-slate-900 rounded-2xl shadow-2xl p-6 sm:p-10 border-4 border-amber-600/30 print:border-none print:shadow-none print:p-4 select-text"
+          className="w-full max-w-[760px] bg-white text-slate-900 rounded-2xl shadow-2xl p-4 sm:p-10 border-2 sm:border-4 border-amber-600/30 print:border-none print:shadow-none print:p-4 select-text"
           style={{ fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif" }}
         >
           {/* Header Banner */}
           <div className="border-b-2 border-dashed border-amber-500 pb-4 mb-6">
-            <div className="flex items-center justify-between gap-4">
-              <div className="size-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
-                <BookOpen className="size-8 text-amber-600" />
+            <div className="flex items-center justify-between gap-2 sm:gap-4">
+              <div className="size-10 sm:size-16 rounded-xl sm:rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                <BookOpen className="size-5 sm:size-8 text-amber-600" />
               </div>
 
-              <div className="text-center flex-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 bg-amber-100 px-3 py-0.5 rounded-full inline-block mb-1">
+              <div className="text-center flex-1 min-w-0">
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-amber-700 bg-amber-100 px-2 sm:px-3 py-0.5 rounded-full inline-block mb-1 truncate max-w-full">
                   बालभारती दैनिक गृहपाठ कार्यपुस्तिका २०२६-२७
                 </span>
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                <h1 className="text-base sm:text-2xl font-black text-slate-900 tracking-tight truncate">
                   {mode === "edit" ? (
                     <input
                       type="text"
@@ -325,14 +337,14 @@ export function DailyHomeworkTemplate({
                     variables.schoolName || "जिल्हा परिषद प्राथमिक शाळा"
                   )}
                 </h1>
-                <p className="text-xs text-slate-600 font-medium mt-0.5">
+                <p className="text-[11px] sm:text-xs text-slate-600 font-medium mt-0.5">
                   इयत्ता: <strong>{homework.class}</strong> | माध्यम:{" "}
                   <strong>{homework.medium === "marathi" ? "मराठी" : "सेमी इंग्रजी"}</strong>
                 </p>
               </div>
 
-              <div className="size-16 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
-                <Sparkles className="size-8 text-orange-600" />
+              <div className="size-10 sm:size-16 rounded-xl sm:rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
+                <Sparkles className="size-5 sm:size-8 text-orange-600" />
               </div>
             </div>
 

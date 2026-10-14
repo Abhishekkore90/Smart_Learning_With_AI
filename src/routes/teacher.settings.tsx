@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
@@ -17,6 +17,7 @@ import {
   School,
   MapPin,
   GraduationCap,
+  ArrowLeft,
 } from "lucide-react";
 
 export const Route = createFileRoute("/teacher/settings")({
@@ -273,6 +274,17 @@ function TeacherSettings() {
 
       <main className="lg:pl-0 pt-20 lg:pt-24 min-h-screen pb-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          {/* Back to Dashboard Button */}
+          <div className="mb-4">
+            <Link
+              to="/teacher"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+            >
+              <ArrowLeft className="size-4 text-indigo-600" />
+              <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+            </Link>
+          </div>
+
           <div className="mb-8">
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">
               Profile Settings

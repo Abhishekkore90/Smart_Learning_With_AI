@@ -38,46 +38,46 @@ function MCQPublicPage() {
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100">
       {/* Clean Public Header */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
           {/* Logo & Platform Name */}
           <a
             href="https://sgkbrainova.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 group"
+            className="flex items-center gap-2 sm:gap-3 group min-w-0"
           >
             <img
               src={logoImg}
               alt="SGK Brainova"
-              className="w-10 h-10 rounded-xl object-cover border border-indigo-200 dark:border-indigo-800 shadow-xs group-hover:scale-105 transition-transform"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl object-cover border border-indigo-200 dark:border-indigo-800 shadow-xs group-hover:scale-105 transition-transform shrink-0"
             />
-            <div>
-              <span className="text-[10px] uppercase font-black tracking-widest text-indigo-600 dark:text-indigo-400 block leading-none">
+            <div className="min-w-0">
+              <span className="text-[9px] sm:text-[10px] uppercase font-black tracking-widest text-indigo-600 dark:text-indigo-400 block leading-none truncate">
                 SMART LEARNING WITH AI
               </span>
-              <span className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight block">
-                SGK BRAINOVA DIGITAL ACADEMY
+              <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white leading-tight block truncate">
+                SGK BRAINOVA ACADEMY
               </span>
             </div>
           </a>
 
           {/* Official Portal Link */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <a
               href="https://sgkbrainova.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors"
             >
-              <span>🌐 sgkbrainova.com</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              <span>sgkbrainova.com</span>
+              <ExternalLink className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </a>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      <main className="flex-1 py-4 sm:py-8 px-2 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <MCQHomeworkSection
           initialQuizId={id}
           defaultRole="user"

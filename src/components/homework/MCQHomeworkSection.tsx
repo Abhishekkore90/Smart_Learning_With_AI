@@ -18,6 +18,8 @@ import {
   Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { auth } from "@/lib/firebase";
 import type { MCQHomeworkSet } from "@/types/mcqHomework";
 import {
   getMCQHomeworkById,
@@ -61,6 +63,8 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
   sharedTeacherName,
   sharedSchoolName,
 }) => {
+  const { user, profile } = useAuth();
+
   // If specific quiz ID is active
   const [activeQuizId, setActiveQuizId] = useState<string | null>(initialQuizId || null);
   const [targetQuiz, setTargetQuiz] = useState<MCQHomeworkSet | null>(null);
@@ -119,10 +123,29 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
     return quizzes.filter((q) => !q.isCustom || q.createdBy?.role === "admin");
   }, [quizzes]);
 
-  // Tab 2: Custom / Teacher / User created quizzes
+  // Tab 2: Custom / Personal Question Bank (strictly for the creator/teacher only, not split to other users)
   const customQuizzes = useMemo(() => {
-    return quizzes.filter((q) => q.isCustom && q.createdBy?.role !== "admin");
-  }, [quizzes]);
+    return quizzes.filter((q) => {
+      if (!q.isCustom || q.createdBy?.role === "admin") return false;
+      // Admin sees all custom quizzes
+      if (defaultRole === "admin") return true;
+
+      const currentUid = user?.uid || auth?.currentUser?.uid;
+      if (currentUid && q.createdBy?.uid) {
+        return q.createdBy.uid === currentUid;
+      }
+
+      // Match by teacher/creator name or stored teacher name
+      const myName = (userName || profile?.fullName || user?.displayName || (typeof window !== "undefined" ? localStorage.getItem("mcq_share_teacher_name") : "") || "").trim().toLowerCase();
+      if (myName && myName !== "विद्यार्थी" && myName !== "विद्यार्थी / पालक") {
+        const creatorName = (q.createdBy?.name || "").trim().toLowerCase();
+        const tName = (q.teacherName || "").trim().toLowerCase();
+        return (creatorName !== "" && creatorName === myName) || (tName !== "" && tName === myName);
+      }
+
+      return false;
+    });
+  }, [quizzes, defaultRole, user?.uid, userName, profile?.fullName]);
 
   // Currently active tab's list
   const currentTabQuizzes = activeSubTab === "admin" ? adminQuizzes : customQuizzes;
@@ -155,8 +178,8 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
           <MCQQuizPlayer
             quiz={targetQuiz}
             studentName={userName}
-            teacherName={sharedTeacherName}
-            schoolName={sharedSchoolName}
+            teacherName={sharedTeacherName || targetQuiz.teacherName || targetQuiz.createdBy?.name}
+            schoolName={sharedSchoolName || targetQuiz.schoolName}
             onBack={() => setActiveQuizId(null)}
             showBackBtn={true}
           />
@@ -258,7 +281,7 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
                 }`}
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>{defaultRole === "admin" ? "२. स्वतःचे प्रश्न (Custom)" : "२. इतर सराव प्रश्न"}</span>
+                <span>२. स्वतःचे प्रश्न (Make Your Own)</span>
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                     activeSubTab === "custom"
@@ -285,13 +308,13 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
                 </button>
               )}
 
-              {activeSubTab === "custom" && defaultRole === "admin" && (
+              {activeSubTab === "custom" && (defaultRole === "admin" || defaultRole === "teacher") && (
                 <button
                   onClick={() => setCreatorModalMode("custom")}
                   className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md cursor-pointer transition-all active:scale-95"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>+ नवीन प्रश्न तयार करा</span>
+                  <span>+ स्वतःचे प्रश्न तयार करा (Make Your Own)</span>
                 </button>
               )}
             </div>
@@ -325,7 +348,8 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
             mode={creatorModalMode}
             onClose={() => setCreatorModalMode(null)}
             defaultRole={defaultRole === "admin" ? "admin" : (defaultRole === "teacher" ? "teacher" : "user")}
-            userName={userName}
+            userName={userName || profile?.fullName || user?.displayName || "शिक्षक"}
+            defaultDate={selectedDate !== "all" ? selectedDate : todayStr}
             defaultClass={selectedClass !== "all" ? selectedClass : "1st"}
             defaultSubject={selectedSubject !== "all" ? selectedSubject : "मराठी"}
             onSuccess={(newId, createdAsAdmin) => {

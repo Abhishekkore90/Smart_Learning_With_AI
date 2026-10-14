@@ -15,12 +15,26 @@ import {
   Edit3,
   MapPin,
   User,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { renderAsync } from "docx-preview";
 import { toast } from "sonner";
 import { fetchBinaryFile, getDirectBunnyStorageUrl, isBufferValidBinary } from "@/lib/bunny-auth-pdf";
 import mammoth from "mammoth";
-import { isVmlDocx, parseVmlDocxToHtml } from "@/services/vmlDocxParser";
+import {
+  isVmlDocx,
+  parseVmlDocxToHtml,
+} from "@/services/vmlDocxParser";
+import {
+  type HomeworkHeaderProfile,
+  getHomeworkHeaderProfile,
+  saveHomeworkHeaderProfile,
+  formatHomeworkDateToMarathi,
+  getMarathiClassLabel,
+} from "@/utils/homeworkDocHelper";
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 
@@ -41,6 +55,8 @@ export interface WordQuestionPaperEditorProps {
   userId?: string;
   userRole?: string;
   documentType?: "question_paper" | "homework";
+  homeworkDate?: string;
+  homeworkClass?: string;
   onSave?: (html: string) => Promise<void> | void;
   onClose?: () => void;
 }
@@ -55,6 +71,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
   userId = "guest",
   userRole = "teacher",
   documentType = "question_paper",
+  homeworkDate,
+  homeworkClass,
   onSave,
   onClose,
 }) => {
@@ -76,6 +94,12 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
   const [activeSection, setActiveSection] = useState<string>("all");
   const [schoolNameInput, setSchoolNameInput] = useState("");
   const [examDateInput, setExamDateInput] = useState("");
+  const [mobileFitWidth, setMobileFitWidth] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth < 768;
+    }
+    return false;
+  });
 
   // Homework Header Info States
   const [showHwHeaderModal, setShowHwHeaderModal] = useState(false);
@@ -109,31 +133,23 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       const savedUserSchool = localStorage.getItem(userKey);
       if (savedUserSchool && savedUserSchool.trim() && !savedUserSchool.toLowerCase().includes("willingdon")) {
         setSchoolNameInput(savedUserSchool.trim());
-        setHwSchoolName(savedUserSchool.trim());
       } else {
         // Keep blank by default for all users
         setSchoolNameInput("");
       }
 
       // 3. Load saved homework header info strictly for this user (Fresh blank dashboard for new users!)
-      const uKey = userId || "guest";
-      const hasSavedHwProfile = localStorage.getItem(`hw_profile_v2_saved_${uKey}`) === "true";
+      const hwProf = getHomeworkHeaderProfile(userId);
+      setHwSchoolName(hwProf.schoolName);
+      setHwKendra(hwProf.kendra);
+      setHwTaluka(hwProf.taluka);
+      setHwDistrict(hwProf.district);
+      setHwTeacherName(hwProf.teacherName);
+      setHwHeadmasterName(hwProf.headmasterName);
 
-      if (hasSavedHwProfile) {
-        setHwSchoolName(localStorage.getItem(`hw_v2_school_${uKey}`) || "");
-        setHwKendra(localStorage.getItem(`hw_v2_kendra_${uKey}`) || "");
-        setHwTaluka(localStorage.getItem(`hw_v2_taluka_${uKey}`) || "");
-        setHwDistrict(localStorage.getItem(`hw_v2_district_${uKey}`) || "");
-        setHwTeacherName(localStorage.getItem(`hw_v2_teacher_${uKey}`) || "");
-        setHwHeadmasterName(localStorage.getItem(`hw_v2_headmaster_${uKey}`) || "");
-      } else {
-        // Fresh new user: strictly blank by default! No dummy data, no code fallbacks.
-        setHwSchoolName("");
-        setHwKendra("");
-        setHwTaluka("");
-        setHwDistrict("");
-        setHwTeacherName("");
-        setHwHeadmasterName("");
+      // Auto-inject into container if already rendered
+      if (documentType === "homework" && containerRef.current && containerRef.current.innerHTML.trim().length > 50) {
+        applyHomeworkHeaderInfo(false, hwProf);
       }
 
       const today = new Date();
@@ -142,18 +158,29 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       const yyyy = today.getFullYear();
       setExamDateInput(`${dd}/${mm}/${yyyy}`);
 
-      // Set Marathi Day and Date defaults
-      const marathiDays = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
-      const marathiMonths = [
-        "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून",
-        "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"
-      ];
-      setHwDayOfWeek(marathiDays[today.getDay()]);
-      setHwDateStr(`${today.getDate()} ${marathiMonths[today.getMonth()]} ${yyyy}`);
+      // Set Marathi Day and Date from admin-uploaded homework date, or fallback to today
+      if (homeworkDate) {
+        const { dayOfWeek, dateStr } = formatHomeworkDateToMarathi(homeworkDate);
+        setHwDayOfWeek(dayOfWeek);
+        setHwDateStr(dateStr);
+      } else {
+        const marathiDays = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+        const marathiMonths = [
+          "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून",
+          "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"
+        ];
+        setHwDayOfWeek(marathiDays[today.getDay()]);
+        setHwDateStr(`${today.getDate()} ${marathiMonths[today.getMonth()]} ${yyyy}`);
+      }
+
+      // Set Marathi Class from admin-uploaded homework class
+      if (homeworkClass) {
+        setHwClassName(getMarathiClassLabel(homeworkClass));
+      }
     } catch (e) {
       console.warn("Could not load initial school name:", e);
     }
-  }, [userId]);
+  }, [userId, homeworkDate, homeworkClass]);
 
   // 1. Load document
   useEffect(() => {
@@ -335,9 +362,17 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             }, 200);
           } else {
             // For homework: auto-fit header and format teacher & headmaster signatures cleanly!
+            const freshProf = getHomeworkHeaderProfile(userId);
+            applyHomeworkHeaderInfo(false, freshProf);
             setTimeout(() => {
-              applyHomeworkHeaderInfo(false);
-            }, 250);
+              applyHomeworkHeaderInfo(false, getHomeworkHeaderProfile(userId));
+            }, 100);
+            setTimeout(() => {
+              applyHomeworkHeaderInfo(false, getHomeworkHeaderProfile(userId));
+            }, 350);
+            setTimeout(() => {
+              applyHomeworkHeaderInfo(false, getHomeworkHeaderProfile(userId));
+            }, 750);
           }
 
           // Detect multi-subject sections in VML documents
@@ -407,13 +442,42 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       (el as HTMLElement).style.outline = "none";
     });
 
-    // Listen to changes to show unsaved changes indicator
-    const handleInput = () => {
+    // Listen to changes to show unsaved changes indicator and sync manually typed school name
+    const handleInput = (e: Event) => {
       setHasUnsavedChanges(true);
+      const target = e.target as HTMLElement;
+      const schoolField = target?.closest<HTMLElement>('[data-field="school-name"]');
+      if (schoolField) {
+        schoolField.style.whiteSpace = "nowrap";
+        schoolField.style.overflow = "hidden";
+        schoolField.style.width = "81.2%";
+        schoolField.style.maxWidth = "81.2%";
+
+        const fullText = (schoolField.textContent || "").trim();
+        const cleanTyped = fullText
+          .replace(/^(?:शाळेचे\s*नाव|school\s*name)\s*[:\-–—]?\s*/i, "")
+          .trim();
+        if (cleanTyped && cleanTyped !== schoolNameInput) {
+          setSchoolNameInput(cleanTyped);
+          const userKey = `user_school_name_${userId || "guest"}`;
+          localStorage.setItem(userKey, cleanTyped);
+        }
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target?.closest?.('[data-field="school-name"]')) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+        }
+      }
     };
 
     containerRef.current.removeEventListener("input", handleInput);
     containerRef.current.addEventListener("input", handleInput);
+    containerRef.current.removeEventListener("keydown", handleKeyDown as any);
+    containerRef.current.addEventListener("keydown", handleKeyDown as any);
   };
 
   // Execute formatting commands
@@ -561,7 +625,18 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     // Ensure header-dots-mask exists strictly inside the box (never touching the left or right column borders)
     const vmlPages = containerRef.current.querySelectorAll<HTMLElement>(".vml-page-wrapper");
     vmlPages.forEach((page) => {
-      const hasSchool = page.querySelector('[data-field="school-name"]') || Array.from(page.querySelectorAll('.vml-shape-text')).some(el => (el.textContent || '').includes('शाळेचे नाव'));
+      const hasSchool =
+        page.querySelector('[data-field="school-name"]') ||
+        Array.from(page.querySelectorAll<HTMLElement>('.vml-shape-text')).some(el => {
+          const t = el.textContent || '';
+          const sTop = parseFloat(el.style.top || '100');
+          return (
+            t.includes('शाळेचे नाव') ||
+            /school\s*name/i.test(t) ||
+            /name\s*of\s*school/i.test(t) ||
+            (sTop < 10 && /\bschool\b/i.test(t))
+          );
+        });
       if (hasSchool) {
         let mask = page.querySelector<HTMLElement>(".header-dots-mask");
         if (!mask) {
@@ -585,18 +660,27 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     );
     schoolEls.forEach((el) => {
       const isField = el.getAttribute("data-field") === "school-name";
-      const hasText = (el.textContent || "").includes("शाळेचे नाव");
-      if (isField || hasText) {
+      const text = el.textContent || "";
+      const sTop = parseFloat(el.style.top || "100");
+      const isSchool =
+        isField ||
+        text.includes("शाळेचे नाव") ||
+        /school\s*name/i.test(text) ||
+        /name\s*of\s*school/i.test(text) ||
+        (sTop < 10 && /\bschool\b/i.test(text));
+
+      if (isSchool) {
         el.setAttribute("data-field", "school-name");
         el.style.left = "10.458%";
         el.style.top = "2.35%";
-        el.style.width = "auto";
-        el.style.maxWidth = "78%"; // Strictly stops well before the right border
-        el.style.minHeight = "24pt";
+        el.style.width = "81.2%";
+        el.style.maxWidth = "81.2%"; // Strictly stops well before the right border
+        el.style.minHeight = "auto";
         el.style.height = "auto";
-        el.style.whiteSpace = "normal";
+        el.style.whiteSpace = "nowrap";
+        el.style.overflow = "hidden";
         el.style.lineHeight = "1.2";
-        el.style.display = "inline-flex";
+        el.style.display = "flex";
         el.style.alignItems = "center";
         el.style.justifyContent = "flex-start";
         el.style.zIndex = "10";
@@ -605,22 +689,28 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         el.style.backgroundColor = "transparent";
         el.style.padding = "0";
 
-        if (schoolName.trim()) {
-          const clean = schoolName.replace(/^शाळेचे नाव\s*[:\-]?\s*/i, "").trim();
-          el.innerHTML = `<span style="background: #ffffff; padding: 0 4px; display: inline-flex; align-items: center; white-space: pre-wrap;"><strong>शाळेचे नाव : </strong><span style="font-weight: 700; color: #0f172a; margin-left: 4px;">${escapeHtmlStr(clean)}</span></span>`;
+        // Determine if English or Marathi
+        const isEng = /school/i.test(text) || !text.includes("शाळेचे");
+        const labelText = isEng ? "SCHOOL NAME -" : "शाळेचे नाव :";
 
-          // Dynamic font sizing for long school names
+        if (schoolName.trim()) {
+          const clean = schoolName
+            .replace(/^(?:शाळेचे\s*नाव|school\s*name)\s*[:\-–—]?\s*/i, "")
+            .trim();
+          el.innerHTML = `<span style="background: #ffffff; padding: 0 2px; display: flex; align-items: center; width: 100%; max-width: 100%;"><strong style="white-space: nowrap; flex-shrink: 0; color: #0f172a;">${labelText} </strong><span style="font-weight: 700; color: #0f172a; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0;" title="${escapeHtmlStr(clean)}">${escapeHtmlStr(clean)}</span></span>`;
+
+          // Dynamic scalable container-query font sizing so it never wraps or overlaps on mobile or desktop
           if (clean.length > 40) {
-            el.style.fontSize = "11.5pt";
+            el.style.fontSize = "clamp(8px, 1.7cqw, 11pt)";
           } else if (clean.length > 25) {
-            el.style.fontSize = "12.5pt";
+            el.style.fontSize = "clamp(8.5px, 2.0cqw, 12.5pt)";
           } else {
-            el.style.fontSize = "14pt";
+            el.style.fontSize = "clamp(9px, 2.3cqw, 14pt)";
           }
         } else {
-          // Clean blank header with dotted underline for student/school write-in
-          el.innerHTML = `<span style="background: #ffffff; padding: 0 4px; display: inline-flex; align-items: center;"><strong>शाळेचे नाव : </strong><span style="display: inline-block; width: 340px; border-bottom: 1.5px dotted #94a3b8; margin-left: 6px; height: 16px;"></span></span>`;
-          el.style.fontSize = "14pt";
+          // Clean blank header with dotted underline for student/school write-in that flexibly fills the line up to the right border
+          el.innerHTML = `<span style="background: #ffffff; padding: 0 2px; display: flex; align-items: center; width: 100%;"><strong style="white-space: nowrap; flex-shrink: 0; color: #0f172a;">${labelText} </strong><span style="flex: 1; min-width: 20px; border-bottom: 1.5px dotted #94a3b8; margin-left: 6px; height: 1em; align-self: center;"></span></span>`;
+          el.style.fontSize = "clamp(9px, 2.3cqw, 14pt)";
         }
         updatedSchool = true;
       }
@@ -630,12 +720,15 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     if (!updatedSchool) {
       const allTextEls = containerRef.current.querySelectorAll<HTMLElement>("p, td, span, div");
       for (const el of Array.from(allTextEls)) {
-        if (el.children.length === 0 && (el.textContent || "").includes("शाळेचे नाव")) {
+        const text = el.textContent || "";
+        if (el.children.length === 0 && (text.includes("शाळेचे नाव") || /school\s*name/i.test(text))) {
+          const isEng = /school/i.test(text);
+          const labelText = isEng ? "SCHOOL NAME -" : "शाळेचे नाव :";
           if (schoolName.trim()) {
-            const clean = schoolName.replace(/^शाळेचे नाव\s*[:\-]?\s*/i, "").trim();
-            el.innerHTML = `<strong>शाळेचे नाव : </strong><span style="font-weight: 700; color: #0f172a; margin-left: 4px;">${escapeHtmlStr(clean)}</span>`;
+            const clean = schoolName.replace(/^(?:शाळेचे\s*नाव|school\s*name)\s*[:\-–—]?\s*/i, "").trim();
+            el.innerHTML = `<span style="white-space: nowrap; display: inline-flex; align-items: center; max-width: 100%;"><strong style="white-space: nowrap; flex-shrink: 0;">${labelText} </strong><span style="font-weight: 700; color: #0f172a; margin-left: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtmlStr(clean)}</span></span>`;
           } else {
-            el.innerHTML = `<strong>शाळेचे नाव : </strong>....................................................`;
+            el.innerHTML = `<strong>${labelText} </strong>....................................................`;
           }
           updatedSchool = true;
           break;
@@ -649,26 +742,42 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     );
     dateEls.forEach((el) => {
       const isField = el.getAttribute("data-field") === "exam-date";
-      const hasText = (el.textContent || "").includes("दि.") && ((el.textContent || "").includes("२०२") || (el.textContent || "").includes("/"));
-      if (isField || hasText) {
+      const text = el.textContent || "";
+      const isDate =
+        isField ||
+        ((text.includes("दि.") || /date\s*[:\-–—]?/i.test(text)) &&
+          (text.includes("२०२") || text.includes("202") || text.includes("/")));
+      if (isDate) {
         el.setAttribute("data-field", "exam-date");
         el.style.zIndex = "10";
         el.style.width = "auto";
         el.style.maxWidth = "35%";
-        el.style.minHeight = "24pt";
+        el.style.minHeight = "auto";
         el.style.height = "auto";
         el.style.display = "inline-flex";
         el.style.alignItems = "center";
+        el.style.whiteSpace = "nowrap";
+        el.style.overflow = "hidden";
+        el.style.fontSize = "clamp(8px, 2.1cqw, 12pt)";
         el.style.boxShadow = "none";
         el.style.borderRadius = "0";
         el.style.backgroundColor = "transparent";
         el.style.padding = "0";
 
+        const isEng = /date/i.test(text);
         if (examDate.trim()) {
-          const clean = examDate.replace(/^दि\.?\s*[:\-]?\s*/i, "").trim();
-          el.innerHTML = `<span style="background: #ffffff; padding: 0 3px; display: inline-flex; align-items: center;"><strong>दि. </strong><span style="font-weight: 700; color: #0f172a; margin-left: 2px;">${escapeHtmlStr(clean)}</span></span>`;
+          const clean = examDate.replace(/^(?:दि\.?|date)\s*[:\-–—]?\s*/i, "").trim();
+          if (isEng) {
+            el.innerHTML = `<span style="background: #ffffff; padding: 0 3px; display: inline-flex; align-items: center; white-space: nowrap;"><strong>DATE - </strong><span style="font-weight: 700; color: #0f172a; margin-left: 4px; white-space: nowrap;">${escapeHtmlStr(clean)}</span></span>`;
+          } else {
+            el.innerHTML = `<span style="background: #ffffff; padding: 0 3px; display: inline-flex; align-items: center; white-space: nowrap;"><strong>दि. </strong><span style="font-weight: 700; color: #0f172a; margin-left: 2px; white-space: nowrap;">${escapeHtmlStr(clean)}</span></span>`;
+          }
         } else {
-          el.innerHTML = `<span style="background: #ffffff; padding: 0 3px;">दि.     /     / २०२६</span>`;
+          if (isEng) {
+            el.innerHTML = `<span style="background: #ffffff; padding: 0 3px; white-space: nowrap;">DATE - &nbsp;&nbsp; / &nbsp;&nbsp; / 2026</span>`;
+          } else {
+            el.innerHTML = `<span style="background: #ffffff; padding: 0 3px; white-space: nowrap;">दि. &nbsp;&nbsp; / &nbsp;&nbsp; / २०२६</span>`;
+          }
         }
         updatedDate = true;
       }
@@ -828,29 +937,59 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
   };
 
   // Apply all homework header fields and fit them properly across the page
-  const applyHomeworkHeaderInfo = (notify = true) => {
+  const applyHomeworkHeaderInfo = (notify = true, overrideProfile?: HomeworkHeaderProfile) => {
     if (!containerRef.current) return;
 
+    // Resolve profile values from: 1) overrideProfile, 2) fresh from localStorage, 3) React state
+    const savedProf = overrideProfile || getHomeworkHeaderProfile(userId);
+    const activeSchool = (hwSchoolName || savedProf.schoolName || "").trim();
+    const activeKendra = (hwKendra || savedProf.kendra || "").trim();
+    const activeTaluka = (hwTaluka || savedProf.taluka || "").trim();
+    const activeDistrict = (hwDistrict || savedProf.district || "").trim();
+    const activeTeacher = (hwTeacherName || savedProf.teacherName || "").trim();
+    const activeHeadmaster = (hwHeadmasterName || savedProf.headmasterName || "").trim();
+
+    // Synchronize React states if state was empty but profile had values
+    if (!hwSchoolName && activeSchool) setHwSchoolName(activeSchool);
+    if (!hwKendra && activeKendra) setHwKendra(activeKendra);
+    if (!hwTaluka && activeTaluka) setHwTaluka(activeTaluka);
+    if (!hwDistrict && activeDistrict) setHwDistrict(activeDistrict);
+    if (!hwTeacherName && activeTeacher) setHwTeacherName(activeTeacher);
+    if (!hwHeadmasterName && activeHeadmaster) setHwHeadmasterName(activeHeadmaster);
+
     // Dynamic font size for Line 1 to guarantee 100% fit on one line without breaking margins
-    const schoolLen = (hwSchoolName || "").trim().length;
-    const line1FontSize = schoolLen > 38 ? "10.5pt" : schoolLen > 24 ? "11.5pt" : "12pt";
+    const schoolLen = activeSchool.length;
+    const line1FontSize = schoolLen > 36 ? "10pt" : schoolLen > 24 ? "11pt" : "11.5pt";
+
+    const displaySchool = activeSchool
+      ? escapeHtmlStr(activeSchool)
+      : '<span style="color: #64748b; letter-spacing: 1px;">....................................</span>';
+    const displayKendra = activeKendra
+      ? escapeHtmlStr(activeKendra)
+      : '<span style="color: #64748b; letter-spacing: 1px;">................</span>';
+    const displayTaluka = activeTaluka
+      ? escapeHtmlStr(activeTaluka)
+      : '<span style="color: #64748b; letter-spacing: 1px;">................</span>';
+    const displayDistrict = activeDistrict
+      ? escapeHtmlStr(activeDistrict)
+      : '<span style="color: #64748b; letter-spacing: 1px;">................</span>';
 
     // Helper to format Line 1: शाळेचे नाव, केंद्र, तालुका, जिल्हा (Borderless 4-cell table)
     const line1Html = `
       <table data-header-field="hw-line-1" style="width: 100% !important; border-collapse: collapse !important; border: none !important; margin: 6px 0 3px 0 !important; font-size: ${line1FontSize} !important; line-height: 1.4 !important; color: #000000 !important; background: transparent !important; table-layout: fixed !important;">
         <tbody>
           <tr style="border: none !important; background: transparent !important;">
-            <td style="border: none !important; padding: 2px 4px 2px 0 !important; text-align: left !important; width: 40% !important; vertical-align: middle !important; background: transparent !important;">
-              <strong>शाळेचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwSchoolName || "....................................")}</span>
+            <td style="border: none !important; padding: 2px 4px 2px 0 !important; text-align: left !important; width: 40% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
+              <strong style="white-space: nowrap !important;">शाळेचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displaySchool}</span>
             </td>
-            <td style="border: none !important; padding: 2px 4px !important; text-align: center !important; width: 20% !important; vertical-align: middle !important; background: transparent !important;">
-              <strong>केंद्र : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwKendra || "................")}</span>
+            <td style="border: none !important; padding: 2px 4px !important; text-align: center !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
+              <strong style="white-space: nowrap !important;">केंद्र : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayKendra}</span>
             </td>
-            <td style="border: none !important; padding: 2px 4px !important; text-align: center !important; width: 20% !important; vertical-align: middle !important; background: transparent !important;">
-              <strong>तालुका : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwTaluka || "................")}</span>
+            <td style="border: none !important; padding: 2px 4px !important; text-align: center !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
+              <strong style="white-space: nowrap !important;">तालुका : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayTaluka}</span>
             </td>
-            <td style="border: none !important; padding: 2px 0 2px 4px !important; text-align: right !important; width: 20% !important; vertical-align: middle !important; background: transparent !important;">
-              <strong>जिल्हा : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwDistrict || "................")}</span>
+            <td style="border: none !important; padding: 2px 0 2px 4px !important; text-align: right !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
+              <strong style="white-space: nowrap !important;">जिल्हा : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayDistrict}</span>
             </td>
           </tr>
         </tbody>
@@ -889,8 +1028,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     let updatedSign = false;
 
     // Helper to format Signature block: शिक्षकाचे नाव, स्वाक्षरी आणि मुख्याध्यापकाचे नाव, स्वाक्षरी व शिक्का
-    const teacherDisplay = escapeHtmlStr(hwTeacherName.trim() || "....................................");
-    const hmDisplay = escapeHtmlStr(hwHeadmasterName.trim() || "....................................");
+    const teacherDisplay = escapeHtmlStr(activeTeacher || "....................................");
+    const hmDisplay = escapeHtmlStr(activeHeadmaster || "....................................");
     const lineSignHtml = `
       <table data-header-field="hw-signature-block" style="width: 100% !important; border-collapse: collapse !important; border: none !important; margin: 32px 0 12px 0 !important; font-size: 11.5pt !important; line-height: 1.5 !important; color: #000000 !important; background: transparent !important; table-layout: fixed !important;">
         <tbody>
@@ -1060,30 +1199,15 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     }
 
     // Remember School, Kendra, Taluka, District, Teacher Name, Headmaster Name in localStorage only when user explicitly submits
-    const uKey = userId || "guest";
     if (notify) {
-      localStorage.setItem(`hw_profile_v2_saved_${uKey}`, "true");
-      if (hwSchoolName.trim()) {
-        localStorage.setItem(`hw_v2_school_${uKey}`, hwSchoolName.trim());
-        localStorage.setItem(`user_school_name_${uKey}`, hwSchoolName.trim());
-      } else {
-        localStorage.removeItem(`hw_v2_school_${uKey}`);
-      }
-
-      if (hwKendra.trim()) localStorage.setItem(`hw_v2_kendra_${uKey}`, hwKendra.trim());
-      else localStorage.removeItem(`hw_v2_kendra_${uKey}`);
-
-      if (hwTaluka.trim()) localStorage.setItem(`hw_v2_taluka_${uKey}`, hwTaluka.trim());
-      else localStorage.removeItem(`hw_v2_taluka_${uKey}`);
-
-      if (hwDistrict.trim()) localStorage.setItem(`hw_v2_district_${uKey}`, hwDistrict.trim());
-      else localStorage.removeItem(`hw_v2_district_${uKey}`);
-
-      if (hwTeacherName.trim()) localStorage.setItem(`hw_v2_teacher_${uKey}`, hwTeacherName.trim());
-      else localStorage.removeItem(`hw_v2_teacher_${uKey}`);
-
-      if (hwHeadmasterName.trim()) localStorage.setItem(`hw_v2_headmaster_${uKey}`, hwHeadmasterName.trim());
-      else localStorage.removeItem(`hw_v2_headmaster_${uKey}`);
+      saveHomeworkHeaderProfile(userId, {
+        schoolName: activeSchool,
+        kendra: activeKendra,
+        taluka: activeTaluka,
+        district: activeDistrict,
+        teacherName: activeTeacher,
+        headmasterName: activeHeadmaster,
+      });
     }
 
     setHasUnsavedChanges(true);
@@ -1313,49 +1437,77 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       <div ref={styleContainerRef} className="hidden" />
 
       {/* Top Main Action Bar */}
-      <div className="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-3 flex-wrap border-b border-slate-800 print:hidden shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="size-9 rounded-xl bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-blue-400">
-            <FileText className="size-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-bold text-sm sm:text-base text-white truncate max-w-[280px] sm:max-w-md">
-                {paperTitle}
-              </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                <CheckCircle2 className="size-3" /> {documentType === "homework" ? "मूळ Word गृहपाठ" : "मूळ Word फाईल"}
-              </span>
-              {hasUnsavedChanges && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                  <AlertCircle className="size-3" /> बदल जतन केलेले नाहीत
-                </span>
-              )}
+      <div className="bg-slate-900 text-white px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-800 print:hidden shadow-md">
+        <div className="flex items-center justify-between gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="size-8 sm:size-9 rounded-xl bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-blue-400 shrink-0">
+              <FileText className="size-4 sm:size-5" />
             </div>
-            <p className="text-[11px] text-slate-400">
-              {documentType === "homework"
-                ? "गृहपाठ थेट संपादन • दस्तऐवजात कुठेही क्लिक करून मजकूर, कोष्टके, चित्रे व उत्तरे संपादित करा"
-                : `${userRole === "admin" ? "सुपर ॲडमिन थेट संपादन" : "शिक्षक थेट संपादन"} • प्रश्नपत्रिकेत कुठेही क्लिक करून मजकूर बदला`}
-            </p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h2 className="font-bold text-xs sm:text-base text-white truncate max-w-[190px] sm:max-w-md">
+                  {paperTitle}
+                </h2>
+                <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shrink-0">
+                  <CheckCircle2 className="size-2.5 sm:size-3" /> {documentType === "homework" ? "Word गृहपाठ" : "Word फाईल"}
+                </span>
+                {hasUnsavedChanges && (
+                  <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1 shrink-0">
+                    <AlertCircle className="size-2.5 sm:size-3" /> न जतन केलेले बदल
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] sm:text-[11px] text-slate-400 hidden xs:block truncate max-w-sm sm:max-w-xl">
+                {documentType === "homework"
+                  ? "गृहपाठ थेट संपादन • मजकूर, कोष्टके, चित्रे व उत्तरे संपादित करा"
+                  : `${userRole === "admin" ? "सुपर ॲडमिन थेट संपादन" : "शिक्षक थेट संपादन"} • प्रश्नपत्रिकेत कुठेही क्लिक करून मजकूर बदला`}
+              </p>
+            </div>
           </div>
+
+          {/* Close button on mobile top-right */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="md:hidden p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-all cursor-pointer shrink-0"
+              title="बंद करा"
+            >
+              <X className="size-4" />
+            </button>
+          )}
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
+          {/* Mobile Screen Fit Toggle */}
+          <button
+            type="button"
+            onClick={() => setMobileFitWidth((prev) => !prev)}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+              mobileFitWidth
+                ? "bg-indigo-600 text-white border-indigo-500 shadow-sm"
+                : "bg-slate-800 text-slate-300 border-slate-700 hover:text-white"
+            }`}
+            title={mobileFitWidth ? "१००% आकार पहा (Full Size)" : "मोबाईल स्क्रीनवर बसवा (Fit Screen)"}
+          >
+            {mobileFitWidth ? <Minimize2 className="size-3.5 text-indigo-200" /> : <Maximize2 className="size-3.5 text-amber-300" />}
+            <span>{mobileFitWidth ? "१००% आकार" : "स्क्रीनवर बसवा"}</span>
+          </button>
+
           {hasSavedVersion && (
             <button
               onClick={handleRestoreSaved}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
               title="मागील जतन केलेले संपादन लोड करा"
             >
               <RotateCcw className="size-3.5" />
-              <span>जतन केलेले लोड करा</span>
+              <span className="hidden sm:inline">जतन केलेले लोड करा</span>
             </button>
           )}
 
           <button
             onClick={handleResetToOriginal}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+            className="px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
             title="मूळ Word फाईल पुन्हा लोड करा"
           >
             <RotateCcw className="size-3.5" />
@@ -1365,7 +1517,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           <button
             onClick={handleDownloadPdf}
             disabled={isDownloadingPdf}
-            className="px-4 py-1.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+            className="px-3 sm:px-4 py-1.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
             title="जशी आहे तशी मूळ PDF डाऊनलोड करा"
           >
             {isDownloadingPdf ? (
@@ -1373,34 +1525,34 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             ) : (
               <Download className="size-3.5" />
             )}
-            <span>PDF डाऊनलोड करा</span>
+            <span>PDF</span>
           </button>
 
           {documentType === "homework" && (
             <button
               onClick={() => setShowHwHeaderModal(true)}
-              className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              className="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
               title="शाळेचे नाव, केंद्र, तालुका, जिल्हा, वार, दिनांक इत्यादी माहिती भरा"
             >
               <Edit3 className="size-3.5 text-amber-300" />
-              <span>माहिती भरा (Fill Details)</span>
+              <span>माहिती भरा</span>
             </button>
           )}
 
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow cursor-pointer active:scale-95 disabled:opacity-50"
+            className="px-3 sm:px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow cursor-pointer active:scale-95 disabled:opacity-50"
             title="केलेले बदल जतन करा"
           >
             {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-            <span>बदल जतन करा</span>
+            <span>जतन करा</span>
           </button>
 
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-all cursor-pointer"
+              className="hidden md:inline-flex p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-all cursor-pointer"
               title="बंद करा"
             >
               <X className="size-4" />
@@ -1411,10 +1563,10 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
       {/* Quick Header Details Bar (शाळेचे नाव & दिनांक) - Only for question papers */}
       {documentType !== "homework" && (
-        <div className="bg-slate-800 text-white px-4 py-2 border-b border-slate-700 flex items-center justify-between gap-3 flex-wrap print:hidden shadow-sm">
-          <div className="flex items-center gap-2.5 flex-wrap flex-1 min-w-[280px]">
+        <div className="bg-slate-800 text-white px-3 sm:px-4 py-2 border-b border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 print:hidden shadow-sm">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 w-full min-w-0">
             {/* School Name Input */}
-            <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 focus-within:border-blue-500 transition-all flex-1 min-w-[220px] max-w-md">
+            <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 focus-within:border-blue-500 transition-all flex-1 min-w-0">
               <Building2 className="size-4 text-amber-400 shrink-0" />
               <span className="text-[11px] font-bold text-slate-300 shrink-0">शाळेचे नाव:</span>
               <input
@@ -1430,7 +1582,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             </div>
 
             {/* Exam Date Input */}
-            <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 focus-within:border-blue-500 transition-all w-48 sm:w-56">
+            <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 focus-within:border-blue-500 transition-all w-full sm:w-44 shrink-0">
               <Calendar className="size-4 text-emerald-400 shrink-0" />
               <span className="text-[11px] font-bold text-slate-300 shrink-0">दिनांक:</span>
               <input
@@ -1448,7 +1600,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             {/* Apply Button */}
             <button
               onClick={() => applyHeaderInfo(schoolNameInput, examDateInput, true)}
-              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow cursor-pointer active:scale-95 shrink-0"
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow cursor-pointer active:scale-95 shrink-0"
               title="शाळेचे नाव व दिनांक थेट प्रश्नपत्रिकेतील चौकटीत योग्य जागी भरा"
             >
               <Sparkles className="size-3.5 text-amber-300" />
@@ -1465,23 +1617,20 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
       {/* Quick Header Details Bar for Homework */}
       {documentType === "homework" && (
-        <div className="bg-slate-800 text-white px-4 py-2 border-b border-slate-700 flex items-center justify-between gap-3 flex-wrap print:hidden shadow-sm">
-          <div className="flex items-center gap-2 flex-wrap text-xs">
+        <div className="bg-slate-800 text-white px-3 sm:px-4 py-2 border-b border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 print:hidden shadow-sm">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap text-xs">
             <span className="font-bold text-amber-400 flex items-center gap-1.5">
-              <Sparkles className="size-4 text-amber-300" />
-              <span>शीर्षक माहिती (Header Details):</span>
+              <Sparkles className="size-3.5 sm:size-4 text-amber-300" />
+              <span>शीर्षक माहिती:</span>
             </span>
-            <span className="text-slate-300 font-medium">
+            <span className="text-slate-300 font-medium text-[11px] sm:text-xs">
               {hwSchoolName ? `शाळा: ${hwSchoolName} • ` : ""}
               {hwTeacherName ? `शिक्षक: ${hwTeacherName} • ` : ""}
               {hwHeadmasterName ? `मुख्याध्यापक: ${hwHeadmasterName} • ` : ""}
-              {hwKendra ? `केंद्र: ${hwKendra} • ` : ""}
-              {hwTaluka ? `तालुका: ${hwTaluka} • ` : ""}
-              {hwDistrict ? `जिल्हा: ${hwDistrict} • ` : ""}
               वार: {hwDayOfWeek} • दिनांक: {hwDateStr} • इयत्ता: {hwClassName}
-              {!hwSchoolName && !hwTeacherName && !hwHeadmasterName && !hwKendra && (
-                <span className="text-amber-300 ml-2 font-normal">
-                  (नवीन वापरकर्ता: माहिती भरण्यासाठी उजवीकडील बटण वापरा)
+              {!hwSchoolName && !hwTeacherName && !hwHeadmasterName && (
+                <span className="text-amber-300 ml-1 font-normal">
+                  (माहिती भरण्यासाठी उजवीकडील बटण वापरा)
                 </span>
               )}
             </span>
@@ -1489,7 +1638,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
           <button
             onClick={() => setShowHwHeaderModal(true)}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow cursor-pointer active:scale-95 shrink-0 ml-auto"
+            className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow cursor-pointer active:scale-95 shrink-0"
           >
             <Edit3 className="size-3.5 text-amber-300" />
             <span>माहिती भरा व पृष्ठात बसवा</span>
@@ -1498,10 +1647,10 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       )}
 
       {/* Main Document Content Container */}
-      <div className="flex-1 overflow-auto p-4 sm:p-8 flex justify-center bg-slate-200/70 print:p-0 print:bg-white custom-scrollbar">
+      <div className="flex-1 overflow-x-auto overflow-y-auto p-2 sm:p-8 flex justify-center bg-slate-200/70 print:p-0 print:bg-white custom-scrollbar touch-pan-x">
         <div className="relative w-full max-w-[850px] min-h-[1123px]">
           {loading && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-12 text-center bg-white/95 rounded-sm shadow-xl border border-slate-300">
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white/95 rounded-sm shadow-xl border border-slate-300">
               <Loader2 className="size-10 animate-spin text-blue-600 mb-3" />
               <h4 className="font-bold text-slate-800 text-sm">{loadingMsg}</h4>
               <p className="text-xs text-slate-500 mt-1">
@@ -1511,7 +1660,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           )}
 
           {loadError && !loading && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-8 text-center bg-white/98 rounded-sm shadow-xl border border-rose-200">
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 sm:p-8 text-center bg-white/98 rounded-sm shadow-xl border border-rose-200">
               <div className="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center mb-4 text-rose-600 shadow-inner">
                 <AlertCircle className="size-8" />
               </div>
@@ -1562,7 +1711,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
                 title="शाळेचे नाव, केंद्र, तालुका, जिल्हा, दिनांक इत्यादी माहिती भरा व पृष्ठात बसवा"
               >
                 <Edit3 className="size-3.5 text-amber-300" />
-                <span>माहिती भरा (Fill Details)</span>
+                <span>माहिती भरा</span>
               </button>
             </div>
           )}
@@ -1570,7 +1719,9 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           <div
             id="word-paper-container"
             ref={containerRef}
-            className="word-editor-paper bg-white shadow-xl rounded-sm text-slate-900 min-h-[1123px] w-full outline-none transition-all print:shadow-none print:max-w-none print:w-full print:m-0"
+            className={`word-editor-paper bg-white shadow-xl rounded-sm text-slate-900 min-h-[1123px] w-full outline-none transition-all print:shadow-none print:max-w-none print:w-full print:m-0 ${
+              mobileFitWidth ? "mobile-fit-active" : ""
+            }`}
             style={{
               padding: "0",
               boxSizing: "border-box",
@@ -1601,6 +1752,87 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
         .docx-wrapper > section.docx:hover {
           box-shadow: 0 6px 24px -2px rgba(37, 99, 235, 0.2) !important;
+        }
+
+        /* Strictly enforce single-line layout and whiteout mask for Question Paper Header Box across all screens */
+        .vml-page-wrapper [data-field="school-name"] {
+          width: 81.2% !important;
+          max-width: 81.2% !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          display: flex !important;
+          align-items: center !important;
+          line-height: 1.2 !important;
+        }
+        .vml-page-wrapper [data-field="school-name"] strong {
+          white-space: nowrap !important;
+          flex-shrink: 0 !important;
+        }
+        .vml-page-wrapper [data-field="school-name"] span {
+          white-space: nowrap !important;
+        }
+        .vml-page-wrapper [data-field="exam-date"] {
+          white-space: nowrap !important;
+        }
+        .header-dots-mask {
+          position: absolute !important;
+          left: 10.4% !important;
+          top: 2.26% !important;
+          width: 81.2% !important;
+          max-width: 81.2% !important;
+          height: 3.66% !important;
+          background: #ffffff !important;
+          z-index: 2 !important;
+          pointer-events: none !important;
+        }
+
+        /* Mobile responsiveness for Word document view */
+        @media screen and (max-width: 768px) {
+          .word-editor-paper.mobile-fit-active .docx-wrapper,
+          .word-editor-paper.mobile-fit-active .hw-paginated-wrapper {
+            zoom: 0.44;
+            -moz-transform: scale(0.44);
+            -moz-transform-origin: top center;
+          }
+          .word-editor-paper.mobile-fit-active {
+            max-width: 100% !important;
+            overflow-x: hidden !important;
+          }
+
+          /* Mobile responsiveness strictly for Question Paper Header Box / Information Table */
+          .vml-page-wrapper [data-field="school-name"] {
+            width: 81.2% !important;
+            max-width: 81.2% !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            font-size: clamp(8px, 2.3cqw, 13pt) !important;
+            line-height: 1.2 !important;
+          }
+          .vml-page-wrapper [data-field="school-name"] strong {
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+          }
+          .vml-page-wrapper [data-field="school-name"] span {
+            white-space: nowrap !important;
+          }
+          .vml-page-wrapper [data-field="exam-date"] {
+            white-space: nowrap !important;
+            font-size: clamp(7.5px, 2.1cqw, 12pt) !important;
+          }
+          .header-dots-mask {
+            left: 10.4% !important;
+            top: 2.26% !important;
+            width: 81.2% !important;
+            max-width: 81.2% !important;
+          }
+        }
+        @media screen and (min-width: 480px) and (max-width: 768px) {
+          .word-editor-paper.mobile-fit-active .docx-wrapper,
+          .word-editor-paper.mobile-fit-active .hw-paginated-wrapper {
+            zoom: 0.62;
+          }
         }
 
         /* ONLY apply fallback styles when Mammoth HTML fallback is active */
@@ -1796,18 +2028,18 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
       {/* Homework Header Information Modal Dialog */}
       {showHwHeaderModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-5 overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full p-4 sm:p-6 space-y-4 max-h-[92vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="size-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-sm">
-                  <Sparkles className="size-5" />
+                <div className="size-9 sm:size-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                  <Sparkles className="size-4 sm:size-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-800">
-                    गृहपाठ शीर्षक माहिती भरा (Fill Homework Header Details)
+                  <h3 className="text-sm sm:text-base font-black text-slate-800">
+                    गृहपाठ शीर्षक माहिती भरा (Homework Header Details)
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">
+                  <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
                     माहिती भरल्यावर ती मूळ Word पृष्ठात योग्य जागी अचूक बसेल
                   </p>
                 </div>
@@ -1820,7 +2052,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1 custom-scrollbar">
               {/* Section 1: शाळा व ठिकाण तपशील */}
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 space-y-3">
                 <div className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
@@ -2005,25 +2237,25 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100 flex-wrap">
-              <span className="text-[11px] text-slate-500 font-medium">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 shrink-0">
+              <span className="text-[11px] text-slate-500 font-medium text-center sm:text-left">
                 * शाळेचे नाव, शिक्षकाचे नाव व मुख्याध्यापकाचे नाव एकदा भरल्यावर कायम आठवणीत राहतील.
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-end w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setShowHwHeaderModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="flex-1 sm:flex-none px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer text-center"
                 >
                   रद्द करा
                 </button>
                 <button
                   type="button"
                   onClick={() => applyHomeworkHeaderInfo(true)}
-                  className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
+                  className="flex-1 sm:flex-none px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
                 >
                   <Sparkles className="size-4 text-amber-300" />
-                  <span>माहिती भरा व पृष्ठात अचूक बसवा</span>
+                  <span>माहिती भरा व बसवा</span>
                 </button>
               </div>
             </div>

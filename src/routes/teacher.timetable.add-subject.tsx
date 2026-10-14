@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
+import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/teacher/timetable/add-subject")({
@@ -41,6 +42,14 @@ function AddSubjectPage() {
 
       <main className="lg:pl-0 pt-20 min-h-screen">
         <div className="p-4 md:p-8 w-full max-w-full mx-auto">
+          <div className="flex items-center mb-6">
+            <Link
+              to="/teacher/timetable"
+              className="inline-flex items-center gap-1.5 text-xs font-black text-slate-500 hover:text-indigo-600 uppercase tracking-widest transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="size-4" /> Back to Timetable / वेळापत्रकावर मागे जा
+            </Link>
+          </div>
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 md:p-8">
             <h2 className="text-xl md:text-2xl font-bold text-center text-[#0f2d69] mb-8">
               Add Subject

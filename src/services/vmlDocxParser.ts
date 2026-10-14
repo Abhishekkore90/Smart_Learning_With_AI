@@ -145,26 +145,65 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         let widthPt = widthMatch ? parseFloat(widthMatch[1]) : 120;
         let heightPt = heightMatch ? parseFloat(heightMatch[1]) : 32;
 
+        // Check if this shape is purely underlines/dots in the top header area
+        const isOnlyUnderlines = /^[\s\-_.~=—–•\.]+$/.test(rawText);
+        if (isOnlyUnderlines && topPt < 45) {
+          // Skip redundant underline shape at top header because school-name element and header-dots-mask handle it cleanly
+          continue;
+        }
+
         let fieldAttr = "";
         let extraBoxStyle = "";
 
-        if (rawText.includes("शाळेचे नाव")) {
+        let shapeInnerHtml = escapeHtml(rawText);
+
+        const isSchoolNameText =
+          rawText.includes("शाळेचे नाव") ||
+          /school\s*name/i.test(rawText) ||
+          /name\s*of\s*school/i.test(rawText) ||
+          (topPt < 40 && /\bschool\b/i.test(rawText));
+
+        if (isSchoolNameText) {
           fieldAttr = 'data-field="school-name"';
-          // Expand width comfortably up to 460pt so school name fits inside the box without touching right border
-          widthPt = Math.max(widthPt, 460);
+          // Span box comfortably up to ~81.2% inside the border (497pt / 612pt)
+          widthPt = Math.max(widthPt, 497);
           heightPt = 28;
-          extraBoxStyle = "z-index: 10;";
-        } else if (rawText.includes("दि.") && (rawText.includes("२०२") || rawText.includes("/"))) {
+          extraBoxStyle = "z-index: 10; white-space: nowrap !important; overflow: hidden !important; display: flex; align-items: center; max-width: 81.2% !important;";
+
+          const isEng = /school/i.test(rawText) || !rawText.includes("शाळेचे");
+          const cleanName = rawText
+            .replace(/^(?:शाळेचे\s*नाव|school\s*name)\s*[:\-–—]?\s*/i, "")
+            .replace(/^[_.\s\-–—]+$/, "")
+            .trim();
+
+          const label = isEng ? "SCHOOL NAME -" : "शाळेचे नाव :";
+
+          if (cleanName) {
+            shapeInnerHtml = `<span style="background: #ffffff; padding: 0 2px; display: flex; align-items: center; width: 100%; max-width: 100%;"><strong style="white-space: nowrap; flex-shrink: 0; color: #0f172a;">${label} </strong><span style="font-weight: 700; color: #0f172a; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0;" title="${escapeHtml(cleanName)}">${escapeHtml(cleanName)}</span></span>`;
+          } else {
+            shapeInnerHtml = `<span style="background: #ffffff; padding: 0 2px; display: flex; align-items: center; width: 100%;"><strong style="white-space: nowrap; flex-shrink: 0; color: #0f172a;">${label} </strong><span style="flex: 1; min-width: 20px; border-bottom: 1.5px dotted #94a3b8; margin-left: 6px; height: 1em; align-self: center;"></span></span>`;
+          }
+        } else if (
+          (rawText.includes("दि.") || /date\s*[:\-–—]?/i.test(rawText)) &&
+          (rawText.includes("२०२") || rawText.includes("202") || rawText.includes("/"))
+        ) {
           fieldAttr = 'data-field="exam-date"';
           widthPt = Math.max(widthPt, 200);
           heightPt = 28;
-          extraBoxStyle = "z-index: 10;";
+          extraBoxStyle = "z-index: 10; white-space: nowrap !important; overflow: hidden !important;";
         }
 
-        const leftPct = Math.max(0, Math.min(99.5, (leftPt / pageWidthPt) * 100));
-        const topPct = Math.max(0, Math.min(99.5, (topPt / pageHeightPt) * 100));
-        const widthPct = Math.max(1, Math.min(100 - leftPct, (widthPt / pageWidthPt) * 100));
-        const heightPct = (heightPt / pageHeightPt) * 100;
+        let leftPct = Math.max(0, Math.min(99.5, (leftPt / pageWidthPt) * 100));
+        let topPct = Math.max(0, Math.min(99.5, (topPt / pageHeightPt) * 100));
+        let widthPct = Math.max(1, Math.min(100 - leftPct, (widthPt / pageWidthPt) * 100));
+        let heightPct = (heightPt / pageHeightPt) * 100;
+
+        if (isSchoolNameText) {
+          leftPct = 10.458;
+          topPct = 2.35;
+          widthPct = 81.2;
+          heightPct = 3.66;
+        }
 
         // Font formatting
         const isBold = s.includes("<w:b/>") || s.includes("<w:b ");
@@ -188,18 +227,31 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           ? `'${docFont}', 'Noto Sans Devanagari', 'Tiro Devanagari Marathi', 'Nirmala UI', 'Mangal', sans-serif`
           : `'Noto Sans Devanagari', 'Tiro Devanagari Marathi', 'Nirmala UI', 'Mangal', sans-serif`;
 
+        const isSchoolNameField = fieldAttr === 'data-field="school-name"';
+        const whiteSpaceRule = isSchoolNameField ? "white-space: nowrap !important; overflow: hidden !important;" : "white-space: pre-wrap; word-break: break-word;";
+
         shapesHtml.push(`
           <div
             contenteditable="true"
             spellcheck="false"
             ${fieldAttr}
             class="vml-shape-text"
-            style="position: absolute; left: ${leftPct.toFixed(3)}%; top: ${topPct.toFixed(3)}%; width: ${widthPct.toFixed(3)}%; height: ${heightPct.toFixed(3)}%; display: flex; align-items: center; justify-content: ${justifyCss}; font-size: ${fontSizePt}pt; font-size: ${fontSizeCqw}cqw; font-weight: ${isBold ? "bold" : "normal"}; font-style: ${isItalic ? "italic" : "normal"}; color: ${color}; text-align: ${align}; font-family: ${fontFamily}; line-height: 1.15; padding: 0 4px; box-sizing: border-box; cursor: text; outline: none; white-space: pre-wrap; word-break: break-word; ${extraBoxStyle}"
-          >${escapeHtml(rawText)}</div>
+            style="position: absolute; left: ${leftPct.toFixed(3)}%; top: ${topPct.toFixed(3)}%; width: ${widthPct.toFixed(3)}%; height: ${heightPct.toFixed(3)}%; display: flex; align-items: center; justify-content: ${justifyCss}; font-size: ${fontSizePt}pt; font-size: ${fontSizeCqw}cqw; font-weight: ${isBold ? "bold" : "normal"}; font-style: ${isItalic ? "italic" : "normal"}; color: ${color}; text-align: ${align}; font-family: ${fontFamily}; line-height: 1.15; padding: 0 4px; box-sizing: border-box; cursor: text; outline: none; ${whiteSpaceRule} ${extraBoxStyle}"
+          >${shapeInnerHtml}</div>
         `);
       }
 
-      const hasSchoolHeader = shapes.some((s) => s.includes("शाळेचे नाव"));
+      const hasSchoolHeader = shapes.some((s) => {
+        const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+        const txt = tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+        return (
+          txt.includes("शाळेचे नाव") ||
+          /school\s*name/i.test(txt) ||
+          /name\s*of\s*school/i.test(txt) ||
+          (sTop < 45 && /\bschool\b/i.test(txt))
+        );
+      });
 
       pagesHtml.push(`
         <div

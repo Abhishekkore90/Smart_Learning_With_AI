@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { showToast as toast } from "@/lib/custom-toast";
@@ -2172,6 +2172,19 @@ function TeacherMeetingPage() {
         <ModulePaywall moduleId="meeting-register" defaultTitle="माता-पालक व शिक्षक सभा नोंदवही (Meeting Register)" selectedMonth={selectedMonth}>
           <PinGate sectionKey="meeting">
             <div className="p-4 md:p-8 space-y-8 max-w-full mx-auto print:p-0 print:pl-0">
+              {/* Back to Dashboard Button on Main Committee View */}
+              {!selectedCommittee && (
+                <div className="print:hidden">
+                  <Link
+                    to="/teacher"
+                    className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+                  >
+                    <ArrowLeft className="size-4 text-indigo-600" />
+                    <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+                  </Link>
+                </div>
+              )}
+
               {/* Header section (Hidden on print) */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">
                 <div>

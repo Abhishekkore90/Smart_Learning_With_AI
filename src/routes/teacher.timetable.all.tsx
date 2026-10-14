@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
+import { ChevronLeft } from "lucide-react";
 
 export const Route = createFileRoute("/teacher/timetable/all")({
   component: AllTimetablePage,
@@ -13,7 +14,15 @@ function AllTimetablePage() {
       <div className="flex flex-1 mt-16">
         <TeacherSidebar />
         <main className="flex-1 lg:pl-0 p-6 relative">
-          <div className="absolute top-32 left-8 md:left-16 space-y-2 z-10">
+          <div className="flex items-center mb-4">
+            <Link
+              to="/teacher/timetable"
+              className="inline-flex items-center gap-1.5 text-xs font-black text-slate-500 hover:text-indigo-600 uppercase tracking-widest transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="size-4" /> Back to Timetable / वेळापत्रकावर मागे जा
+            </Link>
+          </div>
+          <div className="absolute top-44 left-8 md:left-16 space-y-2 z-10">
             <button className="bg-[#2e7d32] hover:bg-green-800 text-white text-[13px] font-medium py-1.5 px-4 rounded-sm shadow-sm transition-colors">
               Print Timetable
             </button>

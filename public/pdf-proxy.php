@@ -80,7 +80,7 @@ $data = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 $curlError = curl_error($ch);
-curl_close($ch);
+unset($ch);
 
 if ($data === false || $httpCode < 200 || $httpCode >= 300) {
     http_response_code($httpCode ? $httpCode : 502);

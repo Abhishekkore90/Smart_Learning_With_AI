@@ -18,6 +18,8 @@ export interface MCQHomeworkSet {
   timeLimitMinutes?: number; // e.g. 15, 20 or 0 for untimed
   questions: MCQQuestion[];
   totalMarks: number;
+  teacherName?: string;
+  schoolName?: string;
   createdBy: {
     uid?: string;
     name: string;

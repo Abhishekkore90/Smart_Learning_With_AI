@@ -42,20 +42,50 @@ export const MCQCertificate: React.FC<MCQCertificateProps> = ({
   schoolName,
 }) => {
   const certificateRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [containerWidth, setContainerWidth] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      return Math.min(window.innerWidth - 32, 780);
+    }
+    return 780;
+  });
+  const [naturalHeight, setNaturalHeight] = useState<number>(550);
+
+  React.useEffect(() => {
+    const updateSize = () => {
+      if (wrapperRef.current) {
+        const w = wrapperRef.current.clientWidth;
+        if (w > 0) setContainerWidth(w);
+      }
+      if (certificateRef.current) {
+        const h = certificateRef.current.offsetHeight;
+        if (h > 0) setNaturalHeight(h);
+      }
+    };
+    updateSize();
+    const ro = new ResizeObserver(updateSize);
+    if (wrapperRef.current) ro.observe(wrapperRef.current);
+    if (certificateRef.current) ro.observe(certificateRef.current);
+    window.addEventListener("resize", updateSize);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", updateSize);
+    };
+  }, []);
 
   const formattedDate = dateStr || new Date().toISOString().split("T")[0];
 
-  const gradeText =
-    percentage >= 90
-      ? "A+ (उत्कृष्ट / Outstanding)"
-      : percentage >= 75
-      ? "A (फार छान / Distinction)"
-      : percentage >= 60
-      ? "B+ (छान / First Class)"
-      : percentage >= 40
-      ? "B (उत्तीर्ण / Pass)"
-      : "सराव आवश्यक (Keep Practicing)";
+  const getGradeInfo = (pct: number) => {
+    if (pct >= 90) return { letter: "A+", mr: "उत्कृष्ट", en: "Outstanding" };
+    if (pct >= 75) return { letter: "A", mr: "फार छान", en: "Distinction" };
+    if (pct >= 60) return { letter: "B+", mr: "छान", en: "First Class" };
+    if (pct >= 40) return { letter: "B", mr: "उत्तीर्ण", en: "Pass" };
+    return { letter: "C", mr: "सराव आवश्यक", en: "Keep Practicing" };
+  };
+
+  const gradeInfo = getGradeInfo(percentage);
+  const gradeText = `${gradeInfo.letter} (${gradeInfo.mr} / ${gradeInfo.en})`;
 
   // One-click PNG image download of the certificate
   const handleDownloadImage = async () => {
@@ -247,37 +277,41 @@ export const MCQCertificate: React.FC<MCQCertificateProps> = ({
     }
   };
 
+  const baseWidth = 780;
+  const isScaled = containerWidth > 0 && containerWidth < baseWidth;
+  const scale = isScaled ? containerWidth / baseWidth : 1;
+
   return (
     <div className="space-y-4 w-full">
       {/* Top Banner Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-2">
-          <Award className="w-5 h-5 text-amber-500" />
-          <span className="font-bold text-sm text-slate-800 dark:text-slate-100">
+          <Award className="w-5 h-5 text-amber-500 shrink-0" />
+          <span className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100">
             विद्यार्थी गुणवत्ता प्रमाणपत्र (Digital Certificate)
           </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={handleDownloadImage}
             disabled={isDownloading}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-70"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-70"
           >
             {isDownloading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Download className="w-4 h-4" />
             )}
-            <span>{isDownloading ? "तयार होत आहे..." : "प्रमाणपत्र इमेज डाऊनलोड (PNG)"}</span>
+            <span>{isDownloading ? "तयार होत आहे..." : "इमेज डाऊनलोड (PNG)"}</span>
           </button>
 
           <button
             type="button"
             onClick={handleDownloadPDF}
             disabled={isDownloading}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer disabled:opacity-70"
+            className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer disabled:opacity-70"
             title="प्रमाणपत्र PDF डाउनलोड करा"
           >
             <Download className="w-4 h-4" />
@@ -287,26 +321,41 @@ export const MCQCertificate: React.FC<MCQCertificateProps> = ({
           <button
             type="button"
             onClick={handleShareToTeacher}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all active:scale-95 cursor-pointer"
           >
             <Share2 className="w-4 h-4" />
-            <span>शिक्षकांना WhatsApp वर पाठवा</span>
+            <span>WhatsApp पाठवा</span>
           </button>
         </div>
       </div>
 
-      {/* CERTIFICATE CONTAINER (Designed for clean image export & on-screen beauty) */}
-      <div className="overflow-x-auto pb-2">
+      {/* CERTIFICATE CONTAINER - 100% MOBILE RESPONSIVE, ZERO SCROLLBAR, FULL A4 RATIO */}
+      <div
+        ref={wrapperRef}
+        className="w-full flex justify-center items-start overflow-hidden select-none"
+        style={{
+          height: isScaled ? `${Math.ceil(naturalHeight * scale)}px` : "auto",
+        }}
+      >
         <div
-          ref={certificateRef}
-          id="mcq-student-certificate"
           style={{
-            minWidth: "780px",
-            background: "#fffdf9",
-            color: "#0f172a",
+            width: `${baseWidth}px`,
+            minWidth: `${baseWidth}px`,
+            transform: isScaled ? `scale(${scale})` : undefined,
+            transformOrigin: "top center",
           }}
-          className="relative mx-auto rounded-3xl p-8 sm:p-10 shadow-2xl border-[6px] border-[#d97706] font-sans selection:bg-amber-100 overflow-hidden"
         >
+          <div
+            ref={certificateRef}
+            id="mcq-student-certificate"
+            style={{
+              width: `${baseWidth}px`,
+              minWidth: `${baseWidth}px`,
+              background: "#fffdf9",
+              color: "#0f172a",
+            }}
+            className="relative mx-auto rounded-3xl p-8 sm:p-10 shadow-2xl border-[6px] border-[#d97706] font-sans selection:bg-amber-100 overflow-hidden"
+          >
           {/* Inner Ornate Gold Border */}
           <div
             style={{
@@ -450,13 +499,18 @@ export const MCQCertificate: React.FC<MCQCertificateProps> = ({
                 </span>
               </div>
 
-              <div className="text-center">
+              <div className="text-center flex flex-col items-center justify-center">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  श्रेणी (Grade)
+                  श्रेणी (GRADE)
                 </span>
-                <span className="text-xs sm:text-sm font-extrabold text-amber-800 line-clamp-1 mt-1">
-                  {gradeText}
-                </span>
+                <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                  <span className="text-xl sm:text-2xl font-black text-amber-800">
+                    {gradeInfo.letter}
+                  </span>
+                  <span className="text-xs sm:text-sm font-extrabold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-300">
+                    {gradeInfo.mr}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -497,5 +551,6 @@ export const MCQCertificate: React.FC<MCQCertificateProps> = ({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };

@@ -19,16 +19,15 @@ export const MCQPrintDocument = forwardRef<HTMLDivElement, MCQPrintDocumentProps
       ? submission.percentage
       : Math.round((score / (totalMarks || 1)) * 100);
 
-    const gradeText =
-      percentage >= 90
-        ? "A+ (उत्कृष्ट / Outstanding)"
-        : percentage >= 75
-        ? "A (फार छान / Distinction)"
-        : percentage >= 60
-        ? "B+ (छान / First Class)"
-        : percentage >= 40
-        ? "B (उत्तीर्ण / Pass)"
-        : "सराव आवश्यक (Keep Practicing)";
+    const getGradeInfo = (pct: number) => {
+      if (pct >= 90) return { letter: "A+", mr: "उत्कृष्ट", en: "Outstanding" };
+      if (pct >= 75) return { letter: "A", mr: "फार छान", en: "Distinction" };
+      if (pct >= 60) return { letter: "B+", mr: "छान", en: "First Class" };
+      if (pct >= 40) return { letter: "B", mr: "उत्तीर्ण", en: "Pass" };
+      return { letter: "C", mr: "सराव आवश्यक", en: "Keep Practicing" };
+    };
+
+    const gradeInfo = getGradeInfo(percentage);
 
     const formattedDate = quiz.date || new Date().toISOString().split("T")[0];
 
@@ -173,13 +172,18 @@ export const MCQPrintDocument = forwardRef<HTMLDivElement, MCQPrintDocumentProps
               </span>
             </div>
 
-            <div className="text-center">
+            <div className="text-center flex flex-col items-center justify-center">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                श्रेणी (Grade)
+                श्रेणी (GRADE)
               </span>
-              <span className="text-xs sm:text-sm font-extrabold text-amber-800 line-clamp-1 mt-1">
-                {gradeText}
-              </span>
+              <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                <span className="text-xl sm:text-2xl font-black text-amber-800">
+                  {gradeInfo.letter}
+                </span>
+                <span className="text-xs sm:text-sm font-extrabold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-300">
+                  {gradeInfo.mr}
+                </span>
+              </div>
             </div>
           </div>
 

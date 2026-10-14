@@ -677,7 +677,7 @@ function AdminQuestionPaperPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3.5">
                 {EXAM_TABS.map((tab, idx) => {
                   const isActive = selectedExamTab === tab.id;
                   const IconComponent = tab.icon;
@@ -689,38 +689,38 @@ function AdminQuestionPaperPage() {
                         setExamType(tab.id);
                         setFilterExamType(tab.id);
                       }}
-                      className={`relative p-3.5 sm:p-4 rounded-2xl text-left transition-all duration-200 border-2 cursor-pointer flex items-center gap-3 shadow-xs ${
+                      className={`relative p-2.5 sm:p-4 rounded-2xl text-left transition-all duration-200 border-2 cursor-pointer flex items-center gap-2 sm:gap-3 shadow-xs ${
                         isActive
                           ? `bg-gradient-to-r ${tab.color} text-white border-transparent shadow-md scale-[1.02]`
                           : "bg-slate-50/70 hover:bg-white text-slate-800 border-slate-200 hover:border-blue-300 hover:shadow-xs"
                       }`}
                     >
                       <div
-                        className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        className={`size-8 sm:size-10 rounded-xl flex items-center justify-center shrink-0 ${
                           isActive ? "bg-white/20 text-white" : "bg-white text-slate-700 border border-slate-200 shadow-2xs"
                         }`}
                       >
-                        <IconComponent className="size-5" />
+                        <IconComponent className="size-4 sm:size-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1 sm:gap-1.5">
                           <span
-                            className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                            className={`text-[9px] sm:text-[10px] font-black px-1 sm:px-1.5 py-0.5 rounded-md shrink-0 ${
                               isActive ? "bg-white/25 text-white" : "bg-slate-200 text-slate-700"
                             }`}
                           >
                             {idx + 1}
                           </span>
-                          <span className="font-black text-base sm:text-lg leading-tight truncate">
+                          <span className="font-black text-xs sm:text-base leading-tight whitespace-nowrap">
                             {tab.labelMr}
                           </span>
                         </div>
-                        <div className={`text-[11px] font-semibold mt-0.5 ${isActive ? "text-white/80" : "text-slate-400"}`}>
+                        <div className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 truncate ${isActive ? "text-white/80" : "text-slate-400"}`}>
                           {tab.labelEn}
                         </div>
                       </div>
                       {isActive && (
-                        <span className="size-2 rounded-full bg-white shadow-xs shrink-0" />
+                        <span className="size-1.5 sm:size-2 rounded-full bg-white shadow-xs shrink-0" />
                       )}
                     </button>
                   );

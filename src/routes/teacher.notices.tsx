@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { useState, useEffect } from "react";
@@ -19,6 +19,7 @@ import {
   Bell,
   Calendar as CalendarIcon,
   MessageSquare,
+  ArrowLeft,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -81,6 +82,17 @@ function TeacherNoticesPage() {
 
       <main className="lg:pl-0 pt-16 min-h-screen">
         <div className="p-6 md:p-10 space-y-8 max-w-full mx-auto">
+          {/* Back to Dashboard Button */}
+          <div>
+            <Link
+              to="/teacher"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+            >
+              <ArrowLeft className="size-4 text-indigo-600" />
+              <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+            </Link>
+          </div>
+
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
               <h1 className="text-3xl font-black text-slate-900 tracking-tight">

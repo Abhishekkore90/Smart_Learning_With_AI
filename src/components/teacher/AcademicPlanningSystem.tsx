@@ -52,6 +52,7 @@ import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorag
 import { uploadFileWithProgress, deleteUploadedFile } from "@/lib/upload";
 
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
+import { fetchBinaryFile } from "@/lib/bunny-auth-pdf";
 import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
 import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord, formatMarathiClassName } from "@/lib/smartPlanningParser";
 import { extractSubjectSectionsFromExcel, normalizeSubjectName, isExamOrAssessmentText, isMarathiMonth, canonicalizeMarathiMonth } from "@/lib/smartSubjectSplitter";
@@ -247,6 +248,36 @@ const isHeaderLabelText = (str: string): boolean => {
   );
 };
 
+// Helper to validate whether a PlanningFileRecord is a genuine, active uploaded file
+export const isValidPlanningRecord = (rec?: PlanningFileRecord | null): rec is PlanningFileRecord => {
+  if (!rec) return false;
+  const fileName = rec.fileName;
+  const hasFileName = Boolean(
+    fileName &&
+    typeof fileName === "string" &&
+    fileName.trim().length > 0 &&
+    fileName.trim().toLowerCase() !== "undefined" &&
+    fileName.trim().toLowerCase() !== "null"
+  );
+  if (!hasFileName) return false;
+
+  const fileUrl = rec.fileUrl;
+  const hasFileUrl = Boolean(
+    fileUrl &&
+    typeof fileUrl === "string" &&
+    fileUrl.trim().length > 0 &&
+    fileUrl.trim().toLowerCase() !== "undefined" &&
+    fileUrl.trim().toLowerCase() !== "null" &&
+    !fileUrl.includes("auto.xlsx")
+  );
+  const hasTableData = Boolean(
+    (Array.isArray(rec.tableRows) && rec.tableRows.length > 0) ||
+    (Array.isArray(rec.rawHeaders) && rec.rawHeaders.length > 0)
+  );
+
+  return hasFileUrl || hasTableData || Boolean(rec.id);
+};
+
 // Helper to detect raw PDF binary stream noise (e.g. /Contents, 4 0 obj, endobj, stream, cm)
 const isPdfNoiseLine = (row: string[] | string | undefined): boolean => {
   if (!row) return false;
@@ -298,35 +329,46 @@ const extractExcelData = async (
   try {
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(arrayBuffer, { type: "array", cellStyles: true });
-    const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) return empty;
-
-    const worksheet = workbook.Sheets[firstSheetName];
-    if (!worksheet || !worksheet["!ref"]) return empty;
-
-    // Read all cells directly by absolute coordinates starting strictly from Column 0 (A)
-    // This prevents sheet_to_json from trimming empty leading cells and shifting columns
-    const range = XLSX.utils.decode_range(worksheet["!ref"]);
-    const maxRow = range.e.r;
-    const maxCol = range.e.c;
+    if (!workbook.SheetNames || workbook.SheetNames.length === 0) return empty;
 
     const rawData: string[][] = [];
-    for (let r = 0; r <= maxRow; r++) {
-      const row: string[] = [];
-      for (let c = 0; c <= maxCol; c++) {
-        const cellAddr = XLSX.utils.encode_cell({ r, c });
-        const cell = worksheet[cellAddr];
-        let val = "";
-        if (cell && cell.v !== undefined && cell.v !== null) {
-          val = String(cell.w || cell.v).trim();
-          if (val.includes("$")) {
-            val = val.replace(/\$\s*/g, "").trim();
+
+    workbook.SheetNames.forEach((sheetName) => {
+      const worksheet = workbook.Sheets[sheetName];
+      if (!worksheet || !worksheet["!ref"]) return;
+
+      // Read all cells directly by absolute coordinates starting strictly from Column 0 (A)
+      const range = XLSX.utils.decode_range(worksheet["!ref"]);
+      const maxRow = range.e.r;
+      const maxCol = range.e.c;
+
+      const sheetRows: string[][] = [];
+      for (let r = 0; r <= maxRow; r++) {
+        const row: string[] = [];
+        for (let c = 0; c <= maxCol; c++) {
+          const cellAddr = XLSX.utils.encode_cell({ r, c });
+          const cell = worksheet[cellAddr];
+          let val = "";
+          if (cell && cell.v !== undefined && cell.v !== null) {
+            val = String(cell.w || cell.v).trim();
+            if (val.includes("$")) {
+              val = val.replace(/\$\s*/g, "").trim();
+            }
           }
+          row.push(val);
         }
-        row.push(val);
+        sheetRows.push(row);
       }
-      rawData.push(row);
-    }
+
+      const activeSheetRows = sheetRows.filter((r) => r.some((c) => c.trim() !== ""));
+      if (activeSheetRows.length === 0) return;
+
+      if (workbook.SheetNames.length > 1) {
+        rawData.push([`मासिक व घटक नियोजन माहे - ${sheetName}`]);
+      }
+      rawData.push(...activeSheetRows);
+    });
+
     if (rawData.length === 0) return empty;
 
     // ── Step 1: Locate the header row ─────────────────────────────────────────
@@ -894,13 +936,11 @@ export function AcademicPlanningSystem({
       // Reject legacy contaminated mock data
       if (
         p.schoolName === "z.p.school" ||
-        p.udiseNumber === "2233445566778899" ||
-        p.headMasterName?.includes("बाळासाहेब") ||
-        p.kendraName === "नरसिंगपूर"
+        p.udiseNumber === "2233445566778899"
       ) {
         return false;
       }
-      return Boolean(p.schoolName && p.schoolName.trim() !== "");
+      return Boolean((p.schoolName && p.schoolName.trim() !== "") || (p.teacherName && p.teacherName.trim() !== ""));
     };
 
     const applyProfile = (data: Partial<UserSchoolProfile>) => {
@@ -938,7 +978,23 @@ export function AcademicPlanningSystem({
     }
 
     if (!cachedFound) {
-      applyProfile(blankProfile);
+      // Fallback to unified school profile first
+      const unified = getUnifiedSchoolProfile();
+      if (unified && (unified.schoolName || unified.teacherName || unified.udise)) {
+        applyProfile({
+          schoolName: unified.schoolName || "",
+          kendraName: unified.kendra || unified.centerName || "",
+          talukaName: unified.taluka || "",
+          districtName: unified.jilha || unified.district || "",
+          udiseNumber: unified.udise || "",
+          teacherName: unified.teacherName || "",
+          headMasterName: unified.headmaster || "",
+          isSavedByUser: true,
+        });
+        cachedFound = true;
+      } else {
+        applyProfile(blankProfile);
+      }
     }
 
     // 2. Fetch from Firestore for logged-in user
@@ -1042,7 +1098,23 @@ export function AcademicPlanningSystem({
   };
 
   // Real-time planning files map: key -> PlanningFileRecord
-  const [planningFiles, setPlanningFiles] = useState<Record<string, PlanningFileRecord>>({});
+  const [planningFiles, setPlanningFiles] = useState<Record<string, PlanningFileRecord>>(() => {
+    try {
+      const cached = localStorage.getItem("cce_academic_plannings_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        const validMap: Record<string, PlanningFileRecord> = {};
+        Object.entries(parsed).forEach(([k, v]) => {
+          const rec = v as PlanningFileRecord;
+          if (rec && isValidPlanningRecord(rec)) {
+            validMap[k] = rec;
+          }
+        });
+        return validMap;
+      }
+    } catch {}
+    return {};
+  });
   const [loadingFiles, setLoadingFiles] = useState<boolean>(true);
 
   // Upload Modal State
@@ -1306,6 +1378,14 @@ export function AcademicPlanningSystem({
   };
 
   const handleAddTableRow = () => {
+    const isRawTable = rawEditorHeaders.length > 0 && !rawEditorHeaders.some((h) => isPdfNoiseLine(h)) && rawEditorRows.some((r) => !isPdfNoiseLine(r));
+    if (isRawTable) {
+      const numCols = rawEditorHeaders.length > 0 ? rawEditorHeaders.length : 6;
+      const emptyRow = Array(numCols).fill("");
+      setRawEditorRows((prev) => [...prev, emptyRow]);
+      toast.success("तक्त्यात नवीन ओळ जोडली गेली.");
+      return;
+    }
     const newRow: PlanningTableRow = {
       id: Date.now().toString(),
       month: "नवीन महिना",
@@ -1533,11 +1613,22 @@ export function AcademicPlanningSystem({
         const filesMap: Record<string, PlanningFileRecord> = {};
         snapshot.docs.forEach((docSnap) => {
           const data = docSnap.data() as PlanningFileRecord;
-          filesMap[docSnap.id] = data;
+          const id = data.id || docSnap.id;
+          const record = { ...data, id, docId: docSnap.id };
+
+          // Skip ghost or deleted records with no valid fileName
+          if (!isValidPlanningRecord(record)) {
+            return;
+          }
+
+          filesMap[docSnap.id] = record;
+          if (id && id !== docSnap.id) {
+            filesMap[id] = record;
+          }
 
           // If current modal file was replaced in Firestore, update active modal view
-          if (viewModalFile && viewModalFile.id === docSnap.id && data.uploadedAt !== viewModalFile.uploadedAt) {
-            setViewModalFile(data);
+          if (viewModalFile && (viewModalFile.id === docSnap.id || viewModalFile.id === id) && data.uploadedAt !== viewModalFile.uploadedAt) {
+            setViewModalFile(record);
           }
         });
 
@@ -1553,7 +1644,15 @@ export function AcademicPlanningSystem({
         try {
           const cached = localStorage.getItem("cce_academic_plannings_cache");
           if (cached) {
-            setPlanningFiles(JSON.parse(cached));
+            const parsed = JSON.parse(cached);
+            const sanitizedMap: Record<string, PlanningFileRecord> = {};
+            Object.entries(parsed).forEach(([k, v]) => {
+              const rec = v as PlanningFileRecord;
+              if (isValidPlanningRecord(rec)) {
+                sanitizedMap[k] = rec;
+              }
+            });
+            setPlanningFiles(sanitizedMap);
           }
         } catch (e) { }
         setLoadingFiles(false);
@@ -1732,7 +1831,7 @@ export function AcademicPlanningSystem({
 
     const fileKey = getFileRecordKey(targetType, rawSubj, targetCls, expectedMed, yearStr);
     let fileRecord: PlanningFileRecord | undefined = planningFiles[fileKey];
-    if (fileRecord && detectRecordMedium(fileRecord) === expectedMed) return fileRecord;
+    if (fileRecord && isValidPlanningRecord(fileRecord) && detectRecordMedium(fileRecord) === expectedMed) return fileRecord;
 
     // Fallback check for legacy record keys (e.g. classId_mediumId_subjectId_planningType)
     const cls = targetCls.trim().toLowerCase();
@@ -1742,10 +1841,10 @@ export function AcademicPlanningSystem({
     const legacyKey1 = `${cls}_${expectedMed}_${subj}_${type}`;
     const legacyKey2 = `${cls}_${expectedMed}_${subj}`;
     fileRecord = planningFiles[legacyKey1];
-    if (fileRecord && detectRecordMedium(fileRecord) === expectedMed) return fileRecord;
+    if (fileRecord && isValidPlanningRecord(fileRecord) && detectRecordMedium(fileRecord) === expectedMed) return fileRecord;
 
     const candLegacy2 = planningFiles[legacyKey2];
-    if (candLegacy2 && detectRecordMedium(candLegacy2) === expectedMed) {
+    if (candLegacy2 && isValidPlanningRecord(candLegacy2) && detectRecordMedium(candLegacy2) === expectedMed) {
       const cType = (candLegacy2.planningType || (candLegacy2 as any).category || "").trim().toLowerCase();
       const isQB = cType === "question_bank" || cType === "prashnapedhi" || (candLegacy2.fileName || "").includes("प्रश्नपेढी");
       const isMo = cType === "monthly" || cType === "masik_niyojan" || (candLegacy2.fileName || "").includes("मासिक");
@@ -1755,7 +1854,7 @@ export function AcademicPlanningSystem({
     }
 
     // Fallback search across all files in planningFiles with strict medium isolation
-    const allFiles = Object.values(planningFiles);
+    const allFiles = Object.values(planningFiles).filter(isValidPlanningRecord);
     fileRecord = allFiles.find((f) => {
       if (!f) return false;
       // STRICT MEDIUM ISOLATION: A file MUST strictly match the target medium!
@@ -1835,7 +1934,7 @@ export function AcademicPlanningSystem({
         return (
           f.subjectId === "all" ||
           !f.subjectId ||
-          f.id.endsWith("_all")
+          (f.id && f.id.endsWith("_all"))
         );
       });
       if (fileRecord) return fileRecord;
@@ -2061,7 +2160,8 @@ export function AcademicPlanningSystem({
 
   // Handle Delete / Remove Existing Planning or Question Bank File (Admin only)
   const handleDeleteFile = async (rec: PlanningFileRecord) => {
-    if (!rec || !rec.id) {
+    const targetDocId = rec?.id || (rec as any)?.docId;
+    if (!rec || !targetDocId) {
       toast.error("हटवण्यासाठी फाईल नोंद सापडली नाही.");
       return;
     }
@@ -2074,7 +2174,7 @@ export function AcademicPlanningSystem({
           : "प्रश्नपेढी (Question Bank)";
 
     const classLabel = CLASS_OPTIONS.find((c) => c.id === rec.classId)?.mr || `इयत्ता ${rec.classId}`;
-    const subjName = rec.subjectId === "all" ? "सर्व विषय (All Subjects)" : rec.subjectId;
+    const subjName = rec.subjectId === "all" ? "सर्व विषय (All Subjects)" : (rec.subjectId || "हा विषय");
     const medLabel = rec.mediumId === "semi" ? "सेमी-इंग्रजी" : "मराठी";
 
     const confirmMsg = `तुम्हाला खात्री आहे का?\n\nफाईल: '${rec.fileName || "ही फाईल"}'\nमाध्यम: ${medLabel} | ${classLabel} | ${typeLabel}\nविषय: ${subjName}\n\nही फाईल कायमस्वरूपी हटवली जाईल (This file will be permanently removed).`;
@@ -2082,12 +2182,34 @@ export function AcademicPlanningSystem({
     if (!window.confirm(confirmMsg)) return;
 
     try {
-      setDeletingFileId(rec.id);
+      setDeletingFileId(targetDocId);
       toast.info("⚡ फाईल हटवली जात आहे...");
 
-      // 1. Delete document from Firestore 'academic_plannings'
-      const docRef = doc(db, "academic_plannings", rec.id);
-      await deleteDoc(docRef);
+      const keysToDelete = new Set<string>();
+      if (rec.id) keysToDelete.add(rec.id);
+      if ((rec as any).docId) keysToDelete.add((rec as any).docId);
+
+      const year = (rec.academicYear || selectedAcademicYear || "2026-27").trim();
+      const med = (rec.mediumId || selectedMedium || "marathi").trim().toLowerCase();
+      const cls = (rec.classId || selectedClass || "1st").trim().toLowerCase();
+      const type = (rec.planningType || selectedPlanningType || "annual").trim().toLowerCase();
+      const subj = (rec.subjectId || selectedSubject || "all").trim().toLowerCase();
+
+      keysToDelete.add(`${year}_${med}_${cls}_${type}_${subj}`);
+      keysToDelete.add(`${cls}_${med}_${subj}_${type}`);
+      keysToDelete.add(`${cls}_${med}_${subj}`);
+      if (subj !== "all") {
+        keysToDelete.add(`${cls}_${med}_all_${type}`);
+      }
+
+      // 1. Delete document from Firestore 'academic_plannings' for all possible keys
+      await Promise.all(
+        Array.from(keysToDelete).map(async (k) => {
+          try {
+            await deleteDoc(doc(db, "academic_plannings", k));
+          } catch (e) {}
+        })
+      );
 
       // 2. Delete physical uploaded file from backend storage (Firebase / Bunny)
       const cloudUrl = rec.fileUrl || (rec as any).cloudUrl;
@@ -2096,57 +2218,77 @@ export function AcademicPlanningSystem({
       }
 
       // 3. Also delete any user edits from 'academic_plannings_user_edits' so data never mixes!
-
       try {
-        const editKeys = [
-          rec.id,
-          `annual_${rec.id}`,
-          `monthly_${rec.id}`,
-          `question_bank_${rec.id}`,
-        ];
+        const editKeys: string[] = [];
+        keysToDelete.forEach((k) => {
+          editKeys.push(k, `annual_${k}`, `monthly_${k}`, `question_bank_${k}`);
+        });
         editKeys.forEach((k) => {
           deleteDoc(doc(db, "academic_plannings_user_edits", k)).catch(() => {});
           if (user?.uid) {
             deleteDoc(doc(db, "academic_plannings_user_edits", `${user.uid}_${k}`)).catch(() => {});
-            deleteDoc(doc(db, "academic_plannings_user_edits", `annual_${user.uid}_${rec.id}`)).catch(() => {});
-            deleteDoc(doc(db, "academic_plannings_user_edits", `monthly_${user.uid}_${rec.id}`)).catch(() => {});
-            deleteDoc(doc(db, "academic_plannings_user_edits", `question_bank_${user.uid}_${rec.id}`)).catch(() => {});
+            deleteDoc(doc(db, "academic_plannings_user_edits", `annual_${user.uid}_${k}`)).catch(() => {});
+            deleteDoc(doc(db, "academic_plannings_user_edits", `monthly_${user.uid}_${k}`)).catch(() => {});
+            deleteDoc(doc(db, "academic_plannings_user_edits", `question_bank_${user.uid}_${k}`)).catch(() => {});
           }
         });
       } catch (editDelErr) {
         console.warn("User edit deletion notice:", editDelErr);
       }
 
-      // 3. Also remove from local IndexedDB if cached
+      // 4. Also remove from local IndexedDB if cached
       try {
         const dbReq = indexedDB.open("cce_file_store", 1);
         dbReq.onsuccess = () => {
           const idb = dbReq.result;
           if (idb.objectStoreNames.contains("files")) {
             const tx = idb.transaction("files", "readwrite");
-            tx.objectStore("files").delete(rec.id);
+            keysToDelete.forEach((k) => {
+              try {
+                tx.objectStore("files").delete(k);
+              } catch (e) {}
+            });
           }
         };
       } catch (idbErr) {
         console.warn("IndexedDB file deletion notice:", idbErr);
       }
 
-      // 4. Clear all local storage entries associated with this file ID
+      // 5. Clear all local storage entries associated with these file IDs
       try {
         Object.keys(localStorage).forEach((key) => {
-          if (key.includes(rec.id)) {
-            localStorage.removeItem(key);
-          }
+          keysToDelete.forEach((k) => {
+            if (key.includes(k)) {
+              localStorage.removeItem(key);
+            }
+          });
         });
-        localStorage.removeItem(`cce_meta_${rec.id}`);
+        localStorage.removeItem(`cce_meta_${targetDocId}`);
       } catch (e) {}
 
-      // 5. Update local planningFiles state & cache instantly
+      // 6. Update local planningFiles state & cache instantly
       setPlanningFiles((prev) => {
         const updated = { ...prev };
-        delete updated[rec.id];
+        keysToDelete.forEach((k) => {
+          delete updated[k];
+        });
         Object.keys(updated).forEach((k) => {
-          if (updated[k]?.id === rec.id) {
+          const existing = updated[k];
+          if (!existing) {
+            delete updated[k];
+            return;
+          }
+          if (
+            keysToDelete.has(existing.id) ||
+            ((existing as any).docId && keysToDelete.has((existing as any).docId))
+          ) {
+            delete updated[k];
+          } else if (
+            existing.classId === rec.classId &&
+            existing.mediumId === rec.mediumId &&
+            existing.subjectId === rec.subjectId &&
+            existing.planningType === rec.planningType
+          ) {
             delete updated[k];
           }
         });
@@ -2156,8 +2298,8 @@ export function AcademicPlanningSystem({
         return updated;
       });
 
-      // 6. If modal is currently open previewing this file, close it instantly
-      if (viewModalFile && viewModalFile.id === rec.id) {
+      // 7. If modal is currently open previewing this file, close it instantly
+      if (viewModalFile && (keysToDelete.has(viewModalFile.id) || ((viewModalFile as any).docId && keysToDelete.has((viewModalFile as any).docId)))) {
         setViewModalFile(null);
         setIsAnnotating(false);
       }
@@ -2173,7 +2315,7 @@ export function AcademicPlanningSystem({
 
   // List of all unique uploaded planning and question bank files across all classes & mediums
   const allUploadedFilesList = React.useMemo(() => {
-    const list = Object.values(planningFiles).filter(Boolean);
+    const list = Object.values(planningFiles).filter(isValidPlanningRecord);
     const uniqueMap = new Map<string, PlanningFileRecord>();
     list.forEach((f) => {
       if (f && f.id && !uniqueMap.has(f.id)) {
@@ -2281,21 +2423,32 @@ export function AcademicPlanningSystem({
       ...(isExcel && { fileType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
     };
 
-    if (isExcel && blobFromDb) {
+    if (isExcel) {
       try {
-        toast.info("📊 Excel ची संपूर्ण माहिती (All Rows) लोड होत आहे...", { duration: 2000 });
-        const excelFile = new File([blobFromDb], rec.fileName || "file.xlsx", {
-          type: blobFromDb.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        });
-        const excelResult = await parseExcelFile(excelFile);
-        if (excelResult.htmlContent) {
-          enrichedRec = {
-            ...enrichedRec,
-            htmlContent: excelResult.htmlContent,
-            gridData: excelResult.gridData,
-            rawHeaders: excelResult.rawHeaders,
-            rawDataRows: excelResult.gridData.map((row) => row.map((cell) => cell.value || "")),
-          };
+        let binaryBlob = blobFromDb;
+        if (!binaryBlob && targetUrl) {
+          const buffer = await fetchBinaryFile(targetUrl);
+          if (buffer) {
+            binaryBlob = new Blob([buffer], {
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            });
+          }
+        }
+        if (binaryBlob) {
+          toast.info("📊 Excel ची संपूर्ण माहिती (All Rows) लोड होत आहे...", { duration: 2000 });
+          const excelFile = new File([binaryBlob], rec.fileName || "file.xlsx", {
+            type: binaryBlob.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          });
+          const excelResult = await parseExcelFile(excelFile);
+          if (excelResult.htmlContent) {
+            enrichedRec = {
+              ...enrichedRec,
+              htmlContent: excelResult.htmlContent,
+              gridData: excelResult.gridData,
+              rawHeaders: excelResult.rawHeaders,
+              rawDataRows: excelResult.gridData.map((row) => row.map((cell) => cell.value || "")),
+            };
+          }
         }
       } catch (parseErr) {
         console.warn("Excel re-parse notice:", parseErr);
@@ -2784,6 +2937,7 @@ export function AcademicPlanningSystem({
                   {/* 1. Annual Planning Card (इयत्तानिहाय संपूर्ण वार्षिक नियोजन - Direct Class Action) */}
                   {(() => {
                     const annualFile = getPlanningFile("annual", "all");
+                    const isAnnualAvailable = isValidPlanningRecord(annualFile);
                     return (
                       <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white rounded-[2.5rem] p-7 border border-indigo-500/30 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl transition-all">
                         <div className="space-y-4">
@@ -2791,7 +2945,7 @@ export function AcademicPlanningSystem({
                             <div className="size-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
                               <BookOpen className="size-7 text-amber-300" />
                             </div>
-                            {annualFile ? (
+                            {isAnnualAvailable ? (
                               <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
                                 <CheckCircle2 className="size-3" /> Available
                               </span>
@@ -2808,8 +2962,8 @@ export function AcademicPlanningSystem({
                               (वार्षिक नियोजन - इयत्ता {selectedClass})
                             </p>
                             <p className="text-xs text-slate-200 mt-3 leading-relaxed font-medium">
-                              {annualFile
-                                ? `फाईल: ${annualFile.fileName} (${annualFile.fileSize})`
+                              {isAnnualAvailable && annualFile
+                                ? `फाईल: ${annualFile.fileName}${annualFile.fileSize && annualFile.fileSize !== "undefined" ? ` (${annualFile.fileSize})` : ""}`
                                 : `या इयत्तेसाठी (इयत्ता ${selectedClass}) वार्षिक नियोजन PDF उपलब्ध नाही.`}
                             </p>
                           </div>
@@ -2819,7 +2973,7 @@ export function AcademicPlanningSystem({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (annualFile) {
+                              if (isAnnualAvailable && annualFile) {
                                 handleViewFile({
                                   ...annualFile,
                                   planningType: "annual",
@@ -2846,15 +3000,15 @@ export function AcademicPlanningSystem({
                               className="w-full py-2.5 px-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1"
                             >
                               <Upload className="size-4" />
-                              {annualFile ? `REPLACE ${selectedClass} ANNUAL PDF (बदला)` : `UPLOAD ${selectedClass} ANNUAL PDF (अपलोड)`}
+                              {isAnnualAvailable ? `REPLACE ${selectedClass} ANNUAL PDF (बदला)` : `UPLOAD ${selectedClass} ANNUAL PDF (अपलोड)`}
                             </button>
                           )}
 
                           {/* Admin Remove Class File */}
-                          {annualFile && mode === "admin" && (
+                          {isAnnualAvailable && annualFile && mode === "admin" && (
                             <button
                               type="button"
-                              disabled={deletingFileId === annualFile.id}
+                              disabled={deletingFileId === (annualFile.id || (annualFile as any).docId)}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteFile(annualFile);
@@ -2862,7 +3016,7 @@ export function AcademicPlanningSystem({
                               className="w-full py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1.5 active:scale-95 disabled:opacity-50"
                               title="ही फाईल कायमस्वरूपी हटवा (Remove File)"
                             >
-                              {deletingFileId === annualFile.id ? (
+                              {deletingFileId === (annualFile.id || (annualFile as any).docId) ? (
                                 <Loader2 className="size-4 animate-spin text-rose-300" />
                               ) : (
                                 <Trash2 className="size-4 text-rose-300" />
@@ -2985,8 +3139,9 @@ export function AcademicPlanningSystem({
                 <div className="flex items-center gap-2.5 flex-wrap">
                   {(() => {
                     const combinedFile = getPlanningFile(selectedPlanningType, "all") || getPlanningFile(selectedPlanningType);
+                    const isCombinedAvailable = isValidPlanningRecord(combinedFile);
                     return (
-                      combinedFile && (
+                      isCombinedAvailable && combinedFile && (
                         <button
                           onClick={() => {
                             handleViewFile({
@@ -3029,6 +3184,7 @@ export function AcademicPlanningSystem({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-full mx-auto">
                 {availableSubjects.map((subjName, idx) => {
                   const fileRec = getPlanningFile(selectedPlanningType, subjName);
+                  const isFileAvailable = isValidPlanningRecord(fileRec);
                   const isCustom = (customSubjectsMap[customKey] || []).includes(subjName);
 
                   return (
@@ -3041,7 +3197,7 @@ export function AcademicPlanningSystem({
                           <div className="size-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shrink-0">
                             <BookOpen className="size-5" />
                           </div>
-                          {fileRec ? (
+                          {isFileAvailable ? (
                             <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
                               <CheckCircle2 className="size-3 text-emerald-600" /> Available
                             </span>
@@ -3062,8 +3218,8 @@ export function AcademicPlanningSystem({
                             )}
                           </div>
                           <p className="text-[11px] text-slate-500 font-semibold mt-1 truncate">
-                            {fileRec
-                              ? `फाईल: ${fileRec.fileName} (${fileRec.fileSize})`
+                            {isFileAvailable && fileRec && fileRec.fileName && fileRec.fileName !== "undefined"
+                              ? `फाईल: ${fileRec.fileName}${fileRec.fileSize && fileRec.fileSize !== "undefined" ? ` (${fileRec.fileSize})` : ""}`
                               : `${selectedPlanningType === "annual" ? "वार्षिक नियोजन" : selectedPlanningType === "monthly" ? "मासिक नियोजन" : "प्रश्नपेढी"} पत्रक`}
                           </p>
                         </div>
@@ -3073,7 +3229,7 @@ export function AcademicPlanningSystem({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (fileRec) {
+                            if (isFileAvailable && fileRec) {
                               handleViewFile({
                                 ...fileRec,
                                 subjectId: subjName || fileRec.subjectId || "मराठी",
@@ -3111,17 +3267,17 @@ export function AcademicPlanningSystem({
                             className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1"
                           >
                             <Upload className="size-4" />
-                            {fileRec
+                            {isFileAvailable
                               ? `REPLACE ${subjName} ${selectedPlanningType === "question_bank" ? "QUESTION BANK" : "FILE"} (बदला)`
                               : `UPLOAD ${subjName} ${selectedPlanningType === "question_bank" ? "QUESTION BANK" : "FILE"} (अपलोड करा)`}
                           </button>
                         )}
 
                         {/* Admin Remove File Button */}
-                        {fileRec && mode === "admin" && (
+                        {isFileAvailable && fileRec && mode === "admin" && (
                           <button
                             type="button"
-                            disabled={deletingFileId === fileRec.id}
+                            disabled={deletingFileId === (fileRec.id || (fileRec as any).docId)}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteFile(fileRec);
@@ -3129,7 +3285,7 @@ export function AcademicPlanningSystem({
                             className="w-full py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-rose-200 mt-1.5 active:scale-95 disabled:opacity-50"
                             title="ही फाईल कायमस्वरूपी हटवा (Remove File)"
                           >
-                            {deletingFileId === fileRec.id ? (
+                            {deletingFileId === (fileRec.id || (fileRec as any).docId) ? (
                               <Loader2 className="size-3.5 animate-spin text-rose-600" />
                             ) : (
                               <Trash2 className="size-3.5 text-rose-600" />
@@ -4062,7 +4218,14 @@ export function AcademicPlanningSystem({
                 </div>
               )}
 
-              <div className="flex justify-end items-center pt-2">
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  type="button"
+                  onClick={handleAddTableRow}
+                  className="px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black transition-all cursor-pointer border border-indigo-200 flex items-center gap-2 shadow-xs active:scale-95"
+                >
+                  <Plus className="size-4" /> नवीन ओळ जोडा (Add Row)
+                </button>
 
                 <button
                   onClick={handleSaveTableDataOnly}
@@ -4130,7 +4293,20 @@ export function AcademicPlanningSystem({
           style={{ width: "190mm", boxSizing: "border-box", padding: "0px", margin: "0px" }}
         >
           <div className="text-center border-b-2 border-slate-900 pb-3 mb-4 space-y-1.5" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-            <h2 className="text-xl font-black tracking-tight text-slate-950 uppercase">
+            {/* School Header Info */}
+            <div className="text-center pb-2">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-950 uppercase tracking-wide">
+                {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
+              </h1>
+              <div className="flex justify-center items-center gap-4 text-xs font-bold text-slate-800 pt-1">
+                {schoolProfile.kendraName && <span>केंद्र : {schoolProfile.kendraName}</span>}
+                {schoolProfile.talukaName && <span>तालुका : {schoolProfile.talukaName}</span>}
+                {schoolProfile.districtName && <span>जिल्हा : {schoolProfile.districtName}</span>}
+                {schoolProfile.udiseNumber && <span>UDISE : {schoolProfile.udiseNumber}</span>}
+              </div>
+            </div>
+
+            <h2 className="text-base sm:text-lg font-black tracking-tight text-slate-950 uppercase border-t border-slate-300 pt-2">
               इयत्ता : {selectedClass === "1st" ? "1ली" : selectedClass === "2nd" ? "2री" : selectedClass === "3rd" ? "3री" : selectedClass === "4th" ? "4थी" : selectedClass === "5th" ? "5वी" : selectedClass === "6th" ? "6वी" : selectedClass === "7th" ? "7वी" : selectedClass === "8th" ? "8वी" : selectedClass} {selectedPlanningType === "annual" ? "संपूर्ण वार्षिक नियोजन (सर्व विषय एकत्र)" : "वार्षिक नियोजन"} सन :- 2026-27
             </h2>
             <div className="flex justify-between items-center text-xs font-bold text-slate-800 pt-1.5 border-t border-slate-300">
@@ -4290,8 +4466,8 @@ export function AcademicPlanningSystem({
           )}
 
           <div className="flex justify-between items-center pt-6 mt-4 text-xs font-bold text-slate-900 border-t border-slate-300" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-            <div>शिक्षक स्वाक्षरी: ___________________</div>
-            <div>मुख्याध्यापक स्वाक्षरी: ___________________</div>
+            <div>शिक्षक स्वाक्षरी: {schoolProfile.teacherName ? `${schoolProfile.teacherName}` : "___________________"}</div>
+            <div>मुख्याध्यापक स्वाक्षरी: {schoolProfile.headMasterName ? `${schoolProfile.headMasterName}` : "___________________"}</div>
           </div>
         </div>
       </div>

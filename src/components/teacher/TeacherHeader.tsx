@@ -106,11 +106,11 @@ export function TeacherHeader() {
         {!isDashboard && (
           <Link
             to="/teacher"
-            className="hidden md:flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
             title="शिक्षक डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
           >
             <ArrowLeft className="size-3.5 shrink-0" />
-            <span className="font-bold">डॅशबोर्ड (Dashboard)</span>
+            <span className="font-bold hidden xs:inline">डॅशबोर्ड (Dashboard)</span>
           </Link>
         )}
       </div>

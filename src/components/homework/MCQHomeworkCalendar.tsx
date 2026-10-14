@@ -445,7 +445,7 @@ export const MCQHomeworkCalendar: React.FC<MCQHomeworkCalendarProps> = ({
                       </button>
                     )}
 
-                    {defaultRole === "admin" && onDeleteQuiz && (
+                    {(defaultRole === "admin" || (defaultRole === "teacher" && quiz.isCustom)) && onDeleteQuiz && (
                       <button
                         type="button"
                         onClick={() => onDeleteQuiz(quiz.id, quiz.title)}

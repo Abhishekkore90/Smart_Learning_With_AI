@@ -26,6 +26,7 @@ import {
   Zap,
   Crown,
   School,
+  ArrowLeft,
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
@@ -70,6 +71,17 @@ function ActivitiesHubPage() {
 
       <main className="lg:pl-0 pt-16 min-h-screen">
         <div className="p-6 md:p-12 space-y-12 max-w-full mx-auto">
+          {/* Back to Dashboard Button */}
+          <div>
+            <Link
+              to="/teacher"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+            >
+              <ArrowLeft className="size-4 text-indigo-600" />
+              <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+            </Link>
+          </div>
+
           {/* Hero Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}

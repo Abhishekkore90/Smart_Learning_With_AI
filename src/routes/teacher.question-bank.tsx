@@ -38,6 +38,7 @@ import {
   ListChecks,
   Sparkles,
   PlusCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
@@ -250,6 +251,17 @@ function QuestionBankPage() {
 
       <main className="lg:pl-0 pt-20 min-h-screen bg-white">
         <div className="p-4 md:p-8 space-y-6 max-w-full mx-auto">
+          {/* Back to Dashboard Button */}
+          <div>
+            <Link
+              to="/teacher"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+            >
+              <ArrowLeft className="size-4 text-indigo-600" />
+              <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+            </Link>
+          </div>
+
           {/* Top Filter Section */}
           <div className="bg-white p-6 border border-[#dee2e6] rounded-md shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">

@@ -280,15 +280,28 @@ function QuestionPaperPage() {
       </div>
 
       <main className="pt-20 pb-16 px-3 sm:px-6 max-w-7xl mx-auto space-y-6">
+        {/* Back to Dashboard Button */}
+        {!activePaper && (
+          <div className="no-print">
+            <Link
+              to="/teacher"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+            >
+              <ArrowLeft className="size-4 text-indigo-600" />
+              <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+            </Link>
+          </div>
+        )}
+
         {/* Banner */}
-        <div className="no-print bg-gradient-to-r from-blue-700 via-indigo-800 to-purple-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="no-print bg-gradient-to-r from-blue-700 via-indigo-800 to-purple-900 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 size-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-blue-200 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
                 <FileText className="size-3.5" /> प्रश्नपत्रिका पोर्टल व संपादन
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+              <h1 className="text-xl sm:text-3xl font-black tracking-tight">
                 प्रश्नपत्रिका व्यवस्थापक (Question Paper Viewer & Editor)
               </h1>
               <p className="text-xs sm:text-sm text-blue-100 max-w-2xl font-medium">
@@ -298,10 +311,10 @@ function QuestionPaperPage() {
 
             {/* Stepper indicator if not viewing document */}
             {!activePaper && (
-              <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/15 text-xs font-bold">
+              <div className="flex items-center gap-1 sm:gap-2 bg-white/10 backdrop-blur-md p-1.5 sm:p-2 rounded-2xl border border-white/15 text-[11px] sm:text-xs font-bold overflow-x-auto touch-pan-x max-w-full shrink-0">
                 <button
                   onClick={() => setStep("medium")}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${
                     step === "medium"
                       ? "bg-white text-blue-900 shadow-md font-black"
                       : "text-white/80 hover:text-white"
@@ -309,10 +322,10 @@ function QuestionPaperPage() {
                 >
                   १. माध्यम
                 </button>
-                <ChevronRight className="size-3.5 text-white/40" />
+                <ChevronRight className="size-3.5 text-white/40 shrink-0" />
                 <button
                   onClick={() => setStep("class")}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${
                     step === "class"
                       ? "bg-white text-blue-900 shadow-md font-black"
                       : "text-white/80 hover:text-white"
@@ -320,10 +333,10 @@ function QuestionPaperPage() {
                 >
                   २. इयत्ता
                 </button>
-                <ChevronRight className="size-3.5 text-white/40" />
+                <ChevronRight className="size-3.5 text-white/40 shrink-0" />
                 <button
                   onClick={() => setStep("list")}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${
                     step === "list"
                       ? "bg-white text-blue-900 shadow-md font-black"
                       : "text-white/80 hover:text-white"
@@ -512,7 +525,7 @@ function QuestionPaperPage() {
                   </div>
 
                   {/* The 4 Exam Tabs Grid */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3.5">
                     {EXAM_TABS.map((tab, idx) => {
                       const isActive = selectedExamTab === tab.id;
                       const IconComponent = tab.icon;
@@ -523,38 +536,38 @@ function QuestionPaperPage() {
                             setSelectedExamTab(tab.id);
                             setFilterExamType(tab.id);
                           }}
-                          className={`relative p-3.5 sm:p-4 rounded-2xl text-left transition-all duration-200 border-2 cursor-pointer flex items-center gap-3 shadow-xs ${
+                          className={`relative p-2.5 sm:p-4 rounded-2xl text-left transition-all duration-200 border-2 cursor-pointer flex items-center gap-2 sm:gap-3 shadow-xs ${
                             isActive
                               ? `bg-gradient-to-r ${tab.color} text-white border-transparent shadow-md scale-[1.02]`
                               : "bg-slate-50/70 hover:bg-white text-slate-800 border-slate-200 hover:border-indigo-300 hover:shadow-xs"
                           }`}
                         >
                           <div
-                            className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
+                            className={`size-8 sm:size-10 rounded-xl flex items-center justify-center shrink-0 ${
                               isActive ? "bg-white/20 text-white" : "bg-white text-slate-700 border border-slate-200 shadow-2xs"
                             }`}
                           >
-                            <IconComponent className="size-5" />
+                            <IconComponent className="size-4 sm:size-5" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1 sm:gap-1.5">
                               <span
-                                className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                                className={`text-[9px] sm:text-[10px] font-black px-1 sm:px-1.5 py-0.5 rounded-md shrink-0 ${
                                   isActive ? "bg-white/25 text-white" : "bg-slate-200 text-slate-700"
                                 }`}
                               >
                                 {idx + 1}
                               </span>
-                              <span className="font-black text-base sm:text-lg leading-tight truncate">
+                              <span className="font-black text-xs sm:text-base leading-tight whitespace-nowrap">
                                 {tab.labelMr}
                               </span>
                             </div>
-                            <div className={`text-[11px] font-semibold mt-0.5 ${isActive ? "text-white/80" : "text-slate-400"}`}>
+                            <div className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 truncate ${isActive ? "text-white/80" : "text-slate-400"}`}>
                               {tab.labelEn}
                             </div>
                           </div>
                           {isActive && (
-                            <span className="size-2 rounded-full bg-white shadow-xs shrink-0" />
+                            <span className="size-1.5 sm:size-2 rounded-full bg-white shadow-xs shrink-0" />
                           )}
                         </button>
                       );

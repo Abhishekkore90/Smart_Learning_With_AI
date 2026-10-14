@@ -47,6 +47,8 @@ export function normalizeMCQHomework(id: string, raw: any): MCQHomeworkSet {
     timeLimitMinutes: raw.timeLimitMinutes || 0,
     questions,
     totalMarks,
+    teacherName: raw.teacherName || raw.teacher || raw.createdBy?.name || "",
+    schoolName: raw.schoolName || raw.school || "",
     createdBy: {
       uid: raw.createdBy?.uid || "",
       name: raw.createdBy?.name || "शिक्षक / प्रशासन",
@@ -85,6 +87,27 @@ export async function updateMCQHomework(
     ...data,
     updatedAt: new Date().toISOString(),
   });
+}
+
+/**
+ * Updates teacher & school details for an MCQ Homework Set (saves into Firestore)
+ */
+export async function updateMCQHomeworkShareDetails(
+  id: string,
+  teacherName: string,
+  schoolName: string
+): Promise<void> {
+  if (!id) return;
+  try {
+    const docRef = doc(db, COLLECTION_NAME, id);
+    await updateDoc(docRef, {
+      teacherName: teacherName.trim(),
+      schoolName: schoolName.trim(),
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn("Failed to update MCQ homework share details in Firestore:", err);
+  }
 }
 
 /**

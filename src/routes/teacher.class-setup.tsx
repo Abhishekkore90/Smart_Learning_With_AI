@@ -21,6 +21,7 @@ import {
   Settings,
   ChevronDown,
   Info,
+  ArrowLeft,
 } from "lucide-react";
 
 export const Route = createFileRoute("/teacher/class-setup")({
@@ -189,6 +190,17 @@ function TeacherClassSetupPage() {
 
       <main className="lg:pl-0 pt-20 flex-1 relative z-10">
         <div className="max-w-full mx-auto px-6 py-10 space-y-8">
+          {/* Back to Dashboard Button */}
+          <div>
+            <Link
+              to="/teacher"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+            >
+              <ArrowLeft className="size-4 text-indigo-600" />
+              <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+            </Link>
+          </div>
+
           {/* Header Card */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/60 backdrop-blur-md p-8 rounded-[2rem] border border-[#E8DFD1]/40 shadow-sm">
             <div className="flex items-center gap-4">

@@ -1,5 +1,5 @@
 
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
@@ -42,6 +42,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Download,
+  ArrowLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -7779,6 +7780,16 @@ function TeacherMDMPage() {
         <ModulePaywall moduleId="mdm-register" defaultTitle="माध्यान्ह भोजन योजना नोंदवही (MDM Register)">
           <PinGate sectionKey="mdm">
           <div className="p-2.5 sm:p-4 md:p-8 space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
+            {/* Back to Dashboard Button */}
+            <div className="no-print">
+              <Link
+                to="/teacher"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+              >
+                <ArrowLeft className="size-4 text-emerald-600" />
+                <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+              </Link>
+            </div>
 
           {/* ===== MDM CATEGORY GROUPED NAVIGATION BAR ===== */}
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl p-5 md:p-6 space-y-5">

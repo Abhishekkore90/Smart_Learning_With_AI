@@ -73,9 +73,13 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
   const [isSharing, setIsSharing] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  // Effective Teacher Name & School Name passed from share link or local storage
+  // Effective Teacher Name & School Name passed from props, quiz document, share link, or local storage
   const [effectiveTeacherName, setEffectiveTeacherName] = useState<string>(() => {
     if (propsTeacherName && propsTeacherName.trim()) return propsTeacherName.trim();
+    if (quiz.teacherName && quiz.teacherName.trim()) return quiz.teacherName.trim();
+    if (quiz.createdBy?.name && quiz.createdBy.name !== "शिक्षक" && quiz.createdBy.name !== "विद्यार्थी" && quiz.createdBy.name !== "शिक्षक / प्रशासन") {
+      return quiz.createdBy.name.trim();
+    }
     if (typeof window !== "undefined") {
       const p = new URLSearchParams(window.location.search);
       const t = p.get("teacher") || p.get("t");
@@ -88,6 +92,7 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
 
   const [effectiveSchoolName, setEffectiveSchoolName] = useState<string>(() => {
     if (propsSchoolName && propsSchoolName.trim()) return propsSchoolName.trim();
+    if (quiz.schoolName && quiz.schoolName.trim()) return quiz.schoolName.trim();
     if (typeof window !== "undefined") {
       const p = new URLSearchParams(window.location.search);
       const s = p.get("school") || p.get("s");
@@ -97,6 +102,23 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
     }
     return "";
   });
+
+  // Sync state if quiz or props update asynchronously
+  useEffect(() => {
+    if (propsTeacherName && propsTeacherName.trim()) {
+      setEffectiveTeacherName(propsTeacherName.trim());
+    } else if (quiz.teacherName && quiz.teacherName.trim()) {
+      setEffectiveTeacherName(quiz.teacherName.trim());
+    }
+  }, [propsTeacherName, quiz.teacherName]);
+
+  useEffect(() => {
+    if (propsSchoolName && propsSchoolName.trim()) {
+      setEffectiveSchoolName(propsSchoolName.trim());
+    } else if (quiz.schoolName && quiz.schoolName.trim()) {
+      setEffectiveSchoolName(quiz.schoolName.trim());
+    }
+  }, [propsSchoolName, quiz.schoolName]);
 
   // Guest Student Name state with temporary sessionStorage (zero server/permanent storage)
   const [currentStudentName, setCurrentStudentName] = useState<string>(() => {
@@ -263,17 +285,13 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
     }
   };
 
-  // Generate shareable link with encoded teacher and school info
+  // Generate clean, short shareable link
   const shareableUrl = useMemo(() => {
-    if (typeof window !== "undefined") {
-      const url = new URL(`${window.location.origin}/mcq`);
-      url.searchParams.set("id", quiz.id);
-      if (effectiveTeacherName.trim()) url.searchParams.set("teacher", effectiveTeacherName.trim());
-      if (effectiveSchoolName.trim()) url.searchParams.set("school", effectiveSchoolName.trim());
-      return url.toString();
+    if (typeof window !== "undefined" && quiz?.id) {
+      return `${window.location.origin}/mcq?id=${quiz.id}`;
     }
     return "";
-  }, [quiz.id, effectiveTeacherName, effectiveSchoolName]);
+  }, [quiz?.id]);
 
   const handleShareQuiz = () => {
     setIsShareModalOpen(true);
@@ -898,7 +916,7 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
 
         {/* BOTTOM SUBMISSION BAR */}
         {!submission ? (
-          <div className="sticky bottom-4 mt-8 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
+          <div className="sticky bottom-2 sm:bottom-4 mt-6 sm:mt-8 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
               <span className="font-bold text-slate-900 dark:text-white">{answeredCount}</span> पैकी{" "}
               <span className="font-bold text-slate-900 dark:text-white">{totalQuestions}</span> प्रश्न सोडवले.
@@ -920,7 +938,7 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
                   }
                 }}
                 disabled={answeredCount === 0 || isSubmitting}
-                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2 active:scale-95"
+                className="w-full sm:w-auto justify-center bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
               >
                 <span>स्वाध्याय सबमिट करा</span>
                 <ArrowRight className="w-4 h-4" />
@@ -1011,7 +1029,7 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative"
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-2xl relative max-h-[92vh] overflow-y-auto"
               >
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center mx-auto mb-4 text-2xl shadow-md">
                   🎓

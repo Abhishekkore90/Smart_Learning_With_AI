@@ -20,6 +20,8 @@ import {
   normalizeMonthlyPlanningRow,
   normalizeMonthlyPlanningRows,
   isTableColumnHeaderRow,
+  isMetadataRow,
+  isMonthBannerRow,
   getAcademicMonthRank,
 } from "@/lib/smartSubjectSplitter";
 import { getBunnyStorageUrl, fetchBinaryFile } from "@/lib/bunny-auth-pdf";
@@ -259,15 +261,15 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     if (recAny?.subject && recAny.subject !== "all") {
       return recAny.subject;
     }
-    if (record?.fileName?.includes("मराठी")) {
-      return "मराठी";
-    }
-    if (record?.fileName?.includes("इंग्रजी") || record?.fileName?.toLowerCase().includes("english")) {
-      return "इंग्रजी";
-    }
-    if (record?.fileName?.includes("गणित") || record?.fileName?.toLowerCase().includes("math")) {
-      return "गणित";
-    }
+    const fLower = String(record?.fileName || recAny?.title || recAny?.name || "").toLowerCase();
+    if (fLower.includes("कला") || fLower.includes("art")) return "कलाशिक्षण";
+    if (fLower.includes("कार्य") || fLower.includes("work")) return "कार्यशिक्षण";
+    if (fLower.includes("शारीरिक") || fLower.includes("pe") || fLower.includes("क्रीडा")) return "शारीरिक शिक्षण";
+    if (fLower.includes("मराठी")) return "मराठी";
+    if (fLower.includes("इंग्रजी") || fLower.includes("english")) return "इंग्रजी";
+    if (fLower.includes("गणित") || fLower.includes("math")) return "गणित";
+    if (fLower.includes("हिंदी") || fLower.includes("hindi")) return "हिंदी";
+    if (fLower.includes("परिसर") || fLower.includes("evs")) return "परिसर अभ्यास";
     return isMonthly ? "सर्व विषय" : "सर्व विषय (All Subjects)";
   }, [selectedSubjectFilter, selectedSubject, record, isMonthly]);
 
@@ -588,10 +590,29 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     // 2. Check if Monthly Planning is requested
     const isMonthlyPlan = isMonthly;
     if (isMonthlyPlan) {
-      if (parsedWorkbook && parsedWorkbook.monthlySections && Object.keys(parsedWorkbook.monthlySections).length > 0) {
-        const sections = Object.values(parsedWorkbook.monthlySections).map((mSec: any) => ({
+      let sectionsMap: Record<string, any> = (parsedWorkbook && parsedWorkbook.monthlySections) || {};
+
+      // If parsedWorkbook.monthlySections has only 1 month (or none), try splitting rawGrid or record rows
+      if (Object.keys(sectionsMap).length <= 1) {
+        const currentRec = savedUserEditRecord || record;
+        let rowsToUse: string[][] = (parsedWorkbook?.rawGrid && parsedWorkbook.rawGrid.length > 0)
+          ? parsedWorkbook.rawGrid
+          : extractRowsFromRecord(currentRec);
+
+        if (rowsToUse.length > 0) {
+          const fallbackSplit = splitRowsIntoMonthlySections(rowsToUse);
+          if (Object.keys(fallbackSplit).length > Object.keys(sectionsMap).length) {
+            sectionsMap = fallbackSplit;
+          }
+        }
+      }
+
+      if (Object.keys(sectionsMap).length > 0) {
+        const sections = Object.values(sectionsMap).map((mSec: any) => ({
           subjectName: mSec.monthName,
           displaySubjectName: mSec.displayMonthName,
+          subjectTitle: mSec.subjectTitle,
+          classTitle: mSec.classTitle,
           headers: mSec.headers || DEFAULT_HEADERS.masik_niyojan,
           rows: mSec.rows,
           startRow: 0,
@@ -599,28 +620,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         }));
         sections.sort((a, b) => getAcademicMonthRank(a.subjectName) - getAcademicMonthRank(b.subjectName));
         return sections;
-      }
-
-      const currentRec = savedUserEditRecord || record;
-      let rowsToUse: string[][] = extractRowsFromRecord(currentRec);
-      if (rowsToUse.length === 0 && parsedWorkbook?.rawGrid) {
-        rowsToUse = parsedWorkbook.rawGrid;
-      }
-
-      if (rowsToUse.length > 0) {
-        const mSplitMap = splitRowsIntoMonthlySections(rowsToUse);
-        if (Object.keys(mSplitMap).length > 0) {
-          const sections = Object.values(mSplitMap).map((mSec) => ({
-            subjectName: mSec.monthName,
-            displaySubjectName: mSec.displayMonthName,
-            headers: mSec.headers || DEFAULT_HEADERS.masik_niyojan,
-            rows: mSec.rows,
-            startRow: 0,
-            endRow: mSec.rows.length,
-          }));
-          sections.sort((a, b) => getAcademicMonthRank(a.subjectName) - getAcademicMonthRank(b.subjectName));
-          return sections;
-        }
       }
     }
 
@@ -702,17 +701,28 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
     // Detect actual academic subject, never let month name become subject
     let realSubject = "";
-    if (record?.subjectId && record.subjectId !== "all") {
+    if ((sec as any)?.subjectTitle && !isMarathiMonth((sec as any).subjectTitle)) {
+      realSubject = normalizeSubjectName((sec as any).subjectTitle);
+    } else if (record?.subjectId && record.subjectId !== "all") {
       realSubject = normalizeSubjectName(record.subjectId);
     } else if (recAny?.subject && recAny.subject !== "all") {
       realSubject = normalizeSubjectName(recAny.subject);
-    } else if (selectedSubjectFilter && selectedSubjectFilter !== "all") {
+    } else if (selectedSubjectFilter && selectedSubjectFilter !== "all" && !isMarathiMonth(selectedSubjectFilter)) {
       realSubject = normalizeSubjectName(selectedSubjectFilter);
     } else if (!isMonthly && sec.subjectName && !isMarathiMonth(sec.subjectName)) {
       realSubject = normalizeSubjectName(sec.subjectName);
     }
+
     if (!realSubject || realSubject === "सामान्य" || realSubject === "all" || isMarathiMonth(realSubject)) {
-      realSubject = "मराठी";
+      const fileTitle = String(record?.fileName || recAny?.title || recAny?.name || "").toLowerCase();
+      if (fileTitle.includes("कला") || fileTitle.includes("art")) realSubject = "कलाशिक्षण";
+      else if (fileTitle.includes("कार्य") || fileTitle.includes("work")) realSubject = "कार्यशिक्षण";
+      else if (fileTitle.includes("शारीरिक") || fileTitle.includes("pe") || fileTitle.includes("क्रीडा")) realSubject = "शारीरिक शिक्षण";
+      else if (fileTitle.includes("गणित") || fileTitle.includes("math")) realSubject = "गणित";
+      else if (fileTitle.includes("इंग्रजी") || fileTitle.includes("english")) realSubject = "इंग्रजी";
+      else if (fileTitle.includes("हिंदी") || fileTitle.includes("hindi")) realSubject = "हिंदी";
+      else if (fileTitle.includes("परिसर") || fileTitle.includes("evs")) realSubject = "परिसर अभ्यास";
+      else realSubject = "मराठी";
     }
 
     if (isMonthly) {
@@ -837,58 +847,70 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
   // Helper to get dynamic category headers matching the Excel language (English / Marathi)
   const getCategoryHeaders = (sec: SubjectSection, isMonthlyPlan: boolean, recordAny: any): string[] => {
+    let baseHeaders: string[] = [];
     if (sec.headers && Array.isArray(sec.headers) && sec.headers.length >= 4) {
       const hasMeaningfulHeaders = sec.headers.some(
         (h) => h && !h.toLowerCase().includes("स्तंभ") && !h.toLowerCase().includes("column")
       );
       if (hasMeaningfulHeaders) {
-        const cleanedHeaders = [...sec.headers];
-        if (!isMonthlyPlan && cleanedHeaders.length >= 6) {
-          cleanedHeaders[5] = "शिक्षक स्वाक्षरी";
+        baseHeaders = [...sec.headers];
+        if (!isMonthlyPlan && baseHeaders.length >= 6) {
+          baseHeaders[5] = "शिक्षक स्वाक्षरी";
         }
         // For monthly plans, replace "दिनांक" with "दिवस" in the first column
-        if (isMonthlyPlan && cleanedHeaders.length > 0) {
-          if (cleanedHeaders[0] && (cleanedHeaders[0].trim().includes("दिनांक") || cleanedHeaders[0].trim().toLowerCase() === "date" || cleanedHeaders[0].trim().includes("date"))) {
-            cleanedHeaders[0] = "दिवस";
+        if (isMonthlyPlan && baseHeaders.length > 0) {
+          if (baseHeaders[0] && (baseHeaders[0].trim().includes("दिनांक") || baseHeaders[0].trim().toLowerCase() === "date" || baseHeaders[0].trim().includes("date"))) {
+            baseHeaders[0] = "दिवस";
           }
         }
-        return cleanedHeaders;
       }
     }
 
     const isEng = isEnglishContent(sec.headers || [], sec.rows, sec.subjectName, recordAny?.mediumId);
 
-    if (isMonthlyPlan) {
-      return isEng
-        ? [
-          "Day",
-          "Topic / Unit / Subtopic",
-          "Learning Outcomes",
-          "Teaching Points / Objectives",
-          "Learning Experiences",
-          "Tools & Techniques",
-          "Teaching Learning Material (TLM)",
-        ]
-        : DEFAULT_HEADERS.masik_niyojan;
-    } else {
-      return isEng
-        ? [
-          "Month",
-          "Weeks",
-          "Working Days",
-          "Periods",
-          `Subject : ${sec.subjectName}`,
-          "Teacher Signature",
-        ]
-        : [
-          "महिना",
-          "आठवडा",
-          "कामाचे दिवस",
-          "प्राप्त तासिका",
-          `विषय : ${sec.subjectName}`,
-          "शिक्षक स्वाक्षरी",
-        ];
+    if (baseHeaders.length === 0) {
+      if (isMonthlyPlan) {
+        baseHeaders = isEng
+          ? [
+            "Day",
+            "Topic / Unit / Subtopic",
+            "Learning Outcomes",
+            "Teaching Points / Objectives",
+            "Learning Experiences",
+            "Tools & Techniques",
+            "Teaching Learning Material (TLM)",
+          ]
+          : [...DEFAULT_HEADERS.masik_niyojan];
+      } else {
+        baseHeaders = isEng
+          ? [
+            "Month",
+            "Weeks",
+            "Working Days",
+            "Periods",
+            `Subject : ${sec.subjectName}`,
+            "Teacher Signature",
+          ]
+          : [
+            "महिना",
+            "आठवडा",
+            "कामाचे दिवस",
+            "प्राप्त तासिका",
+            `विषय : ${sec.subjectName}`,
+            "शिक्षक स्वाक्षरी",
+          ];
+      }
     }
+
+    // Ensure all columns in sec.rows are covered so no columns are clipped
+    const maxRowCols = Math.max(0, ...(sec.rows || []).map((r) => r.length));
+    if (baseHeaders.length < maxRowCols) {
+      for (let i = baseHeaders.length; i < maxRowCols; i++) {
+        baseHeaders.push(isEng ? `Column ${i + 1}` : `स्तंभ ${i + 1}`);
+      }
+    }
+
+    return baseHeaders;
   };
 
   // Helper to check if text is an Exam / Assessment / Test / Vacation title
@@ -1130,15 +1152,41 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           }
         }
 
-        // Col 5: Teacher Signature (शिक्षक स्वाक्षरी) - Merged per Month Block (rowSpan = monthSpan), BLANK
+        // Col 5: Learning Outcomes (अध्ययन निष्पत्ती) / Column 5 data (1 cell per row)
         if (numCols >= 6) {
-          matrix[startR][5] = {
-            rowSpan: monthSpan,
-            skip: false,
-            displayValue: "",
-          };
-          for (let k = startR + 1; k < endR; k++) {
-            matrix[k][5] = { rowSpan: 1, skip: true, displayValue: "" };
+          const isCol5Signature = String(headers[5] || "").toLowerCase().includes("स्वाक्षरी") || String(headers[5] || "").toLowerCase().includes("sign");
+          if (isCol5Signature) {
+            matrix[startR][5] = {
+              rowSpan: monthSpan,
+              skip: false,
+              displayValue: "",
+            };
+            for (let k = startR + 1; k < endR; k++) {
+              matrix[k][5] = { rowSpan: 1, skip: true, displayValue: "" };
+            }
+          } else {
+            for (let r = startR; r < endR; r++) {
+              const rawOutcome = String(rows[r]?.[5] || "").trim();
+              const val = (rawOutcome === "null" || rawOutcome === "undefined") ? "" : rawOutcome;
+              matrix[r][5] = {
+                rowSpan: 1,
+                skip: false,
+                displayValue: val || "-",
+              };
+            }
+          }
+        }
+
+        // Additional columns (if table has >= 7 columns)
+        for (let cIdx = 6; cIdx < numCols; cIdx++) {
+          for (let r = startR; r < endR; r++) {
+            const rawVal = String(rows[r]?.[cIdx] || "").trim();
+            const val = (rawVal === "null" || rawVal === "undefined") ? "" : rawVal;
+            matrix[r][cIdx] = {
+              rowSpan: 1,
+              skip: false,
+              displayValue: val || "-",
+            };
           }
         }
       });
@@ -1147,74 +1195,58 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     }
 
     // --- MONTHLY PLANNING (मासिक नियोजन) MATRIX BUILDER ---
+    // In monthly planning, EVERY cell and EVERY word must be preserved exactly as entered.
+    // No cells must ever be overwritten or erased with empty strings or hyphens.
     let r = 0;
     while (r < numRows) {
-      const isExamRow = isExamOrAssessmentRow(rows[r]);
+      const currentRow = rows[r] || [];
+      const nonBlankCount = currentRow.filter((c) => !isEmptyValue(c)).length;
+      const hasExamText = currentRow.some((cell) => isExamOrAssessmentText(cell));
 
-      if (isExamRow) {
-        let examSpan = 1;
-        while (r + examSpan < numRows && isExamOrAssessmentRow(rows[r + examSpan])) {
-          examSpan++;
-        }
+      // Only treat as a dedicated exam/vacation banner row if it's genuinely a banner:
+      // at most 2 non-empty cells across the entire row AND contains exam/vacation title.
+      // If a row has 3 or more non-empty cells, it is a regular lesson/planning row with an evaluation activity!
+      const isBannerRow = hasExamText && nonBlankCount <= 2;
 
+      if (isBannerRow) {
         let examTitle = "";
         let primaryCol = 1;
-
-        for (let spanR = r; spanR < r + examSpan; spanR++) {
-          for (let c = 0; c < numCols; c++) {
-            const val = rows[spanR]?.[c];
-            if (isExamOrAssessmentText(val)) {
-              examTitle = String(val).trim();
-              primaryCol = c;
-              break;
-            }
+        for (let c = 0; c < numCols; c++) {
+          const val = currentRow[c];
+          if (isExamOrAssessmentText(val)) {
+            examTitle = String(val).trim();
+            primaryCol = c;
+            break;
           }
-          if (examTitle) break;
         }
-
         if (!examTitle) examTitle = "चाचणी / मूल्यमापन";
 
-        // Col 0 (Date) inside Exam block: 1 cell per row (rowSpan: 1) to ensure full cell borders
-        for (let spanR = r; spanR < r + examSpan; spanR++) {
-          const dVal = String(rows[spanR]?.[0] || "").trim();
-          matrix[spanR][0] = { rowSpan: 1, skip: false, displayValue: dVal || "-" };
-        }
+        // Preserve Col 0 (Day/Date)
+        const dVal = String(currentRow[0] || "").trim();
+        matrix[r][0] = { rowSpan: 1, skip: false, displayValue: dVal || "-" };
 
-        // Columns 1 to numCols - 1: Exam banner cell across examSpan
         for (let cIdx = 1; cIdx < numCols; cIdx++) {
+          const rawVal = String(currentRow[cIdx] || "").trim();
           if (cIdx === primaryCol) {
-            matrix[r][cIdx] = { rowSpan: examSpan, skip: false, displayValue: examTitle, isExam: true };
-            for (let k = 1; k < examSpan; k++) {
-              matrix[r + k][cIdx] = { rowSpan: 1, skip: true, displayValue: "" };
-            }
+            matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: examTitle, isExam: true };
+          } else if (rawVal && rawVal !== "-" && rawVal !== "null" && rawVal !== "undefined") {
+            // NEVER erase existing content in any other cell of this row!
+            matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: rawVal, isExam: isExamOrAssessmentText(rawVal) };
           } else {
-            let altExamTitle = "";
-            for (let spanR = r; spanR < r + examSpan; spanR++) {
-              const val = rows[spanR]?.[cIdx];
-              if (isExamOrAssessmentText(val) && normalizeForCompare(val) !== normalizeForCompare(examTitle)) {
-                altExamTitle = String(val).trim();
-                break;
-              }
-            }
-
-            const colDisplay = altExamTitle || "-";
-            matrix[r][cIdx] = { rowSpan: examSpan, skip: false, displayValue: colDisplay, isExam: !!altExamTitle };
-            for (let k = 1; k < examSpan; k++) {
-              matrix[r + k][cIdx] = { rowSpan: 1, skip: true, displayValue: "" };
-            }
+            matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: "-", isExam: true };
           }
         }
 
-        r += examSpan;
+        r++;
       } else {
-        // Col 0: दिवस (Day) cell - strictly as per Excel, 1 cell per row (no artificial merging logic)
-        const dVal = String(rows[r]?.[0] || "").trim();
+        // Col 0: दिवस (Day) / दिनांक cell - strictly 1 cell per row (no artificial merging)
+        const dVal = String(currentRow[0] || "").trim();
         matrix[r][0] = { rowSpan: 1, skip: false, displayValue: dVal || "-" };
 
-        // Columns 1 to numCols - 1: span consecutive sub-rows if sub-row has empty cell in this column
+        // Columns 1 to numCols - 1: preserve every cell
         for (let cIdx = 1; cIdx < numCols; cIdx++) {
           if (!matrix[r][cIdx].skip) {
-            const rawVal = String(rows[r]?.[cIdx] || "").trim();
+            const rawVal = String(currentRow[cIdx] || "").trim();
             const val = (rawVal === "null" || rawVal === "undefined") ? "" : rawVal;
 
             if (isEmptyValue(val)) {
@@ -1223,9 +1255,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               let span = 1;
               while (
                 r + span < numRows &&
-                !isExamOrAssessmentRow(rows[r + span]) &&
                 isEmptyValue(rows[r + span]?.[cIdx]) &&
-                (cIdx === 1 || isEmptyValue(rows[r + span]?.[1]))
+                // Do not span across different lessons if Col 1 has a new topic
+                (cIdx === 1 || isEmptyValue(rows[r + span]?.[1])) &&
+                rows[r + span].filter((c) => !isEmptyValue(c)).length > 0
               ) {
                 span++;
               }
@@ -1234,6 +1267,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                 rowSpan: span,
                 skip: false,
                 displayValue: val,
+                isExam: isExamOrAssessmentText(val),
               };
 
               for (let k = 1; k < span; k++) {
@@ -1291,12 +1325,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     const isGenuineUserSaved = (p: any): boolean => {
       if (!p || typeof p !== "object") return false;
       if (p.isSavedByUser === true) return true;
-      // Reject legacy contaminated mock data
+      // Reject legacy dummy template data
       if (
         p.schoolName === "z.p.school" ||
-        p.udiseNumber === "2233445566778899" ||
-        p.headMasterName?.includes("बाळासाहेब") ||
-        p.kendraName === "नरसिंगपूर"
+        p.udiseNumber === "2233445566778899"
       ) {
         return false;
       }
@@ -1338,7 +1370,22 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     }
 
     if (!cachedFound) {
-      applyProfile(blankProfile);
+      const unified = getUnifiedSchoolProfile();
+      if (unified.schoolName && !unified.schoolName.includes("___")) {
+        applyProfile({
+          schoolName: unified.schoolName,
+          kendraName: unified.kendra || unified.centerName,
+          talukaName: unified.taluka,
+          districtName: unified.jilha || unified.district,
+          udiseNumber: unified.udise,
+          teacherName: unified.teacherName,
+          headMasterName: unified.headmaster,
+          isSavedByUser: true,
+        });
+        cachedFound = true;
+      } else {
+        applyProfile(blankProfile);
+      }
     }
 
     // 2. Fetch from Firestore for logged-in user
@@ -3731,9 +3778,21 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         }
                         if (isSignatureRow(row)) return false;
                         if (isTableColumnHeaderRow(row)) return false;
-                        // Filter out rows that are duplicate header rows (headers appearing as data)
+                        if (isMetadataRow(row)) return false;
+                        if (isMonthBannerRow(row)) return false;
+
+                        // Filter out rows that are duplicate header rows or section banners appearing as data
+                        const rowText = row.map((c) => String(c || "").trim().toLowerCase()).join(" ");
+                        if (
+                          rowText.includes("मासिक घटक नियोजन") ||
+                          rowText.includes("मासिक व घटक नियोजन") ||
+                          (/महिना\s*[:-–]/i.test(rowText) && /विषय/i.test(rowText)) ||
+                          /अभ्यासक्रमाचे\s*मासिक/i.test(rowText)
+                        ) {
+                          return false;
+                        }
+
                         if (isMonthly) {
-                          const rowText = row.map((c) => String(c || "").trim().toLowerCase()).join(" ");
                           const firstCell = String(row[0] || "").trim().toLowerCase();
                           const secondCell = String(row[1] || "").trim().toLowerCase();
                           const thirdCell = String(row[2] || "").trim().toLowerCase();
@@ -4124,11 +4183,17 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                         ) : (
                                           categoryHeaders.map((_: string, cIdx: number) => {
                                             const cellInfo = sectionRowMatrix[rIdx]?.[cIdx];
+                                            const rawCellText = r[cIdx] !== undefined && r[cIdx] !== null ? String(r[cIdx]).trim() : "";
+                                            const hasRawContent = rawCellText !== "" && rawCellText !== "-" && rawCellText !== "null" && rawCellText !== "undefined";
+
                                             if (!isInlineEditing && cellInfo?.skip) {
                                               return null;
                                             }
 
-                                            const cellVal = cellInfo ? cellInfo.displayValue : r[cIdx] || "-";
+                                            let cellVal = cellInfo?.displayValue;
+                                            if (!cellVal || cellVal === "-" || cellVal === "null" || cellVal === "undefined") {
+                                              cellVal = hasRawContent ? rawCellText : "-";
+                                            }
                                             const isExam = cellInfo?.isExam || isExamOrAssessmentText(cellInfo?.displayValue) || isExamOrAssessmentText(r[cIdx]) || isExamOrAssessmentText(cellVal);
                                             const cellText = cellVal;
 
