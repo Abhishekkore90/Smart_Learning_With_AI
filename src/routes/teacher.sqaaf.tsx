@@ -5431,6 +5431,86 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions, udise: pro
   );
 };
 
+// Auto-Fit Table Component to cleanly scale wide tables to mobile screen width without horizontal scrollbar
+function AutoFitTableWrapper({
+  children,
+  targetWidth = 1000,
+  className = "",
+}: {
+  children: React.ReactNode;
+  targetWidth?: number;
+  className?: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (!containerRef.current) return;
+      const parentWidth = containerRef.current.clientWidth;
+      if (parentWidth > 0 && parentWidth < targetWidth) {
+        setScale(parentWidth / targetWidth);
+      } else {
+        setScale(1);
+      }
+
+      if (contentRef.current) {
+        setContentHeight(contentRef.current.offsetHeight);
+      }
+    };
+
+    updateDimensions();
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(() => {
+        updateDimensions();
+      });
+      if (containerRef.current) ro.observe(containerRef.current);
+      if (contentRef.current) ro.observe(contentRef.current);
+    }
+
+    window.addEventListener("resize", updateDimensions);
+    return () => {
+      window.removeEventListener("resize", updateDimensions);
+      if (ro) ro.disconnect();
+    };
+  }, [targetWidth]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={`w-full overflow-hidden ${className}`}
+      style={
+        scale < 1
+          ? {
+              height: contentHeight ? `${Math.ceil(contentHeight * scale)}px` : "auto",
+              overflow: "hidden",
+            }
+          : {}
+      }
+    >
+      <div
+        ref={contentRef}
+        style={
+          scale < 1
+            ? {
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+                width: `${targetWidth}px`,
+                minWidth: `${targetWidth}px`,
+              }
+            : { width: "100%" }
+        }
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function TeacherSqaafPage() {
   const { user, profile } = useAuth();
   const [view, setView] = useState<"info" | "dashboard" | "summary" | "certificate" | "responses" | "table_report" | "manual_summary">(() => {
@@ -9306,8 +9386,8 @@ function TeacherSqaafPage() {
                   )}
 
                   {/* Assessment Table */}
-                  <div className="overflow-x-auto border border-slate-200 rounded-[2rem] bg-white shadow-md w-full">
-                    <table className="min-w-full divide-y divide-slate-200 text-xs">
+                  <AutoFitTableWrapper targetWidth={1000} className="border border-slate-200 rounded-[2rem] bg-white shadow-md">
+                    <table className="w-full min-w-[1000px] divide-y divide-slate-200 text-xs">
                       <thead>
                         <tr className="bg-slate-200 text-slate-900 font-black">
                           <th className="px-3 py-4 text-center font-black border-r border-slate-300 bg-slate-200 text-slate-950 text-xs sm:text-sm w-[50px]">{selectedLang === "mr" ? "अ.क्र." : "Sr."}</th>
@@ -9447,14 +9527,15 @@ function TeacherSqaafPage() {
                         })}
                       </tbody>
                     </table>
-                  </div>
+                  </AutoFitTableWrapper>
 
                   {/* Summary Totals Table */}
-                  <div className="overflow-x-auto border border-slate-300 rounded-[2rem] bg-white shadow-md p-6 w-full space-y-4 mt-10">
+                  <div className="border border-slate-300 rounded-[2rem] bg-white shadow-md p-4 sm:p-6 w-full space-y-4 mt-10 overflow-hidden">
                     <h3 className="text-[14px] md:text-[16px] font-black text-slate-900 uppercase tracking-wider text-center">
                       {selectedLang === "mr" ? "SQAAF - क्षेत्र, उपक्षेत्र, आणि मानके / बेंच मार्किंग व बाह्यमूल्यांकन स्टेटमेंट" : "SQAAF - Domain, Sub-domain and Standards / Benchmarking & External Evaluation Statement"}
                     </h3>
-                    <table className="min-w-[1000px] w-full border-collapse border border-slate-300 text-xs text-slate-950">
+                    <AutoFitTableWrapper targetWidth={1000}>
+                      <table className="min-w-[1000px] w-full border-collapse border border-slate-300 text-xs text-slate-950">
                       <thead>
                         <tr className="bg-slate-50 text-slate-900 font-bold border-b border-slate-300">
                           <th rowSpan={2} className="border border-slate-300 px-3 py-3 text-center w-[10%]">{selectedLang === "mr" ? "मानक क्र." : "Standard Range"}</th>
@@ -9553,7 +9634,8 @@ function TeacherSqaafPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </AutoFitTableWrapper>
+                </div>
                 </div>
               </div>
 
@@ -10177,9 +10259,10 @@ function TeacherSqaafPage() {
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 sm:p-6 max-w-6xl mx-auto overflow-x-auto">
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 sm:p-6 max-w-6xl mx-auto overflow-hidden">
                     <h3 className="text-lg font-bold mb-4 px-2">{selectedLang === "mr" ? "मूल्यांकन तपशील" : "Evaluation Details"}</h3>
-                    <table className="w-full min-w-[800px] border-collapse table-fixed text-sm">
+                    <AutoFitTableWrapper targetWidth={850}>
+                      <table className="w-full min-w-[850px] border-collapse table-fixed text-sm">
                       <thead>
                         <tr className="bg-slate-50">
                           <th className="border border-slate-200 p-2 w-[5%]">अ. क्र.</th>
@@ -10235,6 +10318,7 @@ function TeacherSqaafPage() {
                         </tr>
                       </tbody>
                     </table>
+                    </AutoFitTableWrapper>
 
                     <div className="mt-8 flex flex-col md:flex-row gap-8 items-start">
                       <div className="w-full md:w-1/2">

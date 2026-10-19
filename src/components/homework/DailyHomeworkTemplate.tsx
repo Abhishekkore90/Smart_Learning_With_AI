@@ -15,6 +15,9 @@ import {
   Trash2,
   ChevronLeft,
   CheckCircle2,
+  MessageCircle,
+  Share2,
+  Loader2,
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import type { HomeworkItem, DailyHomeworkVariables } from "@/types/documentEditor";
@@ -23,7 +26,7 @@ import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 
 import { QuestionPaperRenderer } from "@/components/homework/QuestionPaperRenderer";
-import { getHomeworkHeaderProfile } from "@/utils/homeworkDocHelper";
+import { getHomeworkHeaderProfile, formatHomeworkFileName } from "@/utils/homeworkDocHelper";
 
 interface DailyHomeworkTemplateProps {
   homework: HomeworkItem;
@@ -115,6 +118,7 @@ export function DailyHomeworkTemplate({
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
   const worksheetRef = useRef<HTMLDivElement>(null);
 
   // Print
@@ -147,13 +151,74 @@ export function DailyHomeworkTemplate({
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
       pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`गृहपाठ_${homework.class}_${homework.homeworkDate || "daily"}.pdf`);
+      pdf.save(formatHomeworkFileName(homework.class));
       toast.success("गृहपाठ PDF यशस्वीरित्या डाउनलोड झाली!");
     } catch (err: any) {
       console.error("PDF download error:", err);
       toast.error("PDF डाउनलोड करताना त्रुटी आली.");
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  // Direct WhatsApp PDF Sharing (No links, No extra text messages)
+  const handleDirectShareWhatsAppPdf = async () => {
+    if (!worksheetRef.current) return;
+    try {
+      setIsSharingWhatsApp(true);
+      toast.info("WhatsApp साठी PDF तयार होत आहे...");
+      const element = worksheetRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+      });
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: "a4",
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+
+      const fileName = formatHomeworkFileName(homework.class);
+      const pdfBlob = pdf.output("blob");
+      const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
+
+      if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        try {
+          await navigator.share({
+            files: [pdfFile],
+          });
+          toast.success("गृहपाठ PDF थेट WhatsApp वर पाठवली गेली!");
+          return;
+        } catch (shareErr: any) {
+          if (shareErr.name === "AbortError") return;
+        }
+      }
+
+      // Desktop fallback: download PDF and open WhatsApp Web with no link or text
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+
+      window.open("https://web.whatsapp.com", "_blank");
+      toast.success("गृहपाठ PDF डाउनलोड झाली आणि WhatsApp Web उघडले! कृपया फाईल अटॅच करा.");
+    } catch (err: any) {
+      console.error("WhatsApp PDF share error:", err);
+      toast.error("WhatsApp वर PDF पाठवताना त्रुटी आली.");
+    } finally {
+      setIsSharingWhatsApp(false);
     }
   };
 
@@ -291,6 +356,21 @@ export function DailyHomeworkTemplate({
             title="प्रिंट"
           >
             <Printer className="size-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDirectShareWhatsAppPdf}
+            disabled={isSharingWhatsApp}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50"
+            title="हा गृहपाठ PDF स्वरूपात थेट WhatsApp वर पाठवा"
+          >
+            {isSharingWhatsApp ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <MessageCircle className="size-3.5" />
+            )}
+            <span>WhatsApp PDF</span>
           </button>
 
           <button
@@ -554,6 +634,7 @@ export function DailyHomeworkTemplate({
           </div>
         </div>
       </div>
+
     </div>
   );
 }

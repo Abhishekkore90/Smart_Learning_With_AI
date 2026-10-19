@@ -17,6 +17,9 @@ import {
   AlertCircle,
   ArrowLeft,
   ChevronLeft,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
   X,
   FileCheck,
   Sparkles,
@@ -221,16 +224,17 @@ const getRawColumnWidthStyle = (headerName: string, index: number, totalCols: nu
   return {};
 };
 
-// Helper to clean column header names (e.g. replaces "विषय : मराठी" with generic "विषय / घटक विवरण")
+// Helper to clean column header names (e.g. replaces "विषय : मराठी" with generic "पाठ / घटक")
 const getCleanHeaderName = (h: string): string => {
   if (!h) return "";
   const trimmed = h.trim();
   if (
     trimmed.startsWith("विषय :") ||
     trimmed.startsWith("विषय:") ||
-    trimmed.toLowerCase().includes("मराठी")
+    trimmed.toLowerCase().includes("मराठी") ||
+    trimmed.includes("घटक विवरण")
   ) {
-    return "विषय / घटक विवरण";
+    return "पाठ / घटक";
   }
   return trimmed;
 };
@@ -1121,6 +1125,7 @@ export function AcademicPlanningSystem({
   const [uploadModalOpen, setUploadModalOpen] = useState<boolean>(false);
   const [uploadingType, setUploadingType] = useState<"annual" | "monthly" | "question_bank">("annual");
   const [uploadingMedium, setUploadingMedium] = useState<string>("marathi");
+  const [uploadingSubject, setUploadingSubject] = useState<string>("all");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState<boolean>(false);
 
@@ -1562,7 +1567,7 @@ export function AcademicPlanningSystem({
   };
 
   // Custom Subjects State
-  const [customSubjectsMap, setCustomSubjectsMap] = useState<Record<string, string[]>>(() => {
+  const [customSubjectsMap, setCustomSubjectsMap] = useState<Record<string, any>>(() => {
     try {
       const cached = localStorage.getItem("cce_academic_custom_subjects_cache");
       return cached ? JSON.parse(cached) : {};
@@ -1572,26 +1577,36 @@ export function AcademicPlanningSystem({
   });
 
   const [isAddSubjectOpen, setIsAddSubjectOpen] = useState<boolean>(false);
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState<boolean>(false);
   const [newSubjectName, setNewSubjectName] = useState<string>("");
   const [isSavingSubject, setIsSavingSubject] = useState<boolean>(false);
 
-  // Real-time Firestore sync listener for custom subjects
+  // Real-time Firestore sync listener for custom subjects & arranged sequence
   useEffect(() => {
     const unsubCustom = onSnapshot(
       collection(db, "academic_custom_subjects"),
       (snapshot) => {
-        const cMap: Record<string, string[]> = {};
+        const cMap: Record<string, any> = {};
         snapshot.docs.forEach((docSnap) => {
           const data = docSnap.data();
-          if (data && Array.isArray(data.subjects)) {
-            cMap[docSnap.id] = data.subjects;
+          if (data) {
+            cMap[docSnap.id] = {
+              subjects: Array.isArray(data.subjects) ? data.subjects : [],
+              orderedSubjects: Array.isArray(data.orderedSubjects)
+                ? data.orderedSubjects
+                : Array.isArray(data.subjects)
+                  ? data.subjects
+                  : undefined,
+            };
           }
         });
         try {
           const cached = localStorage.getItem("cce_academic_custom_subjects_cache");
           if (cached) {
             const parsed = JSON.parse(cached);
-            Object.assign(cMap, parsed);
+            const merged = { ...parsed, ...cMap };
+            setCustomSubjectsMap(merged);
+            return;
           }
         } catch (e) { }
         setCustomSubjectsMap(cMap);
@@ -1664,21 +1679,73 @@ export function AcademicPlanningSystem({
 
   const customKey = `${selectedClass}_${selectedMedium}`;
 
-  // Compute available subjects for selected class & medium (combining defaults + custom subjects)
-  const availableSubjects = React.useMemo(() => {
+  // Compute available subjects for selected class & medium (combining defaults + custom subjects / arranged sequence)
+  const availableSubjects = React.useMemo<string[]>(() => {
     if (!selectedClass || !selectedMedium) return [];
     const defaults = getDefaultSubjectsForClass(selectedClass, selectedMedium);
-    const customs = customSubjectsMap[customKey] || [];
-    const combined = [...defaults];
-    customs.forEach((cs) => {
-      if (!combined.includes(cs)) {
-        combined.push(cs);
+    const stored = (customSubjectsMap as any)[customKey];
+
+    if (stored) {
+      if (Array.isArray(stored.orderedSubjects) && stored.orderedSubjects.length > 0) {
+        return stored.orderedSubjects;
       }
-    });
-    return combined;
+      if (Array.isArray(stored) && stored.length > 0) {
+        const combined = [...defaults];
+        stored.forEach((cs: string) => {
+          if (!combined.includes(cs)) {
+            combined.push(cs);
+          }
+        });
+        return combined;
+      }
+      if (Array.isArray(stored.subjects) && stored.subjects.length > 0) {
+        const combined = [...defaults];
+        stored.subjects.forEach((cs: string) => {
+          if (!combined.includes(cs)) {
+            combined.push(cs);
+          }
+        });
+        return combined;
+      }
+    }
+    return defaults;
   }, [selectedClass, selectedMedium, customSubjectsMap, customKey]);
 
-  // Handle Add Custom Subject
+  // Helper to persist subject sequence / list to Firestore & local cache
+  const saveSubjectsList = async (newList: string[], successMsg?: string) => {
+    const dataToSave = {
+      orderedSubjects: newList,
+      subjects: newList,
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      const docRef = doc(db, "academic_custom_subjects", customKey);
+      await setDoc(docRef, dataToSave, { merge: true });
+
+      const newMap = { ...customSubjectsMap, [customKey]: dataToSave };
+      setCustomSubjectsMap(newMap);
+      try {
+        localStorage.setItem("cce_academic_custom_subjects_cache", JSON.stringify(newMap));
+      } catch (e) { }
+
+      if (successMsg) {
+        toast.success(successMsg);
+      }
+    } catch (err: any) {
+      console.error("Error saving subjects configuration:", err);
+      const newMap = { ...customSubjectsMap, [customKey]: dataToSave };
+      setCustomSubjectsMap(newMap);
+      try {
+        localStorage.setItem("cce_academic_custom_subjects_cache", JSON.stringify(newMap));
+      } catch (e) { }
+
+      if (successMsg) {
+        toast.success(`${successMsg} (Local Cache)`);
+      }
+    }
+  };
+
+  // Handle Add Subject
   const handleAddSubject = async () => {
     const trimmed = newSubjectName.trim();
     if (!trimmed) {
@@ -1693,28 +1760,8 @@ export function AcademicPlanningSystem({
 
     setIsSavingSubject(true);
     try {
-      const currentCustoms = customSubjectsMap[customKey] || [];
-      const updatedCustoms = [...currentCustoms, trimmed];
-
-      const docRef = doc(db, "academic_custom_subjects", customKey);
-      await setDoc(docRef, { subjects: updatedCustoms, updatedAt: new Date().toISOString() }, { merge: true });
-
-      const newMap = { ...customSubjectsMap, [customKey]: updatedCustoms };
-      setCustomSubjectsMap(newMap);
-      localStorage.setItem("cce_academic_custom_subjects_cache", JSON.stringify(newMap));
-
-      toast.success(`'${trimmed}' हा विषय यशस्वीरित्या जोडला!`);
-      setNewSubjectName("");
-      setIsAddSubjectOpen(false);
-    } catch (err: any) {
-      console.error("Error adding custom subject:", err);
-      const currentCustoms = customSubjectsMap[customKey] || [];
-      const updatedCustoms = [...currentCustoms, trimmed];
-      const newMap = { ...customSubjectsMap, [customKey]: updatedCustoms };
-      setCustomSubjectsMap(newMap);
-      localStorage.setItem("cce_academic_custom_subjects_cache", JSON.stringify(newMap));
-
-      toast.success(`'${trimmed}' विषय जोडला गेला (Local Cache)!`);
+      const updated = [...availableSubjects, trimmed];
+      await saveSubjectsList(updated, `'${trimmed}' हा विषय यशस्वीरित्या जोडला!`);
       setNewSubjectName("");
       setIsAddSubjectOpen(false);
     } finally {
@@ -1722,27 +1769,39 @@ export function AcademicPlanningSystem({
     }
   };
 
-  // Handle Delete Custom Subject
-  const handleDeleteCustomSubject = async (e: React.MouseEvent, subjToDelete: string) => {
+  // Handle Delete Subject
+  const handleDeleteSubject = async (e: React.MouseEvent, subjToDelete: string) => {
     e.stopPropagation();
-    if (!confirm(`'${subjToDelete}' हा विषय हटवायचा आहे का?`)) return;
+    if (!confirm(`'${subjToDelete}' हा विषय या इयत्तेतून हटवायचा आहे का?`)) return;
 
     try {
-      const currentCustoms = customSubjectsMap[customKey] || [];
-      const updatedCustoms = currentCustoms.filter((s) => s !== subjToDelete);
-
-      const docRef = doc(db, "academic_custom_subjects", customKey);
-      await setDoc(docRef, { subjects: updatedCustoms, updatedAt: new Date().toISOString() }, { merge: true });
-
-      const newMap = { ...customSubjectsMap, [customKey]: updatedCustoms };
-      setCustomSubjectsMap(newMap);
-      localStorage.setItem("cce_academic_custom_subjects_cache", JSON.stringify(newMap));
-
-      toast.success(`'${subjToDelete}' विषय हटवला गेला.`);
+      const updated = availableSubjects.filter((s: string) => s !== subjToDelete);
+      await saveSubjectsList(updated, `'${subjToDelete}' विषय हटवला गेला.`);
     } catch (err) {
-      console.error("Error deleting custom subject:", err);
+      console.error("Error deleting subject:", err);
       toast.error("विषय हटवताना त्रुटी आली.");
     }
+  };
+
+  // Handle Move Subject Up / Down in sequence
+  const handleMoveSubject = async (e: React.MouseEvent, index: number, direction: "up" | "down") => {
+    e.stopPropagation();
+    if (direction === "up" && index === 0) return;
+    if (direction === "down" && index === availableSubjects.length - 1) return;
+
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    const newOrder = [...availableSubjects];
+    const [moved] = newOrder.splice(index, 1);
+    newOrder.splice(targetIndex, 0, moved);
+
+    await saveSubjectsList(newOrder);
+  };
+
+  // Handle Reset to Default Subjects
+  const handleResetDefaultSubjects = async () => {
+    if (!confirm("मूळ विषय व क्रम पूर्ववत करायचा आहे का?")) return;
+    const defaults = getDefaultSubjectsForClass(selectedClass, selectedMedium);
+    await saveSubjectsList(defaults, "मूळ विषय व क्रम पूर्ववत केला!");
   };
 
   // Helper to normalize and match class IDs flexibly (e.g. '5th', '5', 'class 5', 'पाचवी')
@@ -1774,10 +1833,20 @@ export function AcademicPlanningSystem({
 
   // Helper to match subjects flexibly with strict part 1 vs part 2 separation
   const matchSubjectId = (s1?: string, s2?: string): boolean => {
-    const clean1 = (s1 || "all").trim().toLowerCase();
-    const clean2 = (s2 || "all").trim().toLowerCase();
-    if (clean1 === clean2) return true;
+    const clean1 = (s1 || "").trim().toLowerCase();
+    const clean2 = (s2 || "").trim().toLowerCase();
+    if (!clean1 || !clean2) return false;
     if (clean1 === "all" || clean2 === "all") return false;
+    if (clean1 === clean2) return true;
+
+    const isPart1_1 = clean1.includes("भाग १") || clean1.includes("भाग 1") || clean1.includes("part 1");
+    const isPart2_1 = clean1.includes("भाग २") || clean1.includes("भाग 2") || clean1.includes("part 2");
+    const isPart1_2 = clean2.includes("भाग १") || clean2.includes("भाग 1") || clean2.includes("part 1");
+    const isPart2_2 = clean2.includes("भाग २") || clean2.includes("भाग 2") || clean2.includes("part 2");
+
+    if (isPart1_1 !== isPart1_2 || isPart2_1 !== isPart2_2) {
+      if ((isPart1_1 || isPart2_1) && (isPart1_2 || isPart2_2)) return false;
+    }
 
     if (areSubjectsEquivalent(clean1, clean2)) return true;
 
@@ -1785,13 +1854,7 @@ export function AcademicPlanningSystem({
     const norm2 = normalizeSubjectName(clean2);
     if (norm1 === norm2) return true;
 
-    const isPart1_1 = norm1.includes("भाग १") || norm1.includes("भाग 1");
-    const isPart2_1 = norm1.includes("भाग २") || norm1.includes("भाग 2");
-    const isPart1_2 = norm2.includes("भाग १") || norm2.includes("भाग 1");
-    const isPart2_2 = norm2.includes("भाग २") || norm2.includes("भाग 2");
-
-    if ((isPart1_1 && isPart2_2) || (isPart2_1 && isPart1_2)) return false;
-    return norm1.includes(norm2) || norm2.includes(norm1);
+    return false;
   };
 
   // Helper to construct normalized deterministic record key:
@@ -1853,18 +1916,71 @@ export function AcademicPlanningSystem({
       if (type === "annual" && !isMo && !isQB) return candLegacy2;
     }
 
-    // Fallback search across all files in planningFiles with strict medium isolation
+    // Fallback check for normalized subject key (e.g. "मराठी" vs "प्रथम भाषा : मराठी")
+    if (subj !== "all") {
+      const normSubjName = normalizeSubjectName(rawSubj);
+      const normKey = getFileRecordKey(targetType, normSubjName, targetCls, expectedMed, yearStr);
+      if (planningFiles[normKey] && isValidPlanningRecord(planningFiles[normKey]) && detectRecordMedium(planningFiles[normKey]) === expectedMed) {
+        return planningFiles[normKey];
+      }
+      const normLegacyKey = `${cls}_${expectedMed}_${normSubjName.toLowerCase()}_${type}`;
+      if (planningFiles[normLegacyKey] && isValidPlanningRecord(planningFiles[normLegacyKey]) && detectRecordMedium(planningFiles[normLegacyKey]) === expectedMed) {
+        return planningFiles[normLegacyKey];
+      }
+    }
+
     const allFiles = Object.values(planningFiles).filter(isValidPlanningRecord);
+
+    // ==========================================
+    // STRICT 1-TO-1 ISOLATION FOR MONTHLY PLANNING
+    // ==========================================
+    if (type === "monthly") {
+      if (subj !== "all") {
+        // STRICT: Each subject card gets ONLY its own file!
+        // Never match by fileName, and NEVER fallback to "all" or general class files!
+        return allFiles.find((f) => {
+          if (!f) return false;
+          if (detectRecordMedium(f) !== expectedMed) return false;
+          if (!matchClassId(f.classId, targetCls)) return false;
+
+          const fType = (f.planningType || (f as any).category || "").trim().toLowerCase();
+          const isQB = fType === "question_bank" || fType === "prashnapedhi" || (f.fileName || "").includes("प्रश्नपेढी");
+          const isMo = fType === "monthly" || fType === "masik_niyojan" || (f.fileName || "").includes("मासिक");
+          if (!isMo || isQB) return false;
+
+          const fSubj = (f.subjectId || "").trim();
+          if (!fSubj || fSubj.toLowerCase() === "all") return false;
+
+          return (
+            fSubj.toLowerCase() === subj ||
+            matchSubjectId(fSubj, rawSubj) ||
+            areSubjectsEquivalent(fSubj, rawSubj)
+          );
+        });
+      } else {
+        // When explicitly searching for class-wide combined monthly file ("all")
+        return allFiles.find((f) => {
+          if (!f) return false;
+          if (detectRecordMedium(f) !== expectedMed) return false;
+          if (!matchClassId(f.classId, targetCls)) return false;
+          const fType = (f.planningType || (f as any).category || "").trim().toLowerCase();
+          const isMo = fType === "monthly" || fType === "masik_niyojan" || (f.fileName || "").includes("मासिक");
+          const isQB = fType === "question_bank" || fType === "prashnapedhi" || (f.fileName || "").includes("प्रश्नपेढी");
+          if (!isMo || isQB) return false;
+          return f.subjectId === "all" || !f.subjectId;
+        });
+      }
+    }
+
+    // Fallback search across all files for Annual or Question Bank with strict medium isolation
     fileRecord = allFiles.find((f) => {
       if (!f) return false;
-      // STRICT MEDIUM ISOLATION: A file MUST strictly match the target medium!
       if (detectRecordMedium(f) !== expectedMed) return false;
 
       const fType = (f.planningType || (f as any).category || "").trim().toLowerCase();
       const isQB = fType === "question_bank" || fType === "prashnapedhi" || (f.fileName || "").includes("प्रश्नपेढी");
       const isMo = fType === "monthly" || fType === "masik_niyojan" || (f.fileName || "").includes("मासिक");
 
-      if (type === "monthly" && (isQB || (!isMo && fType !== "monthly"))) return false;
       if (type === "question_bank" && (isMo || (!isQB && fType !== "question_bank"))) return false;
       if (type === "annual" && (isQB || isMo || (fType && fType !== "annual" && fType !== "varshik_niyojan"))) return false;
 
@@ -1873,8 +1989,7 @@ export function AcademicPlanningSystem({
       if (subj !== "all") {
         return (
           matchSubjectId(f.subjectId, rawSubj) ||
-          areSubjectsEquivalent(f.subjectId || "", rawSubj) ||
-          (f.fileName && areSubjectsEquivalent(f.fileName, rawSubj))
+          areSubjectsEquivalent(f.subjectId || "", rawSubj)
         );
       }
       return f.subjectId === "all" || !f.subjectId;
@@ -1896,42 +2011,16 @@ export function AcademicPlanningSystem({
       if (fileRecord) return fileRecord;
     }
 
-    // If searching for a specific subject and no separate subject file is uploaded,
-    // fallback to class-wide combined file ("all") for the SAME medium ONLY if that file is truly general
-    // (i.e. not titled specifically for a different subject like 'Marathi' when searching for 'Maths')
-    if (subj !== "all") {
+    // For Annual Planning: only fall back to combined file if looking for general/all
+    if (type === "annual" && subj !== "all") {
       fileRecord = allFiles.find((f) => {
         if (!f) return false;
-        // STRICT MEDIUM ISOLATION:
         if (detectRecordMedium(f) !== expectedMed) return false;
-
         const fType = (f.planningType || (f as any).category || "").trim().toLowerCase();
-        const isQB = fType === "question_bank" || fType === "prashnapedhi" || (f.fileName || "").includes("प्रश्नपेढी");
-        const isMo = fType === "monthly" || fType === "masik_niyojan" || (f.fileName || "").includes("मासिक");
-
-        if (type === "monthly" && (isQB || (!isMo && fType !== "monthly"))) return false;
-        if (type === "question_bank" && (isMo || (!isQB && fType !== "question_bank"))) return false;
-        if (type === "annual" && (isQB || isMo || (fType && fType !== "annual" && fType !== "varshik_niyojan"))) return false;
+        if (fType && fType !== "annual" && fType !== "varshik_niyojan") return false;
         if (!matchClassId(f.classId, targetCls)) return false;
-
-        // If file specifically matches target subject by name or alias, accept it!
-        if (
-          areSubjectsEquivalent(f.subjectId || "", rawSubj) ||
-          (f.fileName && areSubjectsEquivalent(f.fileName, rawSubj))
-        ) {
-          return true;
-        }
-
-        // If file name explicitly mentions ANOTHER known subject, DO NOT use as fallback
-        if (f.fileName) {
-          const otherKnownSubjects = ["मराठी", "गणित", "इंग्रजी", "हिंदी", "विज्ञान", "परिसर अभ्यास", "social sciences", "कला", "कार्यानुभव", "शारीरिक शिक्षण"];
-          const matchesOther = otherKnownSubjects.some(
-            (os) => !areSubjectsEquivalent(os, rawSubj) && areSubjectsEquivalent(f.fileName, os)
-          );
-          if (matchesOther) return false;
-        }
-
         return (
+          areSubjectsEquivalent(f.subjectId || "", rawSubj) ||
           f.subjectId === "all" ||
           !f.subjectId ||
           (f.id && f.id.endsWith("_all"))
@@ -1995,9 +2084,16 @@ export function AcademicPlanningSystem({
       const normMed = (rawUploadMed.includes("semi") || rawUploadMed.includes("सेमी") || rawUploadMed === "english") ? "semi" : "marathi";
       const normCls = (selectedClass || "1st").trim().toLowerCase();
       const normType = (uploadingType || selectedPlanningType || "annual").trim().toLowerCase();
-      const normSubj = (selectedSubject || "all").trim().toLowerCase();
 
-      const recordKey = getFileRecordKey(uploadingType, selectedSubject || "all", normCls, normMed, normYear);
+      // For monthly planning, MUST strictly be the specific subject (never "all")
+      let targetSubj = (uploadingSubject || selectedSubject || "").trim();
+      if (normType === "monthly" && (!targetSubj || targetSubj.toLowerCase() === "all")) {
+        targetSubj = selectedSubject && selectedSubject.toLowerCase() !== "all" ? selectedSubject : "मराठी";
+      } else if (!targetSubj) {
+        targetSubj = "all";
+      }
+
+      const recordKey = getFileRecordKey(uploadingType, targetSubj, normCls, normMed, normYear);
       const ext = selectedFile.name.split(".").pop()?.toLowerCase() || "pdf";
 
       const originalSizeMb = (selectedFile.size / (1024 * 1024)).toFixed(2);
@@ -2016,7 +2112,7 @@ export function AcademicPlanningSystem({
 
       // 1. Store binary Blob in local IndexedDB for instant zero-latency view
       await saveFileToIndexedDB(recordKey, finalFileBlob);
-      await saveFileToIndexedDB(`plan_${normMed}_${normCls}_${normType}_${normSubj}`, finalFileBlob);
+      await saveFileToIndexedDB(`plan_${normMed}_${normCls}_${normType}_${targetSubj.toLowerCase()}`, finalFileBlob);
 
       // 2. Upload file directly via uploadFileWithProgress (tries Bunny Storage CDN, then Firebase Storage)
       toast.info("⚡ सर्व्हरवर फाईल अपलोड होत आहे...");
@@ -2092,7 +2188,7 @@ export function AcademicPlanningSystem({
         academicYear: normYear,
         classId: selectedClass,
         mediumId: normMed,
-        subjectId: selectedSubject || "all",
+        subjectId: targetSubj,
         planningType: uploadingType,
         fileName: selectedFile.name,
         fileUrl: uploadedFileUrl,
@@ -2194,15 +2290,21 @@ export function AcademicPlanningSystem({
       const cls = (rec.classId || selectedClass || "1st").trim().toLowerCase();
       const type = (rec.planningType || selectedPlanningType || "annual").trim().toLowerCase();
       const subj = (rec.subjectId || selectedSubject || "all").trim().toLowerCase();
+      const normSubj = normalizeSubjectName(subj).toLowerCase();
 
       keysToDelete.add(`${year}_${med}_${cls}_${type}_${subj}`);
+      keysToDelete.add(`${year}_${med}_${cls}_${type}_${normSubj}`);
       keysToDelete.add(`${cls}_${med}_${subj}_${type}`);
-      keysToDelete.add(`${cls}_${med}_${subj}`);
-      if (subj !== "all") {
+      keysToDelete.add(`${cls}_${med}_${normSubj}_${type}`);
+
+      // ONLY delete "all" keys if the record being deleted was explicitly an "all" file!
+      // NEVER delete "_all_" when deleting a specific subject's file!
+      if (subj === "all") {
+        keysToDelete.add(`${year}_${med}_${cls}_${type}_all`);
         keysToDelete.add(`${cls}_${med}_all_${type}`);
       }
 
-      // 1. Delete document from Firestore 'academic_plannings' for all possible keys
+      // 1. Delete document from Firestore 'academic_plannings' for the target keys only
       await Promise.all(
         Array.from(keysToDelete).map(async (k) => {
           try {
@@ -2211,10 +2313,21 @@ export function AcademicPlanningSystem({
         })
       );
 
-      // 2. Delete physical uploaded file from backend storage (Firebase / Bunny)
+      // 2. Delete physical uploaded file from backend storage ONLY IF no other record uses it!
       const cloudUrl = rec.fileUrl || (rec as any).cloudUrl;
-      if (cloudUrl) {
-        deleteUploadedFile(cloudUrl).catch(() => {});
+      if (cloudUrl && !cloudUrl.startsWith("blob:")) {
+        const isUrlUsedElsewhere = Object.values(planningFiles).some(
+          (other) =>
+            other &&
+            other.id !== rec.id &&
+            (other as any).docId !== rec.id &&
+            !keysToDelete.has(other.id) &&
+            !keysToDelete.has((other as any).docId) &&
+            (other.fileUrl === cloudUrl || (other as any).cloudUrl === cloudUrl)
+        );
+        if (!isUrlUsedElsewhere) {
+          deleteUploadedFile(cloudUrl).catch(() => {});
+        }
       }
 
       // 3. Also delete any user edits from 'academic_plannings_user_edits' so data never mixes!
@@ -2286,8 +2399,8 @@ export function AcademicPlanningSystem({
           } else if (
             existing.classId === rec.classId &&
             existing.mediumId === rec.mediumId &&
-            existing.subjectId === rec.subjectId &&
-            existing.planningType === rec.planningType
+            existing.planningType === rec.planningType &&
+            (existing.subjectId === rec.subjectId || (subj !== "all" && normalizeSubjectName(existing.subjectId || "").toLowerCase() === normSubj))
           ) {
             delete updated[k];
           }
@@ -2993,6 +3106,7 @@ export function AcademicPlanningSystem({
                             <button
                               onClick={() => {
                                 setSelectedSubject("all");
+                                setUploadingSubject("all");
                                 setUploadingType("annual");
                                 setUploadingMedium(selectedMedium || "marathi");
                                 setUploadModalOpen(true);
@@ -3171,6 +3285,28 @@ export function AcademicPlanningSystem({
                     );
                   })()}
 
+                  {mode === "admin" && (
+                    <>
+                      <button
+                        onClick={() => setIsAddSubjectOpen(true)}
+                        className="px-4 py-2.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer border border-indigo-200 shadow-xs active:scale-95"
+                        title="नवीन विषय जोडा"
+                      >
+                        <Plus className="size-4" />
+                        <span>+ विषय जोडा (Add Subject)</span>
+                      </button>
+
+                      <button
+                        onClick={() => setIsReorderModalOpen(true)}
+                        className="px-4 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer border border-amber-200 shadow-xs active:scale-95"
+                        title="विषयांचा क्रम बदला"
+                      >
+                        <ArrowUpDown className="size-4" />
+                        <span>विषयांचा क्रम लावा (Arrange Sequence)</span>
+                      </button>
+                    </>
+                  )}
+
                   <button
                     onClick={() => setStep("type")}
                     className="px-5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border border-slate-200"
@@ -3182,30 +3318,73 @@ export function AcademicPlanningSystem({
 
               {/* Grid of Subjects with File Actions */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-full mx-auto">
-                {availableSubjects.map((subjName, idx) => {
+                {availableSubjects.map((subjName: string, idx: number) => {
                   const fileRec = getPlanningFile(selectedPlanningType, subjName);
                   const isFileAvailable = isValidPlanningRecord(fileRec);
-                  const isCustom = (customSubjectsMap[customKey] || []).includes(subjName);
+                  const rawCustom = (customSubjectsMap as any)[customKey];
+                  const customList = Array.isArray(rawCustom)
+                    ? rawCustom
+                    : Array.isArray(rawCustom?.subjects)
+                      ? rawCustom.subjects
+                      : [];
+                  const isCustom = customList.includes(subjName);
 
                   return (
                     <div
-                      key={idx}
+                      key={`${subjName}-${idx}`}
                       className="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-md flex flex-col justify-between gap-6 hover:shadow-xl hover:border-indigo-300 transition-all relative group"
                     >
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="size-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shrink-0">
-                            <BookOpen className="size-5" />
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="size-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+                              <BookOpen className="size-5" />
+                            </div>
+                            {mode === "admin" && (
+                              <span
+                                className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-black text-[11px] border border-slate-200 tracking-tight"
+                                title={`विषय क्रम: #${idx + 1}`}
+                              >
+                                #{idx + 1}
+                              </span>
+                            )}
                           </div>
-                          {isFileAvailable ? (
-                            <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                              <CheckCircle2 className="size-3 text-emerald-600" /> Available
-                            </span>
-                          ) : (
-                            <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-black uppercase tracking-wider">
-                              Not Uploaded
-                            </span>
-                          )}
+
+                          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                            {/* Sequence Move Up / Down Buttons for Admin */}
+                            {mode === "admin" && (
+                              <div className="flex items-center bg-slate-100 rounded-xl p-0.5 border border-slate-200">
+                                <button
+                                  type="button"
+                                  disabled={idx === 0}
+                                  onClick={(e) => handleMoveSubject(e, idx, "up")}
+                                  className="p-1 rounded-lg text-slate-600 hover:bg-white hover:text-indigo-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition-colors cursor-pointer"
+                                  title="विषय वर घ्या (Move Up)"
+                                >
+                                  <ChevronUp className="size-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={idx === availableSubjects.length - 1}
+                                  onClick={(e) => handleMoveSubject(e, idx, "down")}
+                                  className="p-1 rounded-lg text-slate-600 hover:bg-white hover:text-indigo-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-600 transition-colors cursor-pointer"
+                                  title="विषय खाली घ्या (Move Down)"
+                                >
+                                  <ChevronDown className="size-3.5" />
+                                </button>
+                              </div>
+                            )}
+
+                            {isFileAvailable ? (
+                              <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                                <CheckCircle2 className="size-3 text-emerald-600" /> Available
+                              </span>
+                            ) : (
+                              <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-black uppercase tracking-wider">
+                                Not Uploaded
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <div>
@@ -3260,6 +3439,7 @@ export function AcademicPlanningSystem({
                           <button
                             onClick={() => {
                               setSelectedSubject(subjName);
+                              setUploadingSubject(subjName);
                               setUploadingType(selectedPlanningType);
                               setUploadingMedium(selectedMedium || "marathi");
                               setUploadModalOpen(true);
@@ -3280,7 +3460,13 @@ export function AcademicPlanningSystem({
                             disabled={deletingFileId === (fileRec.id || (fileRec as any).docId)}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteFile(fileRec);
+                              handleDeleteFile({
+                                ...fileRec,
+                                subjectId: subjName,
+                                classId: selectedClass,
+                                mediumId: selectedMedium || "marathi",
+                                planningType: selectedPlanningType,
+                              });
                             }}
                             className="w-full py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-rose-200 mt-1.5 active:scale-95 disabled:opacity-50"
                             title="ही फाईल कायमस्वरूपी हटवा (Remove File)"
@@ -3291,6 +3477,19 @@ export function AcademicPlanningSystem({
                               <Trash2 className="size-3.5 text-rose-600" />
                             )}
                             <span>REMOVE FILE (फाईल हटवा)</span>
+                          </button>
+                        )}
+
+                        {/* Admin Remove Subject Button */}
+                        {mode === "admin" && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteSubject(e, subjName)}
+                            className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-700 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 hover:border-rose-200 mt-1.5 active:scale-95"
+                            title="हा विषय यादीतून हटवा (Remove Subject)"
+                          >
+                            <Trash2 className="size-3.5 text-rose-600" />
+                            <span>REMOVE SUBJECT (विषय हटवा)</span>
                           </button>
                         )}
                       </div>
@@ -3353,7 +3552,12 @@ export function AcademicPlanningSystem({
                       : uploadingType === "monthly"
                         ? "मासिक नियोजन"
                         : "प्रश्नपेढी"}{" "}
-                    | {selectedClass} | {uploadingMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी माध्यम"} | {selectedSubject}
+                    | {CLASS_OPTIONS.find((c) => c.id === selectedClass)?.mr || selectedClass} | {uploadingMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी माध्यम"}
+                    {uploadingType === "monthly" && (
+                      <span className="font-black text-indigo-700 ml-1">
+                        | विषय: {uploadingSubject || selectedSubject || "मराठी"}
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -3365,6 +3569,21 @@ export function AcademicPlanningSystem({
                 <X className="size-5" />
               </button>
             </div>
+
+            {/* Subject Specific Banner for Monthly Planning */}
+            {uploadingType === "monthly" && (
+              <div className="p-3 bg-gradient-to-r from-indigo-50 to-teal-50 border border-indigo-200 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="size-4 text-indigo-600 shrink-0" />
+                  <span className="text-xs font-black text-indigo-950">
+                    विषय: <span className="text-indigo-700 underline">{uploadingSubject || selectedSubject || "मराठी"}</span>
+                  </span>
+                </div>
+                <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                  फक्त हाच विषय (Specific Subject Only)
+                </span>
+              </div>
+            )}
 
             {/* Medium Selector */}
             <div className="space-y-1.5">
@@ -3656,6 +3875,95 @@ export function AcademicPlanningSystem({
                   <Plus className="size-4" />
                 )}
                 <span>विषय जोडा (Add Subject)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ARRANGE SUBJECTS SEQUENCE MODAL (ADMIN ONLY) */}
+      {isReorderModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-amber-100 text-amber-700">
+                  <ArrowUpDown className="size-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">विषयांचा क्रम लावा (Arrange Sequence)</h3>
+                  <p className="text-xs font-semibold text-slate-500">
+                    इयत्ता {selectedClass} ({selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}) - {availableSubjects.length} विषय
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsReorderModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto space-y-2 flex-1 pr-1">
+              {availableSubjects.map((subj: string, idx: number) => (
+                <div
+                  key={`${subj}-${idx}`}
+                  className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 hover:border-indigo-300 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="size-7 rounded-xl bg-slate-200 text-slate-700 text-xs font-black flex items-center justify-center">
+                      {idx + 1}
+                    </span>
+                    <span className="text-sm font-bold text-slate-900">{subj}</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={(e) => handleMoveSubject(e, idx, "up")}
+                      className="p-2 rounded-xl bg-white text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-slate-700 transition-colors cursor-pointer"
+                      title="वर हलवा (Move Up)"
+                    >
+                      <ChevronUp className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === availableSubjects.length - 1}
+                      onClick={(e) => handleMoveSubject(e, idx, "down")}
+                      className="p-2 rounded-xl bg-white text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-slate-700 transition-colors cursor-pointer"
+                      title="खाली हलवा (Move Down)"
+                    >
+                      <ChevronDown className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteSubject(e, subj)}
+                      className="p-2 rounded-xl bg-white text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors cursor-pointer ml-1"
+                      title="विषय हटवा (Remove Subject)"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 shrink-0">
+              <button
+                type="button"
+                onClick={handleResetDefaultSubjects}
+                className="px-4 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 text-xs font-bold transition-all cursor-pointer"
+              >
+                मूळ क्रम पूर्ववत करा (Reset)
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsReorderModalOpen(false)}
+                className="px-6 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all cursor-pointer shadow-md"
+              >
+                पूर्ण झाले (Done)
               </button>
             </div>
           </div>
@@ -4136,7 +4444,7 @@ export function AcademicPlanningSystem({
                         <th className="p-2.5 w-[5%] text-center border-r border-slate-800">आठवडा</th>
                         <th className="p-2.5 w-[7%] text-center border-r border-slate-800">कामाचे दिवस</th>
                         <th className="p-2.5 w-[7%] text-center border-r border-slate-800">प्राप्त तासिका</th>
-                        <th className="p-2.5 w-[42%] border-r border-slate-800">विषय / घटक विवरण</th>
+                        <th className="p-2.5 w-[42%] border-r border-slate-800">पाठ / घटक</th>
                         <th className="p-2.5 w-[22%] border-r border-slate-800">अध्ययन निष्पत्ती</th>
                         <th className="p-2.5 w-12 text-center">कृती</th>
                       </tr>
@@ -4442,7 +4750,7 @@ export function AcademicPlanningSystem({
                     <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "5%" : "6%" }}>आठवडा</th>
                     <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>कामाचे दिवस</th>
                     <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>प्राप्त तासिका</th>
-                    <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "42%" : "46%" }}>विषय / घटक विवरण</th>
+                    <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "42%" : "46%" }}>पाठ / घटक</th>
                     <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "24%" : "26%" }}>अध्ययन निष्पत्ती</th>
                   </tr>
                 </thead>

@@ -23,7 +23,7 @@ export const Route = createFileRoute("/teacher/stats-student")({
 /* ─── Shared A4 page style ─── */
 const A4: React.CSSProperties = {
   width: "100%",
-  maxWidth: "920px",
+  maxWidth: "810px",
   minHeight: "1000px",
   padding: "clamp(12px, 2.5vw, 24px) clamp(12px, 3vw, 30px)",
   background: "radial-gradient(circle at top left, #ffffff 0%, #f8faff 100%)",
@@ -1006,7 +1006,7 @@ function Page4() {
     <div className="a4-sheet-card" style={{ ...A4, padding: "24px 4px" }}>
       <PageHeader title="क) शाळाबाबतची माहिती" />
       <div
-        className="overflow-x-auto w-full no-scrollbar"
+        className="w-full overflow-hidden"
         style={{
           flex: 1,
           display: "flex",
@@ -1014,29 +1014,28 @@ function Page4() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", flex: 1, minWidth: "1220px" }}>
+        <table style={{ ...TBL, tableLayout: "fixed", flex: 1, width: "100%" }}>
           <colgroup>
-            <col style={{ width: "80px" }} />
-            <col style={{ width: "160px" }} />
-            <col style={{ width: "75px" }} />
-            <col style={{ width: "95px" }} />
-            <col style={{ width: "100px" }} />
-            <col style={{ width: "135px" }} />
-            <col style={{ width: "85px" }} />
-            <col style={{ width: "85px" }} />
-            <col style={{ width: "115px" }} />
-            <col style={{ width: "140px" }} />
-            <col style={{ width: "150px" }} />
+            <col style={{ width: "6.5%" }} />
+            <col style={{ width: "14.5%" }} />
+            <col style={{ width: "6.5%" }} />
+            <col style={{ width: "7.5%" }} />
+            <col style={{ width: "8.5%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "5.5%" }} />
+            <col style={{ width: "5.5%" }} />
+            <col style={{ width: "9.5%" }} />
+            <col style={{ width: "12.5%" }} />
+            <col style={{ width: "12.5%" }} />
           </colgroup>
           <thead>
             <tr>
               <th
                 rowSpan={2}
                 style={TH({
-                  fontSize: "8pt",
+                  fontSize: "7.5pt",
                   verticalAlign: "middle",
-                  padding: "6px 2px",
-                  minWidth: "80px",
+                  padding: "4px 1px",
                 })}
               >
                 इयत्ता
@@ -1044,10 +1043,9 @@ function Page4() {
               <th
                 rowSpan={2}
                 style={TH({
-                  fontSize: "8pt",
+                  fontSize: "7.5pt",
                   verticalAlign: "middle",
-                  padding: "6px 2px",
-                  minWidth: "160px",
+                  padding: "4px 1px",
                 })}
               >
                 शाळेचे नाव व पत्ता
@@ -1055,10 +1053,9 @@ function Page4() {
               <th
                 rowSpan={2}
                 style={TH({
-                  fontSize: "8pt",
+                  fontSize: "7.5pt",
                   verticalAlign: "middle",
-                  padding: "6px 2px",
-                  minWidth: "75px",
+                  padding: "4px 1px",
                 })}
               >
                 माध्यम
@@ -1066,10 +1063,9 @@ function Page4() {
               <th
                 rowSpan={2}
                 style={TH({
-                  fontSize: "8pt",
+                  fontSize: "7.5pt",
                   verticalAlign: "middle",
-                  padding: "6px 2px",
-                  minWidth: "95px",
+                  padding: "4px 1px",
                 })}
               >
                 जन. रजि. क्रमांक
@@ -1077,10 +1073,9 @@ function Page4() {
               <th
                 rowSpan={2}
                 style={TH({
-                  fontSize: "8pt",
+                  fontSize: "7.5pt",
                   verticalAlign: "middle",
-                  padding: "6px 2px",
-                  minWidth: "100px",
+                  padding: "4px 1px",
                 })}
               >
                 शाळा प्रविष्ट दिनांक
@@ -1088,10 +1083,9 @@ function Page4() {
               <th
                 rowSpan={2}
                 style={TH({
-                  fontSize: "8pt",
+                  fontSize: "7.5pt",
                   verticalAlign: "middle",
-                  padding: "6px 2px",
-                  minWidth: "135px",
+                  padding: "4px 1px",
                 })}
               >
                 शाळा सोडल्याचा दिनांक व दाखला क्रमांक
@@ -1099,10 +1093,9 @@ function Page4() {
               <th
                 colSpan={2}
                 style={TH({
-                  fontSize: "8pt",
+                  fontSize: "7.5pt",
                   verticalAlign: "middle",
-                  padding: "6px 2px",
-                  minWidth: "170px",
+                  padding: "4px 1px",
                 })}
               >
                 शारीरिक
@@ -1110,10 +1103,9 @@ function Page4() {
               <th
                 rowSpan={2}
                 style={TH({
-                  fontSize: "8pt",
+                  fontSize: "7.5pt",
                   verticalAlign: "middle",
-                  padding: "6px 2px",
-                  minWidth: "115px",
+                  padding: "4px 1px",
                 })}
               >
                 वैद्यकीय तपासणी
@@ -1121,10 +1113,9 @@ function Page4() {
               <th
                 rowSpan={2}
                 style={TH({
-                  fontSize: "8pt",
+                  fontSize: "7.5pt",
                   verticalAlign: "middle",
-                  padding: "6px 2px",
-                  minWidth: "140px",
+                  padding: "4px 1px",
                 })}
               >
                 वर्ग शिक्षकाचे नाव व स्वाक्षरी
@@ -1132,10 +1123,9 @@ function Page4() {
               <th
                 rowSpan={2}
                 style={TH({
-                  fontSize: "8pt",
+                  fontSize: "7.5pt",
                   verticalAlign: "middle",
-                  padding: "6px 2px",
-                  minWidth: "150px",
+                  padding: "4px 1px",
                 })}
               >
                 मुख्याध्यापकाचे नाव व स्वाक्षरी दिनांक
@@ -1144,20 +1134,18 @@ function Page4() {
             <tr>
               <th
                 style={TH({
-                  fontSize: "7.5pt",
+                  fontSize: "7pt",
                   fontWeight: "normal",
-                  padding: "4px 2px",
-                  minWidth: "85px",
+                  padding: "3px 1px",
                 })}
               >
                 <b>वजन:</b> Kg
               </th>
               <th
                 style={TH({
-                  fontSize: "7.5pt",
+                  fontSize: "7pt",
                   fontWeight: "normal",
-                  padding: "4px 2px",
-                  minWidth: "85px",
+                  padding: "3px 1px",
                 })}
               >
                 <b>उंची:</b> cm
@@ -1171,9 +1159,9 @@ function Page4() {
                   style={TD({
                     textAlign: "center",
                     height: "80px",
-                    fontSize: "9pt",
+                    fontSize: "8pt",
                     fontWeight: "bold",
-                    padding: "6px 2px",
+                    padding: "4px 1px",
                   })}
                 >
                   {cls}
@@ -1189,8 +1177,8 @@ function Page4() {
                         height: "80px",
                         outline: "none",
                         cursor: "text",
-                        fontSize: "9pt",
-                        padding: "8px 2px",
+                        fontSize: "8pt",
+                        padding: "4px 1px",
                       })}
                     ></td>
                   ))}
@@ -1223,7 +1211,7 @@ function Page5() {
         ( सत्र निहाय विषयात प्राप्त केलेल्या श्रेणींची नोंद )
       </div>
       <div
-        className="overflow-x-auto w-full no-scrollbar"
+        className="w-full overflow-hidden"
         style={{
           flex: 1,
           display: "flex",
@@ -1231,14 +1219,14 @@ function Page5() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", flex: 1, minWidth: "1320px" }}>
+        <table style={{ ...TBL, tableLayout: "fixed", flex: 1, width: "100%" }}>
           <colgroup>
-            <col style={{ width: "140px" }} />
-            <col style={{ width: "140px" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "9%" }} />
             {Array(16)
               .fill(0)
               .map((_, idx) => (
-                <col key={idx} style={{ width: "65px" }} />
+                <col key={idx} style={{ width: "5.125%" }} />
               ))}
           </colgroup>
           <thead>
@@ -1247,8 +1235,8 @@ function Page5() {
                 rowSpan={2}
                 colSpan={2}
                 style={TH({
-                  fontSize: "9.5pt",
-                  padding: "4px 2px",
+                  fontSize: "8pt",
+                  padding: "4px 1px",
                   verticalAlign: "middle",
                 })}
               >
@@ -1258,7 +1246,7 @@ function Page5() {
                 <th
                   key={cls}
                   colSpan={2}
-                  style={TH({ fontSize: "9pt", padding: "4px 2px" })}
+                  style={TH({ fontSize: "7.5pt", padding: "4px 1px" })}
                 >
                   इयत्ता {cls}
                 </th>
@@ -1267,10 +1255,10 @@ function Page5() {
             <tr>
               {CLASSES_MR.map((cls) => (
                 <React.Fragment key={`${cls}-terms`}>
-                  <th style={TH({ fontSize: "8pt", padding: "4px 1px" })}>
+                  <th style={TH({ fontSize: "6.5pt", padding: "3px 0.5px" })}>
                     सत्र १
                   </th>
-                  <th style={TH({ fontSize: "8pt", padding: "4px 1px" })}>
+                  <th style={TH({ fontSize: "6.5pt", padding: "3px 0.5px" })}>
                     सत्र २
                   </th>
                 </React.Fragment>
@@ -1757,7 +1745,7 @@ function Page6() {
       <PageHeader title="इ) विविध शासकीय योजनांचा लाभ" />
 
       <div
-        className="overflow-x-auto w-full no-scrollbar"
+        className="w-full overflow-hidden"
         style={{
           flex: 1,
           display: "flex",
@@ -1766,20 +1754,20 @@ function Page6() {
           paddingTop: "10px",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, minWidth: "1020px" }}>
+        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, width: "100%" }}>
           <colgroup>
-            <col style={{ width: "60px" }} />
-            <col style={{ width: "280px" }} />
+            <col style={{ width: "5%" }} />
+            <col style={{ width: "27%" }} />
             {CLASSES_MR.map((c) => (
-              <col key={c} style={{ width: "85px" }} />
+              <col key={c} style={{ width: "8.5%" }} />
             ))}
           </colgroup>
           <thead>
             <tr>
-              <th style={TH({ padding: "6px" })}>अ.क्र.</th>
-              <th style={TH({ textAlign: "left", padding: "6px 8px" })}>योजना</th>
+              <th style={TH({ padding: "4px 2px", fontSize: "8.5pt" })}>अ.क्र.</th>
+              <th style={TH({ textAlign: "left", padding: "4px 6px", fontSize: "8.5pt" })}>योजना</th>
               {CLASSES_MR.map((c) => (
-                <th key={c} style={TH({ padding: "4px", minWidth: "85px", width: "85px" })}>{c}</th>
+                <th key={c} style={TH({ padding: "4px 1px", fontSize: "8pt" })}>{c}</th>
               ))}
             </tr>
           </thead>
@@ -1927,7 +1915,7 @@ function Page7A() {
       </div>
 
       <div
-        className="overflow-x-auto w-full no-scrollbar"
+        className="w-full overflow-hidden"
         style={{
           flex: 1,
           display: "flex",
@@ -1935,11 +1923,11 @@ function Page7A() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, minWidth: "1050px" }}>
+        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, width: "100%" }}>
           <colgroup>
-            <col style={{ width: "370px" }} />
+            <col style={{ width: "32%" }} />
             {CLASSES_MR.map((c) => (
-              <col key={c} style={{ width: "85px" }} />
+              <col key={c} style={{ width: "8.5%" }} />
             ))}
           </colgroup>
           <thead>
@@ -1947,9 +1935,8 @@ function Page7A() {
               <th
                 style={TH({
                   textAlign: "left",
-                  fontSize: "10pt",
-                  padding: "6px 8px",
-                  minWidth: "370px",
+                  fontSize: "9pt",
+                  padding: "4px 6px",
                 })}
               >
                 मुद्दे
@@ -1957,7 +1944,7 @@ function Page7A() {
               {CLASSES_MR.map((c) => (
                 <th
                   key={c}
-                  style={TH({ fontSize: "9.5pt", padding: "4px 3px", minWidth: "85px", width: "85px" })}
+                  style={TH({ fontSize: "8pt", padding: "4px 1px" })}
                 >
                   {c}
                 </th>
@@ -2107,7 +2094,7 @@ function Page7B() {
       </div>
 
       <div
-        className="overflow-x-auto w-full no-scrollbar"
+        className="w-full overflow-hidden"
         style={{
           flex: 1,
           display: "flex",
@@ -2115,11 +2102,11 @@ function Page7B() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, minWidth: "1050px" }}>
+        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, width: "100%" }}>
           <colgroup>
-            <col style={{ width: "370px" }} />
+            <col style={{ width: "32%" }} />
             {CLASSES_MR.map((c) => (
-              <col key={c} style={{ width: "85px" }} />
+              <col key={c} style={{ width: "8.5%" }} />
             ))}
           </colgroup>
           <thead>
@@ -2127,9 +2114,8 @@ function Page7B() {
               <th
                 style={TH({
                   textAlign: "left",
-                  fontSize: "10pt",
-                  padding: "6px 8px",
-                  minWidth: "370px",
+                  fontSize: "9pt",
+                  padding: "4px 6px",
                 })}
               >
                 मुद्दे
@@ -2137,7 +2123,7 @@ function Page7B() {
               {CLASSES_MR.map((c) => (
                 <th
                   key={c}
-                  style={TH({ fontSize: "9.5pt", padding: "4px 3px", minWidth: "85px", width: "85px" })}
+                  style={TH({ fontSize: "8pt", padding: "4px 1px" })}
                 >
                   {c}
                 </th>
@@ -2512,6 +2498,32 @@ function StudentPortfolioPage() {
     content: string;
   }[]>([]);
 
+  const workspaceRef = React.useRef<HTMLDivElement>(null);
+  const [mobileScale, setMobileScale] = useState(1);
+  const targetA4Width = 810;
+
+  React.useEffect(() => {
+    const updateScale = () => {
+      if (typeof window === "undefined") return;
+      const workspaceEl = workspaceRef.current;
+      const available = workspaceEl
+        ? workspaceEl.clientWidth - 16
+        : window.innerWidth - 20;
+      if (available > 0 && available < targetA4Width) {
+        setMobileScale(Number((available / targetA4Width).toFixed(4)));
+      } else {
+        setMobileScale(1);
+      }
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
+
+  const supportsZoom =
+    typeof document !== "undefined" && "zoom" in document.documentElement.style;
+
   // Save/Load/Clear local data logic
   const handleSaveData = () => {
     try {
@@ -2683,7 +2695,7 @@ function StudentPortfolioPage() {
 
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen overflow-x-hidden"
       style={{
         background:
           "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)",
@@ -3008,7 +3020,8 @@ function StudentPortfolioPage() {
         <ModulePaywall moduleId="stats-student" defaultTitle="विद्यार्थी संचिका (Student Portfolio)">
         {/* Sheets presentation workspace */}
         <div
-          className="bg-[#0d1b4b]/30 p-2 sm:p-4 pb-2 rounded-2xl sm:rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto"
+          ref={workspaceRef}
+          className="bg-[#0d1b4b]/30 p-2 sm:p-4 pb-2 rounded-2xl sm:rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto overflow-x-hidden"
           style={{ width: "100%", maxWidth: "930px", height: "fit-content" }}
         >
           {/* Floating Next/Prev Arrow Controllers anchored symmetrically on left and right upper sides */}
@@ -3017,7 +3030,7 @@ function StudentPortfolioPage() {
               {currentTab > 0 && (
                 <button
                   onClick={() => setCurrentTab((prev) => Math.max(0, prev - 1))}
-                  className="nav-arrow prev-arrow flex absolute -left-1 sm:-left-6 md:-left-8 lg:-left-10 top-3 sm:top-6 md:top-8 z-50 w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90 text-xs sm:text-base md:text-xl"
+                  className="nav-arrow prev-arrow flex absolute left-1 sm:-left-6 md:-left-8 lg:-left-10 top-3 sm:top-6 md:top-8 z-50 w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90 text-xs sm:text-base md:text-xl"
                   style={{
                     background: "rgba(13, 27, 75, 0.9)",
                     border: "2px solid #c9a227",
@@ -3031,7 +3044,7 @@ function StudentPortfolioPage() {
                     e.currentTarget.style.borderColor = "#fff";
                     e.currentTarget.style.color = "#fff";
                     e.currentTarget.style.boxShadow =
-                      "0 0 15px rgba(255,255,255,0.4)";
+                       "0 0 15px rgba(255,255,255,0.4)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = "rgba(13, 27, 75, 0.9)";
@@ -3051,7 +3064,7 @@ function StudentPortfolioPage() {
                       Math.min(pageNames.length - 1, prev + 1),
                     )
                   }
-                  className="nav-arrow next-arrow flex absolute -right-1 sm:-right-6 md:-right-8 lg:-right-10 top-3 sm:top-6 md:top-8 z-50 w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90 text-xs sm:text-base md:text-xl"
+                  className="nav-arrow next-arrow flex absolute right-1 sm:-right-6 md:-right-8 lg:-right-10 top-3 sm:top-6 md:top-8 z-50 w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90 text-xs sm:text-base md:text-xl"
                   style={{
                     background: "rgba(13, 27, 75, 0.9)",
                     border: "2px solid #c9a227",
@@ -3083,12 +3096,35 @@ function StudentPortfolioPage() {
 
           <div
             id="student-portfolio-print"
-            className={isPrinting ? "is-printing-pdf w-full" : "w-full"}
-            style={{
-              maxWidth: "810px",
-              ["--sanchika-font-size" as any]: `${baseFontSize}pt`,
-              height: "fit-content",
-            }}
+            className={isPrinting ? "is-printing-pdf w-full" : "w-full flex flex-col items-center"}
+            style={
+              !isPrinting && mobileScale < 1
+                ? supportsZoom
+                  ? {
+                      zoom: mobileScale,
+                      width: `${targetA4Width}px`,
+                      minWidth: `${targetA4Width}px`,
+                      maxWidth: `${targetA4Width}px`,
+                      ["--sanchika-font-size" as any]: `${baseFontSize}pt`,
+                      height: "fit-content",
+                    }
+                  : {
+                      transform: `scale(${mobileScale})`,
+                      transformOrigin: "top center",
+                      width: `${targetA4Width}px`,
+                      minWidth: `${targetA4Width}px`,
+                      maxWidth: `${targetA4Width}px`,
+                      marginBottom: `-${Math.round((1 - mobileScale) * 1145)}px`,
+                      ["--sanchika-font-size" as any]: `${baseFontSize}pt`,
+                      height: "fit-content",
+                    }
+                : {
+                    width: "100%",
+                    maxWidth: `${targetA4Width}px`,
+                    ["--sanchika-font-size" as any]: `${baseFontSize}pt`,
+                    height: "fit-content",
+                  }
+            }
           >
             <div
               style={{

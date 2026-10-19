@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { useState, useMemo, useEffect } from "react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -250,6 +251,7 @@ function QuestionBankPage() {
       <TeacherSidebar />
 
       <main className="lg:pl-0 pt-20 min-h-screen bg-white">
+        <ModulePaywall moduleId="question-bank" defaultTitle="प्रश्नपेढी (Question Bank)">
         <div className="p-4 md:p-8 space-y-6 max-w-full mx-auto">
           {/* Back to Dashboard Button */}
           <div>
@@ -449,6 +451,7 @@ function QuestionBankPage() {
             </div>
           </div>
         </div>
+        </ModulePaywall>
       </main>
     </div>
   );

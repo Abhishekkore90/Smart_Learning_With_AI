@@ -40,6 +40,74 @@ const getCleanStudentId = (id) => {
   return str;
 };
 
+// A4 Page Mobile Scale Wrapper to show authentic A4 proportions on mobile without horizontal scrollbar
+function A4PageWrapper({ children, isLandscape = false }) {
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(1);
+
+  const targetWidth = isLandscape ? 1123 : 794;
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const parentWidth = rect.width || containerRef.current.clientWidth || window.innerWidth;
+      if (parentWidth > 0 && parentWidth < targetWidth) {
+        setScale(Number((parentWidth / targetWidth).toFixed(4)));
+      } else {
+        setScale(1);
+      }
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, [targetWidth]);
+
+  const supportsZoom = typeof document !== "undefined" && "zoom" in document.documentElement.style;
+
+  return (
+    <div
+      ref={containerRef}
+      className="a4-page-scale-wrapper w-full flex justify-center mb-6"
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        overflowX: "hidden",
+      }}
+    >
+      <div
+        className="a4-page-scale-inner"
+        style={
+          scale < 1
+            ? supportsZoom
+              ? {
+                  zoom: scale,
+                  width: `${targetWidth}px`,
+                  minWidth: `${targetWidth}px`,
+                  maxWidth: `${targetWidth}px`,
+                }
+              : {
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top center",
+                  width: `${targetWidth}px`,
+                  minWidth: `${targetWidth}px`,
+                  maxWidth: `${targetWidth}px`,
+                  marginBottom: `-${Math.round((1 - scale) * (isLandscape ? 794 : 1123))}px`,
+                }
+            : {
+                width: `${targetWidth}px`,
+                minWidth: `${targetWidth}px`,
+                maxWidth: `${targetWidth}px`,
+              }
+        }
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialSemester = "sem2", initialMedium, onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
@@ -1160,6 +1228,16 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             width: ${layoutMode === "portrait" ? "210mm" : "297mm"} !important;
             background-color: #ffffff !important;
           }
+          .cce-pdf-generating .a4-page-scale-wrapper {
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .cce-pdf-generating .a4-page-scale-inner {
+            transform: none !important;
+            width: auto !important;
+            min-width: 0 !important;
+            max-width: none !important;
+          }
           .cce-pdf-generating .pdf-page {
             margin: 0 !important;
             padding: 24px !important;
@@ -2013,78 +2091,82 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
               return (
                 <>
                   {/* PAGE 1 */}
-                  {layoutMode === "portrait" ? (
-                    <div
-                      className="pdf-page bg-white relative w-[210mm] max-w-[210mm] min-w-[210mm] h-[297mm] max-h-[297mm] min-h-[297mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none box-border border-2 border-orange-500 rounded-xl flex items-center justify-center p-0"
-                      style={{
-                        pageBreakAfter: "always",
-                        breakAfter: "page",
-                        pageBreakInside: "avoid",
-                        breakInside: "avoid",
-                        fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
-                      }}
-                    >
+                  <A4PageWrapper isLandscape={layoutMode !== "portrait"}>
+                    {layoutMode === "portrait" ? (
                       <div
-                        className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-6.5 box-border flex flex-col justify-center items-center shrink-0"
+                        className="pdf-page bg-white relative w-[210mm] max-w-[210mm] min-w-[210mm] h-[297mm] max-h-[297mm] min-h-[297mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none box-border border-2 border-orange-500 rounded-xl flex items-center justify-center p-0"
                         style={{
-                          transform: "rotate(-90deg)",
-                          transformOrigin: "center center",
+                          pageBreakAfter: "always",
+                          breakAfter: "page",
+                          pageBreakInside: "avoid",
+                          breakInside: "avoid",
+                          fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
+                        }}
+                      >
+                        <div
+                          className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-6.5 box-border flex flex-col justify-center items-center shrink-0"
+                          style={{
+                            transform: "rotate(-90deg)",
+                            transformOrigin: "center center",
+                          }}
+                        >
+                          {page1Inner}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-6.5 box-border border-2 border-orange-500 rounded-2xl flex flex-col justify-center items-center"
+                        style={{
+                          pageBreakAfter: "always",
+                          breakAfter: "page",
+                          pageBreakInside: "avoid",
+                          breakInside: "avoid",
+                          fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
                         }}
                       >
                         {page1Inner}
                       </div>
-                    </div>
-                  ) : (
-                    <div
-                      className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-6.5 box-border border-2 border-orange-500 rounded-2xl flex flex-col justify-center items-center"
-                      style={{
-                        pageBreakAfter: "always",
-                        breakAfter: "page",
-                        pageBreakInside: "avoid",
-                        breakInside: "avoid",
-                        fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
-                      }}
-                    >
-                      {page1Inner}
-                    </div>
-                  )}
+                    )}
+                  </A4PageWrapper>
 
                   {/* PAGE 2 */}
-                  {layoutMode === "portrait" ? (
-                    <div
-                      className="pdf-page bg-white relative w-[210mm] max-w-[210mm] min-w-[210mm] h-[297mm] max-h-[297mm] min-h-[297mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none box-border border-2 border-orange-500 rounded-xl flex items-center justify-center p-0"
-                      style={{
-                        pageBreakAfter: isLastStudent ? "avoid" : "always",
-                        breakAfter: isLastStudent ? "avoid" : "page",
-                        pageBreakInside: "avoid",
-                        breakInside: "avoid",
-                        fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
-                      }}
-                    >
+                  <A4PageWrapper isLandscape={layoutMode !== "portrait"}>
+                    {layoutMode === "portrait" ? (
                       <div
-                        className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-6.5 box-border flex flex-col justify-center items-center shrink-0"
+                        className="pdf-page bg-white relative w-[210mm] max-w-[210mm] min-w-[210mm] h-[297mm] max-h-[297mm] min-h-[297mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none box-border border-2 border-orange-500 rounded-xl flex items-center justify-center p-0"
                         style={{
-                          transform: "rotate(-90deg)",
-                          transformOrigin: "center center",
+                          pageBreakAfter: isLastStudent ? "avoid" : "always",
+                          breakAfter: isLastStudent ? "avoid" : "page",
+                          pageBreakInside: "avoid",
+                          breakInside: "avoid",
+                          fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
+                        }}
+                      >
+                        <div
+                          className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-6.5 box-border flex flex-col justify-center items-center shrink-0"
+                          style={{
+                            transform: "rotate(-90deg)",
+                            transformOrigin: "center center",
+                          }}
+                        >
+                          {page2Inner}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-6.5 box-border border-2 border-orange-500 rounded-2xl flex flex-col justify-center items-center"
+                        style={{
+                          pageBreakAfter: isLastStudent ? "avoid" : "always",
+                          breakAfter: isLastStudent ? "avoid" : "page",
+                          pageBreakInside: "avoid",
+                          breakInside: "avoid",
+                          fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
                         }}
                       >
                         {page2Inner}
                       </div>
-                    </div>
-                  ) : (
-                    <div
-                      className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-6.5 box-border border-2 border-orange-500 rounded-2xl flex flex-col justify-center items-center"
-                      style={{
-                        pageBreakAfter: isLastStudent ? "avoid" : "always",
-                        breakAfter: isLastStudent ? "avoid" : "page",
-                        pageBreakInside: "avoid",
-                        breakInside: "avoid",
-                        fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
-                      }}
-                    >
-                      {page2Inner}
-                    </div>
-                  )}
+                    )}
+                  </A4PageWrapper>
                 </>
               );
             };
@@ -2093,42 +2175,46 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
               <React.Fragment key={student.id || idx}>
                 {pageMode === "2pages" ? (
                   renderTwoPageProgressSheet()
-                ) : layoutMode === "portrait" ? (
-                  /* ROTATED PORTRAIT BOOKLET (A4 210mm x 297mm ROTATED FOR PORTRAIT PDF) */
-                  <div
-                    className="pdf-page bg-white relative w-[210mm] max-w-[210mm] min-w-[210mm] h-[297mm] max-h-[297mm] min-h-[297mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none box-border border-2 border-orange-500 rounded-xl flex items-center justify-center p-0"
-                    style={{
-                      pageBreakAfter: isLastStudent ? "avoid" : "always",
-                      breakAfter: isLastStudent ? "avoid" : "page",
-                      pageBreakInside: "avoid",
-                      breakInside: "avoid",
-                      fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
-                    }}
-                  >
-                    <div
-                      className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-6.5 box-border flex flex-col justify-center items-center shrink-0"
-                      style={{
-                        transform: "rotate(-90deg)",
-                        transformOrigin: "center center",
-                      }}
-                    >
-                      {renderSinglePageProgressSheet()}
-                    </div>
-                  </div>
                 ) : (
-                  /* LANDSCAPE BOOKLET (A4 297mm x 210mm SINGLE PAGE LANDSCAPE PDF) */
-                  <div
-                    className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-6.5 box-border border-2 border-orange-500 rounded-2xl flex flex-col justify-center items-center"
-                    style={{
-                      pageBreakAfter: isLastStudent ? "avoid" : "always",
-                      breakAfter: isLastStudent ? "avoid" : "page",
-                      pageBreakInside: "avoid",
-                      breakInside: "avoid",
-                      fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
-                    }}
-                  >
-                    {renderSinglePageProgressSheet()}
-                  </div>
+                  <A4PageWrapper isLandscape={layoutMode !== "portrait"}>
+                    {layoutMode === "portrait" ? (
+                      /* ROTATED PORTRAIT BOOKLET (A4 210mm x 297mm ROTATED FOR PORTRAIT PDF) */
+                      <div
+                        className="pdf-page bg-white relative w-[210mm] max-w-[210mm] min-w-[210mm] h-[297mm] max-h-[297mm] min-h-[297mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none box-border border-2 border-orange-500 rounded-xl flex items-center justify-center p-0"
+                        style={{
+                          pageBreakAfter: isLastStudent ? "avoid" : "always",
+                          breakAfter: isLastStudent ? "avoid" : "page",
+                          pageBreakInside: "avoid",
+                          breakInside: "avoid",
+                          fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
+                        }}
+                      >
+                        <div
+                          className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-6.5 box-border flex flex-col justify-center items-center shrink-0"
+                          style={{
+                            transform: "rotate(-90deg)",
+                            transformOrigin: "center center",
+                          }}
+                        >
+                          {renderSinglePageProgressSheet()}
+                        </div>
+                      </div>
+                    ) : (
+                      /* LANDSCAPE BOOKLET (A4 297mm x 210mm SINGLE PAGE LANDSCAPE PDF) */
+                      <div
+                        className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-6.5 box-border border-2 border-orange-500 rounded-2xl flex flex-col justify-center items-center"
+                        style={{
+                          pageBreakAfter: isLastStudent ? "avoid" : "always",
+                          breakAfter: isLastStudent ? "avoid" : "page",
+                          pageBreakInside: "avoid",
+                          breakInside: "avoid",
+                          fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
+                        }}
+                      >
+                        {renderSinglePageProgressSheet()}
+                      </div>
+                    )}
+                  </A4PageWrapper>
                 )}
               </React.Fragment>
             );

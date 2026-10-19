@@ -43,17 +43,17 @@ export const DEFAULT_HEADERS: Record<PlanningCategory, string[]> = {
     "आठवडा",
     "कामाचे दिवस",
     "प्राप्त तासिका",
-    "विषय / घटक विवरण",
+    "पाठ / घटक",
     "शिक्षक स्वाक्षरी",
   ],
   masik_niyojan: [
     "दिवस",
-    "पाठ / घटक / उपघटक",
+    "पाठ / घटक",
     "अध्ययन निष्पत्ती",
     "अध्ययन मुद्दे / पाठ्यांश उद्देश",
     "अध्ययन अनुभवाचे स्वरूप",
-    "उपयोगात आणावयाची साधन तंत्रे",
-    "आवश्यक साहित्य",
+    "साधन तंत्रे",
+    "शैक्षणिक साहित्य",
   ],
   prashnapedhi: [
     "प्रश्न प्रकार",
@@ -61,6 +61,33 @@ export const DEFAULT_HEADERS: Record<PlanningCategory, string[]> = {
     "गुण",
     "प्रश्न मजकूर",
     "उत्तर / मुद्दे",
+  ],
+};
+
+export const DEFAULT_ENGLISH_HEADERS: Record<PlanningCategory, string[]> = {
+  varshik_niyojan: [
+    "Month",
+    "Weeks",
+    "Working Days",
+    "Periods",
+    "Subject / Topic Details",
+    "Teacher Signature",
+  ],
+  masik_niyojan: [
+    "Day",
+    "Lesson/ Point",
+    "Learning Outcomes",
+    "Teaching Point/ Aim",
+    "Structure of Teaching Experience",
+    "Tool & Technique",
+    "Educational Instrument",
+  ],
+  prashnapedhi: [
+    "Question Type",
+    "Unit / Subtopic",
+    "Marks",
+    "Question Text",
+    "Answer / Key Points",
   ],
 };
 

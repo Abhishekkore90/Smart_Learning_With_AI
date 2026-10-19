@@ -8,6 +8,8 @@ import {
   ChevronLeft,
   CheckCircle2,
   GraduationCap,
+  School,
+  UserCheck,
   X,
   Check,
   Maximize2,
@@ -46,6 +48,11 @@ interface LetterCircleSection {
 
 interface QuestionPaperData {
   schoolName: string;
+  kendra?: string;
+  taluka?: string;
+  jilha?: string;
+  teacherName?: string;
+  headmasterName?: string;
   examTitle: string;
   className: string;
   subjectName: string;
@@ -62,6 +69,11 @@ interface QuestionPaperData {
 
 const DEFAULT_PAPER_DATA: QuestionPaperData = {
   schoolName: "",
+  kendra: "",
+  taluka: "",
+  jilha: "",
+  teacherName: "",
+  headmasterName: "",
   examTitle: "आकारिक मूल्यमापन चाचणी क्र. १",
   className: "१ ली (1st)",
   subjectName: "भाषा व गणित (Language & Maths)",
@@ -119,9 +131,15 @@ export function QuestionPaperTemplate({
 
   const [data, setData] = useState<QuestionPaperData>(() => {
     const savedUserSchool = getUserSavedQPSchool(userId);
+    const uni = getUnifiedSchoolProfile();
     return {
       ...DEFAULT_PAPER_DATA,
-      schoolName: savedUserSchool || "",
+      schoolName: savedUserSchool || uni.schoolName || "",
+      kendra: uni.kendra || uni.centerName || "",
+      taluka: uni.taluka || "",
+      jilha: uni.jilha || uni.district || "",
+      teacherName: uni.teacherName || userName || "",
+      headmasterName: uni.headmaster || "",
       examTitle: paper?.examTypeLabel || paper?.title || DEFAULT_PAPER_DATA.examTitle,
       className: paper?.class ? `${paper.class} ली` : DEFAULT_PAPER_DATA.className,
       subjectName: paper?.subject || DEFAULT_PAPER_DATA.subjectName,
@@ -140,6 +158,11 @@ export function QuestionPaperTemplate({
   });
   const [headerForm, setHeaderForm] = useState({
     schoolName: "",
+    kendra: "",
+    taluka: "",
+    jilha: "",
+    teacherName: "",
+    headmasterName: "",
     examTitle: "आकारिक मूल्यमापन चाचणी क्र. १",
     className: "१ ली",
     subjectName: "भाषा",
@@ -172,6 +195,7 @@ export function QuestionPaperTemplate({
         } catch (e) {}
       }
 
+      const uni = getUnifiedSchoolProfile();
       try {
         const saved = localStorage.getItem(storageKey);
         if (saved && isMounted) {
@@ -179,15 +203,25 @@ export function QuestionPaperTemplate({
           if (resolvedSchool) {
             parsed.schoolName = resolvedSchool;
           }
+          if (!parsed.kendra && (uni.kendra || uni.centerName)) parsed.kendra = uni.kendra || uni.centerName;
+          if (!parsed.taluka && uni.taluka) parsed.taluka = uni.taluka;
+          if (!parsed.jilha && (uni.jilha || uni.district)) parsed.jilha = uni.jilha || uni.district;
+          if (!parsed.teacherName && uni.teacherName) parsed.teacherName = uni.teacherName;
+          if (!parsed.headmasterName && uni.headmaster) parsed.headmasterName = uni.headmaster;
           setData(parsed);
           return;
         }
       } catch (e) {}
 
-      if (resolvedSchool && isMounted) {
+      if (isMounted) {
         setData((prev) => ({
           ...prev,
-          schoolName: resolvedSchool,
+          schoolName: resolvedSchool || uni.schoolName || prev.schoolName,
+          kendra: prev.kendra || uni.kendra || uni.centerName || "",
+          taluka: prev.taluka || uni.taluka || "",
+          jilha: prev.jilha || uni.jilha || uni.district || "",
+          teacherName: prev.teacherName || uni.teacherName || userName || "",
+          headmasterName: prev.headmasterName || uni.headmaster || "",
         }));
       }
     }
@@ -323,6 +357,11 @@ export function QuestionPaperTemplate({
               onClick={() => {
                 setHeaderForm({
                   schoolName: data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, ""),
+                  kendra: data.kendra || "",
+                  taluka: data.taluka || "",
+                  jilha: data.jilha || "",
+                  teacherName: data.teacherName || "",
+                  headmasterName: data.headmasterName || "",
                   examTitle: data.examTitle,
                   className: data.className,
                   subjectName: data.subjectName,
@@ -335,10 +374,10 @@ export function QuestionPaperTemplate({
                 setShowFillSchoolModal(true);
               }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer border border-emerald-400/40 active:scale-95"
-              title="शाळेचे नाव व परीक्षेचा सर्व तपशील भरा"
+              title="शाळेचे नाव, केंद्र, तालुका, जिल्हा व शिक्षक माहिती भरा"
             >
               <GraduationCap className="size-3.5 text-emerald-100" />
-              <span>शाळेचे नाव भरा</span>
+              <span>शाळा व शिक्षक माहिती भरा</span>
             </button>
           )}
 
@@ -410,28 +449,87 @@ export function QuestionPaperTemplate({
           style={{ fontFamily: "'Noto Sans Devanagari', -apple-system, sans-serif" }}
         >
           {/* Header Box */}
-          <div className="border-2 border-slate-900 rounded-none p-2.5 sm:p-4 mb-4 sm:mb-6 w-full box-border overflow-hidden">
-            {/* School Name */}
-            <div className="mb-2 sm:mb-3">
+          <div className="border-2 border-slate-900 rounded-none p-2.5 sm:p-4 mb-4 sm:mb-6 w-full box-border overflow-hidden bg-white">
+            {/* School Name, Kendra, Taluka, Jilla Row */}
+            <div className="mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-slate-300">
               {isEditing ? (
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <span className="text-xs sm:text-base font-black text-slate-900 whitespace-nowrap shrink-0">शाळेचे नाव :</span>
-                  <input
-                    type="text"
-                    value={data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "")}
-                    onChange={(e) => setData({ ...data, schoolName: e.target.value })}
-                    className="flex-1 min-w-0 text-xs sm:text-base font-black text-slate-900 border-b-2 border-indigo-500 outline-none pb-0.5 bg-amber-50/50"
-                    placeholder="येथे शाळेचे नाव भरा"
-                  />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-xs sm:text-base font-black text-slate-900 whitespace-nowrap shrink-0">शाळेचे नाव :</span>
+                    <input
+                      type="text"
+                      value={data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "")}
+                      onChange={(e) => setData({ ...data, schoolName: e.target.value })}
+                      className="flex-1 min-w-0 text-xs sm:text-base font-black text-slate-900 border-b-2 border-indigo-500 outline-none pb-0.5 bg-amber-50/50"
+                      placeholder="येथे शाळेचे नाव भरा"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs font-bold pt-1">
+                    <div className="flex items-center gap-1">
+                      <span className="text-slate-700 whitespace-nowrap">केंद्र :</span>
+                      <input
+                        type="text"
+                        value={data.kendra || ""}
+                        onChange={(e) => setData({ ...data, kendra: e.target.value })}
+                        className="flex-1 border-b border-slate-400 outline-none font-bold bg-amber-50/50 px-1"
+                        placeholder="केंद्र"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-slate-700 whitespace-nowrap">तालुका :</span>
+                      <input
+                        type="text"
+                        value={data.taluka || ""}
+                        onChange={(e) => setData({ ...data, taluka: e.target.value })}
+                        className="flex-1 border-b border-slate-400 outline-none font-bold bg-amber-50/50 px-1"
+                        placeholder="तालुका"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-slate-700 whitespace-nowrap">जिल्हा :</span>
+                      <input
+                        type="text"
+                        value={data.jilha || ""}
+                        onChange={(e) => setData({ ...data, jilha: e.target.value })}
+                        className="flex-1 border-b border-slate-400 outline-none font-bold bg-amber-50/50 px-1"
+                        placeholder="जिल्हा"
+                      />
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div className="text-xs sm:text-lg font-black text-slate-900 tracking-tight flex items-baseline gap-1.5 min-w-0">
-                  <span className="shrink-0 text-slate-900 font-black whitespace-nowrap">शाळेचे नाव :</span>
-                  <span className="flex-1 min-w-0 text-slate-950 font-black border-b border-dotted border-slate-500 pb-0.5 truncate px-1">
-                    {data.schoolName
-                      ? data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "")
-                      : ""}
-                  </span>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs sm:text-base font-black text-slate-900 tracking-tight">
+                  <div className="flex items-baseline gap-1.5 flex-1 min-w-[200px]">
+                    <span className="shrink-0 text-slate-900 font-black whitespace-nowrap">शाळेचे नाव :</span>
+                    <span className="font-black text-slate-950 border-b border-dotted border-slate-500 pb-0.5 px-1 flex-1 min-w-0">
+                      {data.schoolName
+                        ? data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "")
+                        : ""}
+                    </span>
+                  </div>
+
+                  {(data.kendra || data.taluka || data.jilha) && (
+                    <div className="flex items-baseline gap-2 sm:gap-3 text-[11px] sm:text-xs font-bold text-slate-800 shrink-0">
+                      {data.kendra && (
+                        <span className="whitespace-nowrap">
+                          <span className="text-slate-600 font-semibold">केंद्र : </span>
+                          <span className="font-bold text-slate-950">{data.kendra}</span>
+                        </span>
+                      )}
+                      {data.taluka && (
+                        <span className="whitespace-nowrap">
+                          <span className="text-slate-600 font-semibold">तालुका : </span>
+                          <span className="font-bold text-slate-950">{data.taluka}</span>
+                        </span>
+                      )}
+                      {data.jilha && (
+                        <span className="whitespace-nowrap">
+                          <span className="text-slate-600 font-semibold">जिल्हा : </span>
+                          <span className="font-bold text-slate-950">{data.jilha}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -684,10 +782,67 @@ export function QuestionPaperTemplate({
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="mt-8 pt-3 border-t-2 border-slate-900 flex items-center justify-between text-[11px] font-bold text-slate-500">
-            <span>महाराष्ट्र राज्य परीक्षा मंडळ अभ्यासक्रम मानक</span>
-            <span>पालकांची स्वाक्षरी : ____________________</span>
+          {/* Teacher, Parent & Headmaster Signatures (After subject / bottom of paper) */}
+          <div className="mt-8 pt-4 border-t-2 border-slate-900">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm font-bold text-slate-900">
+              {/* Left: Class / Subject Teacher */}
+              <div className="text-left space-y-1">
+                <div className="text-[11px] sm:text-xs text-slate-600 font-semibold">
+                  विषय शिक्षक / वर्ग शिक्षक :
+                </div>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={data.teacherName || ""}
+                    onChange={(e) => setData({ ...data, teacherName: e.target.value })}
+                    className="w-full border-b border-slate-400 outline-none font-bold text-xs sm:text-sm bg-amber-50/50"
+                    placeholder="शिक्षकाचे नाव"
+                  />
+                ) : (
+                  <div className="font-black text-slate-950 text-xs sm:text-sm min-h-[1.25rem]">
+                    {data.teacherName || "____________________"}
+                  </div>
+                )}
+                <div className="text-[10px] text-slate-400 font-medium pt-2 sm:pt-3">स्वाक्षरी</div>
+              </div>
+
+              {/* Center: Parent Signature */}
+              <div className="text-center space-y-1">
+                <div className="text-[11px] sm:text-xs text-slate-600 font-semibold">
+                  पालकांची स्वाक्षरी :
+                </div>
+                <div className="font-black text-slate-950 text-xs sm:text-sm min-h-[1.25rem]">
+                  ____________________
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium pt-2 sm:pt-3">स्वाक्षरी व दिनांक</div>
+              </div>
+
+              {/* Right: Headmaster */}
+              <div className="text-right space-y-1">
+                <div className="text-[11px] sm:text-xs text-slate-600 font-semibold">
+                  मुख्याध्यापक :
+                </div>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={data.headmasterName || ""}
+                    onChange={(e) => setData({ ...data, headmasterName: e.target.value })}
+                    className="w-full border-b border-slate-400 outline-none font-bold text-xs sm:text-sm text-right bg-amber-50/50"
+                    placeholder="मुख्याध्यापकाचे नाव"
+                  />
+                ) : (
+                  <div className="font-black text-slate-950 text-xs sm:text-sm min-h-[1.25rem]">
+                    {data.headmasterName || "____________________"}
+                  </div>
+                )}
+                <div className="text-[10px] text-slate-400 font-medium pt-2 sm:pt-3">स्वाक्षरी व शिक्का</div>
+              </div>
+            </div>
+
+            <div className="mt-3 pt-2 border-t border-dashed border-slate-200 flex items-center justify-between text-[10px] font-bold text-slate-400">
+              <span>महाराष्ट्र राज्य परीक्षा मंडळ अभ्यासक्रम मानक</span>
+              <span>गुण नोंदवही व प्रगती पत्रकासाठी वैध</span>
+            </div>
           </div>
         </div>
       </div>
@@ -723,198 +878,231 @@ export function QuestionPaperTemplate({
             </div>
 
             {/* Scrollable Form Body */}
-            <div className="space-y-3.5 overflow-y-auto pr-1 flex-1 text-xs sm:text-sm">
-              {/* Field 1: School Name */}
-              <div>
-                <label className="block font-bold text-slate-800 mb-1 text-xs">
-                  १. शाळेचे नाव (School Name):
-                </label>
-                <input
-                  type="text"
-                  value={headerForm.schoolName}
-                  onChange={(e) => setHeaderForm({ ...headerForm, schoolName: e.target.value })}
-                  placeholder="उदा. जिल्हा परिषद शाळा धोंडेवाडी"
-                  autoFocus
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-emerald-500/40 rounded-xl font-bold text-slate-900 text-sm outline-none focus:border-emerald-600 focus:bg-white shadow-xs"
-                />
-              </div>
-
-              {/* Field 2: Exam / Assessment Title */}
-              <div>
-                <label className="block font-bold text-slate-800 mb-1 text-xs">
-                  २. चाचणी / परीक्षेचे नाव (Exam Title):
-                </label>
-                <input
-                  type="text"
-                  value={headerForm.examTitle}
-                  onChange={(e) => setHeaderForm({ ...headerForm, examTitle: e.target.value })}
-                  placeholder="उदा. आकारिक मूल्यमापन चाचणी क्र. १"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
-                />
-                <div className="flex flex-wrap gap-1.5 mt-1.5">
-                  {[
-                    "आकारिक मूल्यमापन चाचणी क्र. १",
-                    "आकारिक मूल्यमापन चाचणी क्र. २",
-                    "संकलित मूल्यमापन चाचणी १",
-                    "संकलित मूल्यमापन चाचणी २",
-                    "द्वितीय सत्र परीक्षा",
-                  ].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setHeaderForm({ ...headerForm, examTitle: t })}
-                      className={`px-2 py-0.5 text-[11px] font-semibold rounded-lg border transition-all cursor-pointer ${
-                        headerForm.examTitle === t
-                          ? "bg-indigo-50 text-indigo-700 border-indigo-300 font-bold"
-                          : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Fields 3, 4, 5: Class, Subject, Total Marks */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-800 mb-1 text-xs">
-                    ३. इयत्ता (Class):
-                  </label>
-                  <input
-                    type="text"
-                    value={headerForm.className}
-                    onChange={(e) => setHeaderForm({ ...headerForm, className: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
-                  />
-                </div>
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1 text-xs sm:text-sm">
+              {/* Section A: School, Kendra, Taluka, Jilla */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
+                <h4 className="font-black text-xs text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <School className="size-4 text-indigo-600" />
+                  <span>शाळा व पत्ता माहिती (School Details)</span>
+                </h4>
 
                 <div>
                   <label className="block font-bold text-slate-800 mb-1 text-xs">
-                    ४. विषय (Subject):
+                    १. शाळेचे नाव (School Name): <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={headerForm.subjectName}
-                    onChange={(e) => setHeaderForm({ ...headerForm, subjectName: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                    value={headerForm.schoolName}
+                    onChange={(e) => setHeaderForm({ ...headerForm, schoolName: e.target.value })}
+                    placeholder="उदा. जिल्हा परिषद शाळा धोंडेवाडी"
+                    autoFocus
+                    className="w-full px-3.5 py-2.5 bg-white border-2 border-emerald-500/40 rounded-xl font-bold text-slate-900 text-sm outline-none focus:border-emerald-600 shadow-xs"
                   />
                 </div>
 
-                <div>
-                  <label className="block font-bold text-slate-800 mb-1 text-xs">
-                    ५. एकूण गुण (Marks):
-                  </label>
-                  <input
-                    type="text"
-                    value={headerForm.totalMarks}
-                    onChange={(e) => setHeaderForm({ ...headerForm, totalMarks: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
-                  />
-                </div>
-              </div>
-
-              {/* Fields 6, 7: Student Name & Roll No */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-800 mb-1 text-xs">
-                    ६. विद्यार्थ्याचे नाव (Student Name):
-                  </label>
-                  <input
-                    type="text"
-                    value={headerForm.studentName}
-                    onChange={(e) => setHeaderForm({ ...headerForm, studentName: e.target.value })}
-                    placeholder="उदा. _____________________ (किंवा विद्यार्थ्याचे नाव)"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-800 mb-1 text-xs">
-                    ७. हजेरी क्रमांक (Roll No.):
-                  </label>
-                  <input
-                    type="text"
-                    value={headerForm.rollNo}
-                    onChange={(e) => setHeaderForm({ ...headerForm, rollNo: e.target.value })}
-                    placeholder="[   ] (रिक्त चौकट)"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white text-center"
-                  />
-                </div>
-              </div>
-
-              {/* Fields 8, 9: Date & Marks Obtained */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block font-bold text-slate-800 mb-1 text-xs">
-                    ८. दिनांक (Date):
-                  </label>
-                  <input
-                    type="text"
-                    value={headerForm.examDate}
-                    onChange={(e) => setHeaderForm({ ...headerForm, examDate: e.target.value })}
-                    placeholder="उदा. दि.   /   / २०२६"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-800 mb-1 text-xs">
-                    ९. मिळालेले गुण (Obtained):
-                  </label>
-                  <input
-                    type="text"
-                    value={headerForm.obtainedMarks}
-                    onChange={(e) => setHeaderForm({ ...headerForm, obtainedMarks: e.target.value })}
-                    placeholder="[   ] (तपासणीसाठी)"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white text-center"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1 text-xs">
+                      केंद्र (Kendra):
+                    </label>
+                    <input
+                      type="text"
+                      value={headerForm.kendra}
+                      onChange={(e) => setHeaderForm({ ...headerForm, kendra: e.target.value })}
+                      placeholder="उदा. पेड"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1 text-xs">
+                      तालुका (Taluka):
+                    </label>
+                    <input
+                      type="text"
+                      value={headerForm.taluka}
+                      onChange={(e) => setHeaderForm({ ...headerForm, taluka: e.target.value })}
+                      placeholder="उदा. तासगाव"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1 text-xs">
+                      जिल्हा (Jilla / District):
+                    </label>
+                    <input
+                      type="text"
+                      value={headerForm.jilha}
+                      onChange={(e) => setHeaderForm({ ...headerForm, jilha: e.target.value })}
+                      placeholder="उदा. सांगली"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Live Preview Box (Exact Screenshot 1 match) */}
+              {/* Section B: Teacher & Headmaster Information */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
+                <h4 className="font-black text-xs text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <UserCheck className="size-4 text-indigo-600" />
+                  <span>शिक्षक व मुख्याध्यापक माहिती (Signatures)</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1 text-xs">
+                      वर्ग शिक्षक / विषय शिक्षक नाव:
+                    </label>
+                    <input
+                      type="text"
+                      value={headerForm.teacherName}
+                      onChange={(e) => setHeaderForm({ ...headerForm, teacherName: e.target.value })}
+                      placeholder="उदा. श्री. आर. के. पाटील"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1 text-xs">
+                      मुख्याध्यापकाचे नाव (Headmaster):
+                    </label>
+                    <input
+                      type="text"
+                      value={headerForm.headmasterName}
+                      onChange={(e) => setHeaderForm({ ...headerForm, headmasterName: e.target.value })}
+                      placeholder="उदा. श्री. एस. व्ही. जाधव"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section C: Exam Title & Details */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
+                <h4 className="font-black text-xs text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Edit3 className="size-4 text-indigo-600" />
+                  <span>परीक्षेचा तपशील (Exam Info)</span>
+                </h4>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    चाचणी / परीक्षेचे नाव (Exam Title):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.examTitle}
+                    onChange={(e) => setHeaderForm({ ...headerForm, examTitle: e.target.value })}
+                    placeholder="उदा. आकारिक मूल्यमापन चाचणी क्र. १"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500"
+                  />
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {[
+                      "आकारिक मूल्यमापन चाचणी क्र. १",
+                      "आकारिक मूल्यमापन चाचणी क्र. २",
+                      "संकलित मूल्यमापन चाचणी १",
+                      "संकलित मूल्यमापन चाचणी २",
+                      "द्वितीय सत्र परीक्षा",
+                    ].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setHeaderForm({ ...headerForm, examTitle: t })}
+                        className={`px-2 py-0.5 text-[11px] font-semibold rounded-lg border transition-all cursor-pointer ${
+                          headerForm.examTitle === t
+                            ? "bg-indigo-50 text-indigo-700 border-indigo-300 font-bold"
+                            : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Class, Subject, Total Marks */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1 text-xs">
+                      इयत्ता (Class):
+                    </label>
+                    <input
+                      type="text"
+                      value={headerForm.className}
+                      onChange={(e) => setHeaderForm({ ...headerForm, className: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1 text-xs">
+                      विषय (Subject):
+                    </label>
+                    <input
+                      type="text"
+                      value={headerForm.subjectName}
+                      onChange={(e) => setHeaderForm({ ...headerForm, subjectName: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1 text-xs">
+                      एकूण गुण (Marks):
+                    </label>
+                    <input
+                      type="text"
+                      value={headerForm.totalMarks}
+                      onChange={(e) => setHeaderForm({ ...headerForm, totalMarks: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Preview Box (Exact match with Header Box and Signatures) */}
               <div className="pt-2">
                 <div className="text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1.5">
-                  <span>👁️ थेट पूर्वावलोकन (Live Preview - बॉक्स कसा दिसेल):</span>
+                  <span>👁️ थेट पूर्वावलोकन (Live Preview - प्रश्नपत्रिकेवर कसे दिसेल):</span>
                 </div>
-                <div className="bg-white border-2 border-slate-900 rounded-none p-3 text-slate-900 shadow-sm select-none font-sans">
-                  {/* Line 1: School Name */}
-                  <div className="font-black text-sm tracking-tight mb-1 text-slate-900">
-                    शाळेचे नाव : <span className="text-slate-950 font-black">{headerForm.schoolName || "____________________________________"}</span>
+                <div className="bg-white border-2 border-slate-900 rounded-none p-3 text-slate-900 shadow-sm select-none font-sans space-y-2">
+                  {/* Line 1: School Name, Kendra, Taluka, Jilla */}
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-xs font-black tracking-tight border-b border-slate-200 pb-1 text-slate-900">
+                    <div>
+                      शाळेचे नाव : <span className="text-slate-950 font-black">{headerForm.schoolName || "__________________________"}</span>
+                    </div>
+                    {(headerForm.kendra || headerForm.taluka || headerForm.jilha) && (
+                      <div className="flex items-baseline gap-2 text-[10px] font-bold text-slate-700">
+                        {headerForm.kendra && <span>केंद्र : {headerForm.kendra}</span>}
+                        {headerForm.taluka && <span>तालुका : {headerForm.taluka}</span>}
+                        {headerForm.jilha && <span>जिल्हा : {headerForm.jilha}</span>}
+                      </div>
+                    )}
                   </div>
+
                   {/* Line 2: Exam Title */}
-                  <div className="text-center font-black text-xs sm:text-sm my-1 text-slate-900">
+                  <div className="text-center font-black text-xs sm:text-sm text-slate-900">
                     {headerForm.examTitle || "आकारिक मूल्यमापन चाचणी क्र. १"}
                   </div>
+
                   {/* Line 3: Class, Subject, Marks */}
-                  <div className="flex items-center justify-between text-xs font-bold mt-1.5 pt-1 border-t border-slate-200">
+                  <div className="flex items-center justify-between text-xs font-bold pt-1 border-t border-slate-200">
                     <div>इयत्ता - <span className="font-black">{headerForm.className || "१ ली"}</span></div>
                     <div>विषय - <span className="font-black">{headerForm.subjectName || "भाषा"}</span></div>
                     <div>एकूण गुण - <span className="font-black">{headerForm.totalMarks || "२०"}</span></div>
                   </div>
-                  {/* Line 4: Student Name & Roll No */}
-                  <div className="flex items-center justify-between text-xs font-semibold mt-1.5">
-                    <div className="flex-1 flex items-center gap-1">
-                      <span>विद्यार्थ्याचे नाव :-</span>
-                      <span className="flex-1 border-b border-slate-900 inline-block min-w-[100px] max-w-[200px] px-1 font-bold">
-                        {headerForm.studentName && headerForm.studentName !== "_____________________" ? headerForm.studentName : ""}
-                      </span>
+
+                  {/* Bottom Signature Preview */}
+                  <div className="grid grid-cols-3 gap-2 text-[10px] font-bold pt-2 mt-2 border-t border-slate-300">
+                    <div className="text-left">
+                      <span className="text-slate-500 block text-[9px]">विषय/वर्ग शिक्षक :</span>
+                      <span className="font-black text-slate-900">{headerForm.teacherName || "________________"}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 pl-2 shrink-0">
-                      <span>हजेरी क्रमांक -</span>
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs bg-white">
-                        {headerForm.rollNo}
-                      </div>
+                    <div className="text-center">
+                      <span className="text-slate-500 block text-[9px]">पालक स्वाक्षरी :</span>
+                      <span className="font-black text-slate-900">________________</span>
                     </div>
-                  </div>
-                  {/* Line 5: Date & Marks */}
-                  <div className="flex items-center justify-between text-xs font-semibold mt-1.5">
-                    <div>{headerForm.examDate || "दि.   /   / २०२६"}</div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span>मिळालेले गुण -</span>
-                      <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs bg-white">
-                        {headerForm.obtainedMarks}
-                      </div>
+                    <div className="text-right">
+                      <span className="text-slate-500 block text-[9px]">मुख्याध्यापक :</span>
+                      <span className="font-black text-slate-900">{headerForm.headmasterName || "________________"}</span>
                     </div>
                   </div>
                 </div>
@@ -926,9 +1114,9 @@ export function QuestionPaperTemplate({
               <button
                 type="button"
                 onClick={() => {
-                  setData((prev) => ({ ...prev, schoolName: "" }));
+                  setData((prev) => ({ ...prev, schoolName: "", kendra: "", taluka: "", jilha: "" }));
                   setShowFillSchoolModal(false);
-                  toast.info("शाळेचे नाव पूर्ववत करण्यात आले.");
+                  toast.info("माहिती पूर्ववत करण्यात आली.");
                 }}
                 className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold cursor-pointer"
               >
@@ -946,9 +1134,20 @@ export function QuestionPaperTemplate({
                   type="button"
                   onClick={() => {
                     const cleanSchool = (headerForm.schoolName || "").replace(/^शाळेचे नाव\s*[:-]?\s*/i, "").trim();
+                    const cleanKendra = (headerForm.kendra || "").replace(/^केंद्र\s*[:-]?\s*/i, "").trim();
+                    const cleanTaluka = (headerForm.taluka || "").replace(/^तालुका\s*[:-]?\s*/i, "").trim();
+                    const cleanJilha = (headerForm.jilha || "").replace(/^जिल्हा\s*[:-]?\s*/i, "").trim();
+                    const cleanTeacher = (headerForm.teacherName || "").trim();
+                    const cleanHeadmaster = (headerForm.headmasterName || "").trim();
+
                     setData((prev) => ({
                       ...prev,
                       schoolName: cleanSchool,
+                      kendra: cleanKendra,
+                      taluka: cleanTaluka,
+                      jilha: cleanJilha,
+                      teacherName: cleanTeacher,
+                      headmasterName: cleanHeadmaster,
                       examTitle: headerForm.examTitle,
                       className: headerForm.className,
                       subjectName: headerForm.subjectName,
@@ -958,23 +1157,31 @@ export function QuestionPaperTemplate({
                       examDate: headerForm.examDate,
                       obtainedMarks: headerForm.obtainedMarks,
                     }));
-                    if (cleanSchool) {
-                      saveUnifiedSchoolProfile({ schoolName: cleanSchool });
-                      if (userId) {
-                        try {
-                          localStorage.setItem(`user_question_paper_school_${userId}`, cleanSchool);
-                        } catch (e) {}
-                        if (userId !== "guest_teacher") {
-                          import("@/lib/firebase").then(({ db }) => {
-                            import("firebase/firestore").then(({ doc, setDoc }) => {
-                              setDoc(doc(db, "users", userId), { questionPaperSchoolName: cleanSchool }, { merge: true }).catch(() => {});
-                            });
+
+                    saveUnifiedSchoolProfile({
+                      schoolName: cleanSchool,
+                      kendra: cleanKendra,
+                      taluka: cleanTaluka,
+                      jilha: cleanJilha,
+                      teacherName: cleanTeacher,
+                      headmaster: cleanHeadmaster,
+                    });
+
+                    if (cleanSchool && userId) {
+                      try {
+                        localStorage.setItem(`user_question_paper_school_${userId}`, cleanSchool);
+                      } catch (e) {}
+                      if (userId !== "guest_teacher") {
+                        import("@/lib/firebase").then(({ db }) => {
+                          import("firebase/firestore").then(({ doc, setDoc }) => {
+                            setDoc(doc(db, "users", userId), { questionPaperSchoolName: cleanSchool }, { merge: true }).catch(() => {});
                           });
-                        }
+                        });
                       }
                     }
+
                     setShowFillSchoolModal(false);
-                    toast.success("शाळेचे नाव व परीक्षेचा सर्व तपशील बॉक्समध्ये व्यवस्थित बसवला!");
+                    toast.success("शाळा, केंद्र, तालुका, जिल्हा व शिक्षक माहिती प्रश्नपत्रिकेवर व्यवस्थित बसवली!");
                   }}
                   className="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5 active:scale-95"
                 >

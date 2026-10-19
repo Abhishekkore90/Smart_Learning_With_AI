@@ -61,6 +61,12 @@ interface DocumentEditorViewerProps {
   userId?: string;
   userRole?: string;
   userName?: string;
+  schoolName?: string;
+  kendra?: string;
+  taluka?: string;
+  jilha?: string;
+  teacherName?: string;
+  headmasterName?: string;
   canEdit?: boolean;
   onBack?: () => void;
   metadataBadge?: React.ReactNode;
@@ -77,6 +83,12 @@ export function DocumentEditorViewer({
   userId = "guest_user",
   userRole = "teacher",
   userName,
+  schoolName: propSchoolName,
+  kendra: propKendra,
+  taluka: propTaluka,
+  jilha: propJilha,
+  teacherName: propTeacherName,
+  headmasterName: propHeadmasterName,
   canEdit = true,
   onBack,
   metadataBadge,
@@ -315,10 +327,16 @@ export function DocumentEditorViewer({
     else if (title?.includes("संकलित") || title?.includes("summative")) guessedExam = isEngDoc ? "SUMMATIVE EVALUATION TEST 1" : "संकलित मूल्यमापन चाचणी १";
     else if (title?.includes("सत्र")) guessedExam = "द्वितीय सत्र परीक्षा";
 
-    const sName = initialSchool || getUserSavedQPSchool(userId) || getUnifiedSchoolProfile()?.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी";
+    const uni = getUnifiedSchoolProfile();
+    const sName = initialSchool || propSchoolName || getUserSavedQPSchool(userId) || uni?.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी";
 
     return {
       schoolName: sName,
+      kendra: propKendra || uni?.kendra || "",
+      taluka: propTaluka || uni?.taluka || "",
+      jilha: propJilha || uni?.jilha || "",
+      teacherName: propTeacherName || uni?.teacherName || "",
+      headmasterName: propHeadmasterName || uni?.headmaster || "",
       examTitle: guessedExam,
       className: guessedClass,
       subjectName: guessedSubject,
@@ -454,11 +472,12 @@ export function DocumentEditorViewer({
           } catch (e) { }
         }
 
+        const uni = getUnifiedSchoolProfile();
         if (!restoredHeader && documentType === "question_paper") {
-          restoredHeader = computeInitialHeader(activeSchoolName);
+          restoredHeader = computeInitialHeader(propSchoolName || activeSchoolName);
         }
 
-        const effectiveSchoolName = activeSchoolName || restoredHeader?.schoolName;
+        const effectiveSchoolName = propSchoolName || activeSchoolName || restoredHeader?.schoolName || uni?.schoolName;
 
         // Detect and populate headerBoxData across ALL pages of the PDF ONLY for question papers
         if (documentType === "question_paper") {
@@ -470,10 +489,15 @@ export function DocumentEditorViewer({
             }
 
             if (pHeader) {
-              const finalSchool = effectiveSchoolName || pHeader.schoolName;
+              const finalSchool = effectiveSchoolName || pHeader.schoolName || uni?.schoolName;
               pHeader = {
                 ...pHeader,
                 schoolName: finalSchool,
+                kendra: restoredHeader?.kendra || propKendra || uni?.kendra || pHeader.kendra || "",
+                taluka: restoredHeader?.taluka || propTaluka || uni?.taluka || pHeader.taluka || "",
+                jilha: restoredHeader?.jilha || propJilha || uni?.jilha || pHeader.jilha || "",
+                teacherName: restoredHeader?.teacherName || propTeacherName || uni?.teacherName || pHeader.teacherName || "",
+                headmasterName: restoredHeader?.headmasterName || propHeadmasterName || uni?.headmaster || pHeader.headmasterName || "",
                 rollNo: restoredHeader?.rollNo || pHeader.rollNo || "",
                 obtainedMarks: restoredHeader?.obtainedMarks || pHeader.obtainedMarks || "",
                 studentName:
@@ -775,7 +799,14 @@ export function DocumentEditorViewer({
         } catch (e) { }
       }
       if (cleanSchoolName) {
-        saveUnifiedSchoolProfile({ schoolName: cleanSchoolName });
+        saveUnifiedSchoolProfile({
+          schoolName: cleanSchoolName,
+          kendra: finalHeader.kendra,
+          taluka: finalHeader.taluka,
+          jilha: finalHeader.jilha,
+          teacherName: finalHeader.teacherName,
+          headmaster: finalHeader.headmasterName,
+        });
       }
     }
 
@@ -796,6 +827,11 @@ export function DocumentEditorViewer({
             : {
                 ...base,
                 schoolName: finalHeader.schoolName,
+                kendra: finalHeader.kendra,
+                taluka: finalHeader.taluka,
+                jilha: finalHeader.jilha,
+                teacherName: finalHeader.teacherName,
+                headmasterName: finalHeader.headmasterName,
                 studentName: finalHeader.studentName,
                 rollNo: finalHeader.rollNo,
                 obtainedMarks: finalHeader.obtainedMarks,
@@ -1461,17 +1497,45 @@ export function DocumentEditorViewer({
                             </div>
                           )}
 
-                          {/* Line 1: School Name */}
+                          {/* Line 1: School Name & Kendra / Taluka / Jilha */}
                           <div
-                            className="font-black text-slate-900 tracking-tight flex items-baseline gap-2 mb-1 min-w-0"
+                            className="font-black text-slate-900 tracking-tight flex items-baseline justify-between gap-2 mb-1 min-w-0 flex-wrap"
                             style={{ fontSize: `${Math.max(12, Math.round(18 * pageScale))}px` }}
                           >
-                            <span className="shrink-0 font-black whitespace-nowrap">
-                              {isEng ? "SCHOOL NAME -" : "शाळेचे नाव :"}
-                            </span>
-                            <span className="flex-1 min-w-0 text-slate-950 font-black border-b border-dotted border-slate-500 pb-0.5 truncate px-1">
-                              {hb.schoolName || ""}
-                            </span>
+                            <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
+                              <span className="shrink-0 font-black whitespace-nowrap">
+                                {isEng ? "SCHOOL NAME -" : "शाळेचे नाव :"}
+                              </span>
+                              <span className="flex-1 min-w-0 text-slate-950 font-black border-b border-dotted border-slate-500 pb-0.5 truncate px-1">
+                                {hb.schoolName || ""}
+                              </span>
+                            </div>
+
+                            {(hb.kendra || hb.taluka || hb.jilha) && (
+                              <div
+                                className="shrink-0 font-bold text-slate-700 flex items-center gap-2 whitespace-nowrap pl-1"
+                                style={{ fontSize: `${Math.max(10, Math.round(12 * pageScale))}px` }}
+                              >
+                                {hb.kendra && (
+                                  <span>
+                                    <span className="text-slate-500 font-semibold">{isEng ? "Center:" : "केंद्र:"}</span>{" "}
+                                    <span className="font-black text-slate-900">{hb.kendra}</span>
+                                  </span>
+                                )}
+                                {hb.taluka && (
+                                  <span>
+                                    <span className="text-slate-500 font-semibold">{isEng ? "Taluka:" : "तालुका:"}</span>{" "}
+                                    <span className="font-black text-slate-900">{hb.taluka}</span>
+                                  </span>
+                                )}
+                                {hb.jilha && (
+                                  <span>
+                                    <span className="text-slate-500 font-semibold">{isEng ? "Dist:" : "जिल्हा:"}</span>{" "}
+                                    <span className="font-black text-slate-900">{hb.jilha}</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           {/* Line 2: Exam Title (Centered, bold) */}
@@ -1747,6 +1811,36 @@ export function DocumentEditorViewer({
                 })}
               </div>
 
+              {/* Bottom Signatures Bar (वर्ग शिक्षक / विषय शिक्षक & मुख्याध्यापक स्वाक्षरी) */}
+              {Boolean(
+                documentType === "question_paper" &&
+                ((page.headerBoxData && (page.headerBoxData.teacherName || page.headerBoxData.headmasterName)) ||
+                  (headerData && (headerData.teacherName || headerData.headmasterName)))
+              ) && (() => {
+                const hb = page.headerBoxData || headerData!;
+                const isEng = Boolean(hb.isEnglish);
+                return (
+                  <div
+                    className="absolute bottom-2.5 left-[3.5%] right-[3.5%] z-30 bg-white/95 border-t border-dashed border-slate-700 pt-1.5 pb-1 px-3 flex items-center justify-between text-slate-900 select-none pointer-events-none"
+                    style={{
+                      fontFamily: isEng
+                        ? "system-ui, -apple-system, sans-serif"
+                        : "'Noto Sans Devanagari', -apple-system, sans-serif",
+                      fontSize: `${Math.max(10, Math.round(11.5 * (page.width > 0 ? displayWidth / page.width : zoomScale)))}px`,
+                    }}
+                  >
+                    <div className="font-bold">
+                      <span className="text-slate-600">{isEng ? "Class Teacher :" : "वर्ग शिक्षक :"}</span>{" "}
+                      <span className="font-black text-slate-950 underline decoration-slate-400 underline-offset-4">{hb.teacherName || "________________"}</span>
+                    </div>
+                    <div className="font-bold">
+                      <span className="text-slate-600">{isEng ? "Headmaster :" : "मुख्याध्यापक :"}</span>{" "}
+                      <span className="font-black text-slate-950 underline decoration-slate-400 underline-offset-4">{hb.headmasterName || "________________"}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Page Number Label Watermark */}
               <div className="absolute bottom-2 right-3 z-20 pointer-events-none opacity-40 text-[10px] font-mono text-slate-500">
                 पृष्ठ {page.pageNumber} / {pagesState.length}
@@ -1803,6 +1897,46 @@ export function DocumentEditorViewer({
                   autoFocus
                   className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-emerald-500/40 rounded-xl font-bold text-slate-900 text-sm outline-none focus:border-emerald-600 focus:bg-white shadow-xs"
                 />
+              </div>
+
+              {/* Kendra, Taluka, Jilla */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    केंद्र (Kendra):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.kendra || ""}
+                    onChange={(e) => setHeaderForm({ ...headerForm, kendra: e.target.value })}
+                    placeholder="उदा. पेड"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    तालुका (Taluka):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.taluka || ""}
+                    onChange={(e) => setHeaderForm({ ...headerForm, taluka: e.target.value })}
+                    placeholder="उदा. तासगाव"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    जिल्हा (Jilla):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.jilha || ""}
+                    onChange={(e) => setHeaderForm({ ...headerForm, jilha: e.target.value })}
+                    placeholder="उदा. सांगली"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
               </div>
 
               {/* Field 2: Exam / Assessment Title */}
@@ -1938,15 +2072,53 @@ export function DocumentEditorViewer({
                 </div>
               </div>
 
+              {/* Teacher & Headmaster Signatures */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    १०. वर्ग शिक्षक / विषय शिक्षक नाव:
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.teacherName || ""}
+                    onChange={(e) => setHeaderForm({ ...headerForm, teacherName: e.target.value })}
+                    placeholder="उदा. श्री. आर. के. पाटील"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1 text-xs">
+                    ११. मुख्याध्यापकाचे नाव (Headmaster):
+                  </label>
+                  <input
+                    type="text"
+                    value={headerForm.headmasterName || ""}
+                    onChange={(e) => setHeaderForm({ ...headerForm, headmasterName: e.target.value })}
+                    placeholder="उदा. श्री. एस. व्ही. जाधव"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-900 text-xs sm:text-sm outline-none focus:border-indigo-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
               {/* Live Preview Box (Exact Screenshot 1 match) */}
               <div className="pt-2">
                 <div className="text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1.5">
                   <span>👁️ थेट पूर्वावलोकन (Live Preview - बॉक्स कसा दिसेल):</span>
                 </div>
                 <div className="bg-white border-2 border-slate-900 rounded-none p-3 text-slate-900 shadow-sm select-none font-sans">
-                  {/* Line 1: School Name */}
-                  <div className="font-black text-sm tracking-tight mb-1 text-slate-900">
-                    शाळेचे नाव : <span className="text-slate-950 font-black">{headerForm.schoolName || "____________________________________"}</span>
+                  {/* Line 1: School Name & Kendra, Taluka, Jilla */}
+                  <div className="flex items-baseline justify-between gap-2 mb-1 flex-wrap text-slate-900">
+                    <div className="font-black text-sm tracking-tight flex items-baseline gap-1.5 flex-1 min-w-[200px]">
+                      <span>शाळेचे नाव :</span>
+                      <span className="text-slate-950 font-black border-b border-dotted border-slate-400 flex-1 px-1">{headerForm.schoolName || "____________________"}</span>
+                    </div>
+                    {(headerForm.kendra || headerForm.taluka || headerForm.jilha) && (
+                      <div className="text-[11px] font-bold text-slate-700 flex items-center gap-2 shrink-0">
+                        {headerForm.kendra && <span>केंद्र: <b className="text-slate-950">{headerForm.kendra}</b></span>}
+                        {headerForm.taluka && <span>तालुका: <b className="text-slate-950">{headerForm.taluka}</b></span>}
+                        {headerForm.jilha && <span>जिल्हा: <b className="text-slate-950">{headerForm.jilha}</b></span>}
+                      </div>
+                    )}
                   </div>
                   {/* Line 2: Exam Title */}
                   <div className="text-center font-black text-xs sm:text-sm my-1 text-slate-900">
@@ -1983,6 +2155,14 @@ export function DocumentEditorViewer({
                       </div>
                     </div>
                   </div>
+
+                  {/* Teacher & Headmaster Signature Line */}
+                  {(headerForm.teacherName || headerForm.headmasterName) && (
+                    <div className="flex items-center justify-between text-[11px] font-bold mt-2 pt-1 border-t border-dashed border-slate-300 text-slate-800">
+                      <div>वर्ग शिक्षक: <u>{headerForm.teacherName || "__________"}</u></div>
+                      <div>मुख्याध्यापक: <u>{headerForm.headmasterName || "__________"}</u></div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

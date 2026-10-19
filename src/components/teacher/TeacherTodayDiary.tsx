@@ -674,7 +674,12 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
           // Asynchronously parse DOCX file from Bunny Storage if structuredData is still empty
           const fetchTarget = matchedDoc.pageUrl || matchedDoc.masterPdfUrl;
-          const isDocx = fetchTarget && (fetchTarget.toLowerCase().endsWith(".docx") || fetchTarget.toLowerCase().includes(".docx?"));
+          const isDocx =
+            fetchTarget &&
+            !fetchTarget.startsWith("blob:") &&
+            !fetchTarget.startsWith("data:") &&
+            (fetchTarget.startsWith("http://") || fetchTarget.startsWith("https://") || fetchTarget.startsWith("/")) &&
+            (fetchTarget.toLowerCase().endsWith(".docx") || fetchTarget.toLowerCase().includes(".docx?"));
           if (fetchTarget && isDocx && (!matchedDoc.structuredData || matchedDoc.structuredData.length === 0)) {
             try {
               const targetUrl = getBunnyStorageUrl(fetchTarget);
@@ -1697,7 +1702,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
         </div>
       ) : (todayDiary.periods && todayDiary.periods.length > 0) ? (
         /* SUCCESS STATE: Show Selected Date's Diary in Paper Document Format */
-        <div className="bg-white border-2 border-slate-300 rounded-3xl p-6 sm:p-8 shadow-md space-y-5">
+        <div className="bg-white border-2 border-slate-300 rounded-3xl p-2 sm:p-6 md:p-8 shadow-md space-y-4 sm:space-y-5">
           {/* Top Pill Badges Bar & Edit Tip */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-bold">
             <span className="px-3.5 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full font-extrabold">
@@ -1807,44 +1812,37 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           </div>
 
           {/* Mobile Scroll Indicator */}
-          <div className="flex items-center justify-between text-[11px] text-amber-900 bg-amber-50/90 px-3 py-1.5 rounded-xl border border-amber-200 sm:hidden mt-2 font-bold shadow-2xs">
-            <span className="flex items-center gap-1.5">
-              👈 संपूर्ण तक्ता पाहण्यासाठी डावीकडे/उजवीकडे स्क्रोल करा
-            </span>
-            <span className="text-amber-700 font-black text-xs">↔</span>
-          </div>
-
           {/* 7 Columns Table matching Image 2 */}
-          <div className="overflow-x-auto touch-pan-x rounded-xl border-2 border-slate-900 shadow-sm mt-2 sm:mt-4 max-w-full">
-            <table className="min-w-[920px] w-full text-sm border-collapse border-2 border-slate-900">
+          <div className="w-full overflow-hidden rounded-xl border-2 border-slate-900 shadow-sm mt-2 sm:mt-4 max-w-full">
+            <table className="w-full min-w-0 sm:min-w-[920px] text-xs sm:text-sm border-collapse border-2 border-slate-900 table-fixed">
               <colgroup>
-                <col style={{ width: "55px" }} />
-                <col style={{ width: "95px" }} />
-                <col style={{ width: "150px" }} />
-                <col style={{ width: "230px" }} />
-                <col style={{ width: "200px" }} />
-                <col style={{ width: "95px" }} />
-                <col style={{ width: "95px" }} />
+                <col className="w-[8%] sm:w-[55px]" />
+                <col className="w-[13%] sm:w-[95px]" />
+                <col className="w-[21%] sm:w-[150px]" />
+                <col className="w-[23%] sm:w-[230px]" />
+                <col className="w-[21%] sm:w-[200px]" />
+                <col className="w-[7%] sm:w-[95px]" />
+                <col className="w-[7%] sm:w-[95px]" />
               </colgroup>
-              <thead className="bg-slate-200 text-slate-950 font-black text-xs md:text-sm border-b-2 border-slate-900">
+              <thead className="bg-slate-200 text-slate-950 font-black text-[9px] sm:text-xs md:text-sm border-b-2 border-slate-900">
                 <tr>
-                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight whitespace-nowrap">तासिका</th>
-                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight whitespace-nowrap">विषय</th>
-                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-snug">अध्यापन मुद्दा / पाठ्यघटक</th>
-                  <th className="py-2.5 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-snug">अध्ययन निष्पत्ती</th>
-                  <th className="py-2.5 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-snug">अध्ययन अनुभव</th>
-                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-snug">साधन तंत्रे</th>
-                  <th className="py-2.5 px-1.5 text-center bg-slate-200 text-slate-950 font-black break-words leading-snug">शैक्षणिक साहित्य</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight">तासिका</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight">विषय</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्यापन मुद्दा / पाठ्यघटक</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन निष्पत्ती</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन अनुभव</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">साधन तंत्रे</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black break-words leading-tight sm:leading-snug">शैक्षणिक साहित्य</th>
                 </tr>
               </thead>
-              <tbody className="divide-y-2 divide-slate-400 font-medium text-slate-900 bg-white text-xs md:text-sm">
+              <tbody className="divide-y-2 divide-slate-400 font-medium text-slate-900 bg-white text-[9px] sm:text-xs md:text-sm">
                 {todayDiary.periods.map((item, idx) => (
                   <tr key={idx} className="hover:bg-indigo-50/40 transition-colors border-b-2 border-slate-400">
                     <td 
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "period", e.currentTarget.innerText.trim())}
-                      className="p-2.5 border-r-2 border-slate-400 text-center font-black text-indigo-700 align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text"
+                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-center font-black text-indigo-700 align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9.5px] sm:text-xs md:text-sm break-words"
                       title="तासिका क्रमांक बदलण्यासाठी क्लिक करा"
                     >
                       {item.period}
@@ -1853,7 +1851,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "subject", e.currentTarget.innerText.trim())}
-                      className="p-2.5 border-r-2 border-slate-400 font-black text-slate-900 text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text"
+                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 font-black text-slate-900 text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9.5px] sm:text-xs md:text-sm break-words leading-tight"
                       title="विषय बदलण्यासाठी क्लिक करा"
                     >
                       {item.subject}
@@ -1862,7 +1860,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "topic", e.currentTarget.innerText.trim())}
-                      className="p-2.5 border-r-2 border-slate-400 text-slate-900 font-extrabold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text"
+                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-slate-900 font-extrabold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words leading-tight sm:leading-normal"
                       title="पाठ्यघटक बदलण्यासाठी क्लिक करा"
                     >
                       {item.topic}
@@ -1871,7 +1869,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "outcome", e.currentTarget.innerText.trim())}
-                      className="p-2.5 border-r-2 border-slate-400 text-emerald-600 font-extrabold leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text"
+                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-emerald-600 font-extrabold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
                       title="अध्ययन निष्पत्ती बदलण्यासाठी क्लिक करा"
                     >
                       {item.outcome || "-"}
@@ -1880,7 +1878,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "experience", e.currentTarget.innerText.trim())}
-                      className="p-2.5 border-r-2 border-slate-400 text-slate-800 font-bold leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text"
+                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-slate-800 font-bold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
                       title="अध्ययन अनुभव बदलण्यासाठी क्लिक करा"
                     >
                       {item.experience || "-"}
@@ -1889,7 +1887,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "tools", e.currentTarget.innerText.trim())}
-                      className="p-2.5 border-r-2 border-slate-400 text-slate-800 text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text"
+                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-slate-800 text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
                       title="साधन तंत्रे बदलण्यासाठी क्लिक करा"
                     >
                       {item.tools || "-"}
@@ -1898,7 +1896,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "materials", e.currentTarget.innerText.trim())}
-                      className="p-2.5 text-slate-800 text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text"
+                      className="p-1 sm:p-2.5 text-slate-800 text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
                       title="शैक्षणिक साहित्य बदलण्यासाठी क्लिक करा"
                     >
                       {item.materials || "-"}

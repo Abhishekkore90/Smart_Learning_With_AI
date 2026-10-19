@@ -429,6 +429,9 @@ function StudentHomeworkPage() {
                     }}
                     userRole="student"
                     accentColor="indigo"
+                    selectedClass={selectedClass}
+                    selectedMedium={selectedMedium}
+                    userId={user?.uid || "student"}
                   />
                 )}
 

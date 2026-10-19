@@ -255,13 +255,20 @@ function AIChatWorkspace() {
       <div className="h-screen w-full flex bg-white dark:bg-[#0d0d0d] text-slate-900 dark:text-[#ececec] font-sans overflow-hidden">
         <main className="flex-1 flex flex-col h-full">
           <header className="h-16 px-6 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowWorkspace(false)}
                 className="p-2 hover:bg-slate-100 rounded-xl"
+                title="मागे जा"
               >
                 <ChevronLeft size={20} />
               </button>
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:text-indigo-600 bg-slate-100 hover:bg-slate-200 transition-all uppercase tracking-wider"
+              >
+                <ChevronLeft size={14} /> Back to Hub
+              </Link>
               <span className="font-black tracking-tighter text-lg uppercase">
                 {t.ai_workspace_header}
               </span>
@@ -399,13 +406,22 @@ function AILandingPage({ onStart }: { onStart: () => void }) {
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-indigo-100">
       <nav className="h-20 px-8 flex items-center justify-between max-w-7xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="size-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-            <Sparkles size={18} />
+        <div className="flex items-center gap-4">
+          <Link
+            to="/admin"
+            className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-indigo-600 uppercase tracking-wider transition-colors"
+          >
+            <ChevronLeft size={16} /> Back to Hub
+          </Link>
+          <div className="h-5 w-px bg-slate-200" />
+          <div className="flex items-center gap-2">
+            <div className="size-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+              <Sparkles size={18} />
+            </div>
+            <span className="font-bold text-lg tracking-tight">
+              {t.ai_landing_title}
+            </span>
           </div>
-          <span className="font-bold text-lg tracking-tight">
-            {t.ai_landing_title}
-          </span>
         </div>
         <div className="flex items-center gap-8 text-sm font-medium text-slate-500">
           <a

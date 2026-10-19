@@ -281,16 +281,7 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
                 }`}
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>२. स्वतःचे प्रश्न (Make Your Own)</span>
-                <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                    activeSubTab === "custom"
-                      ? "bg-white/20 text-white"
-                      : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  {customQuizzes.length}
-                </span>
+                <span>दैनिक एमसीक्यू स्वाध्याय स्वतः तयार करा</span>
               </button>
             </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   BookOpen,
   Download,
@@ -1289,7 +1289,38 @@ export function TeacherStatisticsEditor({
           background: transparent !important;
         }
 
+        .is-printing-pdf .a4-page-scale-wrapper {
+          overflow: visible !important;
+          height: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          width: auto !important;
+        }
+        .is-printing-pdf .a4-page-scale-inner {
+          zoom: 1 !important;
+          transform: none !important;
+          margin-bottom: 0 !important;
+          width: 794px !important;
+          min-width: 794px !important;
+          max-width: 794px !important;
+        }
+
         @media print {
+          .a4-page-scale-wrapper {
+            overflow: visible !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: auto !important;
+          }
+          .a4-page-scale-inner {
+            zoom: 1 !important;
+            transform: none !important;
+            margin-bottom: 0 !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: none !important;
+          }
           .pdf-a4-page {
             box-shadow: none !important;
             page-break-after: always;
@@ -1300,18 +1331,84 @@ export function TeacherStatisticsEditor({
 
       {/* Stack of all 18 A4 sheets scrollable vertically */}
       <div
-        className="bg-[#0d1b4b]/30 p-4 md:p-6 pb-4 rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto overflow-x-auto"
-        style={{ width: "100%", maxWidth: "930px", height: "fit-content" }}
+        className="bg-[#0d1b4b]/30 p-2 sm:p-4 md:p-6 pb-4 rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto w-full max-w-full overflow-x-hidden"
+        style={{ maxWidth: "930px", height: "fit-content" }}
       >
-        <div id="teacher-portfolio-pdf-content" className="is-exporting-pdf flex flex-col items-center gap-8 w-full">
+        <div id="teacher-portfolio-pdf-content" className="is-exporting-pdf flex flex-col items-center gap-6 sm:gap-8 w-full max-w-full">
           {Array(18)
             .fill(null)
             .map((_, i) => (
-              <React.Fragment key={i}>
+              <A4EditorPageWrapper key={i}>
                 {renderSingleA4Page(i + 1)}
-              </React.Fragment>
+              </A4EditorPageWrapper>
             ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function A4EditorPageWrapper({ children }: { children: React.ReactNode }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const targetWidth = 794; // 210mm in px at 96dpi
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const parentWidth = rect.width || containerRef.current.clientWidth || window.innerWidth;
+      if (parentWidth > 0 && parentWidth < targetWidth) {
+        setScale(Number((parentWidth / targetWidth).toFixed(4)));
+      } else {
+        setScale(1);
+      }
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
+
+  const supportsZoom = typeof document !== "undefined" && "zoom" in document.documentElement.style;
+
+  return (
+    <div
+      ref={containerRef}
+      className="a4-page-scale-wrapper w-full flex justify-center mb-6"
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        overflowX: "hidden",
+      }}
+    >
+      <div
+        className="a4-page-scale-inner"
+        style={
+          scale < 1
+            ? supportsZoom
+              ? {
+                  zoom: scale,
+                  width: `${targetWidth}px`,
+                  minWidth: `${targetWidth}px`,
+                  maxWidth: `${targetWidth}px`,
+                }
+              : {
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top center",
+                  width: `${targetWidth}px`,
+                  minWidth: `${targetWidth}px`,
+                  maxWidth: `${targetWidth}px`,
+                  marginBottom: `-${Math.round((1 - scale) * 1123)}px`,
+                }
+            : {
+                width: `${targetWidth}px`,
+                minWidth: `${targetWidth}px`,
+                maxWidth: `${targetWidth}px`,
+              }
+        }
+      >
+        {children}
       </div>
     </div>
   );

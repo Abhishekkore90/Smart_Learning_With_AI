@@ -1055,7 +1055,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
       </div>
 
       {dayRecords.map((p, idx) => (
-        <div key={idx} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-6 day-card">
+        <div key={idx} className="bg-white p-2 sm:p-6 md:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4 sm:space-y-6 day-card">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200 text-xs">
             <span className="font-extrabold text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-100 uppercase tracking-wider">
               {p.date ? `दिनांक: ${formatCleanDate(p.date)}` : `Day ${idx + 1}`}
@@ -1116,23 +1116,18 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
           )}
 
           {p.periods.length > 0 ? (
-            <div className="overflow-x-auto touch-pan-x rounded-2xl border-2 border-slate-400 shadow-md max-w-full">
-              {/* Mobile Scroll Hint */}
-              <div className="flex items-center justify-between text-[11px] text-amber-900 bg-amber-50/90 px-3 py-1 border-b border-amber-200 sm:hidden font-bold">
-                <span>👈 संपूर्ण तक्ता पाहण्यासाठी डावीकडे/उजवीकडे स्क्रोल करा</span>
-                <span className="text-amber-700 font-black">↔</span>
-              </div>
-              <table className="w-full min-w-full sm:min-w-[920px] text-center text-xs sm:text-sm border-collapse border-2 border-slate-400 table-fixed">
+            <div className="w-full overflow-hidden rounded-2xl border-2 border-slate-400 shadow-md max-w-full">
+              <table className="w-full min-w-0 sm:min-w-[920px] text-center text-xs sm:text-sm border-collapse border-2 border-slate-400 table-fixed">
                 <colgroup>
                   <col className="w-[8%] sm:w-[55px]" />
-                  <col className="w-[14%] sm:w-[95px]" />
-                  <col className="w-[22%] sm:w-[150px]" />
-                  <col className="w-[24%] sm:w-[230px]" />
-                  <col className="w-[20%] sm:w-[200px]" />
-                  <col className="w-[6%] sm:w-[95px]" />
-                  <col className="w-[6%] sm:w-[95px]" />
+                  <col className="w-[13%] sm:w-[95px]" />
+                  <col className="w-[21%] sm:w-[150px]" />
+                  <col className="w-[23%] sm:w-[230px]" />
+                  <col className="w-[21%] sm:w-[200px]" />
+                  <col className="w-[7%] sm:w-[95px]" />
+                  <col className="w-[7%] sm:w-[95px]" />
                 </colgroup>
-                <thead className="bg-slate-100 text-slate-900 font-extrabold text-[10px] sm:text-xs md:text-sm border-b-2 border-slate-400">
+                <thead className="bg-slate-100 text-slate-900 font-extrabold text-[9px] sm:text-xs md:text-sm border-b-2 border-slate-400">
                   <tr>
                     {(p.columnHeaders && p.columnHeaders.length > 0
                       ? p.columnHeaders
@@ -1142,7 +1137,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                         <th
                           key={hIdx}
                           style={{ color: "#000000" }}
-                          className={`py-1.5 sm:py-2.5 px-1 sm:px-1.5 bg-slate-200 text-black font-black break-words leading-tight sm:leading-snug text-center ${hIdx === 0 ? "bg-slate-300" : ""} border-r-2 border-slate-400`}
+                          className={`py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 bg-slate-200 text-black font-black break-words leading-tight sm:leading-snug text-center ${hIdx === 0 ? "bg-slate-300" : ""} border-r-2 border-slate-400`}
                         >
                           {header}
                         </th>
@@ -1150,19 +1145,19 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                     })}
                   </tr>
                 </thead>
-                <tbody className="divide-y-2 divide-slate-300 font-medium text-slate-800 bg-white text-[9.5px] sm:text-xs md:text-sm">
+                <tbody className="divide-y-2 divide-slate-300 font-medium text-slate-800 bg-white text-[9px] sm:text-xs md:text-sm">
                   {p.periods.map((row: any, rIdx: number) => (
                     <tr 
                       key={rIdx} 
                       className="hover:bg-indigo-50/40 transition-colors group border-b-2 border-slate-300"
                     >
-                      <td className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-center font-black text-indigo-700 bg-indigo-50/50 align-middle break-words">{row.period}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-bold text-slate-900 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight">{row.subject}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-semibold text-slate-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words">{row.topic}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-medium text-emerald-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words">{row.outcome}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-slate-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words">{row.experience}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-slate-700 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight">{row.tools}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 text-slate-700 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight">{row.materials}</td>
+                      <td className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-center font-black text-indigo-700 bg-indigo-50/50 align-middle break-words text-[9.5px] sm:text-xs md:text-sm">{row.period}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-bold text-slate-900 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight text-[9.5px] sm:text-xs md:text-sm">{row.subject}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-semibold text-slate-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words text-[9px] sm:text-xs md:text-sm">{row.topic}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-medium text-emerald-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words text-[9px] sm:text-xs md:text-sm">{row.outcome}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-slate-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words text-[9px] sm:text-xs md:text-sm">{row.experience}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-slate-700 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight text-[8.5px] sm:text-xs">{row.tools}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 text-slate-700 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight text-[8.5px] sm:text-xs">{row.materials}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1429,7 +1424,14 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
       // Asynchronously re-parse DOCX file from Bunny Storage to extract true file thoughts
       const fetchTarget = savedRecord.pageUrl || (savedRecord as any).masterPdfUrl;
-      if (fetchTarget && !isPdf) {
+      const isRemoteBunnyDocx =
+        fetchTarget &&
+        !isPdf &&
+        !fetchTarget.startsWith("blob:") &&
+        !fetchTarget.startsWith("data:") &&
+        (fetchTarget.startsWith("http://") || fetchTarget.startsWith("https://") || fetchTarget.startsWith("/"));
+
+      if (isRemoteBunnyDocx) {
         const targetUrl = getBunnyStorageUrl(fetchTarget);
         const headers: Record<string, string> = {
           AccessKey: import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "",
@@ -1604,14 +1606,20 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       }
     } else if (savedRecord && (savedRecord.pageUrl || (savedRecord as any).masterPdfUrl) && !isPdf) {
       const fetchTarget = savedRecord.pageUrl || (savedRecord as any).masterPdfUrl;
-      setLoadingContent(true);
+      const isRemoteBunnyDocx =
+        fetchTarget &&
+        !fetchTarget.startsWith("blob:") &&
+        !fetchTarget.startsWith("data:") &&
+        (fetchTarget.startsWith("http://") || fetchTarget.startsWith("https://") || fetchTarget.startsWith("/"));
 
-      const targetUrl = getBunnyStorageUrl(fetchTarget);
-      const headers: Record<string, string> = {
-        AccessKey: import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "",
-      };
+      if (isRemoteBunnyDocx) {
+        setLoadingContent(true);
+        const targetUrl = getBunnyStorageUrl(fetchTarget);
+        const headers: Record<string, string> = {
+          AccessKey: import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "",
+        };
 
-      fetch(targetUrl, { headers })
+        fetch(targetUrl, { headers })
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.arrayBuffer();
@@ -1650,6 +1658,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           setErrorMsg("Document preview is ready for download.");
         })
         .finally(() => setLoadingContent(false));
+      }
     }
   }, [selectedFile, savedRecord, isPdf]);
 

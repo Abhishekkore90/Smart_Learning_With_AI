@@ -40,12 +40,22 @@ export interface MonthlyPlanningViewerProps {
 
 export const DEFAULT_MONTHLY_PLANNING_HEADERS = [
   "दिनांक",
-  "पाठ / घटक / उपघटक",
+  "पाठ / घटक",
   "अध्ययन निष्पत्ती",
   "अध्ययन मुद्दे / पाठ्यांश उद्देश",
   "अध्ययन अनुभवाचे स्वरूप",
   "साधन तंत्रे",
-  "आवश्यक साहित्य",
+  "शैक्षणिक साहित्य",
+];
+
+export const DEFAULT_MONTHLY_PLANNING_ENGLISH_HEADERS = [
+  "Day",
+  "Lesson/ Point",
+  "Learning Outcomes",
+  "Teaching Point/ Aim",
+  "Structure of Teaching Experience",
+  "Tool & Technique",
+  "Educational Instrument",
 ];
 
 const DEFAULT_MONTHLY_ROWS: ParsedTableCell[][] = [
@@ -60,12 +70,12 @@ const DEFAULT_MONTHLY_ROWS: ParsedTableCell[][] = [
   ],
   [
     { value: "दिनांक", rowspan: 1, colspan: 1, isMergedHidden: false },
-    { value: "पाठ / घटक / उपघटक", rowspan: 1, colspan: 1, isMergedHidden: false },
+    { value: "पाठ / घटक", rowspan: 1, colspan: 1, isMergedHidden: false },
     { value: "अध्ययन निष्पत्ती", rowspan: 1, colspan: 1, isMergedHidden: false },
     { value: "अध्ययन मुद्दे / पाठ्यांश उद्देश", rowspan: 1, colspan: 1, isMergedHidden: false },
     { value: "अध्ययन अनुभवाचे स्वरूप", rowspan: 1, colspan: 1, isMergedHidden: false },
     { value: "साधन तंत्रे", rowspan: 1, colspan: 1, isMergedHidden: false },
-    { value: "आवश्यक साहित्य", rowspan: 1, colspan: 1, isMergedHidden: false },
+    { value: "शैक्षणिक साहित्य", rowspan: 1, colspan: 1, isMergedHidden: false },
   ],
   [
     { value: "०१ ते ०८ जुलै", rowspan: 1, colspan: 1, isMergedHidden: false },
@@ -440,13 +450,13 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
       // 3. Strict 7-Column Table
       html += `<table class="pdf-table w-full table-fixed border-collapse border border-slate-400 text-[10px] font-sans my-0" style="width: 100%; table-layout: fixed; border-collapse: collapse;">`;
       html += `<colgroup>`;
-      html += `<col style="width: 4.5%;" />`;
-      html += `<col style="width: 15.5%;" />`;
-      html += `<col style="width: 18%;" />`;
-      html += `<col style="width: 18%;" />`;
+      html += `<col style="width: 5.5%;" />`;
+      html += `<col style="width: 11%;" />`;
+      html += `<col style="width: 19%;" />`;
       html += `<col style="width: 14%;" />`;
-      html += `<col style="width: 10%;" />`;
-      html += `<col style="width: 10%;" />`;
+      html += `<col style="width: 32.5%;" />`;
+      html += `<col style="width: 9%;" />`;
+      html += `<col style="width: 9%;" />`;
       html += `</colgroup>`;
 
       html += `<thead>`;
@@ -819,11 +829,11 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
             <colgroup>
               {role === "admin" && isEditMode && <col style={{ width: "50px" }} />}
               <col style={{ width: "48px" }} />
-              <col style={{ width: "150px" }} />
-              <col style={{ width: "165px" }} />
+              <col style={{ width: "125px" }} />
               <col style={{ width: "160px" }} />
-              <col style={{ width: "130px" }} />
-              <col style={{ width: "90px" }} />
+              <col style={{ width: "145px" }} />
+              <col style={{ width: "222px" }} />
+              <col style={{ width: "80px" }} />
               <col style={{ width: "80px" }} />
             </colgroup>
 

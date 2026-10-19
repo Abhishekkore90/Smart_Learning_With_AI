@@ -51,7 +51,6 @@ import { DICTIONARY } from "@/lib/translations";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
 // Import html2pdf dynamically in client side
-import { PinGate } from "@/components/teacher/PinGate";
 
 const getHtml2PdfEngine = async () => {
   if (typeof window === "undefined") return null;
@@ -7778,7 +7777,6 @@ function TeacherMDMPage() {
 
       <main className="lg:pl-0 pt-20 min-h-screen pb-20 relative z-10">
         <ModulePaywall moduleId="mdm-register" defaultTitle="माध्यान्ह भोजन योजना नोंदवही (MDM Register)">
-          <PinGate sectionKey="mdm">
           <div className="p-2.5 sm:p-4 md:p-8 space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
             {/* Back to Dashboard Button */}
             <div className="no-print">
@@ -17111,7 +17109,6 @@ function TeacherMDMPage() {
             </AnimatePresence>
           )}
           </div>
-        </PinGate>
         </ModulePaywall>
       </main>
 

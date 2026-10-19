@@ -209,8 +209,13 @@ export function ModulePaywall({
                 userKeys.includes(data.teacherEmail) ||
                 (data.id && userKeys.some((k) => data.id.startsWith(k)));
 
+              const isParipathMatch = (m1: string, m2: string) => {
+                const pariGroup = ["special-day", "paripath", "daily-assembly", "month-paripath"];
+                return pariGroup.includes(m1) && pariGroup.includes(m2);
+              };
+
               const matchesModule =
-                data.moduleId === "ALL" || data.moduleId === moduleId;
+                data.moduleId === "ALL" || data.moduleId === moduleId || isParipathMatch(data.moduleId, moduleId);
 
               if (matchesUser && matchesModule) {
                 granted = true;
@@ -243,8 +248,13 @@ export function ModulePaywall({
                   userKeys.includes(data.teacherEmail) ||
                   (data.id && userKeys.some((k) => data.id.startsWith(k)));
 
+                const isParipathMatch = (m1: string, m2: string) => {
+                  const pariGroup = ["special-day", "paripath", "daily-assembly", "month-paripath"];
+                  return pariGroup.includes(m1) && pariGroup.includes(m2);
+                };
+
                 const matchesModule =
-                  data.moduleId === "ALL" || data.moduleId === moduleId;
+                  data.moduleId === "ALL" || data.moduleId === moduleId || isParipathMatch(data.moduleId, moduleId);
 
                 if (matchesUser && matchesModule) {
                   if (isMonthlyOptionModule) {

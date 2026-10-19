@@ -491,7 +491,6 @@ function ClassTimetablePage() {
   const [savingGrid, setSavingGrid] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [zoomMode, setZoomMode] = useState<'scroll' | 'fit'>('scroll');
   const [scale, setScale] = useState(1);
   const [containerHeight, setContainerHeight] = useState(0);
 
@@ -510,12 +509,14 @@ function ClassTimetablePage() {
     };
     handleResize();
     window.addEventListener("resize", handleResize);
-    const timer = setTimeout(handleResize, 200);
+    const timer = setTimeout(handleResize, 100);
+    const timer2 = setTimeout(handleResize, 350);
     return () => {
       window.removeEventListener("resize", handleResize);
       clearTimeout(timer);
+      clearTimeout(timer2);
     };
-  }, [gridData, zoomMode]);
+  }, [gridData]);
 
   const cellInputStyle = {
     border: 'none',
@@ -924,48 +925,15 @@ function ClassTimetablePage() {
                   </div>
                 </div>
 
-                {/* Mobile View Mode Controls (< 1024px) */}
-                <div className="block lg:hidden space-y-2">
-                  <div className="flex flex-col sm:flex-row items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50 p-2.5 rounded-xl border border-indigo-100/80 gap-2">
-                    <span className="text-xs font-bold text-indigo-900 text-center sm:text-left">
-                      {zoomMode === 'scroll'
-                        ? '↔️ पूर्ण वेळापत्रक पाहण्यासाठी डावीकडे/उजवीकडे स्क्रोल करा'
-                        : '📱 संपूर्ण वेळापत्रक स्क्रीनवर फिट केले आहे'}
-                    </span>
-                    <div className="flex gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm shrink-0">
-                      <button
-                        onClick={() => setZoomMode('scroll')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-black transition-all cursor-pointer ${
-                          zoomMode === 'scroll'
-                            ? 'bg-indigo-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:bg-slate-100'
-                        }`}
-                      >
-                        ↔️ स्क्रोल करा (Scroll)
-                      </button>
-                      <button
-                        onClick={() => setZoomMode('fit')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-black transition-all cursor-pointer ${
-                          zoomMode === 'fit'
-                            ? 'bg-indigo-600 text-white shadow-md'
-                            : 'text-slate-600 hover:bg-slate-100'
-                        }`}
-                      >
-                        📱 स्क्रीनवर बसवा (Fit)
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Main Timetable Table Container */}
+                {/* Main Timetable Table Container - Auto-fit on mobile with zero horizontal scrollbar */}
                 <div
-                  className="w-full max-w-full min-w-0 overflow-x-auto pb-4"
+                  className="w-full max-w-full min-w-0 overflow-hidden pb-4"
                   ref={containerRef}
                   style={{
                     WebkitOverflowScrolling: 'touch',
-                    ...(zoomMode === 'fit' && scale < 1
+                    ...(scale < 1
                       ? {
-                          height: containerHeight ? `${containerHeight * scale + 20}px` : 'auto',
+                          height: containerHeight ? `${containerHeight * scale + 10}px` : 'auto',
                           overflow: 'hidden'
                         }
                       : {})
@@ -975,7 +943,7 @@ function ClassTimetablePage() {
                     id="editable-timetable-container"
                     className="p-4 pt-10 bg-white text-slate-900 border border-black shadow-sm font-sans space-y-3 w-[1000px] min-w-[1000px] mx-auto overflow-hidden"
                     style={
-                      zoomMode === 'fit' && scale < 1
+                      scale < 1
                         ? {
                             transform: `scale(${scale})`,
                             transformOrigin: 'top left',

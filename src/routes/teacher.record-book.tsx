@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { MonthlyParipathRegister } from "@/components/teacher/MonthlyParipathRegister";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { ChevronLeft } from "lucide-react";
 
 export const Route = createFileRoute("/teacher/record-book")({
@@ -35,7 +36,9 @@ function RecordBookPage() {
           </div>
 
           {/* Monthly Register Component */}
-          <MonthlyParipathRegister />
+          <ModulePaywall moduleId="special-day" defaultTitle="मासिक परिपाठ नोंदवही (Monthly Paripath Register)">
+            <MonthlyParipathRegister />
+          </ModulePaywall>
         </div>
       </main>
     </div>

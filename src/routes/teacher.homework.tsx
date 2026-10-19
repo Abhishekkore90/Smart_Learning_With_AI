@@ -32,6 +32,8 @@ import {
   X,
   School,
   User,
+  MessageCircle,
+  Share2,
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
@@ -43,7 +45,9 @@ import { subscribeToHomework } from "@/services/homeworkService";
 import type { HomeworkItem } from "@/types/documentEditor";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
 import { DailyHomeworkTemplate } from "@/components/homework/DailyHomeworkTemplate";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { DailyHomeworkCalendar, formatISODate } from "@/components/homework/DailyHomeworkCalendar";
+import { directShareHomeworkPdfToWhatsApp } from "@/utils/homeworkPdfShare";
 import { MCQHomeworkSection } from "@/components/homework/MCQHomeworkSection";
 import { WordQuestionPaperEditor } from "@/components/questionPaper/WordQuestionPaperEditor";
 import {
@@ -138,6 +142,25 @@ function HomeworkPage() {
   const [hwProfile, setHwProfile] = useState<HomeworkHeaderProfile>(() =>
     getHomeworkHeaderProfile(user?.uid || "guest")
   );
+
+  // WhatsApp Direct PDF Share state for list view
+  const [isSharingPdf, setIsSharingPdf] = useState(false);
+
+  const handleDirectSharePdf = async (item: HomeworkItem) => {
+    setIsSharingPdf(true);
+    try {
+      await directShareHomeworkPdfToWhatsApp({
+        dateStr: item.homeworkDate || filterDate || calendarDate,
+        classId: item.class || selectedClass || "1st",
+        medium: (item.medium as any) || (selectedMedium as any) || "marathi",
+        homeworkItems: [item],
+        singleItem: item,
+        schoolProfile: hwProfile,
+      });
+    } finally {
+      setIsSharingPdf(false);
+    }
+  };
 
   // Form fields inside modal (School, Kendra, Taluka, District, Teacher Name, Headmaster Name)
   // Day, Date, and Class are NOT in this form as they come dynamically from admin-uploaded homework
@@ -244,6 +267,7 @@ function HomeworkPage() {
       </div>
 
       <main className="pt-20 pb-16 px-3 sm:px-6 max-w-7xl mx-auto space-y-6">
+        <ModulePaywall moduleId="homework" defaultTitle="दैनिक गृहपाठ (Daily Homework)">
         {/* Back to Dashboard Button */}
         {!activeHomework && (
           <div className="no-print">
@@ -725,6 +749,10 @@ function HomeworkPage() {
                     onPreviewHomework={(item) => setActiveHomework(item)}
                     userRole="teacher"
                     accentColor="emerald"
+                    selectedClass={selectedClass}
+                    selectedMedium={selectedMedium}
+                    schoolProfile={hwProfile}
+                    userId={user?.uid || "guest"}
                   />
                 )}
 
@@ -791,6 +819,21 @@ function HomeworkPage() {
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleDirectSharePdf(hw)}
+                              disabled={isSharingPdf}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50"
+                              title="हा गृहपाठ PDF स्वरूपात थेट WhatsApp वर पाठवा"
+                            >
+                              {isSharingPdf ? (
+                                <Loader2 className="size-3.5 animate-spin" />
+                              ) : (
+                                <MessageCircle className="size-3.5" />
+                              )}
+                              <span>WhatsApp PDF</span>
+                            </button>
+
                             <button
                               onClick={() => setActiveHomework(hw)}
                               className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
@@ -992,6 +1035,8 @@ function HomeworkPage() {
             </div>
           </div>
         )}
+
+        </ModulePaywall>
       </main>
     </div>
   );

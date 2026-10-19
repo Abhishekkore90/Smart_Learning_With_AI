@@ -27,6 +27,8 @@ import {
   ArrowLeft,
   Sparkles,
   FileText,
+  Lock,
+  CheckCircle2,
 } from "lucide-react";
 import {
   AreaChart,
@@ -58,9 +60,11 @@ import { showToast as toast } from "@/lib/custom-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
 import { DICTIONARY } from "@/lib/translations";
+import { getTeacherId } from "@/lib/teacherIsolationHelper";
 
 const MODULE_CARDS = [
   {
+    moduleId: "timetable",
     labelKey: "timetable_teacher",
     fallbackLabel: "१. वेळापत्रक",
     to: "/teacher/timetable",
@@ -68,6 +72,7 @@ const MODULE_CARDS = [
     description: "या विभागात आपणास इयत्ता पहिली ते आठवीचे वर्गनिहाय दैनिक व साप्ताहिक वेळापत्रक उपलब्ध होईल यामध्ये आवश्यक तो बदल करून एडिट करून शाळेच्या शिक्षकाच्या आणि मुख्याध्यापकांच्या नावासह आपणास ते प्रिंट करून आपल्या वर्गात वापरता येईल.",
   },
   {
+    moduleId: "templates",
     labelKey: "templates",
     fallbackLabel: "२. टेम्पलेट",
     to: "/teacher/templates",
@@ -75,6 +80,7 @@ const MODULE_CARDS = [
     description: "या विभागात आपण विद्यार्थ्यांच्या नावासह नाव, फोटो इयत्ता आकर्षक संदेश एडिट करून आकर्षक टेम्पलेट सह वाढदिवसाच्या शुभेच्छा, प्रवेश स्वागत, क्रीडा दिन, सांस्कृतिक कार्यक्रम, स्नेहसंमेलन, निकाल आणि यश असे विविध शुभेच्छा संदेश व्हाट्सअप वर पाठवू शकता.",
   },
   {
+    moduleId: "special-day",
     labelKey: "specialDay",
     fallbackLabel: "३. परिपाठ",
     to: "/teacher/modules/special-day",
@@ -82,6 +88,7 @@ const MODULE_CARDS = [
     description: "या विभागांतर्गत आपणास शाळेतील दैनिक परिपाठ उपलब्ध होईल या परिपाठाची पीडीएफ डाऊनलोड करून आपण ती विद्यार्थ्यांना व्हाट्सअप ग्रुप वर शेअर करू शकता तसेच परिपाठ रजिस्टर साठी महिन्याची एकत्रित पीडीएफ देखील उपलब्ध आहे.",
   },
   {
+    moduleId: "meeting-register",
     labelKey: "monthlyMeeting",
     fallbackLabel: "४. मासिक सभा",
     to: "/teacher/meeting",
@@ -89,6 +96,7 @@ const MODULE_CARDS = [
     description: "या विभागात शाळा स्तरावरील सर्व समित्यांचे मासिक अहवाल व इतिवृत्त निमंत्रण पत्रासह उपलब्ध होईल यामध्ये शाळा व्यवस्थापन समिती, विद्यार्थी सुरक्षा व भौतिक सुविधा विकसन समिती, सखी सावित्री समिती, महिला तक्रार निवारण समिती, माजी विद्यार्थी संघ, आणि इको क्लब यांचा समावेश आहे.",
   },
   {
+    moduleId: "mdm-register",
     labelKey: "mdm",
     fallbackLabel: "५. माध्यान्ह भोजन",
     to: "/teacher/mdm",
@@ -96,6 +104,7 @@ const MODULE_CARDS = [
     description: "या विभागात आपणास आरंभीची शिल्लक, आवक साहित्य आणि दैनंदिन नोंद भरल्यानंतर तांदूळ मागणी, धान्यादी मालाची मागणी, प्रमाणपत्र, मासिक अहवालामध्ये दैनंदिन तांदूळ खर्च नोंदवही भाग एक, पोषण आहार दैनंदिन नोंदी, मासिक तांदूळ अहवाल, मासिक साठा नोंदवही प्रपत्र ब, मासिक तांदूळ शिजवून दिल्याचे बिल, तसेच वार्षिक अहवालामध्ये तांदूळ उपयोगिता आणि धान्याची उपयोगिता आपणास उपलब्ध होणार आहे.",
   },
   {
+    moduleId: "sqaf-register",
     labelKey: "sqaaf",
     fallbackLabel: "६. SQAAF मूल्यमापन",
     to: "/teacher/sqaaf",
@@ -103,6 +112,7 @@ const MODULE_CARDS = [
     description: "या विभागात आपणास मानकांच्या स्तरानुसार प्रतिसाद नोंदवल्यानंतर प्रत्येक स्तरानुसार पुरावे निवडल्यानंतर आपणास स्वयं मूल्यांकन व बाह्य मूल्यांकन अहवाल, शाळा प्रतिसाद अहवाल व एकत्रित गुण अहवाल शाळेच्या श्रेणीसह उपलब्ध होईल. स्वयं मूल्यांकन व बाह्य मूल्यांकन अहवालामध्ये बाह्य मूल्यांकनाची सोयही उपलब्ध करून देण्यात आलेली आहे.",
   },
   {
+    moduleId: "cce-result",
     labelKey: "results",
     fallbackLabel: "७. CCE निकाल",
     to: "/teacher/result",
@@ -110,6 +120,7 @@ const MODULE_CARDS = [
     description: "या विभागात इयत्ता पहिली ते आठवी मराठी व सेमी माध्यमाचा निकाल आपणास तयार करता येईल. सर्व नोंदी निवडून सातत्यपूर्ण सर्वंकष मूल्यमापन नोंदवही, गुणपत्रक, प्रगती पत्रक, श्रेणी निहाय निकाल सर्व बाबी या ठिकाणी उपलब्ध आहेत.",
   },
   {
+    moduleId: "hpc-card",
     labelKey: "hpcCard",
     fallbackLabel: "८. Holistic Progress Card (HPC)",
     to: "/teacher/hpc-card",
@@ -117,6 +128,7 @@ const MODULE_CARDS = [
     description: "या विभागात आपणास तीनही स्तरातील इयत्ता पहिली ते आठवीपर्यंतचे एचपीसी कार्ड उपलब्ध आहेत. CCE रिजल्ट सेक्शन मध्ये भरलेली विद्यार्थ्यांची माहिती ऑटोमॅटिक या विभागांमध्ये येईल. त्यामुळे विद्यार्थ्यांची माहिती परत भरावी लागणार नाही.",
   },
   {
+    moduleId: "stats-teacher",
     labelKey: "statsTeacher",
     fallbackLabel: "९. शिक्षक संचिका",
     to: "/teacher/stats-teacher",
@@ -124,6 +136,7 @@ const MODULE_CARDS = [
     description: "या विभागात आपणास शिक्षक संचिका उपलब्ध करून देण्यात आलेली आहे आपण आपली सर्व माहिती त्यात भरून एडिट करून आपल्या नावासह व मुख्याध्यापकांच्या नावासह प्रिंट करून शिक्षक संचिका वापरू शकता.",
   },
   {
+    moduleId: "annual-monthly-planning",
     labelKey: "planningQuestionBank",
     fallbackLabel: "१०. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी",
     to: "/teacher/modules/annual-monthly-planning",
@@ -131,6 +144,7 @@ const MODULE_CARDS = [
     description: "या विभागात आपणास इयत्ता पहिली ते आठवी पर्यंतचे मराठी तसेच सेमी माध्यमचे वार्षिक नियोजन मासिक नियोजन आणि प्रश्नपेढी उपलब्ध होईल. त्यात आपण शाळेचे नाव शिक्षकाचे नाव मुख्याध्यापकांचे नाव आवश्यक बाबी भरून प्रिंट काढून वापरता येईल जर आपणास त्यात बदल करायचा असेल तर एडिट करण्याची सोय सुद्धा उपलब्ध आहे.",
   },
   {
+    moduleId: "teaching-record",
     labelKey: "teachingRecord",
     fallbackLabel: "११. टाचणवही",
     to: "/teacher/teaching-record",
@@ -138,6 +152,7 @@ const MODULE_CARDS = [
     description: "या विभागात आपणास इयत्ता पहिली ते आठवी मराठी आणि सेमी माध्यमचे टाचण उपलब्ध आहे. प्रत्येक दिवसाचे टाचण एडिट करून त्यात हवा तो बदल करून प्रिंट काढता येईल. शाळेच्या वर्ग शिक्षकाच्या आणि मुख्याध्यापकाच्या नावासह आपण प्रिंट काढून वापरू शकतो.",
   },
   {
+    moduleId: "stats-student",
     labelKey: "statsStudent",
     fallbackLabel: "१२. विद्यार्थी संचिका",
     to: "/teacher/stats-student",
@@ -145,6 +160,7 @@ const MODULE_CARDS = [
     description: "या विभागात आपणास विद्यार्थी संचिका उपलब्ध करून देण्यात आलेली आहे यात आपण विद्यार्थ्यांची सर्व माहिती भरून, एडिट करून, आपण ती संचिका शाळेचे नाव, शिक्षकाचे नाव व मुख्याध्यापकांच्या नावासह प्रिंट करून वापरू शकता.",
   },
   {
+    moduleId: "homework",
     labelKey: "homework",
     fallbackLabel: "१३. गृहपाठ (Homework)",
     to: "/teacher/homework",
@@ -152,6 +168,7 @@ const MODULE_CARDS = [
     description: "या विभागात आपणास इयत्ता पहिली ते आठवी मराठी व सेमी माध्यमासाठी विषयनिहाय गृहपाठ तयार करता येईल व विद्यार्थ्यांना पाठवता येईल.",
   },
   {
+    moduleId: "question-paper",
     labelKey: "questionPaper",
     fallbackLabel: "१४. प्रश्नपत्रिका (Question Paper)",
     to: "/teacher/question-paper",
@@ -166,11 +183,101 @@ export const Route = createFileRoute("/teacher/")({
 
 function TeacherDashboard() {
   const navigate = useNavigate();
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile } = useAuth();
   const { lang } = useLanguage();
   const t = DICTIONARY[lang];
 
   const [expandedModule, setExpandedModule] = useState<number | null>(null);
+  const [pricings, setPricings] = useState<Record<string, any>>({});
+  const [grantedModules, setGrantedModules] = useState<string[]>([]);
+  const [paidModules, setPaidModules] = useState<string[]>([]);
+
+  // 1. Fetch real-time module pricing from Firestore
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "cce_module_pricing"), (snap) => {
+      const map: Record<string, any> = {};
+      snap.docs.forEach((d) => {
+        map[d.id] = d.data();
+      });
+      setPricings(map);
+    });
+
+    return () => unsub();
+  }, []);
+
+  // 2. Fetch current teacher's granted access and paid records
+  const teacherId = getTeacherId(user, profile) || "teacher_guest";
+  const userKeys = Array.from(
+    new Set(
+      [
+        teacherId,
+        user?.uid,
+        user?.email,
+        profile?.id,
+        profile?.email,
+        localStorage.getItem("teacher_email"),
+        localStorage.getItem("user_email"),
+      ].filter((k): k is string => Boolean(k))
+    )
+  );
+
+  const isAdmin =
+    (user as any)?.role === "admin" ||
+    (profile as any)?.role === "admin" ||
+    localStorage.getItem("is_super_admin") === "true" ||
+    sessionStorage.getItem("is_super_admin") === "true";
+
+  useEffect(() => {
+    if (isAdmin) {
+      setGrantedModules(["ALL"]);
+      return;
+    }
+
+    // Listen to admin grants
+    const unsubAccess = onSnapshot(collection(db, "teacher_module_access"), (snap) => {
+      const list: string[] = [];
+      snap.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data && data.status === "GRANTED") {
+          const matches =
+            userKeys.includes(data.teacherId) ||
+            userKeys.includes(data.teacherEmail) ||
+            (data.id && userKeys.some((k) => data.id.startsWith(k)));
+          if (matches) {
+            list.push(data.moduleId);
+          }
+        }
+      });
+      setGrantedModules(list);
+    });
+
+    // Listen to payments
+    const unsubPayments = onSnapshot(collection(db, "teacher_module_payments"), (snap) => {
+      const paidList: string[] = [];
+      const now = Date.now();
+      snap.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data && data.status === "SUCCESS") {
+          const matches =
+            userKeys.includes(data.teacherId) ||
+            userKeys.includes(data.teacherEmail) ||
+            (data.id && userKeys.some((k) => data.id.startsWith(k)));
+          if (matches) {
+            const expiresTime = data.expiresAt ? new Date(data.expiresAt).getTime() : 0;
+            if (!expiresTime || expiresTime > now) {
+              paidList.push(data.moduleId);
+            }
+          }
+        }
+      });
+      setPaidModules(paidList);
+    });
+
+    return () => {
+      unsubAccess();
+      unsubPayments();
+    };
+  }, [user, profile, isAdmin]);
 
   const handleModuleAccess = (targetPath: string) => {
     if (user) {
@@ -181,6 +288,65 @@ function TeacherDashboard() {
         search: { redirect: targetPath, role: "teacher" } as any,
       });
     }
+  };
+
+  // Determine Free/Paid status for each card
+  const getCardStatus = (modId: string) => {
+    const itemPricing = pricings[modId];
+    const defaultPrices: Record<string, number> = {
+      timetable: 0,
+      templates: 149,
+      "special-day": 299,
+      "meeting-register": 99,
+      "mdm-register": 149,
+      "sqaf-register": 299,
+      "cce-result": 199,
+      "hpc-card": 199,
+      "stats-teacher": 99,
+      "annual-monthly-planning": 149,
+      "teaching-record": 99,
+      "stats-student": 99,
+      homework: 149,
+      "question-paper": 199,
+    };
+
+    // If admin set price === 0 or enabled === false, or timetable default is 0
+    const isFree =
+      itemPricing?.enabled === false ||
+      itemPricing?.price === 0 ||
+      itemPricing?.monthlyPrice === 0 ||
+      itemPricing?.yearlyPrice === 0 ||
+      itemPricing?.perStudentPrice === 0 ||
+      (!itemPricing && defaultPrices[modId] === 0);
+
+    const isParipathMatch = (m: string) =>
+      ["special-day", "paripath", "daily-assembly", "month-paripath"].includes(m);
+    const isPlanningMatch = (m: string) =>
+      ["annual-monthly-planning", "academic-planning", "question-bank"].includes(m);
+
+    const isUnlocked =
+      isAdmin ||
+      grantedModules.includes("ALL") ||
+      grantedModules.includes(modId) ||
+      paidModules.includes("ALL") ||
+      paidModules.includes(modId) ||
+      (modId === "special-day" && (grantedModules.some(isParipathMatch) || paidModules.some(isParipathMatch))) ||
+      (modId === "annual-monthly-planning" && (grantedModules.some(isPlanningMatch) || paidModules.some(isPlanningMatch)));
+
+    let priceDisplay = "";
+    if (!isFree) {
+      if (modId === "mdm-register" && itemPricing?.yearlyPrice) {
+        priceDisplay = `₹${itemPricing.yearlyPrice}`;
+      } else if (modId === "hpc-card" && itemPricing?.perStudentPrice) {
+        priceDisplay = `₹${itemPricing.perStudentPrice}`;
+      } else if (itemPricing?.price) {
+        priceDisplay = `₹${itemPricing.price}`;
+      } else {
+        priceDisplay = `₹${defaultPrices[modId] || 149}`;
+      }
+    }
+
+    return { isFree, isUnlocked, priceDisplay };
   };
 
   return (
@@ -208,11 +374,12 @@ function TeacherDashboard() {
 
           {/* Quick Access Modules Card Grid */}
           <div className="space-y-6">
-
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8 pt-2">
               {MODULE_CARDS.map((item, idx) => {
                 const CardIcon = item.icon;
                 const isExpanded = expandedModule === idx;
+                const status = getCardStatus(item.moduleId);
+
                 return (
                   <motion.div
                     whileHover={{ scale: 1.03, y: -4 }}
@@ -221,14 +388,45 @@ function TeacherDashboard() {
                   >
                     <div
                       onClick={() => handleModuleAccess(item.to)}
-                      className="min-h-[16.5rem] h-full bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-3xl sm:rounded-[2.25rem] p-5 sm:p-7 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col gap-3.5 transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer block w-full"
+                      className="min-h-[17.5rem] h-full bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-3xl sm:rounded-[2.25rem] p-5 sm:p-7 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col gap-3 transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer block w-full"
                     >
                       {/* Watermark background icon */}
                       <div className="absolute right-[-8%] bottom-[-8%] opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
                         <CardIcon className="size-44" strokeWidth={1} />
                       </div>
 
-                      {/* 1. Top Header: Icon & Title */}
+                      {/* 0. Top Status Badge: FREE vs PAID */}
+                      <div className="relative z-10 flex items-center justify-between gap-2">
+                        {status.isFree ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-emerald-400/25 text-emerald-100 border border-emerald-300/40 backdrop-blur-md shadow-xs tracking-wide">
+                            <Sparkles className="size-3 text-emerald-300" />
+                            <span>मोफत (FREE)</span>
+                          </span>
+                        ) : status.isUnlocked ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-emerald-400/25 text-emerald-100 border border-emerald-300/40 backdrop-blur-md shadow-xs tracking-wide">
+                            <CheckCircle2 className="size-3 text-emerald-300" />
+                            <span>सशुल्क • ॲक्टिव्ह (PAID)</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-amber-400/25 text-amber-100 border border-amber-300/40 backdrop-blur-md shadow-xs tracking-wide">
+                            <Lock className="size-3 text-amber-300" />
+                            <span>सशुल्क (PAID{status.priceDisplay ? ` • ${status.priceDisplay}` : ""})</span>
+                          </span>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedModule(isExpanded ? null : idx);
+                          }}
+                          className="sm:hidden text-[10px] font-bold text-amber-200 bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-full border border-white/20 flex items-center gap-1 shrink-0 ml-auto"
+                        >
+                          <span>{isExpanded ? "कमी करा" : "माहिती"}</span>
+                        </button>
+                      </div>
+
+                      {/* 1. Header: Icon & Title */}
                       <div className="relative z-10 flex items-center gap-3">
                         <div className="size-10 sm:size-11 bg-white/15 rounded-xl sm:rounded-2xl flex items-center justify-center border border-white/25 backdrop-blur-md shrink-0 group-hover:scale-105 group-hover:bg-white group-hover:text-purple-900 transition-all shadow-xs text-white">
                           <CardIcon className="size-5 sm:size-5.5 text-white group-hover:text-purple-900 transition-colors" />
@@ -236,19 +434,9 @@ function TeacherDashboard() {
                         <h3 className="text-base sm:text-lg font-black leading-tight tracking-tight text-white flex-1 truncate pr-1">
                           {t[item.labelKey as keyof typeof t] || item.fallbackLabel}
                         </h3>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedModule(isExpanded ? null : idx);
-                          }}
-                          className="sm:hidden text-[10px] font-bold text-amber-200 bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-full border border-white/20 flex items-center gap-1 shrink-0"
-                        >
-                          <span>{isExpanded ? "कमी करा" : "माहिती"}</span>
-                        </button>
                       </div>
 
-                      {/* 2. Entering Action Button shifted to UPSIDE (Below title/icon) */}
+                      {/* 2. Entering Action Button */}
                       <div className="relative z-10 py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl sm:rounded-2xl bg-white/15 group-hover:bg-white/25 border border-white/25 flex items-center justify-between gap-2 transition-all duration-300 group-hover:border-white/40 shadow-xs">
                         <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-white">
                           {lang === "mr" ? "विभागात प्रवेश करा" : "ENTER SECTION"}
@@ -258,7 +446,7 @@ function TeacherDashboard() {
                         </div>
                       </div>
 
-                      {/* 3. Information / Description shown DOWN under the button */}
+                      {/* 3. Description */}
                       <div className="relative z-10 pt-2 sm:pt-2.5 border-t border-white/20 flex-1 flex flex-col justify-start">
                         <p
                           className={`text-[11.5px] sm:text-xs text-violet-100/95 font-medium leading-relaxed transition-all duration-300 ${

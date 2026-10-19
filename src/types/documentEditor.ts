@@ -23,6 +23,11 @@ export interface DocumentTextBlock {
 
 export interface QuestionPaperHeaderData {
   schoolName: string;
+  kendra?: string;
+  taluka?: string;
+  jilha?: string;
+  teacherName?: string;
+  headmasterName?: string;
   examTitle: string;
   className: string;
   subjectName: string;

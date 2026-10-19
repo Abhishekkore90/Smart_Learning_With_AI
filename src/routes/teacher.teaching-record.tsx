@@ -24,7 +24,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { showToast as toast } from "@/lib/custom-toast";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, getDoc, onSnapshot, query, where } from "firebase/firestore";
-import { PinGate } from "@/components/teacher/PinGate";
 import { useAuth } from "@/hooks/use-auth";
 import { useDiaryProcessing } from "@/contexts/DiaryProcessingContext";
 import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
@@ -375,9 +374,8 @@ function TeachingRecordPage() {
         };
         setSchoolProfile(freshProfile);
         // Remove stale generic storage so old data (e.g. 1234) doesn't show in header pills
-        localStorage.removeItem("teaching_diary_school_profile");
-        // ALWAYS AUTO-OPEN INFO FILL TAB FOR NEW USER!
-        setActiveMainTab("school_profile");
+        // Default to diary view, don't force info tab
+        setActiveMainTab("diary");
       }
     };
 
@@ -788,9 +786,7 @@ function TeachingRecordPage() {
 
       <main className="w-full pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
         <ModulePaywall moduleId="teaching-record" defaultTitle="दैनिक अध्यापन टाचणवही (Teaching Diary)">
-          <PinGate sectionKey="teaching_record">
           <div className="p-3 sm:p-5 md:p-6 w-full max-w-[98%] xl:max-w-[96%] mx-auto space-y-6 print:p-0 print:max-w-full">
-            {/* Top Navigation Bar with ONLY Back Button */}
             <div className="flex items-center justify-between gap-4 print:hidden">
               <button
                 type="button"
@@ -799,6 +795,15 @@ function TeachingRecordPage() {
               >
                 <ArrowLeft className="size-4 shrink-0" />
                 <span>मागे जा (Back)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMainTab(activeMainTab === "school_profile" ? "diary" : "school_profile")}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-orange-50 text-slate-700 hover:text-orange-700 border border-slate-200 hover:border-orange-200 rounded-2xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+              >
+                <GraduationCap className="size-4 text-orange-600" />
+                <span>{activeMainTab === "school_profile" ? "टाचणवही पहा (View Diary)" : "शाळेची माहिती (School Info)"}</span>
               </button>
             </div>
 
@@ -926,6 +931,13 @@ function TeachingRecordPage() {
                   </div>
 
                   <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setActiveMainTab("diary")}
+                      className="px-5 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all cursor-pointer"
+                    >
+                      रद्द करा (Cancel)
+                    </button>
                     <button
                       type="button"
                       onClick={handleSaveSchoolProfile}
@@ -1248,7 +1260,6 @@ function TeachingRecordPage() {
               </div>
             )}
           </div>
-        </PinGate>
       </ModulePaywall>
     </main>
     </div>

@@ -181,3 +181,38 @@ export const getMarathiClassLabel = (cls?: string): string => {
   return cls;
 };
 
+/**
+ * Generates a clean, WhatsApp-compatible ASCII filename in the exact requested format:
+ * "Class [X] Homework.pdf" (e.g. "Class 1st Homework.pdf")
+ * This eliminates Unicode / Devanagari mojibake in WhatsApp and all OS file receivers.
+ */
+export const formatHomeworkFileName = (cls?: string): string => {
+  let classLabel = "1st";
+  if (cls) {
+    const c = cls.trim().toLowerCase();
+    if (c.includes("1st") || c.includes("1 ली") || c.includes("पहिली") || c.includes("first") || c === "1") {
+      classLabel = "1st";
+    } else if (c.includes("2nd") || c.includes("2 री") || c.includes("दुसरी") || c.includes("second") || c === "2") {
+      classLabel = "2nd";
+    } else if (c.includes("3rd") || c.includes("3 री") || c.includes("तिसरी") || c.includes("third") || c === "3") {
+      classLabel = "3rd";
+    } else if (c.includes("4th") || c.includes("4 थी") || c.includes("चौथी") || c.includes("fourth") || c === "4") {
+      classLabel = "4th";
+    } else if (c.includes("5th") || c.includes("5 वी") || c.includes("पाचवी") || c.includes("fifth") || c === "5") {
+      classLabel = "5th";
+    } else if (c.includes("6th") || c.includes("6 वी") || c.includes("सहावी") || c.includes("sixth") || c === "6") {
+      classLabel = "6th";
+    } else if (c.includes("7th") || c.includes("7 वी") || c.includes("सातवी") || c.includes("seventh") || c === "7") {
+      classLabel = "7th";
+    } else if (c.includes("8th") || c.includes("8 वी") || c.includes("आठवी") || c.includes("eighth") || c === "8") {
+      classLabel = "8th";
+    } else {
+      const sanitized = cls.replace(/[^a-zA-Z0-9]/g, "");
+      classLabel = sanitized || "1st";
+    }
+  }
+
+  return `Class ${classLabel} Homework.pdf`;
+};
+
+

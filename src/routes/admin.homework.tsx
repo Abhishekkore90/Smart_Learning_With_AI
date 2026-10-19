@@ -885,6 +885,8 @@ function AdminHomeworkPage() {
                         onDeleteHomework={handleDelete}
                         userRole="admin"
                         accentColor="amber"
+                        selectedClass={selectedClass}
+                        selectedMedium={selectedMedium}
                       />
                     )}
 

@@ -1223,12 +1223,22 @@ export interface MonthlySection {
 
 export const DEFAULT_MONTHLY_HEADERS = [
   "दिवस",
-  "पाठ / घटक / उपघटक",
+  "पाठ / घटक",
   "अध्ययन निष्पत्ती",
   "अध्ययन मुद्दे / पाठ्यांश उद्देश",
   "अध्ययन अनुभवाचे स्वरूप",
-  "उपयोगात आणावयाची साधन तंत्रे",
-  "आवश्यक साहित्य",
+  "साधन तंत्रे",
+  "शैक्षणिक साहित्य",
+];
+
+export const DEFAULT_MONTHLY_ENGLISH_HEADERS = [
+  "Day",
+  "Lesson/ Point",
+  "Learning Outcomes",
+  "Teaching Point/ Aim",
+  "Structure of Teaching Experience",
+  "Tool & Technique",
+  "Educational Instrument",
 ];
 
 export const ACADEMIC_MONTH_ORDER: Record<string, number> = {
@@ -1529,13 +1539,13 @@ const COMMON_TOOLS_LIST = [
 /**
  * Normalizes monthly planning rows:
  * PRESERVES EVERY SINGLE WORD! Never erases, drops, or clears any cell content.
- * Ensures at least 7 columns for monthly layout, while keeping all extra columns if present.
+ * Strictly maintains the standard 7-column monthly layout (Day, Lesson, Outcome, Aim, Experience, Tool, Instrument)
+ * and trims out extra blank/hyphen columns beyond column 7.
  */
 export function normalizeMonthlyPlanningRow(row: string[]): string[] {
   if (!row || !Array.isArray(row)) return [];
-  const targetLen = Math.max(7, row.length);
   const result: string[] = [];
-  for (let i = 0; i < targetLen; i++) {
+  for (let i = 0; i < 7; i++) {
     const val = row[i];
     result.push(val !== undefined && val !== null ? String(val).trim() : "");
   }

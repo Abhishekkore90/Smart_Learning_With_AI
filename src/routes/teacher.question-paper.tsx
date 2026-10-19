@@ -31,6 +31,7 @@ import {
   Trash2,
   ArrowLeft,
   Award,
+  School,
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
@@ -47,10 +48,18 @@ import {
 import { getDefaultSubjectsForClass, areSubjectsEquivalent } from "@/data/cceSubjects";
 import type { QuestionPaperItem } from "@/types/documentEditor";
 import { DocumentEditorViewer } from "@/components/documentViewer/DocumentEditorViewer";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { QuestionPaperTemplate } from "@/components/questionPaper/QuestionPaperTemplate";
 import { QuestionPaperManualEditor } from "@/components/questionPaper/QuestionPaperManualEditor";
-import { fetchUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
+import { fetchUnifiedSchoolProfile, getUnifiedSchoolProfile, saveUnifiedSchoolProfile, saveUnifiedSchoolProfileToFirestore } from "@/utils/schoolProfileHelper";
 import { WordQuestionPaperEditor } from "@/components/questionPaper/WordQuestionPaperEditor";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const isWordPaper = (paper: any): boolean => {
   if (!paper) return false;
@@ -185,6 +194,167 @@ function QuestionPaperPage() {
   // Active opened paper for View & Edit
   const [activePaper, setActivePaper] = useState<QuestionPaperItem | null>(null);
 
+  // School and Teacher details management
+  const [schoolInfo, setSchoolInfo] = useState({
+    schoolName: "",
+    kendra: "",
+    taluka: "",
+    jilha: "",
+    teacherName: "",
+    headmasterName: "",
+  });
+  const [tempSchoolInfo, setTempSchoolInfo] = useState({
+    schoolName: "",
+    kendra: "",
+    taluka: "",
+    jilha: "",
+    teacherName: "",
+    headmasterName: "",
+  });
+  const [showSchoolModal, setShowSchoolModal] = useState<boolean>(false);
+  const [isSavingSchool, setIsSavingSchool] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const userId = user?.uid || profile?.id;
+    if (!userId || userId === "guest" || userId === "guest_teacher") {
+      const blank = {
+        schoolName: "",
+        kendra: "",
+        taluka: "",
+        jilha: "",
+        teacherName: "",
+        headmasterName: "",
+      };
+      setSchoolInfo(blank);
+      setTempSchoolInfo(blank);
+      return;
+    }
+
+    const userKey = `user_school_name_${userId}`;
+    const qpUserKey = `qp_school_info_${userId}`;
+    const userPromptedKey = `qp_school_prompted_${userId}`;
+
+    // Clean legacy global keys to prevent data leaking between accounts
+    try {
+      localStorage.removeItem("qp_school_info");
+      localStorage.removeItem("qp_school_name");
+      localStorage.removeItem("teacher_school_name");
+    } catch (e) {}
+
+    // Strictly check ONLY this specific user's saved data
+    let userDedicated: any = null;
+    try {
+      const raw = localStorage.getItem(qpUserKey);
+      if (raw) userDedicated = JSON.parse(raw);
+    } catch (e) {}
+
+    const cleanSchool = (userDedicated?.schoolName && !userDedicated.schoolName.toLowerCase().includes("willingdon") && !userDedicated.schoolName.includes("___"))
+      ? userDedicated.schoolName.trim()
+      : "";
+
+    if (cleanSchool) {
+      const current = {
+        schoolName: cleanSchool,
+        kendra: userDedicated?.kendra || userDedicated?.centerName || "",
+        taluka: userDedicated?.taluka || "",
+        jilha: userDedicated?.jilha || userDedicated?.district || "",
+        teacherName: userDedicated?.teacherName || "",
+        headmasterName: userDedicated?.headmaster || userDedicated?.headmasterName || "",
+      };
+      setSchoolInfo(current);
+      setTempSchoolInfo(current);
+    } else {
+      // First time user: 100% fresh, blank form without any mixed or leaked information
+      const freshBlank = {
+        schoolName: "",
+        kendra: "",
+        taluka: "",
+        jilha: "",
+        teacherName: "",
+        headmasterName: "",
+      };
+      setSchoolInfo(freshBlank);
+      setTempSchoolInfo(freshBlank);
+
+      const prompted = localStorage.getItem(userPromptedKey) === "true";
+      if (!prompted) {
+        setShowSchoolModal(true);
+      }
+    }
+
+    // Background sync strictly with this user's own document in Firestore backend
+    fetchUnifiedSchoolProfile(userId).then((backendProfile) => {
+      if (backendProfile && backendProfile.schoolName && !backendProfile.schoolName.toLowerCase().includes("willingdon") && !backendProfile.schoolName.includes("___")) {
+        const fresh = {
+          schoolName: backendProfile.schoolName.trim(),
+          kendra: backendProfile.kendra || backendProfile.centerName || "",
+          taluka: backendProfile.taluka || "",
+          jilha: backendProfile.jilha || backendProfile.district || "",
+          teacherName: backendProfile.teacherName || "",
+          headmasterName: backendProfile.headmaster || "",
+        };
+        setSchoolInfo(fresh);
+        setTempSchoolInfo(fresh);
+        localStorage.setItem(qpUserKey, JSON.stringify(fresh));
+      }
+    }).catch((err) => console.warn("Background school profile sync notice:", err));
+  }, [user?.uid, profile?.id]);
+
+  const handleSaveSchoolInfo = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanSchool = tempSchoolInfo.schoolName.trim();
+    if (!cleanSchool) {
+      toast.error("कृपया शाळेचे नाव प्रविष्ट करा!");
+      return;
+    }
+    const updated = {
+      schoolName: cleanSchool,
+      kendra: tempSchoolInfo.kendra.trim(),
+      taluka: tempSchoolInfo.taluka.trim(),
+      jilha: tempSchoolInfo.jilha.trim(),
+      teacherName: tempSchoolInfo.teacherName.trim(),
+      headmasterName: tempSchoolInfo.headmasterName.trim(),
+    };
+
+    setIsSavingSchool(true);
+    setSchoolInfo(updated);
+
+    const userId = user?.uid || profile?.id || "guest";
+    const userKey = `user_school_name_${userId}`;
+    const qpUserKey = `qp_school_info_${userId}`;
+    const userPromptedKey = `qp_school_prompted_${userId}`;
+
+    // Strictly save for THIS specific user ONLY
+    localStorage.setItem(qpUserKey, JSON.stringify(updated));
+    localStorage.setItem(userKey, cleanSchool);
+    localStorage.setItem(userPromptedKey, "true");
+
+    const profileData = {
+      schoolName: cleanSchool,
+      kendra: updated.kendra,
+      centerName: updated.kendra,
+      taluka: updated.taluka,
+      jilha: updated.jilha,
+      district: updated.jilha,
+      teacherName: updated.teacherName,
+      headmaster: updated.headmasterName,
+      headmasterName: updated.headmasterName,
+    };
+
+    if (userId && userId !== "guest" && userId !== "guest_teacher") {
+      try {
+        await saveUnifiedSchoolProfileToFirestore(profileData, userId);
+      } catch (err) {
+        console.warn("Could not sync unified school profile to backend:", err);
+      }
+    }
+
+    setIsSavingSchool(false);
+    setShowSchoolModal(false);
+    toast.success("शाळा व शिक्षक माहिती केवळ आपल्या प्रोफाइलसाठी सुरक्षितपणे जतन झाली!");
+  };
+
   useEffect(() => {
     if (!authLoading) {
       if (sessionStorage.getItem("is_super_admin")) {
@@ -280,6 +450,7 @@ function QuestionPaperPage() {
       </div>
 
       <main className="pt-20 pb-16 px-3 sm:px-6 max-w-7xl mx-auto space-y-6">
+        <ModulePaywall moduleId="question-paper" defaultTitle="प्रश्नपत्रिका (Question Paper)">
         {/* Back to Dashboard Button */}
         {!activePaper && (
           <div className="no-print">
@@ -347,7 +518,175 @@ function QuestionPaperPage() {
               </div>
             )}
           </div>
+
+          {/* School Name Quick Edit Strip */}
+          <div className="relative z-10 mt-4 pt-3.5 border-t border-white/20 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="size-8 rounded-xl bg-white/15 text-amber-300 flex items-center justify-center shrink-0 border border-white/20 shadow-xs">
+                <School className="size-4" />
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <span className="text-blue-200 text-[11px] font-bold uppercase tracking-wider">
+                  शाळा माहिती :
+                </span>
+                {schoolInfo.schoolName ? (
+                  <span className="font-extrabold text-white bg-white/20 px-2.5 py-0.5 rounded-lg border border-white/25 text-xs sm:text-sm">
+                    {schoolInfo.schoolName}
+                    {schoolInfo.kendra ? ` • केंद्र: ${schoolInfo.kendra}` : ""}
+                    {schoolInfo.taluka ? ` • तालुका: ${schoolInfo.taluka}` : ""}
+                    {schoolInfo.jilha ? ` • जिल्हा: ${schoolInfo.jilha}` : ""}
+                  </span>
+                ) : (
+                  <span className="text-amber-300 italic font-medium">
+                    (शाळा माहिती भरलेली नाही)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setTempSchoolInfo(schoolInfo);
+                setShowSchoolModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/20 hover:bg-white/30 active:scale-95 text-white font-bold rounded-xl transition-all cursor-pointer border border-white/30 shadow-xs"
+            >
+              <Edit3 className="size-3.5 text-amber-300" />
+              <span>{schoolInfo.schoolName ? "शाळा व शिक्षक माहिती बदला (Edit)" : "+ शाळा माहिती भरा (Fill Details)"}</span>
+            </button>
+          </div>
         </div>
+
+        {/* Dialog for School and Teacher Details */}
+        <Dialog open={showSchoolModal} onOpenChange={setShowSchoolModal}>
+          <DialogContent className="sm:max-w-xl bg-white rounded-3xl p-6 sm:p-8 border-0 shadow-2xl">
+            <DialogHeader>
+              <div className="size-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2">
+                <School className="size-6" />
+              </div>
+              <DialogTitle className="text-xl sm:text-2xl font-black text-slate-800">
+                शाळा व शिक्षक माहिती प्रविष्ट करा
+              </DialogTitle>
+              <DialogDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
+                सर्व प्रश्नपत्रिकांच्या हेडर बॉक्समध्ये शाळेचे नाव, केंद्र, तालुका, जिल्हा व खाली शिक्षकांची स्वाक्षरी आपोआप दिसेल.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleSaveSchoolInfo} className="space-y-4 mt-2">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  शाळेचे नाव (School Name) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={tempSchoolInfo.schoolName}
+                  onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, schoolName: e.target.value })}
+                  placeholder="उदा. जि. प. प्राथमिक शाळा धोंडेवाडी"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                  autoFocus
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    केंद्र (Kendra)
+                  </label>
+                  <input
+                    type="text"
+                    value={tempSchoolInfo.kendra}
+                    onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, kendra: e.target.value })}
+                    placeholder="उदा. पेड"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    तालुका (Taluka)
+                  </label>
+                  <input
+                    type="text"
+                    value={tempSchoolInfo.taluka}
+                    onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, taluka: e.target.value })}
+                    placeholder="उदा. तासगाव"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    जिल्हा (Jilla)
+                  </label>
+                  <input
+                    type="text"
+                    value={tempSchoolInfo.jilha}
+                    onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, jilha: e.target.value })}
+                    placeholder="उदा. सांगली"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    वर्ग शिक्षकाचे नाव (Class Teacher Name)
+                  </label>
+                  <input
+                    type="text"
+                    value={tempSchoolInfo.teacherName}
+                    onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, teacherName: e.target.value })}
+                    placeholder="उदा. श्री. आर. के. पाटील"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    मुख्याध्यापकाचे नाव (Headmaster)
+                  </label>
+                  <input
+                    type="text"
+                    value={tempSchoolInfo.headmasterName}
+                    onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, headmasterName: e.target.value })}
+                    placeholder="उदा. श्री. एस. व्ही. जाधव"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetId = user?.uid || profile?.id || "guest";
+                    localStorage.setItem(`qp_school_prompted_${targetId}`, "true");
+                    setShowSchoolModal(false);
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-xs sm:text-sm transition-all cursor-pointer"
+                >
+                  रद्द करा / नंतर भरा
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingSchool}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-md flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isSavingSchool ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      <span>जतन होत आहे...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="size-4" />
+                      <span>जतन करा (Save)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* ACTIVE QUESTION PAPER DOCUMENT VIEWER & EDITOR */}
         {activePaper ? (
@@ -377,6 +716,12 @@ function QuestionPaperPage() {
                   subject={activePaper.subject || selectedSubject}
                   userId={user?.uid || "guest_teacher"}
                   userRole={profile?.role || "teacher"}
+                  schoolName={schoolInfo.schoolName}
+                  kendra={schoolInfo.kendra}
+                  taluka={schoolInfo.taluka}
+                  jilha={schoolInfo.jilha}
+                  teacherName={schoolInfo.teacherName}
+                  headmasterName={schoolInfo.headmasterName}
                   onClose={() => setActivePaper(null)}
                 />
               </div>
@@ -392,6 +737,12 @@ function QuestionPaperPage() {
                 userId={user?.uid || "guest_teacher"}
                 userRole={profile?.role || "teacher"}
                 userName={profile?.fullName || "शिक्षक"}
+                schoolName={schoolInfo.schoolName}
+                kendra={schoolInfo.kendra}
+                taluka={schoolInfo.taluka}
+                jilha={schoolInfo.jilha}
+                teacherName={schoolInfo.teacherName}
+                headmasterName={schoolInfo.headmasterName}
                 canEdit={true}
                 onBack={() => setActivePaper(null)}
                 metadataBadge={
@@ -719,6 +1070,7 @@ function QuestionPaperPage() {
             )}
           </div>
         )}
+        </ModulePaywall>
       </main>
     </div>
   );

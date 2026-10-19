@@ -11,6 +11,7 @@ import type {
 } from "@/types/documentEditor";
 import { decodeMarathiLegacyText } from "./marathiFontDecoder";
 import { fetchBinaryFile } from "@/lib/bunny-auth-pdf";
+import { getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 
 // Robust worker configuration for PDF.js using local static worker
 if (typeof window !== "undefined") {
@@ -303,8 +304,15 @@ export function detectPageHeaderBox(
     totalMarks = marksMatch ? marksMatch[1].trim() : "२०";
   }
 
+  const profile = typeof window !== "undefined" ? getUnifiedSchoolProfile() : null;
+
   return {
-    schoolName: defaultSchoolName || "",
+    schoolName: defaultSchoolName || profile?.schoolName || "",
+    kendra: profile?.kendra || "",
+    taluka: profile?.taluka || "",
+    jilha: profile?.jilha || "",
+    teacherName: profile?.teacherName || "",
+    headmasterName: profile?.headmaster || "",
     examTitle,
     className,
     subjectName,
@@ -1070,12 +1078,27 @@ export async function exportDocumentToPdf(
 
         const isEng = Boolean(headerBox.isEnglish);
 
-        // 3. Line 1: School Name
+        // 3. Line 1: School Name & Kendra, Taluka, Jilha
         ctx.fillStyle = "#0f172a";
-        ctx.font = 'bold 18px "Noto Sans Devanagari", sans-serif';
+        ctx.font = 'bold 16px "Noto Sans Devanagari", sans-serif';
         ctx.textBaseline = "top";
         const schoolLabel = isEng ? "SCHOOL NAME : " : "शाळेचे नाव : ";
         ctx.fillText(`${schoolLabel}${headerBox.schoolName || ""}`, bx + 16, by + 12);
+
+        // Kendra, Taluka, Jilha sub-details on top right of the box
+        const subParts = [
+          headerBox.kendra ? (isEng ? `Center: ${headerBox.kendra}` : `केंद्र : ${headerBox.kendra}`) : "",
+          headerBox.taluka ? (isEng ? `Taluka: ${headerBox.taluka}` : `तालुका : ${headerBox.taluka}`) : "",
+          headerBox.jilha ? (isEng ? `Dist: ${headerBox.jilha}` : `जिल्हा : ${headerBox.jilha}`) : "",
+        ].filter(Boolean);
+        if (subParts.length > 0) {
+          const subText = subParts.join("  |  ");
+          ctx.font = 'bold 11px "Noto Sans Devanagari", sans-serif';
+          ctx.fillStyle = "#334155";
+          const subMetrics = ctx.measureText(subText);
+          ctx.fillText(subText, bx + bw - subMetrics.width - 16, by + 15);
+          ctx.fillStyle = "#0f172a";
+        }
 
         // 4. Line 2: Exam Title (centered)
         ctx.font = 'bold 16px "Noto Sans Devanagari", sans-serif';
@@ -1241,6 +1264,35 @@ export async function exportDocumentToPdf(
         }
       }
 
+      // Draw bottom signature line if question paper and teacher/headmaster is filled
+      if (headerBox && headerBox.enabled !== false && model.documentType !== "homework" && (headerBox.teacherName || headerBox.headmasterName)) {
+        ctx.save();
+        const isEng = Boolean(headerBox.isEnglish);
+        const footerY = page.height * 0.965;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(page.width * 0.04, footerY - 14, page.width * 0.92, 28);
+        ctx.strokeStyle = "#475569";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(page.width * 0.04, footerY - 8);
+        ctx.lineTo(page.width * 0.96, footerY - 8);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = "#0f172a";
+        ctx.font = 'bold 11px "Noto Sans Devanagari", sans-serif';
+        ctx.textBaseline = "middle";
+
+        const teacherText = isEng ? `Class Teacher: ${headerBox.teacherName || "__________"}` : `वर्ग शिक्षक : ${headerBox.teacherName || "__________"}`;
+        const hmText = isEng ? `Headmaster: ${headerBox.headmasterName || "__________"}` : `मुख्याध्यापक : ${headerBox.headmasterName || "__________"}`;
+
+        ctx.fillText(teacherText, page.width * 0.04 + 10, footerY + 4);
+        const hmMetrics = ctx.measureText(hmText);
+        ctx.fillText(hmText, page.width * 0.96 - hmMetrics.width - 10, footerY + 4);
+        ctx.restore();
+      }
+
       const imgData = compositeCanvas.toDataURL("image/jpeg", 0.95);
       pdf.addImage(imgData, "JPEG", 0, 0, page.width, page.height);
     }
@@ -1277,8 +1329,17 @@ export function printDocument(model: DocumentModel): void {
             <div style="position: absolute; left: 2.0%; top: 0.5%; width: 96.0%; height: 25.5%; background: white; z-index: 45;"></div>
             <!-- 1. Clean rectangular header box -->
             <div style="position: absolute; left: 4.0%; top: 1.6%; width: 92.0%; min-height: 22.6%; background: white; border: 2px solid #0f172a; border-radius: 0px; padding: 10px 14px; box-sizing: border-box; font-family: 'Noto Sans Devanagari', sans-serif; z-index: 50; color: #0f172a;">
-              <div style="font-size: 16px; font-weight: 800; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                <span style="white-space: nowrap;">${isEng ? 'SCHOOL NAME :' : 'शाळेचे नाव :'}</span> ${escapeHtml(hb.schoolName || '')}
+              <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; font-weight: 800; margin-bottom: 4px; gap: 8px;">
+                <div style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  <span style="white-space: nowrap;">${isEng ? 'SCHOOL NAME :' : 'शाळेचे नाव :'}</span> ${escapeHtml(hb.schoolName || '')}
+                </div>
+                ${(hb.kendra || hb.taluka || hb.jilha) ? `
+                  <div style="font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; display: flex; gap: 8px;">
+                    ${hb.kendra ? `<span>${isEng ? 'Center:' : 'केंद्र:'} <b>${escapeHtml(hb.kendra)}</b></span>` : ''}
+                    ${hb.taluka ? `<span>${isEng ? 'Taluka:' : 'तालुका:'} <b>${escapeHtml(hb.taluka)}</b></span>` : ''}
+                    ${hb.jilha ? `<span>${isEng ? 'Dist:' : 'जिल्हा:'} <b>${escapeHtml(hb.jilha)}</b></span>` : ''}
+                  </div>
+                ` : ''}
               </div>
               <div style="font-size: 15px; font-weight: 800; text-align: center; margin: 4px 0;">
                 ${escapeHtml(hb.examTitle || (isEng ? 'FORMATIVE EVALUATION TEST 1' : 'आकारिक मूल्यमापन चाचणी क्र. १'))}
@@ -1345,6 +1406,19 @@ export function printDocument(model: DocumentModel): void {
       `;
         })
         .join("")}
+      ${(() => {
+        const hb = page.headerBoxData || (page.pageNumber === 1 ? model.headerBoxData : undefined);
+        if (hb && hb.enabled !== false && model.documentType !== "homework" && (hb.teacherName || hb.headmasterName)) {
+          const isEng = Boolean(hb.isEnglish);
+          return `
+            <div style="position: absolute; bottom: 12px; left: 4.0%; width: 92.0%; display: flex; justify-content: space-between; align-items: flex-end; padding: 4px 10px; font-size: 11px; font-weight: 700; color: #0f172a; border-top: 1px dashed #64748b; background: white; z-index: 50; box-sizing: border-box;">
+              <div>${isEng ? 'Class Teacher :' : 'वर्ग शिक्षक :'}&nbsp;<u>${escapeHtml(hb.teacherName || '__________')}</u></div>
+              <div>${isEng ? 'Headmaster :' : 'मुख्याध्यापक :'}&nbsp;<u>${escapeHtml(hb.headmasterName || '__________')}</u></div>
+            </div>
+          `;
+        }
+        return '';
+      })()}
     </div>
   `
     )

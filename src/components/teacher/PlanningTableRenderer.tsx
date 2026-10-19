@@ -80,7 +80,7 @@ const resolveQuestionBankColumnMap = (headers: any[]) => {
 
     if (
       map.srNo === -1 &&
-      (clean.includes("अनुक्रमांक") || clean.includes("अ.क्र") || clean.includes("प्रश्न क्रमांक") || clean === "क्र." || clean === "अ. क्र." || clean === "sr" || clean.startsWith("sr"))
+      (clean.includes("अनुक्रमांक") || clean.includes("अ.क्र") || clean.includes("प्रश्न क्रमांक") || clean === "क्र." || clean === "अ. क्र." || clean.startsWith("sr") || clean.includes("sr. no") || clean.includes("sr no") || clean.includes("sr.") || clean === "sr" || clean === "no" || clean === "no.")
     ) {
       map.srNo = idx;
     } else if (
@@ -90,12 +90,12 @@ const resolveQuestionBankColumnMap = (headers: any[]) => {
       map.lesson = idx;
     } else if (
       map.outcome === -1 &&
-      (clean.includes("निष्पत्ती") || clean.includes("outcome") || clean.includes("lo"))
+      (clean.includes("निष्पत्ती") || clean.includes("outcome") || clean.includes("lo") || clean.includes("learning outcome"))
     ) {
       map.outcome = idx;
     } else if (
       map.question === -1 &&
-      (clean.includes("प्रश्न") || clean.includes("question") || clean.includes("सवाल"))
+      (clean === "question" || clean === "प्रश्न" || clean.includes("सवाल") || (clean.includes("question") && !clean.includes("type")))
     ) {
       map.question = idx;
     } else if (
@@ -105,12 +105,12 @@ const resolveQuestionBankColumnMap = (headers: any[]) => {
       map.answer = idx;
     } else if (
       map.evalType === -1 &&
-      (clean.includes("मूल्यमापन") || clean.includes("evaluation") || clean.includes("तोंडी") || clean.includes("लेखी"))
+      (clean.includes("मूल्यमापन") || clean.includes("evaluation") || clean.includes("assessment") || clean.includes("तोंडी") || clean.includes("लेखी"))
     ) {
       map.evalType = idx;
     } else if (
       map.qType === -1 &&
-      (clean.includes("प्रकार") || clean.includes("type") || clean.includes("स्वरूप"))
+      (clean.includes("question type") || clean.includes("q.type") || clean.includes("प्रकार") || clean.includes("type") || clean.includes("स्वरूप"))
     ) {
       map.qType = idx;
     } else if (
@@ -184,6 +184,88 @@ const AutoHeightTextarea: React.FC<{
       placeholder={placeholder}
       className={`w-full p-2 text-xs font-medium border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white leading-relaxed overflow-hidden resize-none ${className}`}
     />
+  );
+};
+
+// Responsive A4 scale wrapper for Question Bank in mobile view
+const QuestionBankA4Wrapper: React.FC<{
+  children: React.ReactNode;
+  mode: "fit" | "scroll";
+}> = ({ children, mode }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const targetWidth = 794; // Standard A4 width in px (210mm at 96dpi)
+
+  useEffect(() => {
+    if (mode !== "fit") {
+      setScale(1);
+      return;
+    }
+
+    const updateScale = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const parentWidth = rect.width || containerRef.current.clientWidth || window.innerWidth;
+      if (parentWidth > 0 && parentWidth < targetWidth) {
+        setScale(Number((parentWidth / targetWidth).toFixed(4)));
+      } else {
+        setScale(1);
+      }
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, [mode]);
+
+  const supportsZoom = typeof document !== "undefined" && "zoom" in document.documentElement.style;
+
+  if (mode === "scroll") {
+    return (
+      <div className="w-full overflow-x-auto rounded-xl sm:rounded-2xl border-2 border-slate-900 shadow-sm bg-white">
+        <div style={{ minWidth: "794px" }}>
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full overflow-x-hidden rounded-xl sm:rounded-2xl border-2 border-slate-900 shadow-sm bg-white flex justify-center"
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+      }}
+    >
+      <div
+        style={
+          scale < 1
+            ? supportsZoom
+              ? {
+                  zoom: scale,
+                  width: `${targetWidth}px`,
+                  minWidth: `${targetWidth}px`,
+                  maxWidth: `${targetWidth}px`,
+                }
+              : {
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top left",
+                  width: `${targetWidth}px`,
+                  minWidth: `${targetWidth}px`,
+                  maxWidth: `${targetWidth}px`,
+                  marginBottom: `-${Math.round((1 - scale) * 700)}px`,
+                }
+            : {
+                width: "100%",
+                minWidth: "100%",
+              }
+        }
+      >
+        {children}
+      </div>
+    </div>
   );
 };
 
@@ -696,8 +778,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   // Helper to get structured section title parts with clean spacing
   const getSectionBannerParts = (sec: SubjectSection) => {
     const rawTitle = (sec.displaySubjectName || sec.subjectName || "").trim();
-    const clsName = formatMarathiClassName(record?.classId || record?.fileName || "1st");
     const recAny = record as any;
+    const rawCls = (record?.classId || recAny?.classId || recAny?.class || (record?.id ? record.id.split("_")[2] : "") || "1st").trim();
+    const formattedCls = formatMarathiClassName(rawCls || record?.fileName || "1st");
+    const cleanCls = formattedCls.replace(/^इयत्ता\s*/i, "").trim() || "पहिली";
+    const cleanEnCls = rawCls.replace(/^class\s*/i, "").trim() || "1st";
 
     // Detect actual academic subject, never let month name become subject
     let realSubject = "";
@@ -734,11 +819,12 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           isEnglish: true,
           segments: [
             "Monthly & Unit Planning",
+            `Class : ${cleanEnCls}`,
             `Month : ${cleanMonth}`,
             `Subject : ${realSubject}`,
             `Medium : ${displayMedium}`,
           ],
-          fullText: `Monthly & Unit Planning  —  Month : ${cleanMonth}  |  Subject : ${realSubject}  |  Medium : ${displayMedium}`,
+          fullText: `Monthly & Unit Planning  —  Class : ${cleanEnCls}  |  Month : ${cleanMonth}  |  Subject : ${realSubject}  |  Medium : ${displayMedium}`,
         };
       }
 
@@ -754,18 +840,20 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         isEnglish: false,
         segments: [
           "अभ्यासक्रमाचे मासिक व घटक नियोजन",
+          `इयत्ता : ${cleanCls}`,
           `माहे : ${monthName}`,
           `विषय : ${realSubject}`,
           `माध्यम : ${displayMedium}`,
         ],
-        fullText: `अभ्यासक्रमाचे मासिक व घटक नियोजन  —  माहे : ${monthName}  |  विषय : ${realSubject}  |  माध्यम : ${displayMedium}`,
+        fullText: `अभ्यासक्रमाचे मासिक व घटक नियोजन  —  इयत्ता : ${cleanCls}  |  माहे : ${monthName}  |  विषय : ${realSubject}  |  माध्यम : ${displayMedium}`,
       };
     }
 
     // Annual Planning: cleanly separated sentences with breathing room
     const annualSegments = [
-      `इयत्ता : ${clsName}`,
-      "वार्षिक नियोजन सन : २०२६-२७",
+      "अभ्यासक्रमाचे वार्षिक नियोजन",
+      `इयत्ता : ${cleanCls}`,
+      "सन : २०२६-२७",
       `विषय : ${realSubject}`,
       `माध्यम : ${displayMedium}`,
     ];
@@ -799,6 +887,17 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   };
 
   // Helper to detect if content/subject/medium in Excel is English
+  const ENGLISH_MONTHLY_HEADERS = [
+    "Day",
+    "Lesson/ Point",
+    "Learning Outcomes",
+    "Teaching Point/ Aim",
+    "Structure of Teaching Experience",
+    "Tool & Technique",
+    "Educational Instrument",
+  ];
+
+  // Helper to detect if content/subject/medium in Excel is English
   const isEnglishContent = (
     headers: string[],
     rows: string[][],
@@ -809,20 +908,34 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     const med = (mediumId || "").toLowerCase();
 
     if (med === "english" || med === "en") return true;
-    if (sub === "english" || sub.includes("english")) return true;
+    if (
+      sub === "english" ||
+      sub.includes("english") ||
+      sub === "इंग्रजी" ||
+      sub.includes("इंग्रजी") ||
+      sub.includes("इग्रजी")
+    ) {
+      return true;
+    }
 
     const headerStr = (headers || []).join(" ").toLowerCase();
     if (
       headerStr.includes("date") ||
+      headerStr.includes("day") ||
       headerStr.includes("month") ||
       headerStr.includes("unit") ||
       headerStr.includes("topic") ||
+      headerStr.includes("lesson") ||
       headerStr.includes("outcome") ||
       headerStr.includes("objective") ||
+      headerStr.includes("aim") ||
       headerStr.includes("period") ||
       headerStr.includes("week") ||
       headerStr.includes("tlm") ||
-      headerStr.includes("material")
+      headerStr.includes("material") ||
+      headerStr.includes("instrument") ||
+      headerStr.includes("technique") ||
+      headerStr.includes("experience")
     ) {
       return true;
     }
@@ -830,7 +943,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     let englishCount = 0;
     let devanagariCount = 0;
 
-    const sampleRows = (rows || []).slice(0, 12);
+    const sampleRows = (rows || []).slice(0, 15);
     for (const r of sampleRows) {
       for (const cell of r) {
         const s = String(cell || "").trim();
@@ -842,67 +955,94 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       }
     }
 
-    return englishCount > devanagariCount && englishCount > 15;
+    return (englishCount > devanagariCount && englishCount > 15) || englishCount > 25;
   };
 
   // Helper to get dynamic category headers matching the Excel language (English / Marathi)
+  // Helper to get dynamic category headers matching the Excel language (English / Marathi)
   const getCategoryHeaders = (sec: SubjectSection, isMonthlyPlan: boolean, recordAny: any): string[] => {
+    const isEng = isEnglishContent(sec.headers || [], sec.rows, sec.subjectName, recordAny?.mediumId) ||
+      (/[a-zA-Z]/.test(sec.subjectName || ""));
+
     let baseHeaders: string[] = [];
+
+    if (isMonthlyPlan) {
+      // Monthly planning strictly has exactly 7 standard columns in both English and Marathi
+      if (isEng) {
+        baseHeaders = [...ENGLISH_MONTHLY_HEADERS];
+      } else {
+        baseHeaders = [...DEFAULT_HEADERS.masik_niyojan];
+        if (sec.headers && Array.isArray(sec.headers) && sec.headers.length >= 4) {
+          const hasMeaningfulHeaders = sec.headers.some(
+            (h) => h && !h.toLowerCase().includes("स्तंभ") && !h.toLowerCase().includes("column")
+          );
+          if (hasMeaningfulHeaders) {
+            baseHeaders = sec.headers.slice(0, 7).map((h, idx) => {
+              if (!h) return DEFAULT_HEADERS.masik_niyojan[idx] || "";
+              let cleaned = h;
+              if (idx === 0 && (cleaned.includes("दिनांक") || cleaned.toLowerCase().includes("date"))) {
+                cleaned = "दिवस";
+              }
+              if (idx === 1 || cleaned.includes("उपघटक")) {
+                cleaned = cleaned.replace(/\/?\s*उपघटक/g, "").replace(/\/\s*$/, "").trim() || "पाठ / घटक";
+              }
+              if (idx === 5 || cleaned.includes("उपयोगात आणावयाची") || cleaned.includes("उपयोगात")) {
+                cleaned = cleaned.replace(/उपयोगात\s*आणावयाची\s*/g, "").trim() || "साधन तंत्रे";
+              }
+              if (idx === 6 || cleaned.includes("आवश्यक साहित्य") || cleaned.trim() === "आवश्यक" || cleaned.trim() === "आवश्यक साहित्य") {
+                cleaned = cleaned.replace(/आवश्यक\s*साहित्य/g, "शैक्षणिक साहित्य").replace(/^आवश्यक$/g, "शैक्षणिक");
+              }
+              return cleaned;
+            });
+            while (baseHeaders.length < 7) {
+              baseHeaders.push(DEFAULT_HEADERS.masik_niyojan[baseHeaders.length]);
+            }
+          }
+        }
+      }
+      // Monthly planning NEVER has extra columns (e.g. Column 8, Column 9)
+      return baseHeaders.slice(0, 7);
+    }
+
+    // Annual Planning Headers
     if (sec.headers && Array.isArray(sec.headers) && sec.headers.length >= 4) {
       const hasMeaningfulHeaders = sec.headers.some(
         (h) => h && !h.toLowerCase().includes("स्तंभ") && !h.toLowerCase().includes("column")
       );
       if (hasMeaningfulHeaders) {
         baseHeaders = [...sec.headers];
-        if (!isMonthlyPlan && baseHeaders.length >= 6) {
-          baseHeaders[5] = "शिक्षक स्वाक्षरी";
-        }
-        // For monthly plans, replace "दिनांक" with "दिवस" in the first column
-        if (isMonthlyPlan && baseHeaders.length > 0) {
-          if (baseHeaders[0] && (baseHeaders[0].trim().includes("दिनांक") || baseHeaders[0].trim().toLowerCase() === "date" || baseHeaders[0].trim().includes("date"))) {
-            baseHeaders[0] = "दिवस";
+        if (baseHeaders.length >= 5) {
+          if (/विषय/i.test(baseHeaders[4]) || /घटक/i.test(baseHeaders[4])) {
+            baseHeaders[4] = "पाठ / घटक";
           }
         }
+        if (baseHeaders.length >= 6) {
+          baseHeaders[5] = "शिक्षक स्वाक्षरी";
+        }
       }
     }
-
-    const isEng = isEnglishContent(sec.headers || [], sec.rows, sec.subjectName, recordAny?.mediumId);
 
     if (baseHeaders.length === 0) {
-      if (isMonthlyPlan) {
-        baseHeaders = isEng
-          ? [
-            "Day",
-            "Topic / Unit / Subtopic",
-            "Learning Outcomes",
-            "Teaching Points / Objectives",
-            "Learning Experiences",
-            "Tools & Techniques",
-            "Teaching Learning Material (TLM)",
-          ]
-          : [...DEFAULT_HEADERS.masik_niyojan];
-      } else {
-        baseHeaders = isEng
-          ? [
-            "Month",
-            "Weeks",
-            "Working Days",
-            "Periods",
-            `Subject : ${sec.subjectName}`,
-            "Teacher Signature",
-          ]
-          : [
-            "महिना",
-            "आठवडा",
-            "कामाचे दिवस",
-            "प्राप्त तासिका",
-            `विषय : ${sec.subjectName}`,
-            "शिक्षक स्वाक्षरी",
-          ];
-      }
+      baseHeaders = isEng
+        ? [
+          "Month",
+          "Weeks",
+          "Working Days",
+          "Periods",
+          "Lesson / Unit",
+          "Teacher Signature",
+        ]
+        : [
+          "महिना",
+          "आठवडा",
+          "कामाचे दिवस",
+          "प्राप्त तासिका",
+          "पाठ / घटक",
+          "शिक्षक स्वाक्षरी",
+        ];
     }
 
-    // Ensure all columns in sec.rows are covered so no columns are clipped
+    // Ensure all columns in sec.rows are covered for annual planning if needed
     const maxRowCols = Math.max(0, ...(sec.rows || []).map((r) => r.length));
     if (baseHeaders.length < maxRowCols) {
       for (let i = baseHeaders.length; i < maxRowCols; i++) {
@@ -992,7 +1132,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   const getTargetRowSpanMatrix = (rows: string[][], isMonthlyPlan: boolean, headers: string[]) => {
     const numRows = rows.length;
     if (numRows === 0) return [];
-    const numCols = Math.max(...rows.map((r) => r.length), headers.length, 1);
+    const numCols = isMonthlyPlan
+      ? 7
+      : Math.max(...rows.map((r) => r.length), headers.length, 1);
 
     const matrix: { rowSpan: number; skip: boolean; displayValue: string; isExam?: boolean; isMonthHeader?: boolean }[][] = Array.from(
       { length: numRows },
@@ -1973,8 +2115,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         const headerIndex = nonEmptyRows.findIndex((row) => {
           const joined = row.map((c) => String(c || "")).join(" ").toLowerCase();
           return (
-            ((joined.includes("अनुक्रमांक") || joined.includes("अ.क्र") || joined.includes("क्र.")) &&
-              (joined.includes("प्रश्न") || joined.includes("पाठ") || joined.includes("घटक") || joined.includes("उत्तर"))) ||
+            ((joined.includes("अनुक्रमांक") || joined.includes("अ.क्र") || joined.includes("क्र.") || joined.includes("sr") || joined.includes("no")) &&
+              (joined.includes("प्रश्न") || joined.includes("पाठ") || joined.includes("घटक") || joined.includes("उत्तर") || joined.includes("question") || joined.includes("lesson") || joined.includes("outcome") || joined.includes("answer"))) ||
             joined.includes("प्रश्न क्रमांक") ||
             joined.includes("question number")
           );
@@ -1990,6 +2132,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               r.map((v) => ({ value: v, rowspan: 1, colspan: 1, isMergedHidden: false }))
             );
         const colMap = resolveQuestionBankColumnMap(tableHeader);
+        const isSheetEng =
+          tableHeader.some((h: any) => /[a-zA-Z]/.test(String(h || ""))) ||
+          rawDataRows.slice(0, 10).some((r: any[]) => r.some((c: any) => /[a-zA-Z]/.test(String(c || ""))));
 
         // Extract all questions with lesson and outcome inheritance
         const allQuestions: Array<{
@@ -2016,10 +2161,26 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           const rawQuestion = getQuestionBankCellVal(gridRow, colMap.question) || getQuestionBankCellVal(r, colMap.question);
           const rawSr = getQuestionBankCellVal(gridRow, colMap.srNo) || getQuestionBankCellVal(r, colMap.srNo);
 
-          if (rawLesson && !rawLesson.toLowerCase().includes("पाठ / घटक") && !rawLesson.toLowerCase().includes("घटक विवरण")) {
+          const cleanLesson = rawLesson.toLowerCase().trim();
+          const isLessonHeader =
+            cleanLesson === "lesson" ||
+            cleanLesson === "पाठ / घटक" ||
+            cleanLesson === "पाठ" ||
+            cleanLesson === "घटक" ||
+            cleanLesson === "घटक विवरण";
+
+          if (rawLesson && !isLessonHeader) {
             currentLesson = rawLesson;
           }
-          if (rawOutcome && !rawOutcome.toLowerCase().includes("अध्ययन निष्पत्ती")) {
+
+          const cleanOutcome = rawOutcome.toLowerCase().trim();
+          const isOutcomeHeader =
+            cleanOutcome === "learning outcome" ||
+            cleanOutcome === "full learning outcome" ||
+            cleanOutcome === "अध्ययन निष्पत्ती" ||
+            cleanOutcome === "निष्पत्ती";
+
+          if (rawOutcome && !isOutcomeHeader) {
             currentOutcome = rawOutcome;
           }
 
@@ -2027,7 +2188,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
           allQuestions.push({
             srNo: rawSr || String(allQuestions.length + 1),
-            lesson: currentLesson || "सामान्य पाठ / घटक",
+            lesson: currentLesson || (isSheetEng ? "Lesson" : "सामान्य पाठ / घटक"),
             outcome: currentOutcome || "—",
             question: rawQuestion,
             answer: getQuestionBankCellVal(gridRow, colMap.answer) || getQuestionBankCellVal(r, colMap.answer),
@@ -2256,14 +2417,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             </colgroup>
             <thead>
               <tr style="background-color: #ffffff; color: #000000; border-bottom: 2px solid #000000;">
-                <th style="border: 1px solid #000000; padding: 1px 0.5px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000; width: 30px; min-width: 30px; max-width: 30px; line-height: 1.1;">अ.<br/>क्र.</th>
-                <th style="border: 1px solid #000000; padding: 3px 2px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[1] || "पाठ / घटक"}</th>
-                <th style="border: 1px solid #000000; padding: 3px 2px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[2] || "अध्ययन निष्पत्ती"}</th>
-                <th style="border: 1px solid #000000; padding: 3px 8px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[3] || "प्रश्न"}</th>
-                <th style="border: 1px solid #000000; padding: 3px 8px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[4] || "उत्तर"}</th>
-                <th style="border: 1px solid #000000; padding: 2px 1px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000; line-height: 1.15; word-break: break-word; width: 58px; max-width: 60px;">${tableHeader[5] ? String(tableHeader[5]).replace(" ", "<br/>") : "मूल्यमापन<br/>प्रकार"}</th>
-                <th style="border: 1px solid #000000; padding: 2px 1px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000; line-height: 1.15; word-break: break-word; width: 58px; max-width: 60px;">${tableHeader[6] ? String(tableHeader[6]).replace(" ", "<br/>") : "प्रश्नाचा<br/>प्रकार"}</th>
-                <th style="border: 1px solid #000000; padding: 2px 1px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000; line-height: 1.15; word-break: break-word; width: 50px; max-width: 52px;">${tableHeader[7] || "उद्दिष्ट"}</th>
+                <th style="border: 1px solid #000000; padding: 1px 0.5px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000; width: 30px; min-width: 30px; max-width: 30px; line-height: 1.1;">${isSheetEng ? (tableHeader[colMap.srNo] || "Sr. No.") : "अ.<br/>क्र."}</th>
+                <th style="border: 1px solid #000000; padding: 3px 2px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[colMap.lesson] || (isSheetEng ? "Lesson" : "पाठ / घटक")}</th>
+                <th style="border: 1px solid #000000; padding: 3px 2px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[colMap.outcome] || (isSheetEng ? "Full Learning Outcome" : "अध्ययन निष्पत्ती")}</th>
+                <th style="border: 1px solid #000000; padding: 3px 8px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[colMap.question] || (isSheetEng ? "Question" : "प्रश्न")}</th>
+                <th style="border: 1px solid #000000; padding: 3px 8px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000;">${tableHeader[colMap.answer] || (isSheetEng ? "Answer" : "उत्तर")}</th>
+                <th style="border: 1px solid #000000; padding: 2px 1px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000; line-height: 1.15; word-break: break-word; width: 58px; max-width: 60px;">${tableHeader[colMap.evalType] ? String(tableHeader[colMap.evalType]).replace(" ", "<br/>") : (isSheetEng ? "Assessment<br/>Type" : "मूल्यमापन<br/>प्रकार")}</th>
+                <th style="border: 1px solid #000000; padding: 2px 1px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000; line-height: 1.15; word-break: break-word; width: 58px; max-width: 60px;">${tableHeader[colMap.qType] ? String(tableHeader[colMap.qType]).replace(" ", "<br/>") : (isSheetEng ? "Question<br/>Type" : "प्रश्नाचा<br/>प्रकार")}</th>
+                <th style="border: 1px solid #000000; padding: 2px 1px; font-size: ${headerFontSize}; font-weight: 900; text-align: center; background-color: #ffffff; color: #000000; line-height: 1.15; word-break: break-word; width: 50px; max-width: 52px;">${tableHeader[colMap.objective] || (isSheetEng ? "Objective" : "उद्दिष्ट")}</th>
               </tr>
             </thead>
             <tbody>
@@ -2311,7 +2472,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
               const lessonCellHtml = isFirstRowOfLesson
                 ? `<td rowspan="${questions.length}" style="border: 1.5px solid #000000; border-right: 1.5px solid #000000; border-bottom: 2px solid #000000; padding: ${cellPadding}; font-size: ${qFontSize}; font-weight: 900; color: #000000; background-color: #ffffff; vertical-align: middle; text-align: center; word-break: break-word;">
-                    <div style="font-weight: 900; color: #000000; text-align: center; line-height: ${qLineHeight}; padding: 4px 2px; font-size: ${qFontSize}; word-break: break-word;">${lg.lesson || "पाठ / घटक"}</div>
+                    <div style="font-weight: 900; color: #000000; text-align: center; line-height: ${qLineHeight}; padding: 4px 2px; font-size: ${qFontSize}; word-break: break-word;">${lg.lesson || (isSheetEng ? "Lesson" : "पाठ / घटक")}</div>
                   </td>`
                 : "";
 
@@ -2559,6 +2720,49 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             });
           }
         });
+
+        // Enforce balanced Day column and expansive Learning Experience column in PDF
+        if (isMonthly) {
+          const clonedCols = secClone.querySelectorAll("colgroup col");
+          if (clonedCols.length >= 7) {
+            (clonedCols[0] as HTMLElement).style.width = "48px";
+            (clonedCols[1] as HTMLElement).style.width = "95px";
+            (clonedCols[2] as HTMLElement).style.width = "165px";
+            (clonedCols[3] as HTMLElement).style.width = "125px";
+            (clonedCols[4] as HTMLElement).style.width = "297px";
+            (clonedCols[5] as HTMLElement).style.width = "85px";
+            (clonedCols[6] as HTMLElement).style.width = "85px";
+          }
+          secClone.querySelectorAll("thead th").forEach((th: any, idx: number) => {
+            if (idx === 0) {
+              th.style.width = "48px";
+              th.style.minWidth = "46px";
+              th.style.maxWidth = "52px";
+              th.style.padding = "4px 2px";
+              th.style.textAlign = "center";
+              th.style.wordBreak = "break-word";
+            } else if (idx === 4) {
+              th.style.width = "297px";
+            }
+          });
+          secClone.querySelectorAll("tbody tr").forEach((tr: any) => {
+            const tds = tr.querySelectorAll("td");
+            if (tds[0]) {
+              tds[0].style.width = "48px";
+              tds[0].style.minWidth = "46px";
+              tds[0].style.maxWidth = "52px";
+              tds[0].style.padding = "4px 2px";
+              tds[0].style.textAlign = "center";
+              tds[0].style.wordBreak = "break-word";
+              tds[0].style.whiteSpace = "normal";
+              tds[0].style.fontSize = "10.5px";
+              tds[0].style.lineHeight = "1.25";
+            }
+            if (tds[4]) {
+              tds[4].style.width = "297px";
+            }
+          });
+        }
 
         // Extract components of the section
         const schoolHeader = secClone.querySelector(".pdf-school-header");
@@ -3004,8 +3208,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     const headerIndex = nonEmptyRows.findIndex((row) => {
                       const joined = row.map((c) => String(c || "")).join(" ").toLowerCase();
                       return (
-                        ((joined.includes("अनुक्रमांक") || joined.includes("अ.क्र") || joined.includes("क्र.")) &&
-                          (joined.includes("प्रश्न") || joined.includes("पाठ") || joined.includes("घटक") || joined.includes("उत्तर"))) ||
+                        ((joined.includes("अनुक्रमांक") || joined.includes("अ.क्र") || joined.includes("क्र.") || joined.includes("sr") || joined.includes("no")) &&
+                          (joined.includes("प्रश्न") || joined.includes("पाठ") || joined.includes("घटक") || joined.includes("उत्तर") || joined.includes("question") || joined.includes("lesson") || joined.includes("outcome") || joined.includes("answer"))) ||
                         joined.includes("प्रश्न क्रमांक") ||
                         joined.includes("question number") ||
                         (joined.includes("विषय") && joined.includes("माहिती"))
@@ -3092,10 +3296,23 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
                     // 2. RENDER QUESTION BANK SHEET (प्रश्नपेढी)
                     const colMap = resolveQuestionBankColumnMap(tableHeader);
+                    const isSheetEng =
+                      tableHeader.some((h) => /[a-zA-Z]/.test(String(h || ""))) ||
+                      rawDataRows.slice(0, 10).some((r) => r.some((c) => /[a-zA-Z]/.test(String(c || ""))));
                     const isStandard8Col =
-                      tableHeader.some((h) => String(h || "").includes("अनुक्रमांक") || String(h || "").includes("अ.क्र") || String(h || "").includes("प्रश्न क्रमांक")) ||
-                      tableHeader.some((h) => String(h || "").includes("पाठ") || String(h || "").includes("घटक")) ||
-                      tableHeader.some((h) => String(h || "").includes("प्रश्न"));
+                      tableHeader.some((h) => {
+                        const s = String(h || "").toLowerCase();
+                        return s.includes("अनुक्रमांक") || s.includes("अ.क्र") || s.includes("प्रश्न क्रमांक") || s.includes("sr") || s.includes("no");
+                      }) ||
+                      tableHeader.some((h) => {
+                        const s = String(h || "").toLowerCase();
+                        return s.includes("पाठ") || s.includes("घटक") || s.includes("lesson") || s.includes("topic") || s.includes("unit");
+                      }) ||
+                      tableHeader.some((h) => {
+                        const s = String(h || "").toLowerCase();
+                        return s.includes("प्रश्न") || s.includes("question");
+                      }) ||
+                      tableHeader.length >= 6;
 
                     let currentLesson = "";
                     let currentOutcome = "";
@@ -3107,10 +3324,26 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                       const rawSr = getQuestionBankCellVal(gridRow, colMap.srNo) || getQuestionBankCellVal(row, colMap.srNo);
                       const rawQuestion = getQuestionBankCellVal(gridRow, colMap.question) || getQuestionBankCellVal(row, colMap.question);
 
-                      if (rawLesson && !rawLesson.toLowerCase().includes("पाठ / घटक") && !rawLesson.toLowerCase().includes("घटक विवरण")) {
+                      const cleanLesson = rawLesson.toLowerCase().trim();
+                      const isLessonHeader =
+                        cleanLesson === "lesson" ||
+                        cleanLesson === "पाठ / घटक" ||
+                        cleanLesson === "पाठ" ||
+                        cleanLesson === "घटक" ||
+                        cleanLesson === "घटक विवरण";
+
+                      if (rawLesson && !isLessonHeader) {
                         currentLesson = rawLesson;
                       }
-                      if (rawOutcome && !rawOutcome.toLowerCase().includes("अध्ययन निष्पत्ती")) {
+
+                      const cleanOutcome = rawOutcome.toLowerCase().trim();
+                      const isOutcomeHeader =
+                        cleanOutcome === "learning outcome" ||
+                        cleanOutcome === "full learning outcome" ||
+                        cleanOutcome === "अध्ययन निष्पत्ती" ||
+                        cleanOutcome === "निष्पत्ती";
+
+                      if (rawOutcome && !isOutcomeHeader) {
                         currentOutcome = rawOutcome;
                       }
 
@@ -3118,7 +3351,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         rowIdx: rIdx,
                         rowCells: gridRow,
                         srNo: rawSr || String(rIdx + 1),
-                        lesson: currentLesson || "सामान्य पाठ / घटक",
+                        lesson: currentLesson || (isSheetEng ? "Lesson" : "सामान्य पाठ / घटक"),
                         outcome: currentOutcome || "—",
                         question: rawQuestion,
                         answer: getQuestionBankCellVal(gridRow, colMap.answer) || getQuestionBankCellVal(row, colMap.answer),
@@ -3248,7 +3481,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border-2 border-slate-300 print:hidden">
                             <div className="flex items-center gap-2 flex-wrap flex-1 min-w-[280px]">
                               <label className="text-xs font-black text-slate-800 shrink-0">
-                                पाठ निवडा (Select Lesson):
+                                {isSheetEng ? "Select Lesson:" : "पाठ निवडा (Select Lesson):"}
                               </label>
                               <select
                                 value={selectedQuestionBankLesson}
@@ -3256,7 +3489,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                 className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-500 shadow-xs cursor-pointer flex-1 max-w-md"
                               >
                                 <option value="all">
-                                  सर्व {uniqueLessons.length} पाठ (संपूर्ण {allQuestions.length} प्रश्न)
+                                  {isSheetEng
+                                    ? `All ${uniqueLessons.length} Lessons (Total ${allQuestions.length} Questions)`
+                                    : `सर्व ${uniqueLessons.length} पाठ (संपूर्ण ${allQuestions.length} प्रश्न)`}
                                 </option>
                                 {uniqueLessons.map((les, lIdx) => (
                                   <option key={lIdx} value={les}>
@@ -3268,7 +3503,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
                             <div className="flex items-center gap-2 text-xs font-bold text-slate-600 flex-wrap">
                               <span className="bg-white text-slate-900 px-3 py-1 rounded-xl border border-slate-300">
-                                दाखवलेले प्रश्न: <strong>{filteredQuestions.length}</strong>
+                                {isSheetEng ? "Displayed Questions:" : "दाखवलेले प्रश्न:"} <strong>{filteredQuestions.length}</strong>
                               </span>
                               {selectedQuestionBankLesson !== "all" && (
                                 <button
@@ -3276,7 +3511,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                   onClick={() => setSelectedQuestionBankLesson("all")}
                                   className="text-xs text-slate-700 hover:text-black underline font-bold cursor-pointer"
                                 >
-                                  सर्व पाठ पहा
+                                  {isSheetEng ? "Show All Lessons" : "सर्व पाठ पहा"}
                                 </button>
                               )}
                               <button
@@ -3338,86 +3573,74 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         </div>
 
                         {/* Reconstructed Question Bank Table */}
-                        <div className={`rounded-xl sm:rounded-2xl border-2 border-slate-900 shadow-sm bg-white ${mobileTableViewMode === 'fit' ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
-                          <table className={`w-full border-collapse text-xs font-sans bg-white table-fixed ${mobileTableViewMode === 'fit' ? 'min-w-full' : 'min-w-[950px]'}`}>
+                        <QuestionBankA4Wrapper mode={mobileTableViewMode}>
+                          <table className="w-full border-collapse text-xs font-sans bg-white table-fixed min-w-[794px]">
                             {isStandard8Col && (
                               <colgroup>
-                                {mobileTableViewMode === "fit" ? [
-                                  <col key="q0" style={{ width: "6%" }} />,
-                                  <col key="q1" style={{ width: "13%" }} />,
-                                  <col key="q2" style={{ width: "15%" }} />,
-                                  <col key="q3" style={{ width: "32%" }} />,
-                                  <col key="q4" style={{ width: "22%" }} />,
-                                  <col key="q5" style={{ width: "4%" }} />,
-                                  <col key="q6" style={{ width: "4%" }} />,
-                                  <col key="q7" style={{ width: "4%" }} />,
-                                ] : [
-                                  <col key="q0" style={{ width: "30px" }} />,
-                                  <col key="q1" style={{ width: "12%" }} />,
-                                  <col key="q2" style={{ width: "14%" }} />,
-                                  <col key="q3" style={{ width: "38.5%" }} />,
-                                  <col key="q4" style={{ width: "25.5%" }} />,
-                                  <col key="q5" style={{ width: "58px" }} />,
-                                  <col key="q6" style={{ width: "58px" }} />,
-                                  <col key="q7" style={{ width: "50px" }} />,
-                                ]}
+                                <col key="q0" style={{ width: "34px" }} />
+                                <col key="q1" style={{ width: "95px" }} />
+                                <col key="q2" style={{ width: "95px" }} />
+                                <col key="q3" style={{ width: "260px" }} />
+                                <col key="q4" style={{ width: "150px" }} />
+                                <col key="q5" style={{ width: "56px" }} />
+                                <col key="q6" style={{ width: "56px" }} />
+                                <col key="q7" style={{ width: "48px" }} />
                               </colgroup>
                             )}
                             <thead>
                               <tr className="bg-white text-black border-b-2 border-slate-900" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
                                 {isStandard8Col ? (
                                   <>
-                                    <th className="border border-slate-400 p-0.5 text-center font-black bg-white text-black text-[11px] leading-tight" style={{ backgroundColor: "#ffffff", color: "#000000", width: "30px", minWidth: "30px", maxWidth: "30px" }}>
-                                      अ.<br />क्र.
+                                    <th className="border border-slate-400 p-1 text-center font-black bg-white text-black text-[11px] leading-tight" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
+                                      {isSheetEng ? (tableHeader[colMap.srNo] || "Sr. No.") : <>अ.<br />क्र.</>}
                                     </th>
                                     <th className="border border-slate-400 p-2 text-center font-black bg-white text-black text-xs" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
-                                      {tableHeader[1] || "पाठ / घटक"}
+                                      {tableHeader[colMap.lesson] || (isSheetEng ? "Lesson" : "पाठ / घटक")}
                                     </th>
                                     <th className="border border-slate-400 p-2 text-center font-black bg-white text-black text-xs" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
-                                      {tableHeader[2] || "अध्ययन निष्पत्ती"}
+                                      {tableHeader[colMap.outcome] || (isSheetEng ? "Full Learning Outcome" : "अध्ययन निष्पत्ती")}
                                     </th>
-                                    <th className="border border-slate-400 p-3 text-center font-black bg-white text-black text-xs sm:text-sm" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
-                                      {tableHeader[3] || "प्रश्न"}
+                                    <th className="border border-slate-400 p-2.5 text-center font-black bg-white text-black text-xs sm:text-sm" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
+                                      {tableHeader[colMap.question] || (isSheetEng ? "Question" : "प्रश्न")}
                                     </th>
-                                    <th className="border border-slate-400 p-3 text-center font-black bg-white text-black text-xs sm:text-sm" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
-                                      {tableHeader[4] || "उत्तर"}
+                                    <th className="border border-slate-400 p-2.5 text-center font-black bg-white text-black text-xs sm:text-sm" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
+                                      {tableHeader[colMap.answer] || (isSheetEng ? "Answer" : "उत्तर")}
                                     </th>
-                                    <th className="border border-slate-400 p-0.5 text-center font-black bg-white text-black text-[11px] leading-tight break-words" style={{ backgroundColor: "#ffffff", color: "#000000", width: "58px", minWidth: "55px", maxWidth: "60px" }}>
-                                      {tableHeader[5] ? (
-                                        String(tableHeader[5]).includes(" ") ? (
+                                    <th className="border border-slate-400 p-1 text-center font-black bg-white text-black text-[10.5px] leading-tight break-words" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
+                                      {tableHeader[colMap.evalType] ? (
+                                        String(tableHeader[colMap.evalType]).includes(" ") ? (
                                           <>
-                                            {String(tableHeader[5]).split(" ")[0]}
+                                            {String(tableHeader[colMap.evalType]).split(" ")[0]}
                                             <br />
-                                            {String(tableHeader[5]).split(" ").slice(1).join(" ")}
+                                            {String(tableHeader[colMap.evalType]).split(" ").slice(1).join(" ")}
                                           </>
                                         ) : (
-                                          tableHeader[5]
+                                          tableHeader[colMap.evalType]
                                         )
                                       ) : (
-                                        <>मूल्यमापन<br />प्रकार</>
+                                        isSheetEng ? <>Assessment<br />Type</> : <>मूल्यमापन<br />प्रकार</>
                                       )}
                                     </th>
-                                    <th className="border border-slate-400 p-0.5 text-center font-black bg-white text-black text-[11px] leading-tight break-words" style={{ backgroundColor: "#ffffff", color: "#000000", width: "58px", minWidth: "55px", maxWidth: "60px" }}>
-                                      {tableHeader[6] ? (
-                                        String(tableHeader[6]).includes(" ") ? (
+                                    <th className="border border-slate-400 p-1 text-center font-black bg-white text-black text-[10.5px] leading-tight break-words" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
+                                      {tableHeader[colMap.qType] ? (
+                                        String(tableHeader[colMap.qType]).includes(" ") ? (
                                           <>
-                                            {String(tableHeader[6]).split(" ")[0]}
+                                            {String(tableHeader[colMap.qType]).split(" ")[0]}
                                             <br />
-                                            {String(tableHeader[6]).split(" ").slice(1).join(" ")}
+                                            {String(tableHeader[colMap.qType]).split(" ").slice(1).join(" ")}
                                           </>
                                         ) : (
-                                          tableHeader[6]
+                                          tableHeader[colMap.qType]
                                         )
                                       ) : (
-                                        <>प्रश्नाचा<br />प्रकार</>
+                                        isSheetEng ? <>Question<br />Type</> : <>प्रश्नाचा<br />प्रकार</>
                                       )}
                                     </th>
-                                    <th className="border border-slate-400 p-0.5 text-center font-black bg-white text-black text-[11px] leading-tight break-words" style={{ backgroundColor: "#ffffff", color: "#000000", width: "50px", minWidth: "48px", maxWidth: "52px" }}>
-                                      {tableHeader[7] || "उद्दिष्ट"}
+                                    <th className="border border-slate-400 p-1 text-center font-black bg-white text-black text-[10.5px] leading-tight break-words" style={{ backgroundColor: "#ffffff", color: "#000000" }}>
+                                      {tableHeader[colMap.objective] || (isSheetEng ? "Objective" : "उद्दिष्ट")}
                                     </th>
                                   </>
                                 ) : (
-
                                   tableHeader.map((h, colIndex) => (
                                     <th
                                       key={colIndex}
@@ -3437,7 +3660,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                     return (
                                       <tr key={idx} className="bg-white hover:bg-slate-50 transition-colors">
                                         {/* 1. अ.क्र. */}
-                                        <td className="border border-slate-300 p-0.5 text-center font-extrabold text-black align-middle bg-white text-xs" style={{ width: "30px", minWidth: "30px", maxWidth: "30px" }}>
+                                        <td className="border border-slate-300 p-1 text-center font-extrabold text-black align-middle bg-white text-xs">
                                           {q.srNo}
                                         </td>
 
@@ -3445,11 +3668,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                         {lessonSpans[idx]?.isStart ? (
                                           <td
                                             rowSpan={lessonSpans[idx].span}
-                                            className="border border-slate-400 p-3 font-black text-black bg-white align-middle text-center text-xs sm:text-sm leading-relaxed break-words"
+                                            className="border border-slate-400 p-2 font-black text-black bg-white align-middle text-center text-xs leading-snug break-words"
                                             style={{ verticalAlign: "middle", textAlign: "center", borderRight: "1.5px solid #000000" }}
                                           >
-                                            <div className="flex flex-col items-center justify-center text-center p-2 mx-auto font-black text-black break-words">
-                                              {q.lesson || "पाठ / घटक"}
+                                            <div className="flex flex-col items-center justify-center text-center p-1 mx-auto font-black text-black break-words">
+                                              {q.lesson || (isSheetEng ? "Lesson" : "पाठ / घटक")}
                                             </div>
                                           </td>
                                         ) : null}
@@ -3458,51 +3681,52 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                         {outcomeSpans[idx]?.isStart ? (
                                           <td
                                             rowSpan={outcomeSpans[idx].span}
-                                            className="border border-slate-400 p-3 font-semibold text-black bg-white align-middle text-center text-xs leading-relaxed break-words"
+                                            className="border border-slate-400 p-2 font-semibold text-black bg-white align-middle text-center text-xs leading-snug break-words"
                                             style={{ verticalAlign: "middle", textAlign: "center", borderRight: "1.5px solid #000000" }}
                                           >
-                                            <div className="flex flex-col items-center justify-center text-center p-2 mx-auto font-semibold text-black break-words">
+                                            <div className="flex flex-col items-center justify-center text-center p-1 mx-auto font-semibold text-black break-words">
                                               {q.outcome || "—"}
                                             </div>
                                           </td>
                                         ) : null}
 
                                         {/* 4. प्रश्न */}
-                                        <td className="border border-slate-300 p-3 text-black font-bold leading-relaxed align-top bg-white break-words text-xs sm:text-[13.5px]">
+                                        <td className="border border-slate-300 p-2.5 text-black font-bold leading-relaxed align-top bg-white break-words text-xs sm:text-[13.5px]">
                                           {q.question}
                                         </td>
 
                                         {/* 5. उत्तर */}
-                                        <td className="border border-slate-300 p-3 text-black font-medium leading-relaxed bg-white align-top break-words text-xs sm:text-[13.5px]">
+                                        <td className="border border-slate-300 p-2.5 text-black font-medium leading-relaxed bg-white align-top break-words text-xs sm:text-[13.5px]">
                                           {q.answer}
                                         </td>
 
                                         {/* 6. मूल्यमापन प्रकार */}
-                                        <td className="border border-slate-300 p-0.5 text-center align-middle bg-white text-[11px] font-bold text-black break-words leading-tight" style={{ width: "58px", minWidth: "55px", maxWidth: "60px" }}>
+                                        <td className="border border-slate-300 p-1 text-center align-middle bg-white text-[11px] font-bold text-black break-words leading-tight">
                                           {q.evalType ? (
                                             q.evalType.includes("तोंडी") ? "तोंडी" : q.evalType.includes("लेखी") ? "लेखी" : q.evalType.includes("प्रात्यक्षिक") ? "प्रात्यक्षिक" : q.evalType
                                           ) : "—"}
                                         </td>
 
                                         {/* 7. प्रश्नाचा प्रकार */}
-                                        <td className="border border-slate-300 p-0.5 text-center align-middle bg-white text-[11px] font-bold text-black break-words leading-tight" style={{ width: "58px", minWidth: "55px", maxWidth: "60px" }}>
+                                        <td className="border border-slate-300 p-1 text-center align-middle bg-white text-[11px] font-bold text-black break-words leading-tight">
                                           {q.qType ? (
                                             q.qType.includes("वस्तुनिष्ठ") ? "वस्तुनिष्ठ" : q.qType.includes("लघुत्तरी") ? "लघुत्तरी" : q.qType.includes("दीर्घोत्तरी") ? "दीर्घोत्तरी" : q.qType
                                           ) : "—"}
                                         </td>
 
                                         {/* 8. उद्दिष्ट */}
-                                        <td className="border border-slate-300 p-0.5 text-center align-middle bg-white text-[11px] font-bold text-black break-words leading-tight" style={{ width: "50px", minWidth: "48px", maxWidth: "52px" }}>
+                                        <td className="border border-slate-300 p-1 text-center align-middle bg-white text-[11px] font-bold text-black break-words leading-tight">
                                           {q.objective || "—"}
                                         </td>
                                       </tr>
                                     );
                                   })
                                 ) : (
-
                                   <tr>
                                     <td colSpan={8} className="p-8 text-center text-slate-400 font-bold text-sm bg-white">
-                                      शोधानुसार किंवा निवडलेल्या पाठासाठी कोणताही प्रश्न सापडला नाही.
+                                      {isSheetEng
+                                        ? "No questions found matching your search or selected lesson."
+                                        : "शोधानुसार किंवा निवडलेल्या पाठासाठी कोणताही प्रश्न सापडला नाही."}
                                     </td>
                                   </tr>
                                 )
@@ -3527,7 +3751,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               )}
                             </tbody>
                           </table>
-                        </div>
+                        </QuestionBankA4Wrapper>
 
                         {/* Signature Bar on Question Bank Sheet */}
                         <div className="pdf-signature-bar pt-4 mt-6 border-t-2 border-slate-300 grid grid-cols-2 text-center text-sm sm:text-base font-black text-slate-950">
@@ -3769,7 +3993,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     })
                     .map((sec, secIdx) => {
                       const normalizedRows = isMonthly
-                        ? normalizeMonthlyPlanningRows(sec.rows, sec.subjectName)
+                        ? normalizeMonthlyPlanningRows(sec.rows, sec.subjectName).map((r) => r.slice(0, 7))
                         : normalizeAnnualPlanningRows(sec.rows);
                       const filteredRows = normalizedRows.filter((row) => {
                         // CRITICAL: Exam / Assessment / Test / Vacation rows must ALWAYS be preserved and shown!
@@ -3819,36 +4043,40 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         return row.some((c) => (c || "").toLowerCase().includes(q));
                       });
 
+                      const isSecEng = isMonthly
+                        ? (isEnglishContent(sec.headers || [], sec.rows, sec.subjectName, record?.mediumId) ||
+                           /[a-zA-Z]/.test(sec.subjectName || ""))
+                        : false;
                       const categoryHeaders = getCategoryHeaders(sec, isMonthly, record);
                       const sectionRowMatrix = !isInlineEditing ? getTargetRowSpanMatrix(filteredRows, isMonthly, categoryHeaders) : [];
 
                       return (
                         <div
                           key={`${sec.subjectName}-${secIdx}`}
-                          className={`pdf-subject-section space-y-4 my-6 ${secIdx > 0 ? "html2pdf__page-break pt-6 border-t-2 border-slate-200 print:pt-0 print:border-none" : ""}`}
+                          className={`pdf-subject-section space-y-2 my-2 sm:my-3 print:space-y-1 print:my-0.5 ${secIdx > 0 ? "html2pdf__page-break pt-3 border-t-2 border-slate-200 print:pt-0 print:border-none" : ""}`}
                         >
                           {/* Header Title & School Info Card for THIS Subject */}
-                          <div className="pdf-school-header border-2 border-slate-900 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 md:p-6 bg-slate-50 space-y-2 sm:space-y-3.5 text-xs sm:text-base font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900 relative">
+                          <div className="pdf-school-header border-2 border-slate-900 rounded-xl sm:rounded-2xl p-2 sm:p-2.5 md:p-3 bg-slate-50 space-y-1 sm:space-y-1.5 text-xs sm:text-sm font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900 print:p-1.5 print:space-y-0.5 relative">
                             <button
                               type="button"
                               onClick={() => {
                                 setSchoolFormData(schoolProfile);
                                 setIsSchoolModalOpen(true);
                               }}
-                              className="print:hidden absolute top-2.5 right-2.5 sm:top-3 sm:right-3 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-white/80 hover:bg-white text-indigo-700 text-[11px] sm:text-xs font-bold border border-indigo-200 shadow-xs flex items-center gap-1 cursor-pointer transition-all"
+                              className="print:hidden absolute top-2 right-2 px-2 py-1 rounded-lg bg-white/80 hover:bg-white text-indigo-700 text-[11px] font-bold border border-indigo-200 shadow-xs flex items-center gap-1 cursor-pointer transition-all"
                               title="शाळा माहिती संपादन करा"
                             >
-                              <Edit3 className="size-3 sm:size-3.5 text-indigo-600" />
+                              <Edit3 className="size-3 text-indigo-600" />
                               <span>बदला</span>
                             </button>
 
-                            <div className="text-center border-b-2 border-slate-900 pb-2 sm:pb-3">
-                              <h2 className="text-base sm:text-2xl md:text-3xl font-black text-indigo-950 uppercase tracking-wide print:text-slate-950">
+                            <div className="text-center border-b-2 border-slate-900 pb-1 sm:pb-1.5 print:pb-0.5">
+                              <h2 className="text-sm sm:text-lg md:text-xl font-black text-indigo-950 uppercase tracking-wide print:text-slate-950">
                                 {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
                               </h2>
                             </div>
 
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3 text-[10px] sm:text-sm md:text-base font-bold text-slate-900 pt-1 sm:pt-1.5">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 text-[10px] sm:text-xs md:text-[13px] font-bold text-slate-900 pt-0.5">
                               <div><span className="text-slate-600 font-semibold">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
                               <div className="sm:text-center"><span className="text-slate-600 font-semibold">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
                               <div className="sm:text-center"><span className="text-slate-600 font-semibold">जिल्हा:</span> <span className="font-extrabold text-slate-950">{schoolProfile.districtName || "—"}</span></div>
@@ -3860,10 +4088,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           {(() => {
                             const parts = getSectionBannerParts(sec);
                             return (
-                              <div className="pdf-subject-banner relative bg-amber-50/90 border-2 border-amber-300 text-amber-950 px-2 sm:px-3.5 md:px-5 py-1.5 sm:py-2 md:py-2.5 rounded-xl sm:rounded-2xl flex flex-nowrap items-center justify-between gap-1.5 sm:gap-3 shadow-xs overflow-hidden">
-                                <div className="flex items-center gap-1.5 sm:gap-2.5 flex-nowrap flex-1 min-w-0 overflow-hidden">
-                                  <BookOpen className="size-3.5 sm:size-4.5 text-amber-600 shrink-0" />
-                                  <div className="flex items-center flex-nowrap whitespace-nowrap gap-x-1 sm:gap-x-1.5 text-[11px] sm:text-[13px] md:text-[13.5px] font-black text-amber-950 min-w-0">
+                              <div className="pdf-subject-banner relative bg-gradient-to-r from-amber-50/95 via-amber-50 to-orange-50/90 border-2 border-amber-300 text-amber-950 px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-xl flex flex-nowrap items-center justify-between gap-2 shadow-xs overflow-x-auto print:py-0.5 print:px-2">
+                                <div className="flex items-center gap-2.5 sm:gap-3.5 flex-nowrap flex-1 min-w-0">
+                                  <BookOpen className="size-4 sm:size-5 text-amber-600 shrink-0" />
+                                  <div className="flex items-center flex-nowrap whitespace-nowrap text-xs sm:text-[13px] md:text-sm font-black text-amber-950 min-w-0">
                                     {parts.segments.map((seg, idx) => {
                                       const colonMatch = seg.match(/^(.*?)\s*(:-|:)\s*(.*)$/);
                                       const hasColon = !!colonMatch;
@@ -3873,7 +4101,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                       return (
                                         <div key={idx} className="flex items-center shrink-0">
                                           {idx > 0 && (
-                                            <span className="text-amber-400 font-black select-none text-xs sm:text-sm mx-1 sm:mx-1.5 md:mx-2">
+                                            <span className="text-amber-400 font-black select-none text-sm sm:text-base mx-2 sm:mx-3.5 md:mx-4">
                                               •
                                             </span>
                                           )}
@@ -3881,7 +4109,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                             {hasColon ? (
                                               <>
                                                 <span className="font-bold text-amber-800/90">{label}</span>
-                                                <span className="font-black text-amber-600 mx-1">:</span>
+                                                <span className="font-black text-amber-600 mx-1.5">:</span>
                                                 <span className="font-black text-amber-950">{val}</span>
                                               </>
                                             ) : (
@@ -3893,8 +4121,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                     })}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0 self-center">
-                                  <span className="text-[11px] sm:text-xs font-black text-amber-800 bg-amber-100/90 px-2.5 sm:px-3 py-1 rounded-full border border-amber-300 whitespace-nowrap shadow-2xs shrink-0">
+                                <div className="flex items-center gap-2 shrink-0 self-center pl-2 sm:pl-4">
+                                  <span className="text-[11px] sm:text-xs font-black text-amber-800 bg-amber-100/90 px-3 sm:px-3.5 py-1 rounded-full border border-amber-300 whitespace-nowrap shadow-2xs shrink-0">
                                     {filteredRows.length} ओळी (Rows)
                                   </span>
 
@@ -3954,70 +4182,131 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           )}
 
                           {/* Table View Container */}
-                          <div className={`border border-slate-900 rounded-xl shadow-xs mb-4 pb-0.5 ${mobileTableViewMode === 'fit' ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
+                          <div className={`border border-slate-900 rounded-xl shadow-xs mb-3 pb-0.5 print:mb-1 ${mobileTableViewMode === 'fit' ? 'overflow-x-hidden' : 'overflow-x-auto'}`}>
                             <table className={`w-full table-fixed border-collapse border border-slate-900 text-xs font-sans bg-white ${mobileTableViewMode === 'fit' ? 'min-w-full' : 'min-w-[900px]'}`}>
                               <colgroup>
                                 {isMonthly ? (
                                   mobileTableViewMode === "fit" ? [
-                                    <col key="m0" style={{ width: "9%" }} />,
+                                    <col key="m0" style={{ width: "3.5%", minWidth: "28px", maxWidth: "40px" }} />,
                                     <col key="m1" style={{ width: "11%" }} />,
-                                    <col key="m2" style={{ width: "23%" }} />,
-                                    <col key="m3" style={{ width: "15%" }} />,
-                                    <col key="m4" style={{ width: "22%" }} />,
-                                    <col key="m5" style={{ width: "10%" }} />,
-                                    <col key="m6" style={{ width: "10%" }} />,
+                                    <col key="m2" style={{ width: "19%" }} />,
+                                    <col key="m3" style={{ width: "14%" }} />,
+                                    <col key="m4" style={{ width: "34.5%" }} />,
+                                    <col key="m5" style={{ width: "9%" }} />,
+                                    <col key="m6" style={{ width: "9%" }} />,
                                     ...(isInlineEditing ? [<col key="mEdit" style={{ width: "8%" }} />] : [])
                                   ] : [
-                                    <col key="m0" style={{ width: "55px" }} />,
-                                    <col key="m1" style={{ width: "95px" }} />,
-                                    <col key="m2" style={{ width: "190px" }} />,
-                                    <col key="m3" style={{ width: "125px" }} />,
-                                    <col key="m4" style={{ width: "245px" }} />,
-                                    <col key="m5" style={{ width: "95px" }} />,
-                                    <col key="m6" style={{ width: "95px" }} />,
+                                    <col key="m0" style={{ width: "3.5%", minWidth: "28px", maxWidth: "40px" }} />,
+                                    <col key="m1" style={{ width: "11%" }} />,
+                                    <col key="m2" style={{ width: "19%" }} />,
+                                    <col key="m3" style={{ width: "14%" }} />,
+                                    <col key="m4" style={{ width: "34.5%" }} />,
+                                    <col key="m5" style={{ width: "9%" }} />,
+                                    <col key="m6" style={{ width: "9%" }} />,
                                     ...(isInlineEditing ? [<col key="mEdit" style={{ width: "60px" }} />] : [])
                                   ]
                                 ) : (
                                   mobileTableViewMode === "fit" ? [
-                                    <col key="a0" style={{ width: "13%" }} />,
-                                    <col key="a1" style={{ width: "9%" }} />,
-                                    <col key="a2" style={{ width: "11%" }} />,
-                                    <col key="a3" style={{ width: "11%" }} />,
-                                    <col key="a4" style={{ width: "36%" }} />,
-                                    <col key="a5" style={{ width: "20%" }} />,
+                                    <col key="a0" style={{ width: "8.5%", minWidth: "50px", maxWidth: "68px" }} />,
+                                    <col key="a1" style={{ width: "5.5%", minWidth: "36px", maxWidth: "46px" }} />,
+                                    <col key="a2" style={{ width: "6.5%", minWidth: "42px", maxWidth: "54px" }} />,
+                                    <col key="a3" style={{ width: "6.5%", minWidth: "42px", maxWidth: "54px" }} />,
+                                    <col key="a4" style={{ width: "62%" }} />,
+                                    <col key="a5" style={{ width: "11%", minWidth: "65px", maxWidth: "85px" }} />,
                                     ...(isInlineEditing ? [<col key="aEdit" style={{ width: "8%" }} />] : [])
                                   ] : [
-                                    <col key="a0" style={{ width: "80px" }} />,
-                                    <col key="a1" style={{ width: "60px" }} />,
-                                    <col key="a2" style={{ width: "80px" }} />,
-                                    <col key="a3" style={{ width: "80px" }} />,
-                                    <col key="a4" style={{ width: "500px" }} />,
-                                    <col key="a5" style={{ width: "100px" }} />,
+                                    <col key="a0" style={{ width: "8.5%", minWidth: "48px", maxWidth: "65px" }} />,
+                                    <col key="a1" style={{ width: "5.5%", minWidth: "32px", maxWidth: "42px" }} />,
+                                    <col key="a2" style={{ width: "6.5%", minWidth: "38px", maxWidth: "50px" }} />,
+                                    <col key="a3" style={{ width: "6.5%", minWidth: "38px", maxWidth: "50px" }} />,
+                                    <col key="a4" style={{ width: "62%" }} />,
+                                    <col key="a5" style={{ width: "11%", minWidth: "55px", maxWidth: "75px" }} />,
                                     ...(isInlineEditing ? [<col key="aEdit" style={{ width: "60px" }} />] : [])
                                   ]
                                 )}
                               </colgroup>
                               <thead>
                                 <tr className="bg-slate-100 text-slate-900 font-black text-center text-xs border-b border-slate-400">
-                                  {categoryHeaders.map((hText: string, i: number) => (
-                                    <th
-                                      key={i}
-                                      className={`border border-slate-400 ${mobileTableViewMode === 'fit' ? 'p-1 text-[9px] sm:p-2 sm:text-[11px]' : 'p-2 text-[11px]'} text-center font-black tracking-tight sm:tracking-wide bg-slate-100 text-slate-900 leading-tight sm:leading-snug whitespace-pre-line break-words`}
-                                    >
-                                      {!isMonthly && i === 4
-                                        ? `विषय : ${sec.subjectName}`
-                                        : isMonthly && i === 0
-                                          ? "दिवस"
-                                          : isMonthly && i === 5
-                                            ? "उपयोगात आणावयाची\nसाधन तंत्रे"
-                                            : isMonthly && i === 6
-                                              ? "आवश्यक\nसाहित्य"
-                                              : hText}
-                                    </th>
-                                  ))}
+                                  {categoryHeaders.map((hText: string, i: number) => {
+                                    const thStyle = isMonthly
+                                      ? i === 0
+                                        ? { width: "3.5%", minWidth: "28px", maxWidth: "40px", padding: "4px 2px" }
+                                        : i === 4
+                                          ? { width: "34.5%" }
+                                          : i === 1
+                                            ? { width: "11%" }
+                                            : i === 2
+                                              ? { width: "19%" }
+                                              : i === 3
+                                                ? { width: "14%" }
+                                                : i === 5 || i === 6
+                                                  ? { width: "9%" }
+                                                  : undefined
+                                      : i === 0
+                                        ? { width: "8.5%", minWidth: "50px", maxWidth: "68px", padding: "3px 1.5px" }
+                                        : i === 1
+                                          ? { width: "5.5%", minWidth: "36px", maxWidth: "46px", padding: "3px 1px" }
+                                          : i === 2
+                                            ? { width: "6.5%", minWidth: "42px", maxWidth: "54px", padding: "3px 1px" }
+                                            : i === 3
+                                              ? { width: "6.5%", minWidth: "42px", maxWidth: "54px", padding: "3px 1px" }
+                                              : i === 4
+                                                ? { width: "62%", padding: "3px 6px" }
+                                                : i === 5
+                                                  ? { width: "11%", minWidth: "65px", maxWidth: "85px", padding: "3px 1.5px" }
+                                                  : undefined;
+                                    return (
+                                      <th
+                                        key={i}
+                                        style={thStyle}
+                                        className={`border border-slate-400 ${mobileTableViewMode === 'fit' ? 'p-1 text-[9px] sm:p-2 sm:text-[11px]' : 'p-2 text-[11px]'} text-center font-black tracking-tight sm:tracking-wide bg-slate-100 text-slate-900 leading-tight sm:leading-snug whitespace-pre-line break-words`}
+                                      >
+                                        {!isMonthly && i === 4
+                                          ? "पाठ / घटक"
+                                          : !isMonthly && i === 2
+                                            ? <>कामाचे<br />दिवस</>
+                                            : !isMonthly && i === 3
+                                              ? <>प्राप्त<br />तासिका</>
+                                              : !isMonthly && i === 5
+                                                ? <>शिक्षक<br />स्वाक्षरी</>
+                                                : isMonthly
+                                            ? isSecEng
+                                              ? i === 0
+                                                ? "Day"
+                                                : i === 1
+                                                  ? "Lesson/ Point"
+                                                  : i === 2
+                                                    ? "Learning Outcomes"
+                                                    : i === 3
+                                                      ? "Teaching Point/ Aim"
+                                                      : i === 4
+                                                        ? "Structure of Teaching Experience"
+                                                        : i === 5
+                                                          ? "Tool &\nTechnique"
+                                                          : i === 6
+                                                            ? "Educational\nInstrument"
+                                                            : hText
+                                              : i === 0
+                                                ? "दिवस"
+                                                : i === 1
+                                                  ? (hText.replace(/\/?\s*उपघटक/g, "").replace(/\/\s*$/, "").trim() || "पाठ / घटक")
+                                                  : i === 5
+                                                    ? "साधन तंत्रे"
+                                                    : i === 6
+                                                      ? "शैक्षणिक\nसाहित्य"
+                                                      : isMonthly
+                                                        ? hText
+                                                            .replace(/\/?\s*उपघटक/g, "").replace(/\/\s*$/, "").trim()
+                                                            .replace(/उपयोगात\s*आणावयाची\s*/g, "").trim()
+                                                            .replace(/आवश्यक\s*साहित्य/g, "शैक्षणिक साहित्य")
+                                                        : hText
+                                            : hText}
+                                      </th>
+                                    );
+                                  })}
                                   {isInlineEditing && (
                                     <th className="border border-slate-400 p-1 sm:p-2.5 text-center font-black tracking-wide text-[10px] sm:text-xs bg-slate-100 text-slate-900">
-                                      क्रिया
+                                      {isSecEng ? "Actions" : "क्रिया"}
                                     </th>
                                   )}
                                 </tr>
@@ -4047,7 +4336,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                   type="text"
                                                   value={r[0] || ""}
                                                   onChange={(e) => handleCellChange(sec.subjectName, rIdx, 0, e.target.value)}
-                                                  placeholder="दिवस"
+                                                  placeholder={isSecEng ? "Day" : "दिवस"}
                                                   className="w-full p-2 text-xs font-bold text-center border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
                                                 />
                                               </td>
@@ -4056,7 +4345,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 <AutoHeightTextarea
                                                   value={r[1] || ""}
                                                   onChange={(val) => handleCellChange(sec.subjectName, rIdx, 1, val)}
-                                                  placeholder="पाठ/घटक/उपघटक..."
+                                                  placeholder={isSecEng ? "Lesson/ Point..." : "पाठ/घटक..."}
                                                 />
                                               </td>
                                               {/* Monthly Col 2: Learning Outcome */}
@@ -4064,7 +4353,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 <AutoHeightTextarea
                                                   value={r[2] || ""}
                                                   onChange={(val) => handleCellChange(sec.subjectName, rIdx, 2, val)}
-                                                  placeholder="अध्ययन निष्पत्ती..."
+                                                  placeholder={isSecEng ? "Learning Outcomes..." : "अध्ययन निष्पत्ती..."}
                                                 />
                                               </td>
                                               {/* Monthly Col 3: Objectives */}
@@ -4072,7 +4361,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 <AutoHeightTextarea
                                                   value={r[3] || ""}
                                                   onChange={(val) => handleCellChange(sec.subjectName, rIdx, 3, val)}
-                                                  placeholder="अध्ययन मुद्दे/पाठ्यांश उद्देश..."
+                                                  placeholder={isSecEng ? "Teaching Point/ Aim..." : "अध्ययन मुद्दे/पाठ्यांश उद्देश..."}
                                                 />
                                               </td>
                                               {/* Monthly Col 4: Experience */}
@@ -4080,7 +4369,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 <AutoHeightTextarea
                                                   value={r[4] || ""}
                                                   onChange={(val) => handleCellChange(sec.subjectName, rIdx, 4, val)}
-                                                  placeholder="अध्ययन अनुभवाचे स्वरूप..."
+                                                  placeholder={isSecEng ? "Structure of Teaching Experience..." : "अध्ययन अनुभवाचे स्वरूप..."}
                                                 />
                                               </td>
                                               {/* Monthly Col 5: Tools */}
@@ -4088,7 +4377,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 <AutoHeightTextarea
                                                   value={r[5] || ""}
                                                   onChange={(val) => handleCellChange(sec.subjectName, rIdx, 5, val)}
-                                                  placeholder="उपयोगात आणावयाची साधन तंत्रे..."
+                                                  placeholder={isSecEng ? "Tool & Technique..." : "साधन तंत्रे..."}
                                                 />
                                               </td>
                                               {/* Monthly Col 6: Material */}
@@ -4096,7 +4385,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 <AutoHeightTextarea
                                                   value={r[6] || ""}
                                                   onChange={(val) => handleCellChange(sec.subjectName, rIdx, 6, val)}
-                                                  placeholder="आवश्यक साहित्य..."
+                                                  placeholder={isSecEng ? "Educational Instrument..." : "शैक्षणिक साहित्य..."}
                                                 />
                                               </td>
                                               {/* Delete Row Action */}
@@ -4197,7 +4486,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                             const isExam = cellInfo?.isExam || isExamOrAssessmentText(cellInfo?.displayValue) || isExamOrAssessmentText(r[cIdx]) || isExamOrAssessmentText(cellVal);
                                             const cellText = cellVal;
 
-                                            let cellClasses = `border border-slate-300 ${mobileTableViewMode === 'fit' ? 'p-1 text-[9.5px] sm:p-2.5 sm:text-xs md:text-[13px] leading-tight sm:leading-6' : 'p-2.5 sm:p-3 leading-relaxed sm:leading-6 text-xs sm:text-[13.5px]'} break-words`;
+                                            let cellClasses = `border border-slate-300 ${mobileTableViewMode === 'fit' ? 'p-1 text-[9.5px] sm:p-1.5 sm:text-xs md:text-[12px] leading-tight sm:leading-snug' : (isMonthly ? 'p-2 sm:p-2.5 leading-relaxed text-xs sm:text-[13.5px]' : 'p-1 sm:p-1.5 md:p-2 leading-snug text-xs sm:text-[12.5px]')} break-words`;
                                             if (isExam) {
                                               cellClasses += " exam-assessment-cell text-center font-black text-slate-950 bg-amber-50/50 text-[10px] sm:text-xs md:text-[13.5px]";
                                             } else if (isMonthly) {
@@ -4215,9 +4504,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                               }
                                             } else {
                                               cellClasses += " align-middle";
-                                              cellClasses += cIdx <= 3
-                                                ? " text-center font-bold text-slate-900 text-xs sm:text-[13px]"
-                                                : " text-left text-xs sm:text-[13.5px] whitespace-pre-line leading-relaxed sm:leading-6";
+                                              if (cIdx <= 3) {
+                                                cellClasses += " text-center font-bold text-slate-900 text-xs sm:text-[12.5px]";
+                                              } else if (cIdx === 5) {
+                                                cellClasses += " text-center text-slate-400 text-xs sm:text-[12px]";
+                                              } else {
+                                                cellClasses += " text-left text-xs sm:text-[13px] font-semibold text-slate-950 whitespace-pre-line leading-snug";
+                                              }
                                             }
 
                                             return (
@@ -4229,9 +4522,36 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                   pageBreakInside: "avoid",
                                                   breakInside: "avoid",
                                                   verticalAlign: "middle",
-                                                  textAlign: isExam || cIdx <= 3 ? "center" : "left",
+                                                  textAlign: isExam || cIdx <= 3 || (!isMonthly && cIdx === 5) ? "center" : "left",
                                                   fontFamily: "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif",
                                                   backgroundColor: isExam ? "#fffbeb" : undefined,
+                                                  ...(isMonthly
+                                                    ? (cIdx === 0
+                                                      ? { width: "3.5%", minWidth: "28px", maxWidth: "40px", padding: "4px 2px" }
+                                                      : cIdx === 4
+                                                        ? { width: "34.5%" }
+                                                        : cIdx === 1
+                                                          ? { width: "11%" }
+                                                          : cIdx === 2
+                                                            ? { width: "19%" }
+                                                            : cIdx === 3
+                                                              ? { width: "14%" }
+                                                              : cIdx === 5 || cIdx === 6
+                                                                ? { width: "9%" }
+                                                                : {})
+                                                    : (cIdx === 0
+                                                      ? { width: "8.5%", minWidth: "48px", maxWidth: "65px", padding: "2px 2px" }
+                                                      : cIdx === 1
+                                                        ? { width: "5.5%", minWidth: "32px", maxWidth: "42px", padding: "2px 1px" }
+                                                      : cIdx === 2
+                                                        ? { width: "6.5%", minWidth: "38px", maxWidth: "50px", padding: "2px 1px" }
+                                                      : cIdx === 3
+                                                        ? { width: "6.5%", minWidth: "38px", maxWidth: "50px", padding: "2px 1px" }
+                                                      : cIdx === 4
+                                                        ? { width: "62%", padding: "2px 6px" }
+                                                      : cIdx === 5
+                                                        ? { width: "11%", minWidth: "55px", maxWidth: "75px", padding: "2px 2px" }
+                                                      : {})),
                                                 }}
                                               >
                                                 {isExam ? (

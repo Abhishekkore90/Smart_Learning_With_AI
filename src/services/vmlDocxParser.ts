@@ -111,12 +111,15 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
       });
       const allPageRawText = allPageTextParts.join(" ");
 
-      let subjectKey: "marathi" | "math" | "semi" | "other" = "other";
+      let subjectKey: "marathi" | "english" | "math" | "semi" | "other" = "other";
       let subjectLabel = "सामान्य विभाग";
 
       if (/भाषा|मराठी|जोड्या जुळव|अक्षराला गोल कर|शब्द वाच|गिरव/i.test(allPageRawText)) {
         subjectKey = "marathi";
         subjectLabel = "मराठी विभाग (प्रथम भाषा)";
+      } else if (/english|oral\s*&amp;\s*practical|listen and act/i.test(allPageRawText)) {
+        subjectKey = "english";
+        subjectLabel = "इंग्रजी विभाग (English)";
       } else if (/गणित|संख्या|चित्रे मोज|मोठ्या गाडीखालील/i.test(allPageRawText)) {
         subjectKey = "math";
         subjectLabel = "गणित विभाग (Mathematics)";
@@ -168,7 +171,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           // Span box comfortably up to ~81.2% inside the border (497pt / 612pt)
           widthPt = Math.max(widthPt, 497);
           heightPt = 28;
-          extraBoxStyle = "z-index: 10; white-space: nowrap !important; overflow: hidden !important; display: flex; align-items: center; max-width: 81.2% !important;";
+          extraBoxStyle = "z-index: 10; white-space: normal !important; overflow: visible !important; display: flex; align-items: flex-start; max-width: 81.2% !important;";
 
           const isEng = /school/i.test(rawText) || !rawText.includes("शाळेचे");
           const cleanName = rawText
@@ -179,9 +182,9 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           const label = isEng ? "SCHOOL NAME -" : "शाळेचे नाव :";
 
           if (cleanName) {
-            shapeInnerHtml = `<span style="background: #ffffff; padding: 0 2px; display: flex; align-items: center; width: 100%; max-width: 100%;"><strong style="white-space: nowrap; flex-shrink: 0; color: #0f172a;">${label} </strong><span style="font-weight: 700; color: #0f172a; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0;" title="${escapeHtml(cleanName)}">${escapeHtml(cleanName)}</span></span>`;
+            shapeInnerHtml = `<div class="qp-school-name-block" style="background: #ffffff; padding: 0 2px; display: block; flex: 1; min-width: 0; margin-right: 14px; overflow: visible;"><strong style="white-space: nowrap; color: #0f172a;">${label} </strong><span class="qp-school-text" style="font-weight: 700; color: #0f172a; margin-left: 6px; white-space: normal; word-break: break-word;" title="${escapeHtml(cleanName)}">${escapeHtml(cleanName)}</span></div>`;
           } else {
-            shapeInnerHtml = `<span style="background: #ffffff; padding: 0 2px; display: flex; align-items: center; width: 100%;"><strong style="white-space: nowrap; flex-shrink: 0; color: #0f172a;">${label} </strong><span style="flex: 1; min-width: 20px; border-bottom: 1.5px dotted #94a3b8; margin-left: 6px; height: 1em; align-self: center;"></span></span>`;
+            shapeInnerHtml = `<div class="qp-school-name-block" style="background: #ffffff; padding: 0 2px; display: block; flex: 1; min-width: 0; margin-right: 14px; overflow: visible;"><strong style="white-space: nowrap; color: #0f172a;">${label} </strong><span style="display: inline-block; width: 140px; border-bottom: 1.5px dotted #94a3b8; margin-left: 6px; height: 1em; vertical-align: middle;"></span></div>`;
           }
         } else if (
           (rawText.includes("दि.") || /date\s*[:\-–—]?/i.test(rawText)) &&
@@ -200,7 +203,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
         if (isSchoolNameText) {
           leftPct = 10.458;
-          topPct = 2.35;
+          topPct = 2.85;
           widthPct = 81.2;
           heightPct = 3.66;
         }
@@ -228,7 +231,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           : `'Noto Sans Devanagari', 'Tiro Devanagari Marathi', 'Nirmala UI', 'Mangal', sans-serif`;
 
         const isSchoolNameField = fieldAttr === 'data-field="school-name"';
-        const whiteSpaceRule = isSchoolNameField ? "white-space: nowrap !important; overflow: hidden !important;" : "white-space: pre-wrap; word-break: break-word;";
+        const whiteSpaceRule = isSchoolNameField ? "white-space: normal !important; overflow: visible !important;" : "white-space: pre-wrap; word-break: break-word;";
 
         shapesHtml.push(`
           <div
@@ -236,7 +239,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
             spellcheck="false"
             ${fieldAttr}
             class="vml-shape-text"
-            style="position: absolute; left: ${leftPct.toFixed(3)}%; top: ${topPct.toFixed(3)}%; width: ${widthPct.toFixed(3)}%; height: ${heightPct.toFixed(3)}%; display: flex; align-items: center; justify-content: ${justifyCss}; font-size: ${fontSizePt}pt; font-size: ${fontSizeCqw}cqw; font-weight: ${isBold ? "bold" : "normal"}; font-style: ${isItalic ? "italic" : "normal"}; color: ${color}; text-align: ${align}; font-family: ${fontFamily}; line-height: 1.15; padding: 0 4px; box-sizing: border-box; cursor: text; outline: none; ${whiteSpaceRule} ${extraBoxStyle}"
+            style="position: absolute; left: ${leftPct.toFixed(3)}%; top: ${topPct.toFixed(3)}%; width: ${widthPct.toFixed(3)}%; height: ${heightPct.toFixed(3)}%; display: flex; align-items: ${isSchoolNameField ? "flex-start" : "center"}; justify-content: ${justifyCss}; font-size: ${fontSizePt}pt; font-size: ${fontSizeCqw}cqw; font-weight: ${isBold ? "bold" : "normal"}; font-style: ${isItalic ? "italic" : "normal"}; color: ${color}; text-align: ${align}; font-family: ${fontFamily}; line-height: 1.35; padding: 2px 4px; box-sizing: border-box; cursor: text; outline: none; ${whiteSpaceRule} ${extraBoxStyle}"
           >${shapeInnerHtml}</div>
         `);
       }
@@ -268,7 +271,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           }
           ${
             hasSchoolHeader
-              ? `<div class="header-dots-mask" style="position: absolute; left: 10.4%; top: 2.26%; width: 81.2%; height: 3.66%; background: #ffffff; z-index: 2; pointer-events: none;"></div>`
+              ? `<div class="header-dots-mask" style="position: absolute; left: 10.4%; top: 2.5%; width: 81.2%; height: 4.8%; background: #ffffff; z-index: 2; pointer-events: none;"></div>`
               : ""
           }
           <div class="vml-shapes-layer" style="position: absolute; inset: 0; z-index: 3;">

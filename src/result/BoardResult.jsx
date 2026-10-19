@@ -56,6 +56,74 @@ const getGradeKeyFromScore = (score, max = 100) => {
   return "i2";
 };
 
+// A4 Page Mobile Scale Wrapper to show authentic A4 proportions on mobile without horizontal scrollbar
+function A4PageWrapper({ children, isLandscape = false }) {
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(1);
+
+  const targetWidth = isLandscape ? 1123 : 794;
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const parentWidth = rect.width || containerRef.current.clientWidth || window.innerWidth;
+      if (parentWidth > 0 && parentWidth < targetWidth) {
+        setScale(Number((parentWidth / targetWidth).toFixed(4)));
+      } else {
+        setScale(1);
+      }
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, [targetWidth]);
+
+  const supportsZoom = typeof document !== "undefined" && "zoom" in document.documentElement.style;
+
+  return (
+    <div
+      ref={containerRef}
+      className="a4-page-scale-wrapper w-full flex justify-center mb-6"
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        overflowX: "hidden",
+      }}
+    >
+      <div
+        className="a4-page-scale-inner"
+        style={
+          scale < 1
+            ? supportsZoom
+              ? {
+                  zoom: scale,
+                  width: `${targetWidth}px`,
+                  minWidth: `${targetWidth}px`,
+                  maxWidth: `${targetWidth}px`,
+                }
+              : {
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top center",
+                  width: `${targetWidth}px`,
+                  minWidth: `${targetWidth}px`,
+                  maxWidth: `${targetWidth}px`,
+                  marginBottom: `-${Math.round((1 - scale) * (isLandscape ? 794 : 1123))}px`,
+                }
+            : {
+                width: `${targetWidth}px`,
+                minWidth: `${targetWidth}px`,
+                maxWidth: `${targetWidth}px`,
+              }
+        }
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // Default weightage rules when user hasn't filled Bharansh Nischiti
 const getDefaultSubjectWeightage = (clsStr, isPractical) => {
   if (isPractical) {
@@ -1098,7 +1166,34 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           width: 0 !important;
           height: 0 !important;
         }
+        .pdf-page:not(.pdf-page-landscape) {
+          width: 794px !important;
+          min-width: 794px !important;
+          max-width: 794px !important;
+          min-height: 1085px !important;
+        }
+        .pdf-page-landscape {
+          width: 1123px !important;
+          min-width: 1123px !important;
+          max-width: 1123px !important;
+          min-height: 794px !important;
+        }
         @media print {
+          .a4-page-scale-wrapper {
+            overflow: visible !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: auto !important;
+          }
+          .a4-page-scale-inner {
+            zoom: 1 !important;
+            transform: none !important;
+            margin-bottom: 0 !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: none !important;
+          }
           @page {
             size: A4 portrait;
             margin: 0;
@@ -1292,6 +1387,21 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
       {/* -------------------- 11-PAGE PRINT CONTAINER (USING USER'S AUTHENTIC DATA) -------------------- */}
       <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
         <style>{`
+          .cce-downloading-pdf .a4-page-scale-wrapper {
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: auto !important;
+          }
+          .cce-downloading-pdf .a4-page-scale-inner {
+            zoom: 1 !important;
+            transform: none !important;
+            margin-bottom: 0 !important;
+            width: auto !important;
+            min-width: 0 !important;
+            max-width: none !important;
+          }
           .cce-downloading-pdf .pdf-page:not(.pdf-page-landscape) {
             box-shadow: none !important;
             width: 100% !important;
@@ -1317,6 +1427,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         `}</style>
         
         {/* -------------------- PAGE 1: COVER PAGE -------------------- */}
+        <A4PageWrapper>
         <div
           className="pdf-page bg-white border-none relative overflow-hidden text-center flex flex-col justify-between h-[287mm] shadow-sm mb-4"
           style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
@@ -1378,8 +1489,10 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
           </div>
         </div>
+        </A4PageWrapper>
 
         {/* -------------------- PAGE 2: INDEX (अनुक्रमणिका) -------------------- */}
+        <A4PageWrapper>
         <div
           className="pdf-page bg-white border-none relative overflow-hidden flex flex-col justify-between h-[287mm] shadow-sm mb-4"
           style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
@@ -1446,6 +1559,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             </div>
           </div>
         </div>
+        </A4PageWrapper>
 
         {/* -------------------- STUDENT PAGES -------------------- */}
         {(() => {
@@ -1492,19 +1606,20 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           return (
             <React.Fragment key={student.id}>
               {/* Page A: Formative & Summative Evaluation Table */}
+              <A4PageWrapper>
               <div
                 className="pdf-page bg-white border-none relative overflow-hidden flex flex-col justify-between h-[287mm] shadow-sm mb-4"
                 style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
               >
                 <div
-                  className={`border-2 border-slate-700 rounded-none h-full w-full flex flex-col justify-between relative z-10 ${pageMode === "1page" ? (subjects.length >= 8 ? "p-2 sm:p-2.5" : "p-3 sm:p-4") : "p-6"}`}
+                  className={`border-2 border-slate-700 rounded-none h-full w-full flex flex-col justify-between relative z-10 ${pageMode === "1page" ? "p-2 sm:p-2.5" : "p-6"}`}
                   style={{ boxSizing: "border-box" }}
                 >
                 <div>
-                  <h2 className={`font-black text-[#004080] text-center tracking-tight ${pageMode === "1page" ? (subjects.length >= 8 ? "text-base sm:text-lg mb-1" : "text-xl mb-2") : "text-2xl mb-4"}`}>सातत्यपूर्ण सर्वंकष मूल्यांकन</h2>
+                  <h2 className={`font-black text-[#004080] text-center tracking-tight ${pageMode === "1page" ? "text-base sm:text-lg mb-1" : "text-2xl mb-4"}`}>सातत्यपूर्ण सर्वंकष मूल्यांकन</h2>
 
                   {/* Student Meta Header */}
-                  <div className={`flex items-center justify-between font-bold text-slate-900 border-b-2 border-sky-100 ${pageMode === "1page" ? (subjects.length >= 8 ? "text-[11px] font-extrabold pb-1 mb-1.5" : "text-xs font-extrabold pb-2 mb-2.5") : "text-sm font-extrabold pb-3 mb-4"}`}>
+                  <div className={`flex items-center justify-between font-bold text-slate-900 border-b-2 border-sky-100 ${pageMode === "1page" ? "text-[11px] font-extrabold pb-1 mb-1.5" : "text-sm font-extrabold pb-3 mb-4"}`}>
                     <span>विद्यार्थ्याचे नाव - <b className="text-slate-900">{student.name}</b></span>
                     <span>इयत्ता - <b>{selectedClass}</b></span>
                     <span>तुकडी - <b>{division}</b></span>
@@ -1516,9 +1631,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   <div className="overflow-x-auto">
                     <table className={`w-full border-collapse border-2 border-[#0080ff] text-center font-medium table-fixed text-xs`}>
                       <colgroup>
-                        <col style={{ width: "2.5%" }} />
-                        <col style={{ width: "20%" }} />
-                        <col style={{ width: "4.5%" }} />
+                        <col style={{ width: "1.8%" }} />
+                        <col style={{ width: "19.2%" }} />
+                        <col style={{ width: "6.0%" }} />
                         <col style={{ width: "5.4%" }} />
                         <col style={{ width: "5.4%" }} />
                         <col style={{ width: "5.4%" }} />
@@ -1537,7 +1652,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                       <thead>
                         {/* Header Row 1 */}
                         <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold border-b border-[#0080ff]">
-                          <th rowSpan={3} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center align-top pt-2 font-black text-xs">
+                          <th rowSpan={3} className="border border-[#0080ff] bg-[#bfe5ff] p-0.5 text-center align-top pt-2 font-black text-[10.5px] leading-tight">
                             अ.<br />क्र.
                           </th>
                           <th colSpan={2} rowSpan={2} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center align-top pt-2 font-black text-xs">
@@ -1562,7 +1677,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                         </tr>
 
                         {/* Header Row 2: Vertical Labels */}
-                        <tr className={`bg-[#bfe5ff] text-[#002b66] font-bold border-b border-[#0080ff] ${pageMode === "1page" ? (subjects.length >= 8 ? "h-13" : "h-16") : "h-28"}`}>
+                        <tr className={`bg-[#bfe5ff] text-[#002b66] font-bold border-b border-[#0080ff] ${pageMode === "1page" ? "h-13" : "h-28"}`}>
                           {/* Formative Vertical Labels */}
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
                             <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>तोंडीकाम</div>
@@ -1606,7 +1721,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                         {/* Header Row 3: Numbers */}
                         <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold border-b-2 border-[#0080ff]">
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">विषय</th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">गुण</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] py-1 px-0.5 text-center font-extrabold text-[11px] whitespace-nowrap">गुण</th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">1</th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">2</th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">3</th>
@@ -1794,20 +1909,20 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           const grandMax = hasWeightage ? 100 : "";
                           const grade = grandTotalObt !== "" ? getGrade((Number(grandTotalObt) / 100) * 100) : "";
 
-                          const isCompact = pageMode === "1page" && subjects.length >= 8;
+                          const isCompact = pageMode === "1page";
                           const cellPad = isCompact ? "py-0.5 px-0.5 text-[9.5px] font-bold" : "p-1.5 text-xs font-bold";
 
                           return (
                             <React.Fragment key={subjectName}>
                               {/* Row 1: पैकी */}
                               <tr className="bg-white text-slate-900 font-bold border-t border-[#0080ff]">
-                                <td rowSpan={2} className={`border border-[#0080ff] bg-white p-0.5 text-center align-middle font-extrabold text-slate-900 ${isCompact ? "text-[10px]" : "text-xs pt-3.5"}`}>
+                                <td rowSpan={2} className={`border border-[#0080ff] bg-white p-0.5 text-center align-middle font-extrabold text-slate-900 ${isCompact ? "text-[10px]" : "text-[11px] pt-3.5"}`}>
                                   {subIdx + 1}
                                 </td>
                                 <td rowSpan={2} className={`border border-[#0080ff] bg-white p-0.5 text-center align-middle text-[#002b66] font-extrabold ${isCompact ? "text-[10px] leading-tight" : "text-[11px] leading-tight pt-3"} whitespace-normal break-words`}>
                                   {subjectName}
                                 </td>
-                                <td className={`border border-[#0080ff] ${cellPad} text-slate-800 font-bold bg-white align-middle text-center`}>पैकी</td>
+                                <td className={`border border-[#0080ff] py-1 px-0.5 text-slate-800 font-bold bg-white align-middle text-center whitespace-nowrap ${isCompact ? "text-[9.5px]" : "text-[11px]"}`}>पैकी</td>
                                 <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{tondiKaamMax}</td>
                                 <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{pratyakshikPrayogMax}</td>
                                 <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{upakramKritiMax}</td>
@@ -1834,7 +1949,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                               {/* Row 2: प्राप्त */}
                               <tr className="bg-white text-slate-900 font-bold border-b-2 border-[#0080ff]">
-                                <td className={`border border-[#0080ff] ${cellPad} text-slate-800 font-bold bg-white align-middle text-center`}>प्राप्त</td>
+                                <td className={`border border-[#0080ff] py-1 px-0.5 text-slate-800 font-bold bg-white align-middle text-center whitespace-nowrap ${isCompact ? "text-[9.5px]" : "text-[11px]"}`}>प्राप्त</td>
                                 <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{tondiKaamObt !== "" ? tondiKaamObt : ""}</td>
                                 <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{pratyakshikPrayogObt !== "" ? pratyakshikPrayogObt : ""}</td>
                                 <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{upakramKritiObt !== "" ? upakramKritiObt : ""}</td>
@@ -1862,8 +1977,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                   {/* Inline Compact Remarks — ONLY in 1-page mode */}
                   {pageMode === "1page" && (
-                    <div className={subjects.length >= 8 ? "mt-1.5" : "mt-2"}>
-                      <h3 className={`font-black text-sky-800 text-center border-b border-sky-200 ${subjects.length >= 8 ? "text-[11px] mb-1 pb-0.5" : "text-xs mb-1 pb-1"}`}>वर्णनात्मक नोंदी</h3>
+                    <div className={pageMode === "1page" ? "mt-1" : "mt-2"}>
+                      <h3 className={`font-black text-sky-800 text-center border-b border-sky-200 ${pageMode === "1page" ? "text-[11px] mb-0.5 pb-0.5" : "text-xs mb-1 pb-1"}`}>वर्णनात्मक नोंदी</h3>
                       {(() => {
                             const getFormattedRemark = (remarksObj, labelOrKey) => {
                               if (!remarksObj || typeof remarksObj !== "object") return "-";
@@ -1981,18 +2096,22 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             }
 
                             return (
-                              <table className="w-full border-collapse border border-sky-400 text-xs font-medium">
+                              <table className="w-full border-collapse border border-sky-400 text-xs font-medium table-fixed">
+                                <colgroup>
+                                  <col style={{ width: "22%" }} />
+                                  <col style={{ width: "78%" }} />
+                                </colgroup>
                                 <thead>
                                   <tr className="bg-sky-100 text-sky-950 font-bold">
-                                    <th className="border border-sky-400 p-1 text-left w-1/4">विषय / घटक</th>
-                                    <th className="border border-sky-400 p-1 text-left w-3/4">वर्णनात्मक नोंदी</th>
+                                    <th className="border border-sky-400 py-0.5 px-1.5 text-left text-[10px]">विषय / घटक</th>
+                                    <th className="border border-sky-400 py-0.5 px-1.5 text-left text-[10px]">वर्णनात्मक नोंदी</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {allRemarksItems.map((item) => (
                                     <tr key={item} className="border-b border-sky-300">
-                                      <td className="border border-sky-400 p-1 font-bold text-slate-900 bg-sky-50/50 leading-snug">{item}</td>
-                                      <td className="border border-sky-400 p-1 text-slate-800 leading-snug">{getR(studentRemarks, item)}</td>
+                                      <td className="border border-sky-400 py-0.5 px-1.5 font-bold text-slate-900 bg-sky-50/50 text-[9.5px] leading-tight whitespace-normal break-words">{item}</td>
+                                      <td className="border border-sky-400 py-0.5 px-1.5 text-slate-800 text-[9.5px] leading-tight whitespace-normal break-words">{getR(studentRemarks, item)}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2004,7 +2123,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 </div>
 
                 {/* Footer Signatures */}
-                <div className={`flex items-center justify-between border-t border-slate-200 font-bold text-slate-900 ${pageMode === "1page" ? (subjects.length >= 8 ? "pt-1 mt-1 text-[11px]" : "pt-2 mt-2 text-xs") : "pt-4 mt-3 text-xs"}`}>
+                <div className={`flex items-center justify-between border-t border-slate-200 font-bold text-slate-900 ${pageMode === "1page" ? "pt-1 mt-1 text-[11px]" : "pt-4 mt-3 text-xs"}`}>
                   <div className="text-center">
                     <p className={pageMode === "1page" ? "font-extrabold text-xs" : "font-extrabold text-sm"}>{schoolData.teacherName || "वर्गशिक्षक"}</p>
                     <p className={pageMode === "1page" ? "text-[10px] text-slate-500 font-medium" : "text-[11px] text-slate-600 font-medium"}>वर्गशिक्षक</p>
@@ -2016,9 +2135,11 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 </div>
               </div>
             </div>
+            </A4PageWrapper>
 
               {/* Page B: Descriptive Remarks Table — ONLY in 2-pages mode */}
               {pageMode === "2pages" && (
+              <A4PageWrapper>
               <div
                 className="pdf-page bg-white border-none relative overflow-hidden flex flex-col justify-between h-[287mm] shadow-sm mb-4"
                 style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
@@ -2131,6 +2252,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 </div>
               </div>
             </div>
+            </A4PageWrapper>
             )}
             </React.Fragment>
           );
@@ -2310,6 +2432,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               {/* ========================================================================= */}
               {/* PAGE 1: श्रेणी निहाय संकलन तक्ता (वर्गस्तर)                                */}
               {/* ========================================================================= */}
+              <A4PageWrapper>
               <div
                 className="pdf-page bg-white border-none relative overflow-hidden flex flex-col justify-between h-[287mm] shadow-sm mb-4"
                 style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
@@ -2452,6 +2575,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 </div>
               </div>
             </div>
+            </A4PageWrapper>
 
               {/* ========================================================================= */}
               {/* PAGE 2: जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक (अनेक पानांमध्ये विभागलेले)    */}
@@ -2464,8 +2588,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 }
 
                 return subjectChunks.map((chunkSubjects, pageIdx) => (
+                  <A4PageWrapper key={`caste_summary_page_${pageIdx}`}>
                   <div
-                    key={`caste_summary_page_${pageIdx}`}
                     className="pdf-page bg-white border-none relative overflow-hidden flex flex-col justify-between h-[287mm] shadow-sm mb-4"
                     style={{ padding: "10mm", boxSizing: "border-box", pageBreakAfter: "always", breakAfter: "page" }}
                   >
@@ -2600,12 +2724,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                     </div>
                   </div>
                 </div>
+                </A4PageWrapper>
                 ));
               })()}
 
               {/* ========================================================================= */}
               {/* PAGE 3: सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक (एकत्रित लँडस्केप टेबल)    */}
               {/* ========================================================================= */}
+              <A4PageWrapper isLandscape={true}>
               <div
                 className="pdf-page pdf-page-landscape bg-white border-none relative overflow-hidden flex flex-col justify-between h-[190mm] min-w-[297mm] shadow-sm mb-4"
                 data-orientation="landscape"
@@ -2759,6 +2885,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 </div>
               </div>
             </div>
+            </A4PageWrapper>
           </>
           );
         })()}

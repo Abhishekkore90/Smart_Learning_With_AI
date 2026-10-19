@@ -31,12 +31,13 @@
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
+    html, body {
       font-family: 'Noto Sans Devanagari', Arial, sans-serif;
       background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
       background-attachment: fixed;
       color: #111;
-      max-width: 100%;
+      max-width: 100vw;
+      width: 100%;
       overflow-x: hidden;
       min-height: 100vh;
     }
@@ -149,14 +150,15 @@
       padding-top: 90px;
       padding-bottom: 40px;
       width: 100%;
-      max-width: 960px;
+      max-width: 100vw;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
       position: relative;
-      overflow-x: visible;
+      overflow-x: hidden;
+      box-sizing: border-box;
     }
 
     /* Responsive styling for mobile view */
@@ -889,31 +891,19 @@
       .page {
         display: block !important;
         opacity: 1 !important;
+        zoom: 1 !important;
         transform: none !important;
         margin: 0 !important;
         box-shadow: none !important;
         border: none !important;
+        width: 210mm !important;
+        min-height: 297mm !important;
         page-break-after: always;
         break-after: page;
       }
     }
 
-    @media (max-width: 800px) {
-      .nav-arrow {
-        width: 44px;
-        height: 44px;
-        font-size: 18px;
-        top: 125px;
-        bottom: auto;
-        transform: none;
-      }
-      .nav-arrow.prev-arrow {
-        left: 8px;
-      }
-      .nav-arrow.next-arrow {
-        right: 8px;
-      }
-    }
+
 
     /* Clean Top Sticky Navbar Styles */
     .print-bar {
@@ -1005,93 +995,52 @@
     @media (max-width: 960px) {
       body {
         padding-top: 0;
+        overflow-x: hidden;
       }
       .pages-wrapper {
         padding-top: 116px;
-        padding-left: 8px;
-        padding-right: 8px;
-        max-width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
         box-sizing: border-box;
       }
-      .page {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-height: auto !important;
-        transform: none !important;
-        margin: 0 0 20px 0 !important;
-        padding: 16px 12px !important;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
-        border-radius: 8px !important;
-        box-sizing: border-box !important;
+      .nav-arrow {
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+        z-index: 2500;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
       }
-      .cover-border {
-        padding: 16px 12px !important;
-        box-sizing: border-box !important;
-        min-height: auto !important;
+      .nav-arrow.prev-arrow {
+        left: 8px;
       }
-      .cover-title {
-        font-size: 28px !important;
-        padding: 10px 24px !important;
-        letter-spacing: 0.5px !important;
+      .nav-arrow.next-arrow {
+        right: 8px;
       }
-      .cover-title::before, .cover-title::after {
-        font-size: 14px !important;
+      .bottom-controller {
+        padding: 8px 12px;
+        gap: 6px;
+        bottom: 10px;
+        max-width: 96vw;
       }
-      .cover-title::before { left: 6px !important; }
-      .cover-title::after { right: 6px !important; }
-      #saraswati-img {
-        width: 160px !important;
-        height: 160px !important;
+      .controller-btn {
+        padding: 4px 8px;
+        font-size: 13px;
+        gap: 4px;
       }
-      .cover-info-box {
-        width: 100% !important;
-        box-sizing: border-box !important;
+      .page-select-dropdown {
+        padding: 4px 8px;
+        font-size: 12px;
+        max-width: 140px;
       }
-      .cover-info-box-header {
-        font-size: 15px !important;
-        padding: 10px !important;
-      }
-      .cover-info-row {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        padding: 10px 14px !important;
-        gap: 6px !important;
-      }
-      .cover-info-label {
-        min-width: auto !important;
-        font-size: 15px !important;
-      }
-      .cover-ef {
-        width: 100% !important;
-        font-size: 15px !important;
-        box-sizing: border-box !important;
-      }
-      .page-inner {
-        padding: 10px 8px !important;
-        overflow-x: hidden;
-      }
-      /* Table Horizontal Scroll Container for Mobile */
-      .table-wrapper, .table-responsive, div:has(> table) {
-        width: 100% !important;
-        max-width: 100% !important;
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        margin-bottom: 12px !important;
-        box-sizing: border-box !important;
-      }
-      table {
-        width: 100% !important;
-        min-width: 580px !important;
-        border-collapse: collapse !important;
-        table-layout: auto !important;
-      }
-      table th, table td {
-        white-space: nowrap !important;
-        word-break: normal !important;
-        padding: 8px 10px !important;
-      }
-      table .tef, table .ef {
-        min-width: 80px !important;
+      .counter-text {
+        font-size: 12px;
+        min-width: 55px;
       }
     }
   </style>
@@ -1954,39 +1903,54 @@ function deleteDynamicPage(pageNum) {
 
 // ===== PAGE SCALING =====
 function adjustPageScale() {
-  const targetWidth = 810; // A4 page width in px (210mm ≈ 793px, + padding)
-  const viewportWidth = window.innerWidth;
+  const targetWidth = 794; // 210mm standard A4 width in px at 96dpi
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
   
-  // Scale to fill full viewport width
-  const scale = viewportWidth / targetWidth;
+  // Available width with a small 12px margin (6px on each side)
+  const availableWidth = Math.max(280, viewportWidth - 12);
   
-  // Clamp between 0.35 and 1.05 (matches student portfolio centering)
-  const clampedScale = Math.min(Math.max(scale, 0.35), 1.05);
+  // Calculate scale so the 210mm A4 page fits inside available width
+  let scale = 1;
+  if (availableWidth < targetWidth) {
+    scale = availableWidth / targetWidth;
+  }
+  
+  // Clamp scale between 0.25 and 1.05
+  const clampedScale = Math.min(Math.max(scale, 0.25), 1.05);
   
   document.documentElement.style.setProperty('--page-scale', clampedScale);
-  
-  // Since transform: scale() doesn't change layout size,
-  // adjust the layout footprint using margin-bottom
-  // Use currentSlideIndex because .active-slide might not be applied yet
-  const pages = document.querySelectorAll('.page');
-  const activePage = pages[typeof currentSlideIndex !== 'undefined' ? currentSlideIndex : 0];
-  if (activePage) {
-    const pageHeight = activePage.offsetHeight;
-    const marginDiff = (pageHeight * clampedScale) - pageHeight;
-    
-    // Apply margin so the layout box matches visual size
-    activePage.style.marginBottom = marginDiff + 'px';
-    
-    // Reset margins on inactive pages just in case
-    document.querySelectorAll('.page').forEach(p => {
-      if (p !== activePage) p.style.marginBottom = '0px';
-    });
 
-    const wrapper = document.querySelector('.pages-wrapper');
-    if (wrapper) {
-      wrapper.style.minHeight = 'auto'; // Let the wrapper size naturally
-      wrapper.style.paddingBottom = '40px'; // Add a little breathing room at the bottom
+  const supportsZoom = 'zoom' in document.documentElement.style;
+  const pages = document.querySelectorAll('.page');
+
+  pages.forEach(p => {
+    if (clampedScale < 1) {
+      if (supportsZoom) {
+        p.style.zoom = clampedScale;
+        p.style.transform = 'none';
+        p.style.transformOrigin = '';
+        p.style.marginBottom = '20px';
+      } else {
+        p.style.zoom = '';
+        p.style.transform = `scale(${clampedScale})`;
+        p.style.transformOrigin = 'top center';
+        const pageHeight = p.offsetHeight || 1123;
+        const marginDiff = (pageHeight * clampedScale) - pageHeight;
+        p.style.marginBottom = marginDiff + 'px';
+      }
+    } else {
+      p.style.zoom = '';
+      p.style.transform = '';
+      p.style.transformOrigin = '';
+      p.style.marginBottom = '20px';
     }
+  });
+
+  const wrapper = document.querySelector('.pages-wrapper');
+  if (wrapper) {
+    wrapper.style.minHeight = 'auto';
+    wrapper.style.overflowX = 'hidden';
+    wrapper.style.paddingBottom = clampedScale < 1 ? '90px' : '40px';
   }
 }
 window.addEventListener('resize', adjustPageScale);
@@ -2207,11 +2171,12 @@ async function downloadPDF() {
     // Reset scale to 1 for high quality print
     document.documentElement.style.setProperty('--page-scale', '1');
 
-    // Temporarily show all pages for PDF capture
+    // Temporarily show all pages for PDF capture at full scale
     pages.forEach(page => {
       page.style.display = 'block';
       page.style.opacity = '1';
       page.style.transform = 'none';
+      page.style.zoom = '1';
     });
 
     for (let i = 0; i < pages.length; i++) {
@@ -2261,6 +2226,7 @@ async function downloadPDF() {
       page.style.display = '';
       page.style.opacity = '';
       page.style.transform = '';
+      page.style.zoom = '';
     });
     // Re-run initSlider to restore active page state correctly
     initSlider();
@@ -2293,13 +2259,13 @@ function initSlider() {
       page.style.display = 'block';
       setTimeout(() => {
         page.style.opacity = '1';
-        page.style.transform = 'scale(var(--page-scale)) rotateY(0deg)';
-      }, 50);
+        adjustPageScale();
+      }, 30);
     } else {
       page.classList.remove('active-slide');
       page.style.display = 'none';
       page.style.opacity = '0';
-      page.style.transform = 'scale(calc(var(--page-scale) * 0.96)) rotateY(-5deg)';
+      page.style.transform = '';
     }
   });
 

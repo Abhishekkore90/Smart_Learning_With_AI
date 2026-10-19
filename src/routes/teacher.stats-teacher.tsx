@@ -13,7 +13,7 @@ function TeacherStatsPage() {
     <div className="min-h-screen bg-slate-100 flex flex-col">
       <TeacherHeader />
       <TeacherSidebar />
-      <main className="lg:pl-0 pt-16 flex-1 flex flex-col">
+      <main className="lg:pl-0 pt-16 flex-1 flex flex-col w-full max-w-full overflow-x-hidden">
         <ModulePaywall moduleId="stats-teacher" defaultTitle="शिक्षक संचिका (Teacher Portfolio)">
           <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between">
             <Link
@@ -27,7 +27,7 @@ function TeacherStatsPage() {
           {/* Full-screen iframe showing the sanchika directly */}
           <iframe
             src="/shikshak-sanchika.html"
-            className="flex-1 w-full min-h-[calc(100vh-7rem)] border-none"
+            className="flex-1 w-full max-w-full min-h-[calc(100vh-7rem)] border-none overflow-x-hidden"
             title="शिक्षक संचिका"
           />
         </ModulePaywall>

@@ -88,18 +88,20 @@ interface UniqueTeacher {
 }
 
 const DEFAULT_MODULES: { id: string; title: string; defaultPrice: number }[] = [
-  { id: "timetable", title: "१. वेळापत्रक", defaultPrice: 0 },
-  { id: "templates", title: "२. टेम्पलेट", defaultPrice: 149 },
-  { id: "special-day", title: "३. परिपाठ", defaultPrice: 299 },
-  { id: "meeting-register", title: "४. मासिक सभा", defaultPrice: 99 },
-  { id: "mdm-register", title: "५. माध्यान्ह भोजन", defaultPrice: 149 },
-  { id: "sqaf-register", title: "६. SQAAF मूल्यमापन", defaultPrice: 299 },
-  { id: "cce-result", title: "७. CCE निकाल", defaultPrice: 199 },
+  { id: "timetable", title: "१. वेळापत्रक (Timetable)", defaultPrice: 0 },
+  { id: "templates", title: "२. टेम्पलेट (Templates)", defaultPrice: 149 },
+  { id: "special-day", title: "३. परिपाठ (Daily Assembly & Paripath)", defaultPrice: 299 },
+  { id: "meeting-register", title: "४. मासिक सभा (Meeting Register)", defaultPrice: 99 },
+  { id: "mdm-register", title: "५. माध्यान्ह भोजन (MDM Register)", defaultPrice: 149 },
+  { id: "sqaf-register", title: "६. SQAAF मूल्यमापन (SQAAF)", defaultPrice: 299 },
+  { id: "cce-result", title: "७. CCE निकाल (CCE Result)", defaultPrice: 199 },
   { id: "hpc-card", title: "८. Holistic Progress Card (HPC)", defaultPrice: 199 },
-  { id: "stats-teacher", title: "९. शिक्षक संचिका", defaultPrice: 99 },
-  { id: "stats-student", title: "१०. विद्यार्थी संचिका", defaultPrice: 99 },
-  { id: "annual-monthly-planning", title: "११. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी", defaultPrice: 149 },
-  { id: "teaching-record", title: "१२. टाचणवही", defaultPrice: 99 },
+  { id: "stats-teacher", title: "९. शिक्षक संचिका (Teacher Portfolio)", defaultPrice: 99 },
+  { id: "annual-monthly-planning", title: "१०. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी (Planning & Question Bank)", defaultPrice: 149 },
+  { id: "teaching-record", title: "११. दैनिक अध्यापन टाचणवही (Teaching Diary)", defaultPrice: 99 },
+  { id: "stats-student", title: "१२. विद्यार्थी संचिका (Student Portfolio)", defaultPrice: 99 },
+  { id: "homework", title: "१३. दैनिक गृहपाठ (Daily Homework)", defaultPrice: 149 },
+  { id: "question-paper", title: "१४. प्रश्नपत्रिका (Question Paper)", defaultPrice: 199 },
 ];
 
 function AdminModulePaymentsPage() {
@@ -651,11 +653,11 @@ function AdminModulePaymentsPage() {
                             <div className="mt-1.5 flex items-center gap-2">
                               {allGranted ? (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                  <Sparkles className="size-3" /> सर्व 8 मॉड्यूल्स मोफत ॲक्टिव्ह
+                                  <Sparkles className="size-3" /> सर्व {DEFAULT_MODULES.length} मॉड्यूल्स मोफत ॲक्टिव्ह
                                 </span>
                               ) : activeCount > 0 ? (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-800 border border-blue-200">
-                                  <Check className="size-3" /> {activeCount} / 8 मॉड्यूल्स ॲक्टिव्ह
+                                  <Check className="size-3" /> {activeCount} / {DEFAULT_MODULES.length} मॉड्यूल्स ॲक्टिव्ह
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-600 border border-slate-200">
@@ -844,7 +846,7 @@ function AdminModulePaymentsPage() {
                           </div>
                         </div>
                       </div>
-                    ) : (mod.id === "annual-monthly-planning" || mod.id === "teaching-record") ? (
+                    ) : (mod.id === "annual-monthly-planning" || mod.id === "teaching-record" || mod.id === "homework" || mod.id === "question-paper" || mod.id === "question-bank") ? (
                       <div className="space-y-4 pt-2">
                         <div className="grid grid-cols-2 gap-3">
                           <div>
@@ -1167,7 +1169,7 @@ function AdminModulePaymentsPage() {
                   </span>
                   <h4 className="text-base font-black text-slate-900">सर्व मॉड्यूल्सचा मोफत ॲक्सेस</h4>
                   <p className="text-xs font-bold text-slate-600 mt-0.5">
-                    हे चालू केल्यास या शिक्षकाला सर्व 8 मॉड्यूल्सचा पूर्ण मोफत ॲक्सेस मिळेल.
+                    हे चालू केल्यास या शिक्षकाला सर्व {DEFAULT_MODULES.length} मॉड्यूल्सचा पूर्ण मोफत ॲक्सेस मिळेल.
                   </p>
                 </div>
 

@@ -13,8 +13,13 @@ import {
   Sparkles,
   CheckCircle2,
   Layers,
+  MessageCircle,
+  Share2,
+  Loader2,
 } from "lucide-react";
 import type { HomeworkItem } from "@/types/documentEditor";
+import { directShareHomeworkPdfToWhatsApp } from "@/utils/homeworkPdfShare";
+import type { HomeworkHeaderProfile } from "@/utils/homeworkDocHelper";
 
 const MARATHI_MONTHS = [
   "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून",
@@ -53,6 +58,10 @@ export interface DailyHomeworkCalendarProps {
   onDeleteHomework?: (id: string, title: string) => void;
   userRole?: "admin" | "teacher" | "student";
   accentColor?: "amber" | "emerald" | "indigo";
+  selectedClass?: string;
+  selectedMedium?: string;
+  schoolProfile?: HomeworkHeaderProfile;
+  userId?: string;
 }
 
 export function DailyHomeworkCalendar({
@@ -64,11 +73,34 @@ export function DailyHomeworkCalendar({
   onDeleteHomework,
   userRole = "teacher",
   accentColor = "amber",
+  selectedClass,
+  selectedMedium,
+  schoolProfile,
+  userId,
 }: DailyHomeworkCalendarProps) {
   // Calendar month state
   const initialDate = selectedDate ? parseISODate(selectedDate) : new Date();
   const [currentYear, setCurrentYear] = useState<number>(initialDate.getFullYear());
   const [currentMonth, setCurrentMonth] = useState<number>(initialDate.getMonth());
+
+  // Direct WhatsApp PDF sharing state
+  const [isSharingPdf, setIsSharingPdf] = useState(false);
+
+  const handleDirectSharePdf = async (itemToShare?: HomeworkItem | null) => {
+    setIsSharingPdf(true);
+    try {
+      await directShareHomeworkPdfToWhatsApp({
+        dateStr: selectedDate || todayStr,
+        classId: selectedClass || itemToShare?.class || selectedDateItems[0]?.class || "1st",
+        medium: (selectedMedium as any) || itemToShare?.medium || (selectedDateItems[0]?.medium as any) || "marathi",
+        homeworkItems: selectedDateItems,
+        singleItem: itemToShare || null,
+        schoolProfile: schoolProfile,
+      });
+    } finally {
+      setIsSharingPdf(false);
+    }
+  };
 
   const todayStr = useMemo(() => formatISODate(new Date()), []);
 
@@ -378,8 +410,8 @@ export function DailyHomeworkCalendar({
         {/* Right: Selected Date Homework Cards & Direct Upload */}
         <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 shadow-sm flex flex-col justify-between space-y-3">
           <div className="space-y-3">
-            {/* Header for Selected Date */}
-            <div className="border-b border-slate-100 pb-2.5 space-y-0.5">
+            {/* Header for Selected Date with Daywise WhatsApp Share Button */}
+            <div className="border-b border-slate-100 pb-2.5 space-y-1.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
                   निवडलेली तारीख (Selected Date)
@@ -388,12 +420,32 @@ export function DailyHomeworkCalendar({
                   {selectedDateItems.length} गृहपाठ
                 </span>
               </div>
-              <h4 className="text-base font-black text-slate-900 leading-snug">
-                {selectedDateFormatted}
-              </h4>
-              <p className="text-[11px] text-slate-500">
-                {selectedDate === todayStr ? "आजचा दैनिक गृहपाठ" : "या तारखेचा प्रकाशित गृहपाठ"}
-              </p>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <h4 className="text-base font-black text-slate-900 leading-snug">
+                    {selectedDateFormatted}
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    {selectedDate === todayStr ? "आजचा दैनिक गृहपाठ" : "या तारखेचा प्रकाशित गृहपाठ"}
+                  </p>
+                </div>
+
+                {/* Daywise Direct WhatsApp PDF Share Button (No link, direct PDF file) */}
+                <button
+                  type="button"
+                  disabled={isSharingPdf}
+                  onClick={() => handleDirectSharePdf(null)}
+                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0 disabled:opacity-60"
+                  title="या दिवसाचा गृहपाठ थेट PDF स्वरूपात WhatsApp वर पाठवा (कोणतीही लिंक नाही)"
+                >
+                  {isSharingPdf ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <MessageCircle className="size-3.5" />
+                  )}
+                  <span>WhatsApp वर PDF पाठवा</span>
+                </button>
+              </div>
             </div>
 
             {/* Quick Upload Button for Admin */}
@@ -485,6 +537,21 @@ export function DailyHomeworkCalendar({
                       </div>
 
                       <div className="flex items-center gap-1 shrink-0">
+                        {/* WhatsApp Direct PDF Share this specific item */}
+                        <button
+                          type="button"
+                          onClick={() => handleDirectSharePdf(item)}
+                          disabled={isSharingPdf}
+                          className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-all cursor-pointer disabled:opacity-50"
+                          title="हा गृहपाठ PDF स्वरूपात WhatsApp वर पाठवा"
+                        >
+                          {isSharingPdf ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <MessageCircle className="size-3.5" />
+                          )}
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => onPreviewHomework(item)}
@@ -512,11 +579,26 @@ export function DailyHomeworkCalendar({
           </div>
 
           {/* Quick Helper text */}
-          <div className="p-2 bg-amber-50/50 rounded-xl border border-amber-100/80 text-[9.5px] text-amber-800 font-medium flex items-center gap-1.5">
-            <Sparkles className="size-3 text-amber-600 shrink-0" />
-            <span>
-              तारखेवर क्लिक करून त्या दिवसाचा गृहपाठ उघडा किंवा संपादित करा.
-            </span>
+          <div className="p-2 bg-amber-50/50 rounded-xl border border-amber-100/80 text-[9.5px] text-amber-800 font-medium flex items-center justify-between gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="size-3 text-amber-600 shrink-0" />
+              <span>
+                तारखेवर क्लिक करून त्या दिवसाचा गृहपाठ उघडा किंवा थेट WhatsApp वर PDF पाठवा.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleDirectSharePdf(null)}
+              disabled={isSharingPdf || selectedDateItems.length === 0}
+              className="text-emerald-700 font-bold hover:underline cursor-pointer flex items-center gap-1 disabled:opacity-50"
+            >
+              {isSharingPdf ? (
+                <Loader2 className="size-3 animate-spin text-emerald-600" />
+              ) : (
+                <MessageCircle className="size-3 text-emerald-600" />
+              )}
+              <span>WhatsApp PDF पाठवा</span>
+            </button>
           </div>
         </div>
       </div>

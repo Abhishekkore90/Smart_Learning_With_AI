@@ -21,7 +21,6 @@ import { collection, getDocs, doc, query, onSnapshot } from "firebase/firestore"
 import { format } from "date-fns";
 import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
 import { DocumentLivePreview } from "@/components/DocumentLivePreview";
-import { PinGate } from "@/components/teacher/PinGate";
 import { motion } from "framer-motion";
 
 export const Route = createFileRoute("/student/teaching-record")({
@@ -376,7 +375,7 @@ function StudentTeachingRecordPage() {
               </div>
             </div>
 
-            <div className="p-6 md:p-10">
+            <div className="p-2 sm:p-6 md:p-10">
               {activeTab === "daily" ? (
                 <TeacherTodayDiary
                   selectedClass={studentClass}

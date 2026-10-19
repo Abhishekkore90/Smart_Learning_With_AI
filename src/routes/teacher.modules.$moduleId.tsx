@@ -27,6 +27,7 @@ import {
   ArrowRight,
   Sparkles,
   MessageSquare,
+  MessageCircle,
   Brain,
   Send,
   Save,
@@ -76,7 +77,6 @@ import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { TeacherStatisticsEditor } from "@/components/teacher/TeacherStatisticsEditor";
 import { MonthlyParipathRegister } from "@/components/teacher/MonthlyParipathRegister";
-import { PinGate } from "@/components/teacher/PinGate";
 import class1SyllabusData from "./class1_syllabus.json";
 import { DEFAULT_FORM_DATA, ASSEMBLY_TRANSLATIONS, DEFAULT_ASSEMBLY_ITEMS } from "@/lib/assemblyTranslations";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -316,8 +316,11 @@ function ModulePage() {
       )}
 
       <main className={`flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full ${moduleId === 'daily-assembly' || moduleId === 'special-day' ? 'pt-4' : 'pt-24'} mx-auto w-full relative z-10`}>
-        <ModulePaywall moduleId={moduleId} defaultTitle={config.m}>
-          <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
+        <ModulePaywall
+          moduleId={moduleId}
+          defaultTitle={config.m}
+          isPaidTab={moduleId !== "special-day" && moduleId !== "daily-assembly"}
+        >
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -463,7 +466,6 @@ function ModulePage() {
               )}
             </div>
           </motion.div>
-        </PinGate>
         </ModulePaywall>
       </main>
 
@@ -2042,6 +2044,244 @@ function DailyAssemblyContent() {
     setExpandedSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
+
+  const generateAssemblyPdfBlob = async (): Promise<{ pdfBlob: Blob; fileName: string }> => {
+    const html2pdfModule = await import("html2pdf.js");
+    let html2pdfFn: any = html2pdfModule.default || html2pdfModule;
+    if (html2pdfFn && html2pdfFn.default) html2pdfFn = html2pdfFn.default;
+    if (typeof html2pdfFn !== "function") {
+      if (typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
+        html2pdfFn = (window as any).html2pdf;
+      }
+    }
+    if (typeof html2pdfFn !== "function") {
+      throw new Error("html2pdf library is not loaded properly.");
+    }
+
+    // Helper for safe text with newlines
+    const nl2br = (text: string) => (text || "").replace(/\n/g, "<br/>");
+
+    const data = formData;
+    const dateStr = selectedDate || new Date().toISOString().split("T")[0];
+
+    // Build clean HTML template for PDF
+    const tempDiv = document.createElement("div");
+    tempDiv.id = "temp-pdf-render";
+    tempDiv.style.width = "733px";
+    tempDiv.style.padding = "0";
+    tempDiv.style.margin = "0";
+    tempDiv.style.background = "#FFFFFF";
+    tempDiv.style.color = "#1F2937";
+    tempDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', system-ui, sans-serif";
+    tempDiv.style.boxSizing = "border-box";
+
+    // Shared style helpers
+    const greenBar = (title: string) =>
+      `<div style="background: #2e7d32; color: #fff; text-align: center; font-size: 14px; font-weight: 800; padding: 6px 14px; border-radius: 6px; margin: 0 0 8px 0; letter-spacing: 0.5px; font-family: 'Noto Sans Devanagari', sans-serif; box-sizing: border-box;">${title}</div>`;
+
+    const sectionBox = (borderColor: string = "#e2e8f0") =>
+      `border: 1.5px solid ${borderColor}; border-radius: 10px; padding: 12px 20px; margin-top: 10px; margin-bottom: 12px; background: #fff; page-break-inside: avoid !important; break-inside: avoid !important; break-inside: avoid-page !important; display: block; position: relative; overflow: hidden; box-sizing: border-box;`;
+
+    const contentText = `font-size: 13px; font-weight: 600; line-height: 1.65; color: #1F2937; margin: 0; text-align: center; font-family: 'Noto Sans Devanagari', sans-serif; white-space: pre-line; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box; padding: 0 10px;`;
+
+    const formatDateToDDMMYYYY = (dStr: string) => {
+      if (!dStr) return "";
+      const parts = dStr.split(/[-/]/);
+      if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2].padStart(2, "0")}-${parts[1].padStart(2, "0")}-${parts[0]}`;
+      }
+      return dStr;
+    };
+
+    const formattedDate = formatDateToDDMMYYYY(dateStr);
+
+    const pageHeader = `
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #2e7d32; padding-bottom: 6px; margin-bottom: 14px;">
+        <div style="font-size: 14px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">📖 दैनिक परिपाठ</div>
+        <div style="font-size: 13px; font-weight: 700; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">दिनांक: ${formattedDate}</div>
+      </div>
+    `;
+
+    // School Info Header
+    const schoolHeader = (schoolInfo.schoolName || schoolInfo.udise || schoolInfo.kendra) ? `
+      <div class="pdf-section-box" style="border: 2px solid #2e7d32; border-radius: 10px; padding: 12px 18px; margin-top: 8px; margin-bottom: 14px; background: #f0fdf4; text-align: center; page-break-inside: avoid !important; break-inside: avoid !important; position: relative; overflow: hidden;">
+        ${schoolInfo.schoolName ? `<div style="font-size: 18px; font-weight: 900; color: #166534; margin-bottom: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">शाळेचे नाव: ${schoolInfo.schoolName}</div>` : ''}
+        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #166534; border-top: 1px dashed #86efac; padding-top: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">
+          <span>केंद्र: ${schoolInfo.kendra || '-'} | युडायस (UDISE): ${schoolInfo.udise || '-'}</span>
+          <span>तालुका: ${schoolInfo.taluka || '-'} | जिल्हा: ${schoolInfo.jilha || '-'}</span>
+        </div>
+      </div>
+    ` : '';
+
+    // --- All Monthly Paripath Register Content Sections ---
+    const rashtrageet = data.nationalAnthem || data.rashtrageet || data.nationalAnthem_mr || assemblyItems[0]?.content || "";
+    const rajyageet = data.stateAnthem || data.rajyageet || data.stateAnthem_mr || assemblyItems[1]?.content || "";
+    const pratigya = data.pledge || data.pratigya || data.pledge_mr || assemblyItems[2]?.content || "";
+    const sanvidhan = data.preamble || data.sanvidhan || data.preamble_mr || assemblyItems[3]?.content || "";
+    const prarthana = data.prayer || data.prarthana || data.prayer_mr || "";
+    const shlok = data.shlok || data.shlok_mr || "";
+    const panchang = data.panchang
+      ? (typeof data.panchang === "string" ? data.panchang : Object.values(data.panchang).filter(Boolean).join(" "))
+      : [
+          data.tithi ? `तिथी: ${data.tithi}` : "",
+          data.paksha ? `पक्ष: ${data.paksha}` : "",
+          data.nakshatra ? `नक्षत्र: ${data.nakshatra}` : "",
+          data.month ? `मास: ${data.month}` : "",
+        ].filter(Boolean).join(" ");
+    const suvichar = data.thought || data.suvichar || "";
+    const batmya = data.valueNews || data.batmya || data.news || "";
+    const dinvishesh = data.events || data.dinvishesh || "";
+    const mhan = data.proverb || data.mhan || "";
+    const mhanMeaning = data.proverbMeaning || "";
+    const bodhkatha = data.story || data.bodhkatha || "";
+    const storyTitle = data.storyTitle || "";
+    const moral = data.moral || "";
+    const gkList = [1, 2, 3, 4]
+      .map(n => ({
+        q: data[`gkQ${n}`],
+        a: data[`gkA${n}`]
+      }))
+      .filter(item => item.q);
+
+    const gkText = gkList.length > 0
+      ? gkList.map((item, i) => `प्र. ${i + 1}: ${item.q}\nउत्तर: ${item.a || '-'}`).join('\n\n')
+      : (data.gk || data.samanyaGyan || data.generalKnowledge || "");
+
+    const songTitle = data.songTitle || (data.samuhgeet && data.samuhgeet.length <= 40 ? data.samuhgeet : "") || (data.deshbhaktigeet && data.deshbhaktigeet.length <= 40 ? data.deshbhaktigeet : "") || "";
+    const songLyrics = data.patrioticSong || (data.samuhgeet && data.samuhgeet !== songTitle ? data.samuhgeet : "") || (data.deshbhaktigeet && data.deshbhaktigeet !== songTitle ? data.deshbhaktigeet : "") || "";
+    const maun = data.silentPasayadan || data.maun || assemblyItems[5]?.content || DEFAULT_ASSEMBLY_ITEMS.mr[5].content;
+
+    // Ensure web fonts are completely loaded before html2canvas capture
+    if (document.fonts && document.fonts.ready) {
+      try { await document.fonts.ready; } catch (e) {}
+    }
+
+    // Build PDF sections dynamically (only 5 set items + non-empty admin sections + signature)
+    const pdfSectionsConfig = [
+      { title: '१. राष्ट्रगीत', content: rashtrageet, bg: '#bbf7d0', isSetItem: true },
+      { title: '२. राज्यगीत', content: rajyageet, bg: '#fef08a', isSetItem: true },
+      { title: '३. प्रतिज्ञा', content: pratigya, bg: '#bbf7d0', isSetItem: true },
+      { title: '४. भारताचे संविधान', content: sanvidhan, bg: '#fed7aa', isSetItem: true },
+      { title: '५. प्रार्थना', content: prarthana, bg: '#bbf7d0' },
+      { title: '६. श्लोक', content: shlok, bg: '#fecaca' },
+      { title: '७. पंचांग', content: panchang, bg: '#ffedd5' },
+      { title: '८. सुविचार', content: suvichar, bg: '#ede9fe', isItalic: true },
+      { title: '९. सुसंस्कारक्षम बातम्या', content: batmya, bg: '#a7f3d0', alignLeft: true },
+      { title: '१०. दिनविशेष', content: dinvishesh, bg: '#bfdbfe', alignLeft: true, extra: (formData.yearDay || data.yearDay) ? `हा वर्षातील ${formData.yearDay || data.yearDay} वा दिवस आहे.` : "" },
+      { title: '११. म्हण', content: mhan, bg: '#ccfbf1', meaning: mhanMeaning },
+      { title: '१२. बोधकथा', content: bodhkatha, bg: '#fecdd3', storyTitle, moral, alignLeft: true },
+      { title: '१३. सामान्य ज्ञान', content: gkText, bg: '#fef3c7', alignLeft: true },
+      { title: '१४. समूहगीत/देशभक्ती गीत', content: songLyrics || songTitle, bg: '#e0e7ff' },
+      { title: '१५. मौन पसायदान', content: maun, bg: '#fde68a', isSetItem: true },
+    ];
+
+    let secCounter = 1;
+    const pdfSectionsHtml = pdfSectionsConfig
+      .filter((sec) => sec.isSetItem || (sec.content && sec.content.trim()))
+      .map((sec) => {
+        const numTitle = `${secCounter++}. ${sec.title.replace(/^[०-९0-9]+\.\s*/, "")}${sec.storyTitle ? ': ' + sec.storyTitle : ''}`;
+        return `
+          <div class="pdf-section-box" style="${sectionBox(sec.bg)}">
+            ${greenBar(numTitle)}
+            ${sec.extra ? `<div style="font-size: 11px; font-weight: 700; color: #1e40af; text-align: center; margin-bottom: 4px;">${sec.extra}</div>` : ''}
+            <div style="${contentText} ${sec.alignLeft ? 'text-align: left;' : ''} ${sec.isItalic ? 'font-style: italic;' : ''}">${nl2br(sec.content)}</div>
+            ${sec.meaning ? `<div style="font-size: 12px; color: #4b5563; text-align: center; margin-top: 6px;"><b>अर्थ:</b> ${sec.meaning}</div>` : ''}
+            ${sec.moral ? `<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 6px 12px; border-radius: 4px; margin-top: 6px; font-size: 12px; font-weight: 700; color: #92400e;"><b>तात्पर्य:</b> ${sec.moral}</div>` : ''}
+          </div>
+        `;
+      })
+      .join("\n");
+
+    const signatureSectionHtml = `
+      <div class="pdf-section-box" style="${sectionBox('#e2e8f0')}">
+        ${greenBar(`${secCounter}. वर्गशिक्षकांची स्वाक्षरी`)}
+        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: #1e293b; padding: 25px 20px 5px 20px;">
+          <span>वर्गशिक्षक स्वाक्षरी</span>
+          <span>मुख्याध्यापक स्वाक्षरी</span>
+        </div>
+      </div>
+    `;
+
+    const contactFooterHtml = `
+      <div class="pdf-section-box" style="margin-top: 14px; margin-bottom: 10px; padding: 12px 16px; background: #1e1b4b; border: 2px solid #4338ca; border-radius: 10px; color: #ffffff; text-align: center; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid !important; position: relative; overflow: hidden; font-family: 'Noto Sans Devanagari', 'Mukta', sans-serif;">
+        <div style="font-size: 13px; font-weight: 800; color: #fbbf24; margin-bottom: 6px;">
+          📞 अधिक माहिती व अपडेट्ससाठी आमच्याशी संपर्क साधा
+        </div>
+        <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; font-weight: 700;">
+          <div style="color: #ffffff;">
+            📱 <b>मोबाईल नं:</b> <a href="tel:9730784233" style="color: #38bdf8; text-decoration: none; font-weight: 800;">9730784233</a>
+          </div>
+          <div>
+            🌐 <b>वेबसाईट:</b> <a href="https://sgkbrainova.com" target="_blank" style="color: #38bdf8; text-decoration: underline; font-weight: 800;">sgkbrainova.com</a>
+          </div>
+          <div>
+            💬 <b>व्हाट्सॲप ग्रुप:</b> <a href="https://chat.whatsapp.com/EaJpKkQTIxD3DtlJSTG2wk?s=sh&p=a&mlu=4&ilr=4" target="_blank" style="color: #4ade80; text-decoration: underline; font-weight: 800;">व्हाट्सॲप ग्रुप जॉईन करा</a>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const allContent = `
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+      <style>
+        #temp-pdf-render, #temp-pdf-render * {
+          box-sizing: border-box !important;
+          word-break: break-word;
+          overflow-wrap: break-word;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+        .pdf-section-box {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+          break-inside: avoid-page !important;
+          display: block !important;
+          margin-top: 10px !important;
+          margin-bottom: 12px !important;
+        }
+      </style>
+      <div style="padding: 16px 22px 14px 22px; width: 100%; box-sizing: border-box;">
+        ${pageHeader}
+        ${schoolHeader}
+        ${pdfSectionsHtml}
+        ${signatureSectionHtml}
+        ${contactFooterHtml}
+
+        <div style="width: 100%; height: 1.5px; background: linear-gradient(90deg, transparent, #cbd5e1, transparent); margin: 14px 0;"></div>
+        <div style="text-align: center; padding: 8px 0; font-size: 10px; font-weight: 700; color: #9ca3af; font-family: 'Noto Sans Devanagari', sans-serif;">
+          निर्मिती: ${data.creator || "Smart Learning With AI"} | © दैनिक परिपाठ ${new Date().getFullYear()}
+        </div>
+      </div>
+    `;
+
+    tempDiv.innerHTML = allContent;
+    document.body.appendChild(tempDiv);
+
+    const fileName = `Daily Assembly - ${dateStr}.pdf`;
+    const opt = {
+      margin: [12, 8, 10, 8],
+      filename: fileName,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, windowWidth: 733, scrollY: 0, scrollX: 0 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      enableLinks: true,
+    };
+
+    try {
+      const pdfBlob = await html2pdfFn().set(opt).from(tempDiv).outputPdf("blob");
+      return { pdfBlob, fileName };
+    } finally {
+      if (tempDiv.parentNode) {
+        document.body.removeChild(tempDiv);
+      }
+    }
+  };
+
   const handleDownloadPdf = async () => {
     if (!formData) {
       toast.error("परिपाठ content सापडला नाही. कृपया पुन्हा प्रयत्न करा.");
@@ -2051,252 +2291,66 @@ function DailyAssemblyContent() {
     toast.success("PDF निर्मिती सुरू आहे... कृपया प्रतीक्षा करा.");
 
     try {
-      const html2pdfModule = await import("html2pdf.js");
-      let html2pdfFn: any = html2pdfModule.default || html2pdfModule;
-      if (html2pdfFn && html2pdfFn.default) html2pdfFn = html2pdfFn.default;
-      if (typeof html2pdfFn !== "function") {
-        if (typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
-          html2pdfFn = (window as any).html2pdf;
-        }
-      }
-      if (typeof html2pdfFn !== "function") {
-        throw new Error("html2pdf library is not loaded properly.");
-      }
+      const { pdfBlob, fileName } = await generateAssemblyPdfBlob();
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = blobUrl;
+      downloadLink.download = fileName;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 
-      // Helper for safe text with newlines
-      const nl2br = (text: string) => (text || "").replace(/\n/g, "<br/>");
-
-      const data = formData;
-      const dateStr = selectedDate || new Date().toISOString().split("T")[0];
-
-      // Build clean HTML template for PDF
-      const tempDiv = document.createElement("div");
-      tempDiv.id = "temp-pdf-render";
-      tempDiv.style.width = "733px";
-      tempDiv.style.padding = "0";
-      tempDiv.style.margin = "0";
-      tempDiv.style.background = "#FFFFFF";
-      tempDiv.style.color = "#1F2937";
-      tempDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', system-ui, sans-serif";
-      tempDiv.style.boxSizing = "border-box";
-
-
-      // Shared style helpers
-      const greenBar = (title: string) =>
-        `<div style="background: #2e7d32; color: #fff; text-align: center; font-size: 14px; font-weight: 800; padding: 6px 14px; border-radius: 6px; margin: 0 0 8px 0; letter-spacing: 0.5px; font-family: 'Noto Sans Devanagari', sans-serif; box-sizing: border-box;">${title}</div>`;
-
-      const sectionBox = (borderColor: string = "#e2e8f0") =>
-        `border: 1.5px solid ${borderColor}; border-radius: 10px; padding: 12px 20px; margin-top: 10px; margin-bottom: 12px; background: #fff; page-break-inside: avoid !important; break-inside: avoid !important; break-inside: avoid-page !important; display: block; position: relative; overflow: hidden; box-sizing: border-box;`;
-
-      const contentText = `font-size: 13px; font-weight: 600; line-height: 1.65; color: #1F2937; margin: 0; text-align: center; font-family: 'Noto Sans Devanagari', sans-serif; white-space: pre-line; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box; padding: 0 10px;`;
-
-      const formatDateToDDMMYYYY = (dStr: string) => {
-        if (!dStr) return "";
-        const parts = dStr.split(/[-/]/);
-        if (parts.length === 3 && parts[0].length === 4) {
-          return `${parts[2].padStart(2, "0")}-${parts[1].padStart(2, "0")}-${parts[0]}`;
-        }
-        return dStr;
-      };
-
-      const formattedDate = formatDateToDDMMYYYY(dateStr);
-
-      const pageHeader = `
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #2e7d32; padding-bottom: 6px; margin-bottom: 14px;">
-          <div style="font-size: 14px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">📖 दैनिक परिपाठ</div>
-          <div style="font-size: 13px; font-weight: 700; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">दिनांक: ${formattedDate}</div>
-        </div>
-      `;
-
-      // School Info Header
-      const schoolHeader = (schoolInfo.schoolName || schoolInfo.udise || schoolInfo.kendra) ? `
-        <div class="pdf-section-box" style="border: 2px solid #2e7d32; border-radius: 10px; padding: 12px 18px; margin-top: 8px; margin-bottom: 14px; background: #f0fdf4; text-align: center; page-break-inside: avoid !important; break-inside: avoid !important; position: relative; overflow: hidden;">
-          ${schoolInfo.schoolName ? `<div style="font-size: 18px; font-weight: 900; color: #166534; margin-bottom: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">शाळेचे नाव: ${schoolInfo.schoolName}</div>` : ''}
-          <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #166534; border-top: 1px dashed #86efac; padding-top: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">
-            <span>केंद्र: ${schoolInfo.kendra || '-'} | युडायस (UDISE): ${schoolInfo.udise || '-'}</span>
-            <span>तालुका: ${schoolInfo.taluka || '-'} | जिल्हा: ${schoolInfo.jilha || '-'}</span>
-          </div>
-        </div>
-      ` : '';
-
-      // --- All Monthly Paripath Register Content Sections ---
-      const rashtrageet = data.nationalAnthem || data.rashtrageet || data.nationalAnthem_mr || assemblyItems[0]?.content || "";
-      const rajyageet = data.stateAnthem || data.rajyageet || data.stateAnthem_mr || assemblyItems[1]?.content || "";
-      const pratigya = data.pledge || data.pratigya || data.pledge_mr || assemblyItems[2]?.content || "";
-      const sanvidhan = data.preamble || data.sanvidhan || data.preamble_mr || assemblyItems[3]?.content || "";
-      const prarthana = data.prayer || data.prarthana || data.prayer_mr || "";
-      const shlok = data.shlok || data.shlok_mr || "";
-      const panchang = data.panchang
-        ? (typeof data.panchang === "string" ? data.panchang : Object.values(data.panchang).filter(Boolean).join(" "))
-        : [
-            data.tithi ? `तिथी: ${data.tithi}` : "",
-            data.paksha ? `पक्ष: ${data.paksha}` : "",
-            data.nakshatra ? `नक्षत्र: ${data.nakshatra}` : "",
-            data.month ? `मास: ${data.month}` : "",
-          ].filter(Boolean).join(" ");
-      const suvichar = data.thought || data.suvichar || "";
-      const batmya = data.valueNews || data.batmya || data.news || "";
-      const dinvishesh = data.events || data.dinvishesh || "";
-      const mhan = data.proverb || data.mhan || "";
-      const mhanMeaning = data.proverbMeaning || "";
-      const bodhkatha = data.story || data.bodhkatha || "";
-      const storyTitle = data.storyTitle || "";
-      const moral = data.moral || "";
-      const gkList = [1, 2, 3, 4]
-        .map(n => ({
-          q: data[`gkQ${n}`],
-          a: data[`gkA${n}`]
-        }))
-        .filter(item => item.q);
-
-      const gkText = gkList.length > 0
-        ? gkList.map((item, i) => `प्र. ${i + 1}: ${item.q}\nउत्तर: ${item.a || '-'}`).join('\n\n')
-        : (data.gk || data.samanyaGyan || data.generalKnowledge || "");
-
-      const songTitle = data.songTitle || (data.samuhgeet && data.samuhgeet.length <= 40 ? data.samuhgeet : "") || (data.deshbhaktigeet && data.deshbhaktigeet.length <= 40 ? data.deshbhaktigeet : "") || "";
-      const songLyrics = data.patrioticSong || (data.samuhgeet && data.samuhgeet !== songTitle ? data.samuhgeet : "") || (data.deshbhaktigeet && data.deshbhaktigeet !== songTitle ? data.deshbhaktigeet : "") || "";
-      const maun = data.silentPasayadan || data.maun || assemblyItems[5]?.content || DEFAULT_ASSEMBLY_ITEMS.mr[5].content;
-
-      // Ensure web fonts are completely loaded before html2canvas capture
-      if (document.fonts && document.fonts.ready) {
-        try { await document.fonts.ready; } catch (e) {}
-      }
-
-      // Build PDF sections dynamically (only 5 set items + non-empty admin sections + signature)
-      const pdfSectionsConfig = [
-        { title: '१. राष्ट्रगीत', content: rashtrageet, bg: '#bbf7d0', isSetItem: true },
-        { title: '२. राज्यगीत', content: rajyageet, bg: '#fef08a', isSetItem: true },
-        { title: '३. प्रतिज्ञा', content: pratigya, bg: '#bbf7d0', isSetItem: true },
-        { title: '४. भारताचे संविधान', content: sanvidhan, bg: '#fed7aa', isSetItem: true },
-        { title: '५. प्रार्थना', content: prarthana, bg: '#bbf7d0' },
-        { title: '६. श्लोक', content: shlok, bg: '#fecaca' },
-        { title: '७. पंचांग', content: panchang, bg: '#ffedd5' },
-        { title: '८. सुविचार', content: suvichar, bg: '#ede9fe', isItalic: true },
-        { title: '९. सुसंस्कारक्षम बातम्या', content: batmya, bg: '#a7f3d0', alignLeft: true },
-        { title: '१०. दिनविशेष', content: dinvishesh, bg: '#bfdbfe', alignLeft: true, extra: (formData.yearDay || data.yearDay) ? `हा वर्षातील ${formData.yearDay || data.yearDay} वा दिवस आहे.` : "" },
-        { title: '११. म्हण', content: mhan, bg: '#ccfbf1', meaning: mhanMeaning },
-        { title: '१२. बोधकथा', content: bodhkatha, bg: '#fecdd3', storyTitle, moral, alignLeft: true },
-        { title: '१३. सामान्य ज्ञान', content: gkText, bg: '#fef3c7', alignLeft: true },
-        { title: '१४. समूहगीत/देशभक्ती गीत', content: songLyrics || songTitle, bg: '#e0e7ff' },
-        { title: '१५. मौन पसायदान', content: maun, bg: '#fde68a', isSetItem: true },
-      ];
-
-      let secCounter = 1;
-      const pdfSectionsHtml = pdfSectionsConfig
-        .filter((sec) => sec.isSetItem || (sec.content && sec.content.trim()))
-        .map((sec) => {
-          const numTitle = `${secCounter++}. ${sec.title.replace(/^[०-९0-9]+\.\s*/, "")}${sec.storyTitle ? ': ' + sec.storyTitle : ''}`;
-          return `
-            <div class="pdf-section-box" style="${sectionBox(sec.bg)}">
-              ${greenBar(numTitle)}
-              ${sec.extra ? `<div style="font-size: 11px; font-weight: 700; color: #1e40af; text-align: center; margin-bottom: 4px;">${sec.extra}</div>` : ''}
-              <div style="${contentText} ${sec.alignLeft ? 'text-align: left;' : ''} ${sec.isItalic ? 'font-style: italic;' : ''}">${nl2br(sec.content)}</div>
-              ${sec.meaning ? `<div style="font-size: 12px; color: #4b5563; text-align: center; margin-top: 6px;"><b>अर्थ:</b> ${sec.meaning}</div>` : ''}
-              ${sec.moral ? `<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 6px 12px; border-radius: 4px; margin-top: 6px; font-size: 12px; font-weight: 700; color: #92400e;"><b>तात्पर्य:</b> ${sec.moral}</div>` : ''}
-            </div>
-          `;
-        })
-        .join("\n");
-
-      const signatureSectionHtml = `
-        <div class="pdf-section-box" style="${sectionBox('#e2e8f0')}">
-          ${greenBar(`${secCounter}. वर्गशिक्षकांची स्वाक्षरी`)}
-          <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: #1e293b; padding: 25px 20px 5px 20px;">
-            <span>वर्गशिक्षक स्वाक्षरी</span>
-            <span>मुख्याध्यापक स्वाक्षरी</span>
-          </div>
-        </div>
-      `;
-
-      const contactFooterHtml = `
-        <div class="pdf-section-box" style="margin-top: 14px; margin-bottom: 10px; padding: 12px 16px; background: #1e1b4b; border: 2px solid #4338ca; border-radius: 10px; color: #ffffff; text-align: center; box-sizing: border-box; page-break-inside: avoid !important; break-inside: avoid !important; position: relative; overflow: hidden; font-family: 'Noto Sans Devanagari', 'Mukta', sans-serif;">
-          <div style="font-size: 13px; font-weight: 800; color: #fbbf24; margin-bottom: 6px;">
-            📞 अधिक माहिती व अपडेट्ससाठी आमच्याशी संपर्क साधा
-          </div>
-          <div style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; font-weight: 700;">
-            <div style="color: #ffffff;">
-              📱 <b>मोबाईल नं:</b> <a href="tel:9730784233" style="color: #38bdf8; text-decoration: none; font-weight: 800;">9730784233</a>
-            </div>
-            <div>
-              🌐 <b>वेबसाईट:</b> <a href="https://sgkbrainova.com" target="_blank" style="color: #38bdf8; text-decoration: underline; font-weight: 800;">sgkbrainova.com</a>
-            </div>
-            <div>
-              💬 <b>व्हाट्सॲप ग्रुप:</b> <a href="https://chat.whatsapp.com/EaJpKkQTIxD3DtlJSTG2wk?s=sh&p=a&mlu=4&ilr=4" target="_blank" style="color: #4ade80; text-decoration: underline; font-weight: 800;">व्हाट्सॲप ग्रुप जॉईन करा</a>
-            </div>
-          </div>
-        </div>
-      `;
-
-      const allContent = `
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-        <style>
-          #temp-pdf-render, #temp-pdf-render * {
-            box-sizing: border-box !important;
-            word-break: break-word;
-            overflow-wrap: break-word;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
-          .pdf-section-box {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            break-inside: avoid-page !important;
-            display: block !important;
-            margin-top: 10px !important;
-            margin-bottom: 12px !important;
-          }
-        </style>
-        <div style="padding: 16px 22px 14px 22px; width: 100%; box-sizing: border-box;">
-          ${pageHeader}
-          ${schoolHeader}
-          ${pdfSectionsHtml}
-          ${signatureSectionHtml}
-          ${contactFooterHtml}
-
-          <div style="width: 100%; height: 1.5px; background: linear-gradient(90deg, transparent, #cbd5e1, transparent); margin: 14px 0;"></div>
-          <div style="text-align: center; padding: 8px 0; font-size: 10px; font-weight: 700; color: #9ca3af; font-family: 'Noto Sans Devanagari', sans-serif;">
-            निर्मिती: ${data.creator || "Smart Learning With AI"} | © दैनिक परिपाठ ${new Date().getFullYear()}
-          </div>
-        </div>
-      `;
-
-      tempDiv.innerHTML = allContent;
-      document.body.appendChild(tempDiv);
-
-      const opt = {
-        margin: [12, 8, 10, 8],
-        filename: `Paripath_${dateStr}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, windowWidth: 733, scrollY: 0, scrollX: 0 },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-        enableLinks: true,
-      };
-
-      try {
-        const pdfBlob = await html2pdfFn().set(opt).from(tempDiv).outputPdf("blob");
-        document.body.removeChild(tempDiv);
-
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        const downloadLink = document.createElement("a");
-        downloadLink.href = blobUrl;
-        downloadLink.download = opt.filename;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-
-        toast.success("PDF यशस्वीरीत्या डाउनलोड झाली!");
-      } catch (innerErr) {
-        if (tempDiv.parentNode) document.body.removeChild(tempDiv);
-        throw innerErr;
-      }
+      toast.success("PDF यशस्वीरीत्या डाउनलोड झाली!");
     } catch (err: any) {
       console.error("PDF generation error", err);
       toast.error(`PDF तयार करताना त्रुटी आली: ${err.message || "PDF generate failed"}. कृपया पुन्हा प्रयत्न करा.`);
+    }
+  };
+
+  const handleShareWhatsAppPdf = async () => {
+    if (!formData) {
+      toast.error("परिपाठ content सापडला नाही. कृपया पुन्हा प्रयत्न करा.");
+      return;
+    }
+
+    setIsSharingWhatsApp(true);
+    toast.info("WhatsApp साठी दैनिक परिपाठ PDF तयार होत आहे...");
+
+    try {
+      const { pdfBlob, fileName } = await generateAssemblyPdfBlob();
+      const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
+
+      // Direct WhatsApp share (file only, no links, no text)
+      if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        try {
+          await navigator.share({
+            files: [pdfFile],
+          });
+          toast.success("दैनिक परिपाठ PDF WhatsApp वर थेट पाठवली गेली!");
+          return;
+        } catch (shareErr: any) {
+          if (shareErr.name === "AbortError") return;
+        }
+      }
+
+      // Desktop fallback: download PDF and open WhatsApp Web with NO link or text message
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = blobUrl;
+      downloadLink.download = fileName;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
+      window.open("https://web.whatsapp.com", "_blank");
+      toast.success("दैनिक परिपाठ PDF डाउनलोड झाली आणि WhatsApp Web उघडले! कृपया फाईल अटॅच करा.");
+    } catch (err: any) {
+      console.error("WhatsApp PDF share error:", err);
+      toast.error(`WhatsApp PDF तयार करताना त्रुटी आली: ${err.message || "PDF तयार करणे अयशस्वी"}.`);
+    } finally {
+      setIsSharingWhatsApp(false);
     }
   };
 
@@ -2592,10 +2646,24 @@ function DailyAssemblyContent() {
               </button>
               <button
                 onClick={handleDownloadPdf}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-lg shadow-orange-500/25 active:scale-95 border border-orange-400/30"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-lg shadow-orange-500/25 active:scale-95 border border-orange-400/30 cursor-pointer"
               >
                 <Download className="size-4" />
                 <span>{lang === "en" ? "Download PDF" : "PDF डाउनलोड"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleShareWhatsAppPdf}
+                disabled={isSharingWhatsApp}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/25 active:scale-95 border border-emerald-400/30 disabled:opacity-50 cursor-pointer"
+                title="दैनिक परिपाठ PDF थेट WhatsApp वर पाठवा"
+              >
+                {isSharingWhatsApp ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <MessageCircle className="size-4" />
+                )}
+                <span>WhatsApp PDF</span>
               </button>
             </div>
           </div>
@@ -3192,7 +3260,9 @@ function SpecialDayEditor({
             ) : activeSection === "assembly-book" ? (
               <AssemblyBookViewer />
             ) : activeSection === "month-paripath" ? (
-              <MonthlyParipathRegister />
+              <ModulePaywall moduleId="special-day" defaultTitle="मासिक परिपाठ नोंदवही (Monthly Paripath Register)">
+                <MonthlyParipathRegister />
+              </ModulePaywall>
             ) : (
               <>
                 <div className="flex items-center justify-between px-8 py-5 bg-[#FAFAF7] border border-[#E8DFD1]/40 rounded-[2.5rem] shadow-sm">
@@ -4788,7 +4858,7 @@ function AnnualMonthlyPlanningEditor({
                                       <th className="w-[155px]">अध्ययन मुद्दा / पाठ्यांश</th>
                                       <th className="w-[175px]">अध्ययन अनुभव स्वरूप</th>
                                       <th className="w-[90px]">मूल्यमापनाची साधन तंत्रे</th>
-                                      <th className="w-[90px]">आवश्यक साहित्य</th>
+                                      <th className="w-[90px]">शैक्षणिक साहित्य</th>
                                       <th className="w-[144px]">अध्ययन निष्पत्ती</th>
                                     </tr>
                                   </thead>

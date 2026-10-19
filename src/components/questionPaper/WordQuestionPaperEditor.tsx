@@ -19,6 +19,7 @@ import {
   Minimize2,
   ZoomIn,
   ZoomOut,
+  MessageCircle,
 } from "lucide-react";
 import { renderAsync } from "docx-preview";
 import { toast } from "sonner";
@@ -34,7 +35,9 @@ import {
   saveHomeworkHeaderProfile,
   formatHomeworkDateToMarathi,
   getMarathiClassLabel,
+  formatHomeworkFileName,
 } from "@/utils/homeworkDocHelper";
+import { getUnifiedSchoolProfile, saveUnifiedSchoolProfile, saveUnifiedSchoolProfileToFirestore } from "@/utils/schoolProfileHelper";
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 
@@ -54,6 +57,12 @@ export interface WordQuestionPaperEditorProps {
   subject?: string;
   userId?: string;
   userRole?: string;
+  schoolName?: string;
+  kendra?: string;
+  taluka?: string;
+  jilha?: string;
+  teacherName?: string;
+  headmasterName?: string;
   documentType?: "question_paper" | "homework";
   homeworkDate?: string;
   homeworkClass?: string;
@@ -70,6 +79,12 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
   subject,
   userId = "guest",
   userRole = "teacher",
+  schoolName: propSchoolName,
+  kendra: propKendra,
+  taluka: propTaluka,
+  jilha: propJilha,
+  teacherName: propTeacherName,
+  headmasterName: propHeadmasterName,
   documentType = "question_paper",
   homeworkDate,
   homeworkClass,
@@ -90,10 +105,17 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
   const [isSaving, setIsSaving] = useState(false);
   const [hasSavedVersion, setHasSavedVersion] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
   const [availableSections, setAvailableSections] = useState<SectionTab[]>([]);
   const [activeSection, setActiveSection] = useState<string>("all");
-  const [schoolNameInput, setSchoolNameInput] = useState("");
+  const [schoolNameInput, setSchoolNameInput] = useState(propSchoolName || "");
   const [examDateInput, setExamDateInput] = useState("");
+  const [kendraInput, setKendraInput] = useState(propKendra || "");
+  const [talukaInput, setTalukaInput] = useState(propTaluka || "");
+  const [jilhaInput, setJilhaInput] = useState(propJilha || "");
+  const [teacherNameInput, setTeacherNameInput] = useState(propTeacherName || "");
+  const [headmasterNameInput, setHeadmasterNameInput] = useState(propHeadmasterName || "");
+  const [showQpHeaderModal, setShowQpHeaderModal] = useState(false);
   const [mobileFitWidth, setMobileFitWidth] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return window.innerWidth < 768;
@@ -128,15 +150,18 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         localStorage.removeItem("last_paper_school_name");
       }
 
-      // 2. School name is strictly remembered per specific user. Blank by default!
+      // 2. School name & profile fields from props, local storage or unified profile
+      const uni = getUnifiedSchoolProfile();
       const userKey = `user_school_name_${userId || "guest"}`;
       const savedUserSchool = localStorage.getItem(userKey);
-      if (savedUserSchool && savedUserSchool.trim() && !savedUserSchool.toLowerCase().includes("willingdon")) {
-        setSchoolNameInput(savedUserSchool.trim());
-      } else {
-        // Keep blank by default for all users
-        setSchoolNameInput("");
-      }
+      const activeSchool = propSchoolName || (savedUserSchool && !savedUserSchool.toLowerCase().includes("willingdon") ? savedUserSchool.trim() : "") || uni.schoolName || "";
+
+      setSchoolNameInput(activeSchool);
+      setKendraInput(propKendra || uni.kendra || "");
+      setTalukaInput(propTaluka || uni.taluka || "");
+      setJilhaInput(propJilha || uni.jilha || "");
+      setTeacherNameInput(propTeacherName || uni.teacherName || "");
+      setHeadmasterNameInput(propHeadmasterName || uni.headmaster || "");
 
       // 3. Load saved homework header info strictly for this user (Fresh blank dashboard for new users!)
       const hwProf = getHomeworkHeaderProfile(userId);
@@ -354,12 +379,31 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
           // Auto-apply initial school name and date into header box (per user only, blank by default for question papers)
           if (documentType !== "homework") {
+            const uni = getUnifiedSchoolProfile();
             const userKey = `user_school_name_${userId || "guest"}`;
             const savedUserSchool = localStorage.getItem(userKey) || "";
-            const initialSchool = (savedUserSchool && !savedUserSchool.toLowerCase().includes("willingdon")) ? savedUserSchool.trim() : "";
+            const initialSchool = propSchoolName || ((savedUserSchool && !savedUserSchool.toLowerCase().includes("willingdon")) ? savedUserSchool.trim() : "") || uni.schoolName || "";
+            const initialKendra = propKendra || uni.kendra || "";
+            const initialTaluka = propTaluka || uni.taluka || "";
+            const initialJilha = propJilha || uni.jilha || "";
+            const initialTeacher = propTeacherName || uni.teacherName || "";
+            const initialHeadmaster = propHeadmasterName || uni.headmaster || "";
+
+            const today = new Date();
+            const dd = String(today.getDate()).padStart(2, "0");
+            const mm = String(today.getMonth() + 1).padStart(2, "0");
+            const yyyy = today.getFullYear();
+            const initialDate = examDateInput || `${dd}/${mm}/${yyyy}`;
+
             setTimeout(() => {
-              applyHeaderInfo(initialSchool, examDateInput, false);
+              applyHeaderInfo(initialSchool, initialDate, initialKendra, initialTaluka, initialJilha, initialTeacher, initialHeadmaster, false);
             }, 200);
+            setTimeout(() => {
+              applyHeaderInfo(initialSchool, initialDate, initialKendra, initialTaluka, initialJilha, initialTeacher, initialHeadmaster, false);
+            }, 600);
+            setTimeout(() => {
+              applyHeaderInfo(initialSchool, initialDate, initialKendra, initialTaluka, initialJilha, initialTeacher, initialHeadmaster, false);
+            }, 1200);
           } else {
             // For homework: auto-fit header and format teacher & headmaster signatures cleanly!
             const freshProf = getHomeworkHeaderProfile(userId);
@@ -448,8 +492,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       const target = e.target as HTMLElement;
       const schoolField = target?.closest<HTMLElement>('[data-field="school-name"]');
       if (schoolField) {
-        schoolField.style.whiteSpace = "nowrap";
-        schoolField.style.overflow = "hidden";
+        schoolField.style.whiteSpace = "normal";
+        schoolField.style.overflow = "visible";
         schoolField.style.width = "81.2%";
         schoolField.style.maxWidth = "81.2%";
 
@@ -614,13 +658,48 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       .replace(/>/g, "&gt;");
   };
 
-  // Apply School Name and Exam Date to question paper header boxes
-  const applyHeaderInfo = (schoolName: string, examDate: string, notify = false) => {
+  // Apply School Name, Kendra, Taluka, Jilla, Exam Date & Signatures to question paper
+  const applyHeaderInfo = (
+    schoolName = schoolNameInput,
+    examDate = examDateInput,
+    kendraVal = kendraInput,
+    talukaVal = talukaInput,
+    jilhaVal = jilhaInput,
+    teacherVal = teacherNameInput,
+    hmVal = headmasterNameInput,
+    notify = false
+  ) => {
     if (!containerRef.current) return;
     if (documentType === "homework") return;
 
     let updatedSchool = false;
     let updatedDate = false;
+
+    // Keep state values in sync
+    if (schoolName !== undefined) setSchoolNameInput(schoolName);
+    if (examDate !== undefined) setExamDateInput(examDate);
+    if (kendraVal !== undefined) setKendraInput(kendraVal);
+    if (talukaVal !== undefined) setTalukaInput(talukaVal);
+    if (jilhaVal !== undefined) setJilhaInput(jilhaVal);
+    if (teacherVal !== undefined) setTeacherNameInput(teacherVal);
+    if (hmVal !== undefined) setHeadmasterNameInput(hmVal);
+
+    const cleanSchool = (schoolName || "").trim();
+    const cleanKendra = (kendraVal || "").trim();
+    const cleanTaluka = (talukaVal || "").trim();
+    const cleanJilha = (jilhaVal || "").trim();
+    const cleanTeacher = (teacherVal || "").trim();
+    const cleanHm = (hmVal || "").trim();
+
+    // Prepare sub-info html for Kendra, Taluka, Jilla to fit cleanly in Line 1 with uniform font size
+    const subParts: string[] = [];
+    if (cleanKendra) subParts.push(`<span style="white-space: nowrap; font-size: inherit;"><strong style="font-size: inherit; font-weight: 700; color: #0f172a;">केंद्र :</strong> <span style="font-size: inherit; font-weight: 700; color: #0f172a;">${escapeHtmlStr(cleanKendra)}</span></span>`);
+    if (cleanTaluka) subParts.push(`<span style="white-space: nowrap; font-size: inherit;"><strong style="font-size: inherit; font-weight: 700; color: #0f172a;">तालुका :</strong> <span style="font-size: inherit; font-weight: 700; color: #0f172a;">${escapeHtmlStr(cleanTaluka)}</span></span>`);
+    if (cleanJilha) subParts.push(`<span style="white-space: nowrap; font-size: inherit;"><strong style="font-size: inherit; font-weight: 700; color: #0f172a;">जिल्हा :</strong> <span style="font-size: inherit; font-weight: 700; color: #0f172a;">${escapeHtmlStr(cleanJilha)}</span></span>`);
+
+    const subInfoHtml = subParts.length > 0 
+      ? `<div class="qp-sub-location" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0; font-size: inherit; font-weight: 700; color: #0f172a; white-space: nowrap; margin-left: auto; align-self: flex-start;">${subParts.join('<span style="color: #94a3b8; font-weight: normal; margin: 0 4px; font-size: inherit;">|</span>')}</div>`
+      : "";
 
     // Ensure header-dots-mask exists strictly inside the box (never touching the left or right column borders)
     const vmlPages = containerRef.current.querySelectorAll<HTMLElement>(".vml-page-wrapper");
@@ -649,8 +728,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             page.appendChild(mask);
           }
         }
-        // Strictly position mask inside the box: left: 10.4% (safely inside the 8.27% left border), width: 81.2%
-        mask.style.cssText = "position: absolute; left: 10.4%; top: 2.26%; width: 81.2%; height: 3.66%; background: #ffffff; z-index: 2; pointer-events: none;";
+        // Position mask cleanly behind text and below top border, with enough height for wrapped 2nd line
+        mask.style.cssText = "position: absolute; left: 10.4%; top: 2.5%; width: 81.2%; height: 4.8%; background: #ffffff; z-index: 2; pointer-events: none;";
       }
     });
 
@@ -672,45 +751,55 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       if (isSchool) {
         el.setAttribute("data-field", "school-name");
         el.style.left = "10.458%";
-        el.style.top = "2.35%";
+        el.style.top = "2.65%"; // Positioned cleanly below top border
         el.style.width = "81.2%";
-        el.style.maxWidth = "81.2%"; // Strictly stops well before the right border
+        el.style.maxWidth = "81.2%"; // Strictly stops before right border
         el.style.minHeight = "auto";
         el.style.height = "auto";
-        el.style.whiteSpace = "nowrap";
-        el.style.overflow = "hidden";
-        el.style.lineHeight = "1.2";
+        el.style.overflow = "visible"; // Never clip text vertically or horizontally
+        el.style.lineHeight = "1.3";
         el.style.display = "flex";
-        el.style.alignItems = "center";
-        el.style.justifyContent = "flex-start";
+        el.style.alignItems = "flex-start";
+        el.style.justifyContent = "space-between";
         el.style.zIndex = "10";
         el.style.boxShadow = "none";
         el.style.borderRadius = "0";
         el.style.backgroundColor = "transparent";
-        el.style.padding = "0";
+        el.style.padding = "1px 0";
+        el.style.boxSizing = "border-box";
 
         // Determine if English or Marathi
         const isEng = /school/i.test(text) || !text.includes("शाळेचे");
         const labelText = isEng ? "SCHOOL NAME -" : "शाळेचे नाव :";
 
-        if (schoolName.trim()) {
-          const clean = schoolName
+        // Constant font size matching the rest of the question paper (12pt / 2.1cqw) - never reduced under any condition
+        const headerFontSize = "clamp(8.5px, 2.1cqw, 12pt)";
+        el.style.fontSize = headerFontSize;
+        el.style.fontWeight = "700";
+
+        if (cleanSchool) {
+          const clean = cleanSchool
             .replace(/^(?:शाळेचे\s*नाव|school\s*name)\s*[:\-–—]?\s*/i, "")
             .trim();
-          el.innerHTML = `<span style="background: #ffffff; padding: 0 2px; display: flex; align-items: center; width: 100%; max-width: 100%;"><strong style="white-space: nowrap; flex-shrink: 0; color: #0f172a;">${labelText} </strong><span style="font-weight: 700; color: #0f172a; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0;" title="${escapeHtmlStr(clean)}">${escapeHtmlStr(clean)}</span></span>`;
-
-          // Dynamic scalable container-query font sizing so it never wraps or overlaps on mobile or desktop
-          if (clean.length > 40) {
-            el.style.fontSize = "clamp(8px, 1.7cqw, 11pt)";
-          } else if (clean.length > 25) {
-            el.style.fontSize = "clamp(8.5px, 2.0cqw, 12.5pt)";
-          } else {
-            el.style.fontSize = "clamp(9px, 2.3cqw, 14pt)";
-          }
+          el.innerHTML = `
+            <div style="background: #ffffff; padding: 2px 4px; display: flex; align-items: flex-start; justify-content: space-between; width: 100%; max-width: 100%; box-sizing: border-box; font-size: inherit; line-height: 1.3; overflow: visible;">
+              <div class="qp-school-name-block" style="display: block; flex: 1; min-width: 0; margin-right: 14px; font-size: inherit; line-height: 1.3; overflow: visible;">
+                <strong style="white-space: nowrap; color: #0f172a; font-size: inherit; font-weight: 700;">${labelText} </strong>
+                <span class="qp-school-text" style="font-weight: 700; color: #0f172a; margin-left: 5px; font-size: inherit; white-space: normal; word-break: break-word;">${escapeHtmlStr(clean)}</span>
+              </div>
+              ${subInfoHtml}
+            </div>
+          `;
         } else {
-          // Clean blank header with dotted underline for student/school write-in that flexibly fills the line up to the right border
-          el.innerHTML = `<span style="background: #ffffff; padding: 0 2px; display: flex; align-items: center; width: 100%;"><strong style="white-space: nowrap; flex-shrink: 0; color: #0f172a;">${labelText} </strong><span style="flex: 1; min-width: 20px; border-bottom: 1.5px dotted #94a3b8; margin-left: 6px; height: 1em; align-self: center;"></span></span>`;
-          el.style.fontSize = "clamp(9px, 2.3cqw, 14pt)";
+          el.innerHTML = `
+            <div style="background: #ffffff; padding: 2px 4px; display: flex; align-items: flex-start; justify-content: space-between; width: 100%; max-width: 100%; box-sizing: border-box; font-size: inherit; line-height: 1.3; overflow: visible;">
+              <div class="qp-school-name-block" style="display: block; flex: 1; min-width: 0; margin-right: 14px; font-size: inherit; line-height: 1.3; overflow: visible;">
+                <strong style="white-space: nowrap; color: #0f172a; font-size: inherit; font-weight: 700;">${labelText} </strong>
+                <span style="display: inline-block; width: 140px; border-bottom: 1.5px dotted #94a3b8; margin-left: 5px; height: 1em; vertical-align: middle;"></span>
+              </div>
+              ${subInfoHtml}
+            </div>
+          `;
         }
         updatedSchool = true;
       }
@@ -724,11 +813,26 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         if (el.children.length === 0 && (text.includes("शाळेचे नाव") || /school\s*name/i.test(text))) {
           const isEng = /school/i.test(text);
           const labelText = isEng ? "SCHOOL NAME -" : "शाळेचे नाव :";
-          if (schoolName.trim()) {
-            const clean = schoolName.replace(/^(?:शाळेचे\s*नाव|school\s*name)\s*[:\-–—]?\s*/i, "").trim();
-            el.innerHTML = `<span style="white-space: nowrap; display: inline-flex; align-items: center; max-width: 100%;"><strong style="white-space: nowrap; flex-shrink: 0;">${labelText} </strong><span style="font-weight: 700; color: #0f172a; margin-left: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtmlStr(clean)}</span></span>`;
+          if (cleanSchool) {
+            const clean = cleanSchool.replace(/^(?:शाळेचे\s*नाव|school\s*name)\s*[:\-–—]?\s*/i, "").trim();
+            el.innerHTML = `
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; width: 100%; max-width: 100%; overflow: visible; font-size: inherit; line-height: 1.3;">
+                <div class="qp-school-name-block" style="display: block; flex: 1; min-width: 0; margin-right: 14px; overflow: visible;">
+                  <strong style="white-space: nowrap; color: #0f172a; font-size: inherit; font-weight: 700;">${labelText} </strong>
+                  <span class="qp-school-text" style="font-weight: 700; color: #0f172a; margin-left: 4px; font-size: inherit; white-space: normal; word-break: break-word;">${escapeHtmlStr(clean)}</span>
+                </div>
+                ${subInfoHtml}
+              </div>
+            `;
           } else {
-            el.innerHTML = `<strong>${labelText} </strong>....................................................`;
+            el.innerHTML = `
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; width: 100%; overflow: visible; font-size: inherit; line-height: 1.3;">
+                <div class="qp-school-name-block" style="display: block; flex: 1; min-width: 0; margin-right: 14px; overflow: visible;">
+                  <strong style="white-space: nowrap; color: #0f172a; font-size: inherit; font-weight: 700;">${labelText} </strong>....................................................
+                </div>
+                ${subInfoHtml}
+              </div>
+            `;
           }
           updatedSchool = true;
           break;
@@ -765,7 +869,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         el.style.padding = "0";
 
         const isEng = /date/i.test(text);
-        if (examDate.trim()) {
+        if (examDate && examDate.trim()) {
           const clean = examDate.replace(/^(?:दि\.?|date)\s*[:\-–—]?\s*/i, "").trim();
           if (isEng) {
             el.innerHTML = `<span style="background: #ffffff; padding: 0 3px; display: inline-flex; align-items: center; white-space: nowrap;"><strong>DATE - </strong><span style="font-weight: 700; color: #0f172a; margin-left: 4px; white-space: nowrap;">${escapeHtmlStr(clean)}</span></span>`;
@@ -783,34 +887,204 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       }
     });
 
+    // 4. Update or Inject Bottom Signatures Block after completing each subject
+    // First, remove any existing signature blocks across ALL pages to avoid stale blocks
+    containerRef.current.querySelectorAll('.qp-signatures-block').forEach(el => el.remove());
+
+    if (vmlPages.length > 0) {
+      // Find pages that start a subject
+      const subjectStartIndices: number[] = [];
+      const subjectNames: string[] = [];
+
+      vmlPages.forEach((page, pIdx) => {
+        const shapes = Array.from(page.querySelectorAll<HTMLElement>('.vml-shape-text'));
+        
+        let foundSubjectName = "";
+        let isStart = false;
+
+        for (const s of shapes) {
+          const t = (s.textContent || '').trim();
+          // Look for "विषय - भाषा", "विषय - ENGLISH", "विषय - गणित", "SUB - ...", "SUBJECT - ..."
+          const match = t.match(/(?:विषय|subject|sub)\s*[-–:]\s*([^\n\r]+)/i);
+          if (match && match[1]) {
+            foundSubjectName = match[1].trim();
+            isStart = true;
+            break;
+          }
+        }
+
+        if (!isStart) {
+          const raw = page.textContent || '';
+          const rawMatch = raw.match(/(?:विषय|subject)\s*[-–:]\s*(भाषा|मराठी|english|इंग्रजी|गणित|math|विज्ञान|परिसर)/i);
+          if (rawMatch && rawMatch[1]) {
+            foundSubjectName = rawMatch[1].trim();
+            isStart = true;
+          }
+        }
+
+        // Page 0 (Page 1) is always the first subject start
+        if (pIdx === 0) {
+          isStart = true;
+        }
+
+        if (isStart) {
+          subjectStartIndices.push(pIdx);
+          subjectNames.push(foundSubjectName || `Subject ${subjectStartIndices.length}`);
+        }
+      });
+
+      // Compute where each subject ends:
+      // If subject k has a following subject (k+1), it ends at (start[k+1] - 1)
+      // The last subject ends at the last page of the document (vmlPages.length - 1)
+      const subjectEndIndices: number[] = [];
+      for (let k = 0; k < subjectStartIndices.length; k++) {
+        if (k + 1 < subjectStartIndices.length) {
+          const nextStart = subjectStartIndices[k + 1];
+          subjectEndIndices.push(Math.max(subjectStartIndices[k], nextStart - 1));
+        } else {
+          subjectEndIndices.push(vmlPages.length - 1);
+        }
+      }
+
+      // Deduplicate end indices just in case
+      const uniqueEndIndices = Array.from(new Set(subjectEndIndices));
+
+      uniqueEndIndices.forEach((endIdx) => {
+        const targetPage = vmlPages[endIdx];
+        if (!targetPage) return;
+
+        // Determine if English subject for proper labels
+        const pageText = targetPage.textContent || "";
+        const isEnglishSubject = /english|oral\s*&amp;\s*practical|listen and act/i.test(pageText);
+
+        const teacherLabel = isEnglishSubject ? "Class Teacher :" : "वर्ग शिक्षक :";
+        const hmLabel = isEnglishSubject ? "Headmaster :" : "मुख्याध्यापक :";
+
+        const teacherDisplay = cleanTeacher || "_______________";
+        const hmDisplay = cleanHm || "_______________";
+
+        const sigBlock = document.createElement("div");
+        sigBlock.className = "qp-signatures-block";
+        sigBlock.setAttribute("data-field", "qp-signatures-block");
+
+        sigBlock.style.cssText = `
+          position: absolute;
+          left: 8.27%;
+          width: 83.46%;
+          bottom: 1.8%;
+          z-index: 15;
+          background: #ffffff;
+          padding: 8px 18px;
+          border-top: 1.5px dashed #334155;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: clamp(8.5px, 2.0cqw, 11pt);
+          font-weight: 700;
+          color: #0f172a;
+          box-sizing: border-box;
+          pointer-events: auto;
+        `;
+
+        sigBlock.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: inherit;">
+            <span style="color: #475569; font-size: inherit;">${teacherLabel}</span>
+            <span style="font-weight: 700; color: #1e3a8a; border-bottom: 1px dotted #64748b; min-width: 90px; padding: 0 4px; display: inline-block; font-size: inherit;">${escapeHtmlStr(teacherDisplay)}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: inherit;">
+            <span style="color: #475569; font-size: inherit;">${hmLabel}</span>
+            <span style="font-weight: 700; color: #1e3a8a; border-bottom: 1px dotted #64748b; min-width: 90px; padding: 0 4px; display: inline-block; font-size: inherit;">${escapeHtmlStr(hmDisplay)}</span>
+          </div>
+        `;
+
+        targetPage.appendChild(sigBlock);
+      });
+    } else {
+      let sigBlock = containerRef.current.querySelector<HTMLElement>('[data-field="qp-signatures-block"]');
+      if (!sigBlock) {
+        sigBlock = document.createElement("div");
+        sigBlock.className = "qp-signatures-block";
+        sigBlock.setAttribute("data-field", "qp-signatures-block");
+        containerRef.current.appendChild(sigBlock);
+      }
+      const teacherDisplay = cleanTeacher || "_______________";
+      const hmDisplay = cleanHm || "_______________";
+      sigBlock.style.cssText = `
+        margin-top: 36px;
+        padding: 12px 18px;
+        border-top: 1.5px dashed #475569;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+        font-weight: 700;
+        color: #0f172a;
+        background: #ffffff;
+      `;
+      sigBlock.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+          <span style="color: #475569;">वर्ग शिक्षक :</span>
+          <span style="font-weight: 700; color: #1e3a8a; border-bottom: 1px dotted #64748b; min-width: 90px; padding: 0 4px;">${escapeHtmlStr(teacherDisplay)}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+          <span style="color: #475569;">मुख्याध्यापक :</span>
+          <span style="font-weight: 700; color: #1e3a8a; border-bottom: 1px dotted #64748b; min-width: 90px; padding: 0 4px;">${escapeHtmlStr(hmDisplay)}</span>
+        </div>
+      `;
+    }
+
     // Save strictly for this specific user
     const userKey = `user_school_name_${userId || "guest"}`;
-    if (schoolName.trim()) {
-      localStorage.setItem(userKey, schoolName.trim());
-    } else {
-      localStorage.removeItem(userKey);
+    if (cleanSchool) {
+      localStorage.setItem(userKey, cleanSchool);
+      if (userId && userId !== "guest" && userId !== "guest_teacher") {
+        localStorage.setItem(
+          `qp_school_info_${userId}`,
+          JSON.stringify({
+            schoolName: cleanSchool,
+            kendra: cleanKendra,
+            taluka: cleanTaluka,
+            jilha: cleanJilha,
+            teacherName: cleanTeacher,
+            headmaster: cleanHm,
+            headmasterName: cleanHm,
+          })
+        );
+      }
     }
     localStorage.removeItem("last_paper_school_name");
+
+    try {
+      saveUnifiedSchoolProfileToFirestore(
+        {
+          schoolName: cleanSchool,
+          kendra: cleanKendra,
+          taluka: cleanTaluka,
+          jilha: cleanJilha,
+          teacherName: cleanTeacher,
+          headmaster: cleanHm,
+        },
+        userId
+      );
+    } catch (err) {
+      console.warn("Could not save unified profile to Firestore:", err);
+    }
 
     setHasUnsavedChanges(true);
 
     if (notify) {
-      if (updatedSchool || updatedDate) {
-        toast.success("शाळेचे नाव व दिनांक प्रश्नपत्रिकेत योग्य जागी भरले गेले!");
-      } else {
-        toast.info("माहिती अपडेट झाली!");
-      }
+      toast.success("शाळेचे नाव, केंद्र, तालुका, जिल्हा व स्वाक्षरी माहिती प्रश्नपत्रिकेत अचूक भरली गेली!");
     }
   };
 
   const handleSchoolNameChange = (val: string) => {
     setSchoolNameInput(val);
-    applyHeaderInfo(val, examDateInput, false);
+    applyHeaderInfo(val, examDateInput, kendraInput, talukaInput, jilhaInput, teacherNameInput, headmasterNameInput, false);
   };
 
   const handleExamDateChange = (val: string) => {
     setExamDateInput(val);
-    applyHeaderInfo(schoolNameInput, val, false);
+    applyHeaderInfo(schoolNameInput, val, kendraInput, talukaInput, jilhaInput, teacherNameInput, headmasterNameInput, false);
   };
 
   // Paginate homework document into clean, exact A4 page sheets (Page 1 = Marathi, Page 2 = English + Math, etc.)
@@ -1419,8 +1693,11 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       }
 
       if (pdf) {
-        const cleanTitle = (paperTitle || "question_paper").replace(/[/\\?%*:|"<>]/g, "_");
-        pdf.save(`${cleanTitle}.pdf`);
+        const cleanTitle =
+          documentType === "homework"
+            ? formatHomeworkFileName(homeworkClass || paperTitle)
+            : `${(paperTitle || "question_paper").replace(/[/\\?%*:|"<>]/g, "_")}.pdf`;
+        pdf.save(cleanTitle);
         toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
       }
     } catch (err: any) {
@@ -1428,6 +1705,95 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       toast.error("PDF डाऊनलोड करताना त्रुटी: " + (err.message || "अनोळखी त्रुटी"));
     } finally {
       setIsDownloadingPdf(false);
+    }
+  };
+
+  // Share Word Homework as PDF directly to WhatsApp
+  const handleSharePdfToWhatsApp = async () => {
+    if (!containerRef.current) return;
+    setIsSharingWhatsApp(true);
+    toast.info("WhatsApp साठी PDF तयार होत आहे...");
+
+    try {
+      const filename = formatHomeworkFileName(homeworkClass || paperTitle);
+
+      const pages = containerRef.current.querySelectorAll<HTMLElement>(".docx-page, .vml-page-wrapper, .homework-a4-page");
+      let pdf: jsPDF | null = null;
+
+      if (pages.length > 0) {
+        for (let i = 0; i < pages.length; i++) {
+          const pg = pages[i];
+          const canvas = await html2canvas(pg, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            logging: false,
+          });
+          const imgData = canvas.toDataURL("image/jpeg", 0.95);
+          if (i === 0) {
+            pdf = new jsPDF({
+              orientation: "portrait",
+              unit: "pt",
+              format: "a4",
+              compress: true,
+            });
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+          } else if (pdf) {
+            pdf.addPage();
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+          }
+        }
+      } else {
+        const canvas = await html2canvas(containerRef.current, {
+          scale: 1.5,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+        });
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "pt",
+          format: "a4",
+          compress: true,
+        });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+      }
+
+      if (pdf) {
+        const blob = pdf.output("blob");
+        const file = new File([blob], filename, { type: "application/pdf" });
+
+        if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+            });
+            toast.success("गृहपाठ PDF WhatsApp वर शेअर केली!");
+            return;
+          } catch (shareErr: any) {
+            if (shareErr.name === "AbortError") return;
+          }
+        }
+
+        // Fallback for Desktop
+        pdf.save(filename);
+        window.open("https://web.whatsapp.com", "_blank");
+        toast.success("PDF डाऊनलोड झाली आणि WhatsApp उघडले! कृपया फाईल अटॅच करा.");
+      }
+    } catch (err: any) {
+      console.error("WhatsApp PDF share error:", err);
+      toast.error("WhatsApp वर PDF शेअर करताना त्रुटी: " + err.message);
+    } finally {
+      setIsSharingWhatsApp(false);
     }
   };
 
@@ -1530,6 +1896,22 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
           {documentType === "homework" && (
             <button
+              onClick={handleSharePdfToWhatsApp}
+              disabled={isSharingWhatsApp}
+              className="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+              title="हा Word गृहपाठ PDF स्वरूपात WhatsApp वर पाठवा"
+            >
+              {isSharingWhatsApp ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <MessageCircle className="size-3.5" />
+              )}
+              <span>WhatsApp PDF</span>
+            </button>
+          )}
+
+          {documentType === "homework" && (
+            <button
               onClick={() => setShowHwHeaderModal(true)}
               className="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
               title="शाळेचे नाव, केंद्र, तालुका, जिल्हा, वार, दिनांक इत्यादी माहिती भरा"
@@ -1574,7 +1956,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
                 value={schoolNameInput}
                 onChange={(e) => handleSchoolNameChange(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") applyHeaderInfo(schoolNameInput, examDateInput, true);
+                  if (e.key === "Enter") applyHeaderInfo(schoolNameInput, examDateInput, kendraInput, talukaInput, jilhaInput, teacherNameInput, headmasterNameInput, true);
                 }}
                 placeholder="येथे शाळेचे नाव टाईप करा..."
                 className="bg-transparent text-white placeholder-slate-500 text-xs outline-none w-full font-medium"
@@ -1590,7 +1972,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
                 value={examDateInput}
                 onChange={(e) => handleExamDateChange(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") applyHeaderInfo(schoolNameInput, examDateInput, true);
+                  if (e.key === "Enter") applyHeaderInfo(schoolNameInput, examDateInput, kendraInput, talukaInput, jilhaInput, teacherNameInput, headmasterNameInput, true);
                 }}
                 placeholder="DD/MM/YYYY"
                 className="bg-transparent text-white placeholder-slate-500 text-xs outline-none w-full font-medium"
@@ -1599,18 +1981,28 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
             {/* Apply Button */}
             <button
-              onClick={() => applyHeaderInfo(schoolNameInput, examDateInput, true)}
+              onClick={() => applyHeaderInfo(schoolNameInput, examDateInput, kendraInput, talukaInput, jilhaInput, teacherNameInput, headmasterNameInput, true)}
               className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow cursor-pointer active:scale-95 shrink-0"
               title="शाळेचे नाव व दिनांक थेट प्रश्नपत्रिकेतील चौकटीत योग्य जागी भरा"
             >
               <Sparkles className="size-3.5 text-amber-300" />
               <span>चौकटीत भरा</span>
             </button>
+
+            {/* Complete Profile Details Modal Button */}
+            <button
+              onClick={() => setShowQpHeaderModal(true)}
+              className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow cursor-pointer active:scale-95 shrink-0"
+              title="शाळेचे नाव, केंद्र, तालुका, जिल्हा, शिक्षक व मुख्याध्यापक नाव भरा / बदला"
+            >
+              <Edit3 className="size-3.5 text-amber-300" />
+              <span>तपशील भरा</span>
+            </button>
           </div>
 
           <div className="hidden xl:flex items-center gap-1.5 text-[11px] text-slate-400">
             <Check className="size-3.5 text-emerald-400" />
-            <span>शाळेचे नाव व तारीख टाकल्यावर प्रश्नपत्रिकेतील चौकटीत अचूक बसेल</span>
+            <span>शाळेचे नाव, केंद्र, तालुका, जिल्हा व स्वाक्षरी अचूक बसतील</span>
           </div>
         </div>
       )}
@@ -1754,22 +2146,46 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           box-shadow: 0 6px 24px -2px rgba(37, 99, 235, 0.2) !important;
         }
 
-        /* Strictly enforce single-line layout and whiteout mask for Question Paper Header Box across all screens */
+
+        /* Question Paper Header Box - Clean wrap for long school name downside without overlapping sub-locations */
         .vml-page-wrapper [data-field="school-name"] {
+          top: 2.65% !important;
           width: 81.2% !important;
           max-width: 81.2% !important;
-          white-space: nowrap !important;
-          overflow: hidden !important;
+          white-space: normal !important;
+          overflow: visible !important;
           display: flex !important;
-          align-items: center !important;
-          line-height: 1.2 !important;
+          align-items: flex-start !important;
+          line-height: 1.3 !important;
+          padding: 1px 0 !important;
+          font-weight: 700 !important;
+          font-size: clamp(8.5px, 2.1cqw, 12pt) !important;
+        }
+        .vml-page-wrapper [data-field="school-name"] * {
+          overflow: visible !important;
         }
         .vml-page-wrapper [data-field="school-name"] strong {
           white-space: nowrap !important;
-          flex-shrink: 0 !important;
+          font-size: inherit !important;
+          font-weight: 700 !important;
         }
-        .vml-page-wrapper [data-field="school-name"] span {
-          white-space: nowrap !important;
+        .vml-page-wrapper [data-field="school-name"] .qp-school-name-block {
+          display: block !important;
+          flex: 1 1 auto !important;
+          min-width: 0 !important;
+          margin-right: 14px !important;
+          font-size: inherit !important;
+          line-height: 1.3 !important;
+          overflow: visible !important;
+          text-align: left !important;
+        }
+        .vml-page-wrapper [data-field="school-name"] .qp-school-text {
+          white-space: normal !important;
+          word-break: break-word !important;
+          overflow-wrap: break-word !important;
+          display: inline !important;
+          font-size: inherit !important;
+          font-weight: 700 !important;
         }
         .vml-page-wrapper [data-field="exam-date"] {
           white-space: nowrap !important;
@@ -1777,13 +2193,42 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         .header-dots-mask {
           position: absolute !important;
           left: 10.4% !important;
-          top: 2.26% !important;
+          top: 2.5% !important;
           width: 81.2% !important;
           max-width: 81.2% !important;
-          height: 3.66% !important;
+          height: 4.8% !important;
           background: #ffffff !important;
           z-index: 2 !important;
           pointer-events: none !important;
+        }
+
+        .qp-sub-location {
+          display: flex !important;
+          align-items: flex-start !important;
+          align-self: flex-start !important;
+          gap: 6px !important;
+          flex-shrink: 0 !important;
+          white-space: nowrap !important;
+          font-size: inherit !important;
+          font-weight: 700 !important;
+          margin-left: auto !important;
+          line-height: 1.3 !important;
+        }
+        .qp-sub-location strong,
+        .qp-sub-location span {
+          white-space: nowrap !important;
+          font-size: inherit !important;
+          font-weight: inherit !important;
+        }
+        .qp-signatures-block {
+          box-sizing: border-box !important;
+          font-family: inherit !important;
+        }
+        @media print {
+          .qp-signatures-block {
+            display: flex !important;
+            position: absolute !important;
+          }
         }
 
         /* Mobile responsiveness for Word document view */
@@ -1801,21 +2246,60 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
           /* Mobile responsiveness strictly for Question Paper Header Box / Information Table */
           .vml-page-wrapper [data-field="school-name"] {
+            top: 2.65% !important;
             width: 81.2% !important;
             max-width: 81.2% !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
+            white-space: normal !important;
+            overflow: visible !important;
             display: flex !important;
-            align-items: center !important;
-            font-size: clamp(8px, 2.3cqw, 13pt) !important;
-            line-height: 1.2 !important;
+            align-items: flex-start !important;
+            line-height: 1.3 !important;
+            font-weight: 700 !important;
+            font-size: clamp(8px, 2.1cqw, 12pt) !important;
           }
           .vml-page-wrapper [data-field="school-name"] strong {
             white-space: nowrap !important;
-            flex-shrink: 0 !important;
+            font-size: inherit !important;
+            font-weight: 700 !important;
           }
-          .vml-page-wrapper [data-field="school-name"] span {
+          .vml-page-wrapper [data-field="school-name"] .qp-school-name-block {
+            display: block !important;
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+            margin-right: 10px !important;
+            font-size: inherit !important;
+            line-height: 1.3 !important;
+            overflow: visible !important;
+            text-align: left !important;
+          }
+          .vml-page-wrapper [data-field="school-name"] .qp-school-text {
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            display: inline !important;
+            font-size: inherit !important;
+            font-weight: 700 !important;
+          }
+          .qp-sub-location {
+            display: flex !important;
+            align-items: flex-start !important;
+            align-self: flex-start !important;
+            font-size: inherit !important;
+            gap: 4px !important;
+            margin-left: auto !important;
+            flex-shrink: 0 !important;
             white-space: nowrap !important;
+            line-height: 1.3 !important;
+          }
+          .qp-sub-location strong,
+          .qp-sub-location span {
+            white-space: nowrap !important;
+            font-size: inherit !important;
+            font-weight: inherit !important;
+          }
+          .qp-signatures-block {
+            font-size: clamp(7.5px, 1.8cqw, 10.5pt) !important;
+            padding: 4px 6px !important;
           }
           .vml-page-wrapper [data-field="exam-date"] {
             white-space: nowrap !important;
@@ -1823,9 +2307,10 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           }
           .header-dots-mask {
             left: 10.4% !important;
-            top: 2.26% !important;
+            top: 2.5% !important;
             width: 81.2% !important;
             max-width: 81.2% !important;
+            height: 4.8% !important;
           }
         }
         @media screen and (min-width: 480px) and (max-width: 768px) {
@@ -2256,6 +2741,177 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
                 >
                   <Sparkles className="size-4 text-amber-300" />
                   <span>माहिती भरा व बसवा</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Question Paper Header & Signatures Details Modal */}
+      {showQpHeaderModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white px-5 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-white/15 rounded-xl backdrop-blur-md">
+                  <Sparkles className="size-5 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base sm:text-lg">प्रश्नपत्रिका शाळा व स्वाक्षरी तपशील</h3>
+                  <p className="text-xs text-blue-100">
+                    शाळेचे नाव, केंद्र, तालुका, जिल्हा व शिक्षक/मुख्याध्यापक स्वाक्षरी
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowQpHeaderModal(false)}
+                className="p-1.5 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <div className="p-5 overflow-y-auto space-y-4 text-slate-800">
+              {/* Section 1: शाळा व ठिकाण तपशील */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
+                  <Building2 className="size-4 text-blue-600" />
+                  <span>शाळा व ठिकाण तपशील (School & Location)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-3 space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">शाळेचे नाव (School Name)</label>
+                    <input
+                      type="text"
+                      value={schoolNameInput}
+                      onChange={(e) => setSchoolNameInput(e.target.value)}
+                      placeholder="उदा. जि. प. प्राथमिक शाळा..."
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none font-medium bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">केंद्र (Kendra)</label>
+                    <input
+                      type="text"
+                      value={kendraInput}
+                      onChange={(e) => setKendraInput(e.target.value)}
+                      placeholder="उदा. बोरगाव"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none font-medium bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">तालुका (Taluka)</label>
+                    <input
+                      type="text"
+                      value={talukaInput}
+                      onChange={(e) => setTalukaInput(e.target.value)}
+                      placeholder="उदा. मिरज"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none font-medium bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700">जिल्हा (District)</label>
+                    <input
+                      type="text"
+                      value={jilhaInput}
+                      onChange={(e) => setJilhaInput(e.target.value)}
+                      placeholder="उदा. सांगली"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none font-medium bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: दिनांक व स्वाक्षरी तपशील */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
+                  <User className="size-4 text-emerald-600" />
+                  <span>दिनांक व स्वाक्षरी तपशील (Date & Signatures)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                      <Calendar className="size-3.5 text-blue-500" />
+                      <span>परीक्षा दिनांक (Date)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={examDateInput}
+                      onChange={(e) => setExamDateInput(e.target.value)}
+                      placeholder="उदा. 19/10/2026"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none font-medium bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                      <User className="size-3.5 text-indigo-500" />
+                      <span>वर्ग शिक्षक (Class Teacher)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={teacherNameInput}
+                      onChange={(e) => setTeacherNameInput(e.target.value)}
+                      placeholder="उदा. श्री. शिक्षक नाव"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none font-medium bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-3">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                      <Building2 className="size-3.5 text-purple-500" />
+                      <span>मुख्याध्यापक नाव (Headmaster Name)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={headmasterNameInput}
+                      onChange={(e) => setHeadmasterNameInput(e.target.value)}
+                      placeholder="उदा. मुख्याध्यापक नाव"
+                      className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 outline-none font-medium bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+              <span className="text-[11px] text-slate-500 hidden sm:inline">
+                * ही माहिती जतन केल्यावर प्रश्नपत्रिकेच्या चौकटीत व शेवटी स्वाक्षरीत आपोआप बसेल.
+              </span>
+              <div className="flex items-center gap-2 justify-end w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowQpHeaderModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-all cursor-pointer"
+                >
+                  रद्द करा
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    applyHeaderInfo(
+                      schoolNameInput,
+                      examDateInput,
+                      kendraInput,
+                      talukaInput,
+                      jilhaInput,
+                      teacherNameInput,
+                      headmasterNameInput,
+                      true
+                    );
+                    setShowQpHeaderModal(false);
+                  }}
+                  className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Sparkles className="size-4 text-amber-300" />
+                  <span>प्रश्नपत्रिकेत सेव्ह करा</span>
                 </button>
               </div>
             </div>
