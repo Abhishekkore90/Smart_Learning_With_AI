@@ -356,6 +356,18 @@ export function QuestionPaperRenderer({
               </div>
 
               <div className="flex items-center gap-1.5">
+                <span>{paperData.rollNoLabel || "हजेरी क्रमांक :-"}</span>
+                <span className="w-8 h-6 border-2 border-slate-900 rounded-sm inline-block text-center">&nbsp;</span>
+              </div>
+            </div>
+
+            {/* Student Name & Total Marks */}
+            <div className="flex flex-wrap items-center justify-between text-xs sm:text-sm font-bold pt-1 px-1">
+              <div className="flex-1 min-w-[240px] flex items-center gap-2">
+                <span>{paperData.studentNameLabel || "विद्यार्थ्याचे नाव :-"}</span>
+                <span className="flex-1 border-b border-dotted border-black inline-block min-w-[150px]">&nbsp;</span>
+              </div>
+              <div className="flex items-center gap-2 pl-4">
                 <span>एकूण गुण -</span>
                 {mode === "edit" ? (
                   <input
@@ -367,18 +379,6 @@ export function QuestionPaperRenderer({
                 ) : (
                   <span className="font-black">{paperData.totalMarks}</span>
                 )}
-              </div>
-            </div>
-
-            {/* Student Name & Roll No */}
-            <div className="flex flex-wrap items-center justify-between text-xs sm:text-sm font-bold pt-1 px-1">
-              <div className="flex-1 min-w-[240px] flex items-center gap-2">
-                <span>{paperData.studentNameLabel || "विद्यार्थ्याचे नाव :-"}</span>
-                <span className="flex-1 border-b border-dotted border-black inline-block min-w-[150px]">&nbsp;</span>
-              </div>
-              <div className="flex items-center gap-2 pl-4">
-                <span>{paperData.rollNoLabel || "हजेरी क्रमांक :-"}</span>
-                <span className="w-16 border-b border-dotted border-black inline-block text-center">&nbsp;</span>
               </div>
             </div>
 

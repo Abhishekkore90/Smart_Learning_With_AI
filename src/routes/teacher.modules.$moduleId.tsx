@@ -47,6 +47,7 @@ import {
   Download,
   Eye,
   ArrowLeft,
+  Lock,
   Check,
   Trash2,
   AlertCircle,
@@ -2432,7 +2433,7 @@ function DailyAssemblyContent() {
         <div className="flex gap-1.5 md:gap-2 p-1.5 md:p-2 bg-[#0B0F19] rounded-xl md:rounded-2xl border border-indigo-400/40 w-full sm:max-w-2xl shadow-inner">
           <button
             onClick={() => setAssemblyMode("daily")}
-            className={`flex-1 py-2.5 md:py-3 px-2 md:px-6 rounded-lg md:rounded-xl font-black text-[11px] sm:text-xs md:text-sm tracking-wide md:tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5 md:gap-2.5 ${
+            className={`flex-1 py-2.5 md:py-3 px-2 md:px-5 rounded-lg md:rounded-xl font-black text-[11px] sm:text-xs md:text-sm tracking-wide md:tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5 md:gap-2 ${
               assemblyMode === "daily"
                 ? "bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 scale-[1.02]"
                 : "bg-white/10 hover:bg-white/20 text-white font-extrabold border border-white/20 shadow-inner"
@@ -2440,11 +2441,14 @@ function DailyAssemblyContent() {
           >
             <BookMarked className="size-3.5 md:size-4 shrink-0" />
             <span className="truncate">{lang === "en" ? "Daily Assembly" : "दैनिक परिपाठ"}</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-black bg-emerald-400/25 text-emerald-300 border border-emerald-300/30 shrink-0">
+              {lang === "en" ? "FREE" : "मोफत (FREE)"}
+            </span>
           </button>
 
           <button
             onClick={() => setAssemblyMode("monthly")}
-            className={`flex-1 py-2.5 md:py-3 px-2 md:px-6 rounded-lg md:rounded-xl font-black text-[11px] sm:text-xs md:text-sm tracking-wide md:tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5 md:gap-2.5 ${
+            className={`flex-1 py-2.5 md:py-3 px-2 md:px-5 rounded-lg md:rounded-xl font-black text-[11px] sm:text-xs md:text-sm tracking-wide md:tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5 md:gap-2 ${
               assemblyMode === "monthly"
                 ? "bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/40 ring-2 ring-emerald-300/50 scale-[1.02]"
                 : "bg-white/10 hover:bg-white/20 text-white font-extrabold border border-white/20 shadow-inner"
@@ -2453,6 +2457,14 @@ function DailyAssemblyContent() {
             <Table className="size-3.5 md:size-4 shrink-0" />
             <span className="truncate">
               {lang === "en" ? "Monthly Assembly" : <><span className="hidden sm:inline">मासिक परिपाठ (रजिस्टर)</span><span className="sm:hidden">मासिक परिपाठ</span></>}
+            </span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-black border flex items-center gap-1 shrink-0 ${
+              assemblyMode === "monthly"
+                ? "bg-slate-900/30 text-slate-950 border-slate-950/20"
+                : "bg-amber-400/25 text-amber-300 border-amber-300/40"
+            }`}>
+              <Lock className="size-2.5 md:size-3" />
+              <span>{lang === "en" ? "PAID" : "सशुल्क (PAID)"}</span>
             </span>
           </button>
         </div>
@@ -2665,6 +2677,16 @@ function DailyAssemblyContent() {
                 )}
                 <span>WhatsApp PDF</span>
               </button>
+              <a
+                href="https://chat.whatsapp.com/IUcC4XskSSQF8dFpQWUMb4?s=sh&p=a&mlu=4&ilr=4"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-[#25D366] text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-md active:scale-95 border border-white/20 hover:border-[#25D366] cursor-pointer"
+                title="शंका / मदतीसाठी अधिकृत WhatsApp ग्रुप जॉईन करा"
+              >
+                <MessageCircle className="size-4 text-emerald-400" />
+                <span>Queries ग्रुप</span>
+              </a>
             </div>
           </div>
 
@@ -3143,7 +3165,7 @@ function SpecialDayEditor({
     {
       id: "month-paripath",
       label: lang === "en" ? "Month Register" : "मासिक परिपाठ नोंदवही",
-      sub: lang === "en" ? "Paripath Register" : "मासिक नोंद तक्ता",
+      sub: lang === "en" ? "Paripath Register • PAID" : "मासिक नोंद तक्ता • सशुल्क (PAID)",
       icon: Table,
       color: "text-emerald-500",
       bg: "bg-emerald-50",

@@ -128,6 +128,45 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         subjectLabel = "Semi-English विभाग (Semi Math)";
       }
 
+      // Detect total marks from all text/shapes on this page
+      let pageTotalMarks = "२०";
+      for (const s of shapes) {
+        const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+        const txt = tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+        const marksMatch = txt.match(/(?:एकूण\s*गुण|total\s*marks)\s*[:\-–—]?\s*([०-९0-9]+)/i);
+        if (marksMatch && marksMatch[1]) {
+          pageTotalMarks = marksMatch[1].trim();
+          break;
+        }
+      }
+
+      // Check if this page has the full school header box (shown in third image)
+      const hasSchoolNameOnPage = shapes.some((s) => {
+        const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+        const txt = tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+        return (
+          txt.includes("शाळेचे नाव") ||
+          /school\s*name/i.test(txt) ||
+          /name\s*of\s*school/i.test(txt) ||
+          (sTop < 45 && /\bschool\b/i.test(txt))
+        );
+      });
+
+      const hasStudentOrStdOnPage = shapes.some((s) => {
+        const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+        const txt = tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+        return (
+          txt.includes("विद्यार्थ्याचे नाव") ||
+          txt.includes("विद्यार्थी") ||
+          txt.includes("इयत्ता") ||
+          txt.includes("दि.") ||
+          /student|std|class|date/i.test(txt)
+        );
+      });
+
+      const hasSchoolHeader = hasSchoolNameOnPage && hasStudentOrStdOnPage;
+
       for (const s of shapes) {
         const styleStr = s.match(/style="([^"]+)"/)?.[1] || "";
         const leftMatch = styleStr.match(/margin-left:([0-9.]+)pt/);
@@ -143,28 +182,54 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           continue;
         }
 
+        // Decode XML entities from Word XML so < and > aren't double escaped
+        const decodedText = decodeXmlEntities(rawText);
+        const trimmedText = decodedText.trim();
+
         const leftPt = leftMatch ? parseFloat(leftMatch[1]) : 0;
         const topPt = topMatch ? parseFloat(topMatch[1]) : 0;
         let widthPt = widthMatch ? parseFloat(widthMatch[1]) : 120;
         let heightPt = heightMatch ? parseFloat(heightMatch[1]) : 32;
 
         // Check if this shape is purely underlines/dots in the top header area
-        const isOnlyUnderlines = /^[\s\-_.~=—–•\.]+$/.test(rawText);
+        const isOnlyUnderlines = /^[\s\-_.~=—–•\.]+$/.test(trimmedText);
         if (isOnlyUnderlines && topPt < 45) {
           // Skip redundant underline shape at top header because school-name element and header-dots-mask handle it cleanly
+          continue;
+        }
+
+        const topRatio = topPt / pageHeightPt;
+        const leftRatio = leftPt / pageWidthPt;
+        const isInRightHeaderQuadrant =
+          (topPt < 185 || topRatio < 0.22) && (leftPt > pageWidthPt * 0.52 || leftRatio > 0.52);
+
+        const isHeaderMarksOrRoll =
+          hasSchoolHeader &&
+          isInRightHeaderQuadrant &&
+          (
+            trimmedText.includes("हजेरी") ||
+            /roll\s*no/i.test(trimmedText) ||
+            trimmedText.includes("गुण") ||
+            /total\s*marks|obtained\s*marks|marks/i.test(trimmedText) ||
+            /^[\s\-_.~=—–•\[\]\(\)]*$/.test(trimmedText) ||
+            !trimmedText
+          );
+
+        if (isHeaderMarksOrRoll) {
+          // Suppress raw scattered shape or old box in the school header box; reconstructed cleanly via code below
           continue;
         }
 
         let fieldAttr = "";
         let extraBoxStyle = "";
 
-        let shapeInnerHtml = escapeHtml(rawText);
+        let shapeInnerHtml = escapeHtml(decodedText);
 
         const isSchoolNameText =
-          rawText.includes("शाळेचे नाव") ||
-          /school\s*name/i.test(rawText) ||
-          /name\s*of\s*school/i.test(rawText) ||
-          (topPt < 40 && /\bschool\b/i.test(rawText));
+          trimmedText.includes("शाळेचे नाव") ||
+          /school\s*name/i.test(trimmedText) ||
+          /name\s*of\s*school/i.test(trimmedText) ||
+          (topPt < 40 && /\bschool\b/i.test(trimmedText));
 
         if (isSchoolNameText) {
           fieldAttr = 'data-field="school-name"';
@@ -173,8 +238,8 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           heightPt = 28;
           extraBoxStyle = "z-index: 10; white-space: normal !important; overflow: visible !important; display: flex; align-items: flex-start; max-width: 81.2% !important;";
 
-          const isEng = /school/i.test(rawText) || !rawText.includes("शाळेचे");
-          const cleanName = rawText
+          const isEng = /school/i.test(trimmedText) || !trimmedText.includes("शाळेचे");
+          const cleanName = trimmedText
             .replace(/^(?:शाळेचे\s*नाव|school\s*name)\s*[:\-–—]?\s*/i, "")
             .replace(/^[_.\s\-–—]+$/, "")
             .trim();
@@ -187,8 +252,14 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
             shapeInnerHtml = `<div class="qp-school-name-block" style="background: #ffffff; padding: 0 2px; display: block; flex: 1; min-width: 0; margin-right: 14px; overflow: visible;"><strong style="white-space: nowrap; color: #0f172a;">${label} </strong><span style="display: inline-block; width: 140px; border-bottom: 1.5px dotted #94a3b8; margin-left: 6px; height: 1em; vertical-align: middle;"></span></div>`;
           }
         } else if (
-          (rawText.includes("दि.") || /date\s*[:\-–—]?/i.test(rawText)) &&
-          (rawText.includes("२०२") || rawText.includes("202") || rawText.includes("/"))
+          (trimmedText.includes("चाचणी") || trimmedText.includes("मूल्यमापन") || trimmedText.includes("परीक्षा") || /test|evaluation/i.test(trimmedText)) &&
+          topPt < 65
+        ) {
+          fieldAttr = 'data-field="exam-title"';
+          extraBoxStyle = "z-index: 10; overflow: visible !important;";
+        } else if (
+          (trimmedText.includes("दि.") || /date\s*[:\-–—]?/i.test(trimmedText)) &&
+          (trimmedText.includes("२०२") || trimmedText.includes("202") || trimmedText.includes("/"))
         ) {
           fieldAttr = 'data-field="exam-date"';
           widthPt = Math.max(widthPt, 200);
@@ -203,9 +274,11 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
         if (isSchoolNameText) {
           leftPct = 10.458;
-          topPct = 2.85;
+          topPct = 2.3;
           widthPct = 81.2;
           heightPct = 3.66;
+        } else if (fieldAttr === 'data-field="exam-title"') {
+          topPct = 5.9;
         }
 
         // Font formatting
@@ -231,7 +304,70 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           : `'Noto Sans Devanagari', 'Tiro Devanagari Marathi', 'Nirmala UI', 'Mangal', sans-serif`;
 
         const isSchoolNameField = fieldAttr === 'data-field="school-name"';
-        const whiteSpaceRule = isSchoolNameField ? "white-space: normal !important; overflow: visible !important;" : "white-space: pre-wrap; word-break: break-word;";
+
+        // 1. Check if shape is a marks indicator, e.g. "(1)", "( 1 )", "(2)", "(3)", "(गुण २)", "( Marks 2 )"
+        const isMarksShape =
+          /^\s*\(\s*(?:गुण|Marks|marks)?\s*[०-९0-9]+\s*(?:गुण|Marks|marks)?\s*\)\s*$/i.test(trimmedText) ||
+          /^\s*\(?\s*(?:गुण|Marks)\s*[:\-–—]?\s*[०-९0-9]+\s*\)?\s*$/i.test(trimmedText);
+
+        // 2. Sub-question indexes, e.g. "1)", "2)", "3)", "4)", "1 )", "A)", "B)"
+        const isSubQuestionIndex =
+          /^\s*[०-९0-9a-zA-Zअ-ज्ञ]\s*[\)\.\-]\s*$/.test(trimmedText) ||
+          /^\s*\(\s*[०-९0-9a-zA-Zअ-ज्ञ]\s*\)\s*$/.test(trimmedText);
+
+        // 3. Table operators with numbers, e.g. "+1", "+2", "-5", "-2", "+ 1"
+        const isTableOperatorNum = /^[+\-−±]\s*[०-९0-9]+$/.test(trimmedText);
+
+        // 4. Short math tokens / single digits / operators, e.g. "2", "8", "+", "−", "x", "=", "180°", "70°"
+        const isShortMathToken =
+          trimmedText.length <= 4 &&
+          /^[०-९0-9+\-−±xX=*/÷°\s]+$/.test(trimmedText);
+
+        // 5. Short word / token, e.g. "दह", "ह", "श", "द", "ए"
+        const isShortWordToken = trimmedText.length <= 6 && !trimmedText.includes(" ");
+
+        let whiteSpaceRule = "white-space: pre-wrap; word-break: break-word;";
+        let shapeAlignItems = "center";
+        let shapeLineHeight = "1.35";
+        let shapePadding = "0px 2px";
+
+        if (isSchoolNameField) {
+          whiteSpaceRule = "white-space: normal !important; overflow: visible !important;";
+          shapeAlignItems = "flex-start";
+          shapeLineHeight = "1.35";
+          shapePadding = "2px 4px";
+        } else if (isMarksShape) {
+          whiteSpaceRule = "white-space: nowrap !important; word-break: normal !important; overflow: visible !important;";
+          shapeAlignItems = "center";
+          shapeLineHeight = "1.35";
+          shapePadding = "0 2px";
+          extraBoxStyle += " min-width: 36px !important; width: auto !important; z-index: 11; justify-content: flex-end !important; text-align: right !important;";
+          if (leftRatio > 0.80 || leftPt > pageWidthPt * 0.80) {
+            extraBoxStyle += " right: 10.458% !important; left: auto !important;";
+          }
+        } else if (isSubQuestionIndex) {
+          whiteSpaceRule = "white-space: nowrap !important; word-break: normal !important; overflow: visible !important;";
+          shapeAlignItems = "center";
+          shapeLineHeight = "1.35";
+          shapePadding = "0 1px";
+          extraBoxStyle += " min-width: 24px !important; width: auto !important; z-index: 10;";
+        } else if (isTableOperatorNum) {
+          whiteSpaceRule = "white-space: nowrap !important; word-break: normal !important; overflow: visible !important;";
+          shapeAlignItems = "center";
+          shapeLineHeight = "1.35";
+          shapePadding = "0 1px";
+          const opMatch = trimmedText.match(/^([+\-−±])\s*([०-९0-9]+)$/);
+          if (opMatch) {
+            shapeInnerHtml = `${opMatch[1]}&nbsp;${opMatch[2]}`;
+          }
+          extraBoxStyle += " min-width: 28px !important; width: auto !important; z-index: 10; letter-spacing: 1px !important;";
+        } else if (isShortMathToken || isShortWordToken) {
+          whiteSpaceRule = "white-space: nowrap !important; word-break: normal !important; overflow: visible !important;";
+          shapeAlignItems = "center";
+          shapeLineHeight = "1.35";
+          shapePadding = "0 1px";
+          extraBoxStyle += ` width: auto !important; min-width: ${Math.max(16, widthPt)}px !important; z-index: 10;`;
+        }
 
         shapesHtml.push(`
           <div
@@ -239,22 +375,52 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
             spellcheck="false"
             ${fieldAttr}
             class="vml-shape-text"
-            style="position: absolute; left: ${leftPct.toFixed(3)}%; top: ${topPct.toFixed(3)}%; width: ${widthPct.toFixed(3)}%; height: ${heightPct.toFixed(3)}%; display: flex; align-items: ${isSchoolNameField ? "flex-start" : "center"}; justify-content: ${justifyCss}; font-size: ${fontSizePt}pt; font-size: ${fontSizeCqw}cqw; font-weight: ${isBold ? "bold" : "normal"}; font-style: ${isItalic ? "italic" : "normal"}; color: ${color}; text-align: ${align}; font-family: ${fontFamily}; line-height: 1.35; padding: 2px 4px; box-sizing: border-box; cursor: text; outline: none; ${whiteSpaceRule} ${extraBoxStyle}"
+            style="position: absolute; left: ${leftPct.toFixed(3)}%; top: ${topPct.toFixed(3)}%; width: ${widthPct.toFixed(3)}%; height: ${heightPct.toFixed(3)}%; display: flex; align-items: ${shapeAlignItems}; justify-content: ${justifyCss}; font-size: ${fontSizePt}pt; font-size: ${fontSizeCqw}cqw; font-weight: ${isBold ? "bold" : "normal"}; font-style: ${isItalic ? "italic" : "normal"}; color: ${color}; text-align: ${align}; font-family: ${fontFamily}; line-height: ${shapeLineHeight}; padding: ${shapePadding}; box-sizing: border-box; cursor: text; outline: none; ${whiteSpaceRule} ${extraBoxStyle}"
           >${shapeInnerHtml}</div>
         `);
       }
 
-      const hasSchoolHeader = shapes.some((s) => {
-        const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
-        const txt = tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
-        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
-        return (
-          txt.includes("शाळेचे नाव") ||
-          /school\s*name/i.test(txt) ||
-          /name\s*of\s*school/i.test(txt) ||
-          (sTop < 45 && /\bschool\b/i.test(txt))
-        );
-      });
+      if (hasSchoolHeader) {
+        const isEngPage = subjectKey === "english" || subjectKey === "semi" || /TOTAL MARKS/i.test(allPageRawText);
+        const rollLabel = isEngPage ? "ROLL NO. -" : "हजेरी क्रमांक -";
+        const totalLabel = isEngPage ? "TOTAL MARKS -" : "एकूण गुण -";
+        const obtLabel = isEngPage ? "OBTAINED MARKS -" : "मिळालेले गुण -";
+        const displayTotalMarks = isEngPage
+          ? (pageTotalMarks.replace(/[०-९]/g, (d) => "0123456789"["०१२३४५६७८९".indexOf(d)]))
+          : pageTotalMarks;
+
+        shapesHtml.push(`
+          <div
+            class="qp-header-marks-block"
+            data-field="qp-header-marks-block"
+            contenteditable="false"
+            style="position: absolute; right: 10.458%; top: 10.9%; width: 23.0%; height: 10.2%; z-index: 12; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; font-family: 'Noto Sans Devanagari', 'Tiro Devanagari Marathi', 'Nirmala UI', sans-serif; pointer-events: auto;"
+          >
+            <!-- 1. हजेरी क्रमांक -->
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: clamp(2px, 0.7cqw, 6px); width: 100%;">
+              <span style="font-size: clamp(6.0px, 1.8cqw, 10.5pt); font-weight: 700; color: #0f172a; white-space: nowrap; background: #ffffff; padding: 0 2px;">${rollLabel}</span>
+              <div style="width: clamp(16px, 5.0cqw, 34px); height: clamp(12px, 3.5cqw, 24px); border: clamp(1px, 0.22cqw, 1.5px) solid #0f172a; border-radius: clamp(2px, 0.5cqw, 4px); background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: clamp(6.5px, 1.9cqw, 11pt); font-weight: 800; color: #0f172a; flex-shrink: 0; box-sizing: border-box;"></div>
+            </div>
+
+            <!-- 2. एकूण गुण (with box for fetched marks) -->
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: clamp(2px, 0.7cqw, 6px); width: 100%;">
+              <span style="font-size: clamp(6.0px, 1.8cqw, 10.5pt); font-weight: 700; color: #0f172a; white-space: nowrap; background: #ffffff; padding: 0 2px;">${totalLabel}</span>
+              <div
+                contenteditable="true"
+                data-field="total-marks-box"
+                title="एकूण गुण संपादित करा"
+                style="width: clamp(16px, 5.0cqw, 34px); height: clamp(12px, 3.5cqw, 24px); border: clamp(1px, 0.22cqw, 1.5px) solid #0f172a; border-radius: clamp(2px, 0.5cqw, 4px); background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: clamp(6.5px, 1.9cqw, 11pt); font-weight: 800; color: #0f172a; flex-shrink: 0; box-sizing: border-box; cursor: text; outline: none;"
+              >${escapeHtml(displayTotalMarks)}</div>
+            </div>
+
+            <!-- 3. मिळालेले गुण -->
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: clamp(2px, 0.7cqw, 6px); width: 100%;">
+              <span style="font-size: clamp(6.0px, 1.8cqw, 10.5pt); font-weight: 700; color: #0f172a; white-space: nowrap; background: #ffffff; padding: 0 2px;">${obtLabel}</span>
+              <div style="width: clamp(16px, 5.0cqw, 34px); height: clamp(12px, 3.5cqw, 24px); border: clamp(1px, 0.22cqw, 1.5px) solid #0f172a; border-radius: clamp(2px, 0.5cqw, 4px); background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: clamp(6.5px, 1.9cqw, 11pt); font-weight: 800; color: #0f172a; flex-shrink: 0; box-sizing: border-box;"></div>
+            </div>
+          </div>
+        `);
+      }
 
       pagesHtml.push(`
         <div
@@ -271,7 +437,10 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           }
           ${
             hasSchoolHeader
-              ? `<div class="header-dots-mask" style="position: absolute; left: 10.4%; top: 2.5%; width: 81.2%; height: 4.8%; background: #ffffff; z-index: 2; pointer-events: none;"></div>`
+              ? `
+                <div class="header-dots-mask" style="position: absolute; left: 10.4%; top: 2.5%; width: 81.2%; height: 4.8%; background: #ffffff; z-index: 2; pointer-events: none;"></div>
+                <div class="header-orphan-boxes-mask" style="position: absolute; right: 8.9%; top: 13.8%; width: 7.8%; height: 9.1%; background: #ffffff; z-index: 2; pointer-events: none;"></div>
+              `
               : ""
           }
           <div class="vml-shapes-layer" style="position: absolute; inset: 0; z-index: 3;">
@@ -286,6 +455,16 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
     console.error("parseVmlDocxToHtml error:", err);
     return null;
   }
+}
+
+function decodeXmlEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
 }
 
 function escapeHtml(text: string): string {

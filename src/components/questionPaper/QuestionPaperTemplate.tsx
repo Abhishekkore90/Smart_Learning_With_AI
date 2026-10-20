@@ -498,8 +498,9 @@ export function QuestionPaperTemplate({
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs sm:text-base font-black text-slate-900 tracking-tight">
-                  <div className="flex items-baseline gap-1.5 flex-1 min-w-[200px]">
+                <div className="space-y-1 text-xs sm:text-base font-black text-slate-900 tracking-tight">
+                  {/* Line 1: Dedicated School Name across full line */}
+                  <div className="flex items-baseline gap-1.5 w-full">
                     <span className="shrink-0 text-slate-900 font-black whitespace-nowrap">शाळेचे नाव :</span>
                     <span className="font-black text-slate-950 border-b border-dotted border-slate-500 pb-0.5 px-1 flex-1 min-w-0">
                       {data.schoolName
@@ -508,23 +509,30 @@ export function QuestionPaperTemplate({
                     </span>
                   </div>
 
+                  {/* Line 2: Remaining Location Fields (Kendra | Taluka | Jilha) */}
                   {(data.kendra || data.taluka || data.jilha) && (
-                    <div className="flex items-baseline gap-2 sm:gap-3 text-[11px] sm:text-xs font-bold text-slate-800 shrink-0">
+                    <div className="flex flex-wrap items-center gap-x-2.5 sm:gap-x-4 gap-y-1 text-[11px] sm:text-xs font-bold text-slate-800 pt-0.5">
                       {data.kendra && (
                         <span className="whitespace-nowrap">
-                          <span className="text-slate-600 font-semibold">केंद्र : </span>
+                          <span className="text-slate-700 font-bold">केंद्र : </span>
                           <span className="font-bold text-slate-950">{data.kendra}</span>
                         </span>
                       )}
+                      {data.kendra && (data.taluka || data.jilha) && (
+                        <span className="text-slate-400 font-normal select-none">|</span>
+                      )}
                       {data.taluka && (
                         <span className="whitespace-nowrap">
-                          <span className="text-slate-600 font-semibold">तालुका : </span>
+                          <span className="text-slate-700 font-bold">तालुका : </span>
                           <span className="font-bold text-slate-950">{data.taluka}</span>
                         </span>
                       )}
+                      {(data.kendra || data.taluka) && data.jilha && (
+                        <span className="text-slate-400 font-normal select-none">|</span>
+                      )}
                       {data.jilha && (
                         <span className="whitespace-nowrap">
-                          <span className="text-slate-600 font-semibold">जिल्हा : </span>
+                          <span className="text-slate-700 font-bold">जिल्हा : </span>
                           <span className="font-bold text-slate-950">{data.jilha}</span>
                         </span>
                       )}
@@ -550,9 +558,9 @@ export function QuestionPaperTemplate({
               )}
             </div>
 
-            {/* Class, Subject, Total Marks */}
-            <div className="grid grid-cols-3 gap-1 sm:gap-2 mt-2 pt-2 border-t border-slate-300 text-[11px] sm:text-sm font-bold">
-              <div>
+            {/* Class, Subject, Roll No (Row 3) */}
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-300 text-[11px] sm:text-sm font-bold gap-1 sm:gap-2">
+              <div className="text-left">
                 <span className="whitespace-nowrap">इयत्ता - </span>
                 {isEditing ? (
                   <input
@@ -578,22 +586,24 @@ export function QuestionPaperTemplate({
                   <span className="font-black">{data.subjectName}</span>
                 )}
               </div>
-              <div className="text-right">
-                <span className="whitespace-nowrap">एकूण गुण - </span>
+              <div className="flex items-center gap-1.5 shrink-0 text-right">
+                <span className="font-bold whitespace-nowrap text-[11px] sm:text-xs">हजेरी क्रमांक -</span>
                 {isEditing ? (
                   <input
                     type="text"
-                    value={data.totalMarks}
-                    onChange={(e) => setData({ ...data, totalMarks: e.target.value })}
-                    className="w-10 sm:w-12 border-b border-slate-400 outline-none font-bold text-right"
+                    value={data.rollNo}
+                    onChange={(e) => setData({ ...data, rollNo: e.target.value })}
+                    className="w-6 h-6 sm:w-8 sm:h-8 border-2 border-slate-900 rounded-sm font-black text-xs sm:text-sm text-center outline-none bg-amber-50/50"
                   />
                 ) : (
-                  <span className="text-amber-900 font-black">{data.totalMarks}</span>
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs sm:text-sm bg-white shrink-0">
+                    {data.rollNo}
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Student Name & Roll No (Row 4) */}
+            {/* Student Name & Total Marks (Row 4) */}
             <div className="flex items-center justify-between text-[11px] sm:text-sm font-semibold mt-2 pt-1.5 border-t border-dashed border-slate-200 gap-1.5">
               <div className="flex-1 min-w-0 flex items-center gap-1">
                 <span className="font-bold whitespace-nowrap shrink-0">विद्यार्थ्याचे नाव :-</span>
@@ -601,10 +611,19 @@ export function QuestionPaperTemplate({
                   {data.studentNamePlaceholder && data.studentNamePlaceholder !== "_____________________" ? data.studentNamePlaceholder : ""}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 pl-1 shrink-0">
-                <span className="font-bold whitespace-nowrap text-[11px] sm:text-xs">हजेरी क्रमांक -</span>
+              <div className="flex items-center gap-1.5 pl-1 shrink-0 text-right">
+                <span className="font-bold whitespace-nowrap text-[11px] sm:text-xs">एकूण गुण -</span>
                 <div className="w-6 h-6 sm:w-8 sm:h-8 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs sm:text-sm bg-white shrink-0">
-                  {data.rollNo}
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={data.totalMarks}
+                      onChange={(e) => setData({ ...data, totalMarks: e.target.value })}
+                      className="w-full text-center outline-none font-bold bg-transparent"
+                    />
+                  ) : (
+                    <span className="text-slate-950 font-black">{data.totalMarks || "२०"}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1064,30 +1083,61 @@ export function QuestionPaperTemplate({
                   <span>👁️ थेट पूर्वावलोकन (Live Preview - प्रश्नपत्रिकेवर कसे दिसेल):</span>
                 </div>
                 <div className="bg-white border-2 border-slate-900 rounded-none p-3 text-slate-900 shadow-sm select-none font-sans space-y-2">
-                  {/* Line 1: School Name, Kendra, Taluka, Jilla */}
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-xs font-black tracking-tight border-b border-slate-200 pb-1 text-slate-900">
-                    <div>
-                      शाळेचे नाव : <span className="text-slate-950 font-black">{headerForm.schoolName || "__________________________"}</span>
-                    </div>
-                    {(headerForm.kendra || headerForm.taluka || headerForm.jilha) && (
-                      <div className="flex items-baseline gap-2 text-[10px] font-bold text-slate-700">
-                        {headerForm.kendra && <span>केंद्र : {headerForm.kendra}</span>}
-                        {headerForm.taluka && <span>तालुका : {headerForm.taluka}</span>}
-                        {headerForm.jilha && <span>जिल्हा : {headerForm.jilha}</span>}
-                      </div>
-                    )}
+                  {/* Line 1: School Name */}
+                  <div className="text-xs font-black tracking-tight text-slate-900">
+                    शाळेचे नाव : <span className="text-slate-950 font-black">{headerForm.schoolName || "__________________________"}</span>
                   </div>
+                  {/* Line 2: Kendra, Taluka, Jilla */}
+                  {(headerForm.kendra || headerForm.taluka || headerForm.jilha) && (
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-700 border-b border-slate-200 pb-1">
+                      {headerForm.kendra && <span>केंद्र : <b>{headerForm.kendra}</b></span>}
+                      {headerForm.kendra && (headerForm.taluka || headerForm.jilha) && <span className="text-slate-300 font-normal">|</span>}
+                      {headerForm.taluka && <span>तालुका : <b>{headerForm.taluka}</b></span>}
+                      {(headerForm.kendra || headerForm.taluka) && headerForm.jilha && <span className="text-slate-300 font-normal">|</span>}
+                      {headerForm.jilha && <span>जिल्हा : <b>{headerForm.jilha}</b></span>}
+                    </div>
+                  )}
 
                   {/* Line 2: Exam Title */}
                   <div className="text-center font-black text-xs sm:text-sm text-slate-900">
                     {headerForm.examTitle || "आकारिक मूल्यमापन चाचणी क्र. १"}
                   </div>
 
-                  {/* Line 3: Class, Subject, Marks */}
+                  {/* Line 3: Class, Subject, Roll No */}
                   <div className="flex items-center justify-between text-xs font-bold pt-1 border-t border-slate-200">
                     <div>इयत्ता - <span className="font-black">{headerForm.className || "१ ली"}</span></div>
                     <div>विषय - <span className="font-black">{headerForm.subjectName || "भाषा"}</span></div>
-                    <div>एकूण गुण - <span className="font-black">{headerForm.totalMarks || "२०"}</span></div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span>हजेरी क्रमांक -</span>
+                      <div className="w-5 h-5 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-[10px] bg-white">
+                        {headerForm.rollNo}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Line 4: Student Name & Total Marks */}
+                  <div className="flex items-center justify-between text-xs font-semibold pt-1 border-t border-dashed border-slate-200">
+                    <div className="flex-1 flex items-center gap-1">
+                      <span>विद्यार्थ्याचे नाव :-</span>
+                      <span className="border-b border-slate-900 inline-block w-28">&nbsp;</span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span>एकूण गुण - </span>
+                      <div className="w-5 h-5 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-[10px] bg-white">
+                        {headerForm.totalMarks || "२०"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Line 5: Date & Obtained Marks */}
+                  <div className="flex items-center justify-between text-xs font-semibold pt-1">
+                    <div>दि. &nbsp;&nbsp; / &nbsp;&nbsp; / २०२६</div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span>मिळालेले गुण -</span>
+                      <div className="w-5 h-5 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-[10px] bg-white">
+                        {headerForm.obtainedMarks}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Bottom Signature Preview */}

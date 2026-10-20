@@ -420,10 +420,10 @@ export async function generateDocxFromQuestionPaper(data: {
     })
   );
 
-  // 3. Meta Table: Class, Subject, Time, Marks
+  // 3. Meta Table: Class, Subject, Roll No
   const metaRow1Left = `इयत्ता : ${data.className || "१ ली"}`;
   const metaRow1Mid = `विषय : ${data.subject || "मराठी"}`;
-  const metaRow1Right = `एकूण गुण : ${data.totalMarks || "२०"}`;
+  const metaRow1Right = data.rollNo ? `हजेरी क्र. : ${data.rollNo}` : "हजेरी क्र. : ______";
 
   const metaTable = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
@@ -544,7 +544,7 @@ export async function generateDocxFromQuestionPaper(data: {
                 spacing: { before: 80, after: 80 },
                 children: [
                   new TextRun({
-                    text: data.rollNo ? `हजेरी क्र. : ${data.rollNo}` : "हजेरी क्र. : ______",
+                    text: `एकूण गुण : ${data.totalMarks || "२०"}`,
                     size: 22,
                     font: "Noto Sans Devanagari, Mangal, Arial",
                   }),

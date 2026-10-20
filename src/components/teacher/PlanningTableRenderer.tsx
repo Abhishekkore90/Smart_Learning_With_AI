@@ -2312,11 +2312,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             masterHeader.style.backgroundColor = "#ffffff";
             masterHeader.innerHTML = `
               <div style="text-align: center; border-bottom: 1.5px solid #000000; padding-bottom: 2px;">
-                <h2 style="font-size: 16px; font-weight: 900; color: #000000; text-transform: uppercase; margin: 0;">
+                <h2 style="font-size: 18px; font-weight: 900; color: #000000; text-transform: uppercase; margin: 0;">
                   ${schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
                 </h2>
               </div>
-              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 11px; font-weight: 700; color: #000000; padding-top: 2px;">
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; font-size: 13px; font-weight: 700; color: #000000; padding-top: 4px;">
                 <div><span style="color: #475569;">केंद्र:</span> <strong>${schoolProfile.kendraName || "—"}</strong></div>
                 <div style="text-align: center;"><span style="color: #475569;">तालुका:</span> <strong>${schoolProfile.talukaName || "—"}</strong></div>
                 <div style="text-align: center;"><span style="color: #475569;">जिल्हा:</span> <strong>${schoolProfile.districtName || "—"}</strong></div>
@@ -2725,32 +2725,40 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         if (isMonthly) {
           const clonedCols = secClone.querySelectorAll("colgroup col");
           if (clonedCols.length >= 7) {
-            (clonedCols[0] as HTMLElement).style.width = "48px";
-            (clonedCols[1] as HTMLElement).style.width = "95px";
-            (clonedCols[2] as HTMLElement).style.width = "165px";
-            (clonedCols[3] as HTMLElement).style.width = "125px";
-            (clonedCols[4] as HTMLElement).style.width = "297px";
-            (clonedCols[5] as HTMLElement).style.width = "85px";
-            (clonedCols[6] as HTMLElement).style.width = "85px";
+            (clonedCols[0] as HTMLElement).style.width = "45px";
+            (clonedCols[1] as HTMLElement).style.width = "90px";
+            (clonedCols[2] as HTMLElement).style.width = "155px";
+            (clonedCols[3] as HTMLElement).style.width = "120px";
+            (clonedCols[4] as HTMLElement).style.width = "270px";
+            (clonedCols[5] as HTMLElement).style.width = "105px";
+            (clonedCols[6] as HTMLElement).style.width = "125px";
           }
           secClone.querySelectorAll("thead th").forEach((th: any, idx: number) => {
             if (idx === 0) {
-              th.style.width = "48px";
-              th.style.minWidth = "46px";
-              th.style.maxWidth = "52px";
+              th.style.width = "45px";
+              th.style.minWidth = "42px";
+              th.style.maxWidth = "48px";
               th.style.padding = "4px 2px";
               th.style.textAlign = "center";
               th.style.wordBreak = "break-word";
             } else if (idx === 4) {
-              th.style.width = "297px";
+              th.style.width = "270px";
+            } else if (idx === 5) {
+              th.style.width = "105px";
+              th.style.textAlign = "center";
+              th.style.whiteSpace = "nowrap";
+            } else if (idx === 6) {
+              th.style.width = "125px";
+              th.style.textAlign = "center";
+              th.style.whiteSpace = "nowrap";
             }
           });
           secClone.querySelectorAll("tbody tr").forEach((tr: any) => {
             const tds = tr.querySelectorAll("td");
             if (tds[0]) {
-              tds[0].style.width = "48px";
-              tds[0].style.minWidth = "46px";
-              tds[0].style.maxWidth = "52px";
+              tds[0].style.width = "45px";
+              tds[0].style.minWidth = "42px";
+              tds[0].style.maxWidth = "48px";
               tds[0].style.padding = "4px 2px";
               tds[0].style.textAlign = "center";
               tds[0].style.wordBreak = "break-word";
@@ -2759,13 +2767,61 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               tds[0].style.lineHeight = "1.25";
             }
             if (tds[4]) {
-              tds[4].style.width = "297px";
+              tds[4].style.width = "270px";
+            }
+            if (tds[5]) {
+              tds[5].style.width = "105px";
+              tds[5].style.whiteSpace = "nowrap";
+              tds[5].style.textAlign = "center";
+              tds[5].style.fontSize = "10.5px";
+            }
+            if (tds[6]) {
+              tds[6].style.width = "125px";
+              tds[6].style.whiteSpace = "nowrap";
+              tds[6].style.textAlign = "center";
+              tds[6].style.fontSize = "10.5px";
             }
           });
         }
 
         // Extract components of the section
-        const schoolHeader = secClone.querySelector(".pdf-school-header");
+        const schoolHeader = secClone.querySelector(".pdf-school-header") as HTMLElement | null;
+        if (schoolHeader) {
+          schoolHeader.style.width = "100%";
+          schoolHeader.style.boxSizing = "border-box";
+          schoolHeader.style.padding = "8px 16px";
+          schoolHeader.style.backgroundColor = "#ffffff";
+          schoolHeader.style.borderRadius = "12px";
+          schoolHeader.style.border = "2px solid #0f172a";
+          schoolHeader.style.marginBottom = "8px";
+
+          const h2 = schoolHeader.querySelector("h2");
+          if (h2) {
+            h2.style.fontSize = "20px";
+            h2.style.fontWeight = "900";
+            h2.style.lineHeight = "1.3";
+            h2.style.color = "#0f172a";
+            h2.style.margin = "0";
+            h2.style.paddingBottom = "4px";
+          }
+
+          const subline = schoolHeader.querySelector(".pdf-school-subline") as HTMLElement | null;
+          if (subline) {
+            subline.style.fontSize = "13.5px";
+            subline.style.lineHeight = "1.4";
+            subline.style.paddingTop = "5px";
+            subline.style.display = "flex";
+            subline.style.flexDirection = "row";
+            subline.style.flexWrap = "nowrap";
+            subline.style.justifyContent = "space-between";
+            subline.style.alignItems = "center";
+            subline.style.width = "100%";
+            subline.style.overflow = "visible";
+            subline.querySelectorAll("*").forEach((el: any) => {
+              el.style.fontSize = "13.5px";
+            });
+          }
+        }
         const subjectBanner = secClone.querySelector(".pdf-subject-banner") as HTMLElement | null;
         if (subjectBanner) {
           subjectBanner.style.display = "flex";
@@ -2777,6 +2833,53 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           subjectBanner.style.whiteSpace = "nowrap";
           subjectBanner.style.width = "100%";
           subjectBanner.style.boxSizing = "border-box";
+          subjectBanner.style.overflow = "visible";
+
+          const scrollWrap = subjectBanner.querySelector(".pdf-banner-scroll") as HTMLElement | null;
+          if (scrollWrap) {
+            scrollWrap.style.overflow = "visible";
+            scrollWrap.style.width = "100%";
+            scrollWrap.style.display = "flex";
+            scrollWrap.style.flexDirection = "row";
+            scrollWrap.style.justifyContent = "space-between";
+            scrollWrap.style.alignItems = "center";
+          }
+
+          const contentWrap = subjectBanner.querySelector(".pdf-banner-content") as HTMLElement | null;
+          if (contentWrap) {
+            contentWrap.style.overflow = "visible";
+            contentWrap.style.width = "100%";
+            contentWrap.style.display = "flex";
+            contentWrap.style.flexDirection = "row";
+            contentWrap.style.flexWrap = "nowrap";
+            contentWrap.style.justifyContent = "space-between";
+            contentWrap.style.alignItems = "center";
+          }
+
+          subjectBanner.querySelectorAll(".pdf-banner-item").forEach((el: any) => {
+            el.style.width = "auto";
+            el.style.flex = "0 0 auto";
+            el.style.display = "inline-flex";
+            el.style.alignItems = "center";
+          });
+
+          const titleWrap = subjectBanner.querySelector(".pdf-banner-title") as HTMLElement | null;
+          if (titleWrap) {
+            titleWrap.style.width = "auto";
+            titleWrap.style.display = "inline-flex";
+            titleWrap.style.alignItems = "center";
+            titleWrap.style.gap = "6px";
+          }
+
+          subjectBanner.querySelectorAll(".pdf-banner-dot, .pdf-banner-prefix").forEach((el: any) => {
+            el.classList.remove("hidden");
+            el.style.display = "inline";
+          });
+          subjectBanner.querySelectorAll(".pdf-banner-icon").forEach((el: any) => {
+            el.classList.remove("hidden");
+            el.style.display = "inline-block";
+          });
+
           subjectBanner.querySelectorAll("*").forEach((el: any) => {
             el.style.flexWrap = "nowrap";
             el.style.whiteSpace = "nowrap";
@@ -3252,11 +3355,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               </h2>
                             </div>
 
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm md:text-base font-bold text-slate-900 pt-1.5">
-                              <div><span className="text-slate-600 font-semibold">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
-                              <div className="sm:text-center"><span className="text-slate-600 font-semibold">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
-                              <div className="sm:text-center"><span className="text-slate-600 font-semibold">जिल्हा:</span> <span className="font-extrabold text-slate-950">{schoolProfile.districtName || "—"}</span></div>
-                              <div className="sm:text-right"><span className="text-slate-600 font-semibold">UDISE क्र.:</span> <span className="font-mono font-extrabold text-slate-950">{schoolProfile.udiseNumber || "—"}</span></div>
+                            <div className="pdf-school-subline flex flex-nowrap items-center justify-between gap-1 sm:gap-3 text-[8.5px] min-[360px]:text-[9.5px] min-[400px]:text-[11px] sm:text-sm md:text-base font-bold text-slate-900 pt-1.5 whitespace-nowrap overflow-hidden">
+                              <div className="text-left shrink-0"><span className="text-slate-600 font-semibold">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
+                              <div className="text-center shrink-0"><span className="text-slate-600 font-semibold">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
+                              <div className="text-center shrink-0"><span className="text-slate-600 font-semibold">जिल्हा:</span> <span className="font-extrabold text-slate-950">{schoolProfile.districtName || "—"}</span></div>
+                              <div className="text-right shrink-0"><span className="text-slate-600 font-semibold">UDISE क्र.:</span> <span className="font-mono font-extrabold text-slate-950">{schoolProfile.udiseNumber || "—"}</span></div>
                             </div>
                           </div>
 
@@ -3459,11 +3562,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                             </h2>
                           </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm md:text-base font-bold text-slate-900 pt-1.5">
-                            <div><span className="text-slate-600 font-semibold">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
-                            <div className="sm:text-center"><span className="text-slate-600 font-semibold">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
-                            <div className="sm:text-center"><span className="text-slate-600 font-semibold">जिल्हा:</span> <span className="font-extrabold text-slate-950">{schoolProfile.districtName || "—"}</span></div>
-                            <div className="sm:text-right"><span className="text-slate-600 font-semibold">UDISE क्र.:</span> <span className="font-mono font-extrabold text-slate-950">{schoolProfile.udiseNumber || "—"}</span></div>
+                          <div className="pdf-school-subline flex flex-nowrap items-center justify-between gap-1 sm:gap-3 text-[8.5px] min-[360px]:text-[9.5px] min-[400px]:text-[11px] sm:text-sm md:text-base font-bold text-slate-900 pt-1.5 whitespace-nowrap overflow-hidden">
+                            <div className="text-left shrink-0"><span className="text-slate-600 font-semibold">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
+                            <div className="text-center shrink-0"><span className="text-slate-600 font-semibold">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
+                            <div className="text-center shrink-0"><span className="text-slate-600 font-semibold">जिल्हा:</span> <span className="font-extrabold text-slate-950">{schoolProfile.districtName || "—"}</span></div>
+                            <div className="text-right shrink-0"><span className="text-slate-600 font-semibold">UDISE क्र.:</span> <span className="font-mono font-extrabold text-slate-950">{schoolProfile.udiseNumber || "—"}</span></div>
                           </div>
                         </div>
 
@@ -3796,6 +3899,28 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                       page-break-inside: avoid !important;
                       break-inside: avoid !important;
                     }
+                    .pdf-school-header {
+                      padding: 8px 14px !important;
+                      border: 2px solid #0f172a !important;
+                    }
+                    .pdf-school-header h2 {
+                      font-size: 18px !important;
+                      font-weight: 900 !important;
+                      color: #0f172a !important;
+                    }
+                    .pdf-school-subline {
+                      font-size: 13px !important;
+                      line-height: 1.4 !important;
+                      display: flex !important;
+                      flex-direction: row !important;
+                      flex-wrap: nowrap !important;
+                      justify-content: space-between !important;
+                      width: 100% !important;
+                    }
+                    .pdf-school-subline * {
+                      font-size: 13px !important;
+                      white-space: nowrap !important;
+                    }
                   }
 
                   /* Dedicated Clean PDF Export Mode */
@@ -3926,6 +4051,39 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                   .pdf-export-active td.bg-amber-50 {
                     background-color: #fffbe6 !important;
                   }
+                  .pdf-export-active .pdf-school-header {
+                    width: 100% !important;
+                    box-sizing: border-box !important;
+                    padding: 8px 16px !important;
+                    border: 2px solid #0f172a !important;
+                    border-radius: 12px !important;
+                    background-color: #ffffff !important;
+                    margin-bottom: 8px !important;
+                  }
+                  .pdf-export-active .pdf-school-header h2 {
+                    font-size: 20px !important;
+                    font-weight: 900 !important;
+                    line-height: 1.3 !important;
+                    color: #0f172a !important;
+                    margin: 0 !important;
+                    padding-bottom: 4px !important;
+                  }
+                  .pdf-export-active .pdf-school-subline {
+                    font-size: 13.5px !important;
+                    line-height: 1.4 !important;
+                    padding-top: 5px !important;
+                    display: flex !important;
+                    flex-direction: row !important;
+                    flex-wrap: nowrap !important;
+                    justify-content: space-between !important;
+                    align-items: center !important;
+                    width: 100% !important;
+                    overflow: visible !important;
+                  }
+                  .pdf-export-active .pdf-school-subline * {
+                    font-size: 13.5px !important;
+                    white-space: nowrap !important;
+                  }
                   .pdf-export-active .pdf-subject-banner {
                     display: flex !important;
                     flex-direction: row !important;
@@ -3936,6 +4094,36 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     white-space: nowrap !important;
                     width: 100% !important;
                     box-sizing: border-box !important;
+                    overflow: visible !important;
+                  }
+                  .pdf-export-active .pdf-banner-scroll,
+                  .pdf-export-active .pdf-banner-content {
+                    width: 100% !important;
+                    display: flex !important;
+                    flex-direction: row !important;
+                    flex-wrap: nowrap !important;
+                    justify-content: space-between !important;
+                    align-items: center !important;
+                    overflow: visible !important;
+                  }
+                  .pdf-export-active .pdf-banner-item {
+                    width: auto !important;
+                    flex: 0 0 auto !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                  }
+                  .pdf-export-active .pdf-banner-title {
+                    width: auto !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 6px !important;
+                  }
+                  .pdf-export-active .pdf-banner-dot,
+                  .pdf-export-active .pdf-banner-prefix {
+                    display: inline !important;
+                  }
+                  .pdf-export-active .pdf-banner-icon {
+                    display: inline-block !important;
                   }
                   .pdf-export-active .pdf-subject-banner * {
                     flex-wrap: nowrap !important;
@@ -4076,11 +4264,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               </h2>
                             </div>
 
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 text-[10px] sm:text-xs md:text-[13px] font-bold text-slate-900 pt-0.5">
-                              <div><span className="text-slate-600 font-semibold">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
-                              <div className="sm:text-center"><span className="text-slate-600 font-semibold">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
-                              <div className="sm:text-center"><span className="text-slate-600 font-semibold">जिल्हा:</span> <span className="font-extrabold text-slate-950">{schoolProfile.districtName || "—"}</span></div>
-                              <div className="sm:text-right"><span className="text-slate-600 font-semibold">UDISE क्र.:</span> <span className="font-mono font-extrabold text-slate-950">{schoolProfile.udiseNumber || "—"}</span></div>
+                            <div className="pdf-school-subline flex flex-nowrap items-center justify-between gap-1 sm:gap-2 text-[8px] min-[360px]:text-[9px] min-[400px]:text-[10px] sm:text-xs md:text-[13px] font-bold text-slate-900 pt-0.5 whitespace-nowrap overflow-hidden">
+                              <div className="text-left shrink-0"><span className="text-slate-600 font-semibold">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
+                              <div className="text-center shrink-0"><span className="text-slate-600 font-semibold">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
+                              <div className="text-center shrink-0"><span className="text-slate-600 font-semibold">जिल्हा:</span> <span className="font-extrabold text-slate-950">{schoolProfile.districtName || "—"}</span></div>
+                              <div className="text-right shrink-0"><span className="text-slate-600 font-semibold">UDISE क्र.:</span> <span className="font-mono font-extrabold text-slate-950">{schoolProfile.udiseNumber || "—"}</span></div>
                             </div>
                           </div>
 
@@ -4088,10 +4276,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           {(() => {
                             const parts = getSectionBannerParts(sec);
                             return (
-                              <div className="pdf-subject-banner relative bg-gradient-to-r from-amber-50/95 via-amber-50 to-orange-50/90 border-2 border-amber-300 text-amber-950 px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-xl flex flex-nowrap items-center justify-between gap-2 shadow-xs overflow-x-auto print:py-0.5 print:px-2">
-                                <div className="flex items-center gap-2.5 sm:gap-3.5 flex-nowrap flex-1 min-w-0">
-                                  <BookOpen className="size-4 sm:size-5 text-amber-600 shrink-0" />
-                                  <div className="flex items-center flex-nowrap whitespace-nowrap text-xs sm:text-[13px] md:text-sm font-black text-amber-950 min-w-0">
+                              <div className="pdf-subject-banner relative bg-gradient-to-r from-amber-50/95 via-amber-50 to-orange-50/90 border-2 border-amber-300 text-amber-950 px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-xl flex flex-nowrap items-center justify-between shadow-xs overflow-hidden print:py-0.5 print:px-2 w-full">
+                                <div className="w-full flex-1 min-w-0 overflow-x-auto scrollbar-thin scrollbar-thumb-amber-300 sm:scrollbar-none [-webkit-overflow-scrolling:touch] py-0.5">
+                                  <div className="w-full min-w-full flex flex-nowrap items-center justify-between gap-2 sm:gap-3 text-xs sm:text-[13px] md:text-sm font-black text-amber-950 whitespace-nowrap">
                                     {parts.segments.map((seg, idx) => {
                                       const colonMatch = seg.match(/^(.*?)\s*(:-|:)\s*(.*)$/);
                                       const hasColon = !!colonMatch;
@@ -4099,43 +4286,46 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                       const val = hasColon ? colonMatch[3].trim() : "";
 
                                       return (
-                                        <div key={idx} className="flex items-center shrink-0">
+                                        <React.Fragment key={idx}>
                                           {idx > 0 && (
-                                            <span className="text-amber-400 font-black select-none text-sm sm:text-base mx-2 sm:mx-3.5 md:mx-4">
+                                            <span className="pdf-banner-dot text-amber-400 font-black select-none text-xs sm:text-sm shrink-0">
                                               •
                                             </span>
                                           )}
-                                          <span className="inline-flex items-center whitespace-nowrap">
-                                            {hasColon ? (
-                                              <>
+                                          <div className="pdf-banner-item flex items-center shrink-0">
+                                            {idx === 0 ? (
+                                              <div className="pdf-banner-title flex items-center gap-1.5 shrink-0">
+                                                <BookOpen className="pdf-banner-icon size-3.5 sm:size-4 md:size-4.5 text-amber-600 shrink-0" />
+                                                <span className="font-black text-amber-950">
+                                                  {seg}
+                                                </span>
+                                              </div>
+                                            ) : hasColon ? (
+                                              <span className="inline-flex items-center">
                                                 <span className="font-bold text-amber-800/90">{label}</span>
-                                                <span className="font-black text-amber-600 mx-1.5">:</span>
+                                                <span className="font-black text-amber-600 mx-1 shrink-0">:</span>
                                                 <span className="font-black text-amber-950">{val}</span>
-                                              </>
+                                              </span>
                                             ) : (
                                               <span className="font-black text-amber-950">{seg}</span>
                                             )}
-                                          </span>
-                                        </div>
+                                          </div>
+                                        </React.Fragment>
                                       );
                                     })}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0 self-center pl-2 sm:pl-4">
-                                  <span className="text-[11px] sm:text-xs font-black text-amber-800 bg-amber-100/90 px-3 sm:px-3.5 py-1 rounded-full border border-amber-300 whitespace-nowrap shadow-2xs shrink-0">
-                                    {filteredRows.length} ओळी (Rows)
-                                  </span>
-
-                                  {isInlineEditing && (
+                                {isInlineEditing && (
+                                  <div className="flex items-center gap-1 sm:gap-2 shrink-0 self-center pl-1 sm:pl-3">
                                     <button
                                       onClick={() => handleAddRow(sec.subjectName)}
-                                      className="px-2.5 sm:px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1 shadow-xs active:scale-95"
+                                      className="px-2 sm:px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1 shadow-xs active:scale-95 shrink-0"
                                     >
                                       <Plus className="size-3.5" />
                                       <span className="hidden sm:inline">ओळ जोडा</span>
                                     </button>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
                               </div>
                             );
                           })()}
@@ -4187,39 +4377,39 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               <colgroup>
                                 {isMonthly ? (
                                   mobileTableViewMode === "fit" ? [
-                                    <col key="m0" style={{ width: "3.5%", minWidth: "28px", maxWidth: "40px" }} />,
-                                    <col key="m1" style={{ width: "11%" }} />,
-                                    <col key="m2" style={{ width: "19%" }} />,
-                                    <col key="m3" style={{ width: "14%" }} />,
-                                    <col key="m4" style={{ width: "34.5%" }} />,
-                                    <col key="m5" style={{ width: "9%" }} />,
-                                    <col key="m6" style={{ width: "9%" }} />,
+                                    <col key="m0" style={{ width: "3.5%", minWidth: "26px", maxWidth: "38px" }} />,
+                                    <col key="m1" style={{ width: "10.5%" }} />,
+                                    <col key="m2" style={{ width: "17.5%" }} />,
+                                    <col key="m3" style={{ width: "13.5%" }} />,
+                                    <col key="m4" style={{ width: "27%" }} />,
+                                    <col key="m5" style={{ width: "12.5%", minWidth: "55px" }} />,
+                                    <col key="m6" style={{ width: "15.5%", minWidth: "75px" }} />,
                                     ...(isInlineEditing ? [<col key="mEdit" style={{ width: "8%" }} />] : [])
                                   ] : [
-                                    <col key="m0" style={{ width: "3.5%", minWidth: "28px", maxWidth: "40px" }} />,
-                                    <col key="m1" style={{ width: "11%" }} />,
-                                    <col key="m2" style={{ width: "19%" }} />,
-                                    <col key="m3" style={{ width: "14%" }} />,
-                                    <col key="m4" style={{ width: "34.5%" }} />,
-                                    <col key="m5" style={{ width: "9%" }} />,
-                                    <col key="m6" style={{ width: "9%" }} />,
+                                    <col key="m0" style={{ width: "3.5%", minWidth: "26px", maxWidth: "38px" }} />,
+                                    <col key="m1" style={{ width: "10.5%" }} />,
+                                    <col key="m2" style={{ width: "17.5%" }} />,
+                                    <col key="m3" style={{ width: "13.5%" }} />,
+                                    <col key="m4" style={{ width: "27%" }} />,
+                                    <col key="m5" style={{ width: "12.5%", minWidth: "65px" }} />,
+                                    <col key="m6" style={{ width: "15.5%", minWidth: "85px" }} />,
                                     ...(isInlineEditing ? [<col key="mEdit" style={{ width: "60px" }} />] : [])
                                   ]
                                 ) : (
                                   mobileTableViewMode === "fit" ? [
-                                    <col key="a0" style={{ width: "8.5%", minWidth: "50px", maxWidth: "68px" }} />,
-                                    <col key="a1" style={{ width: "5.5%", minWidth: "36px", maxWidth: "46px" }} />,
-                                    <col key="a2" style={{ width: "6.5%", minWidth: "42px", maxWidth: "54px" }} />,
-                                    <col key="a3" style={{ width: "6.5%", minWidth: "42px", maxWidth: "54px" }} />,
-                                    <col key="a4" style={{ width: "62%" }} />,
-                                    <col key="a5" style={{ width: "11%", minWidth: "65px", maxWidth: "85px" }} />,
+                                    <col key="a0" style={{ width: "8.5%", minWidth: "48px", maxWidth: "65px" }} />,
+                                    <col key="a1" style={{ width: "8%", minWidth: "48px", maxWidth: "60px" }} />,
+                                    <col key="a2" style={{ width: "6.5%", minWidth: "40px", maxWidth: "52px" }} />,
+                                    <col key="a3" style={{ width: "6.5%", minWidth: "40px", maxWidth: "52px" }} />,
+                                    <col key="a4" style={{ width: "59.5%" }} />,
+                                    <col key="a5" style={{ width: "11%", minWidth: "60px", maxWidth: "80px" }} />,
                                     ...(isInlineEditing ? [<col key="aEdit" style={{ width: "8%" }} />] : [])
                                   ] : [
                                     <col key="a0" style={{ width: "8.5%", minWidth: "48px", maxWidth: "65px" }} />,
-                                    <col key="a1" style={{ width: "5.5%", minWidth: "32px", maxWidth: "42px" }} />,
+                                    <col key="a1" style={{ width: "8%", minWidth: "48px", maxWidth: "60px" }} />,
                                     <col key="a2" style={{ width: "6.5%", minWidth: "38px", maxWidth: "50px" }} />,
                                     <col key="a3" style={{ width: "6.5%", minWidth: "38px", maxWidth: "50px" }} />,
-                                    <col key="a4" style={{ width: "62%" }} />,
+                                    <col key="a4" style={{ width: "59.5%" }} />,
                                     <col key="a5" style={{ width: "11%", minWidth: "55px", maxWidth: "75px" }} />,
                                     ...(isInlineEditing ? [<col key="aEdit" style={{ width: "60px" }} />] : [])
                                   ]
@@ -4230,46 +4420,50 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                   {categoryHeaders.map((hText: string, i: number) => {
                                     const thStyle = isMonthly
                                       ? i === 0
-                                        ? { width: "3.5%", minWidth: "28px", maxWidth: "40px", padding: "4px 2px" }
+                                        ? { width: "3.5%", minWidth: "26px", maxWidth: "38px", padding: "4px 2px" }
                                         : i === 4
-                                          ? { width: "34.5%" }
+                                          ? { width: "27%" }
                                           : i === 1
-                                            ? { width: "11%" }
+                                            ? { width: "10.5%" }
                                             : i === 2
-                                              ? { width: "19%" }
+                                              ? { width: "17.5%" }
                                               : i === 3
-                                                ? { width: "14%" }
-                                                : i === 5 || i === 6
-                                                  ? { width: "9%" }
-                                                  : undefined
-                                      : i === 0
-                                        ? { width: "8.5%", minWidth: "50px", maxWidth: "68px", padding: "3px 1.5px" }
-                                        : i === 1
-                                          ? { width: "5.5%", minWidth: "36px", maxWidth: "46px", padding: "3px 1px" }
-                                          : i === 2
-                                            ? { width: "6.5%", minWidth: "42px", maxWidth: "54px", padding: "3px 1px" }
-                                            : i === 3
-                                              ? { width: "6.5%", minWidth: "42px", maxWidth: "54px", padding: "3px 1px" }
-                                              : i === 4
-                                                ? { width: "62%", padding: "3px 6px" }
+                                                ? { width: "13.5%" }
                                                 : i === 5
-                                                  ? { width: "11%", minWidth: "65px", maxWidth: "85px", padding: "3px 1.5px" }
+                                                  ? { width: "12.5%", minWidth: "55px" }
+                                                  : i === 6
+                                                    ? { width: "15.5%", minWidth: "75px" }
+                                                    : undefined
+                                      : i === 0
+                                        ? { width: "8.5%", minWidth: "48px", maxWidth: "65px", padding: "3px 1.5px" }
+                                        : i === 1
+                                          ? { width: "8%", minWidth: "48px", maxWidth: "60px", padding: "3px 1px", whiteSpace: "nowrap" }
+                                          : i === 2
+                                            ? { width: "6.5%", minWidth: "40px", maxWidth: "52px", padding: "3px 1px" }
+                                            : i === 3
+                                              ? { width: "6.5%", minWidth: "40px", maxWidth: "52px", padding: "3px 1px" }
+                                              : i === 4
+                                                ? { width: "59.5%", padding: "3px 6px" }
+                                                : i === 5
+                                                  ? { width: "11%", minWidth: "60px", maxWidth: "80px", padding: "3px 1.5px" }
                                                   : undefined;
                                     return (
                                       <th
                                         key={i}
                                         style={thStyle}
-                                        className={`border border-slate-400 ${mobileTableViewMode === 'fit' ? 'p-1 text-[9px] sm:p-2 sm:text-[11px]' : 'p-2 text-[11px]'} text-center font-black tracking-tight sm:tracking-wide bg-slate-100 text-slate-900 leading-tight sm:leading-snug whitespace-pre-line break-words`}
+                                        className={`border border-slate-400 ${mobileTableViewMode === 'fit' ? 'p-1 text-[9px] sm:p-2 sm:text-[11px]' : 'p-2 text-[11px]'} text-center font-black tracking-tight sm:tracking-wide bg-slate-100 text-slate-900 leading-tight sm:leading-snug ${!isMonthly && i === 1 ? 'whitespace-nowrap' : 'whitespace-pre-line break-words'}`}
                                       >
                                         {!isMonthly && i === 4
                                           ? "पाठ / घटक"
-                                          : !isMonthly && i === 2
-                                            ? <>कामाचे<br />दिवस</>
-                                            : !isMonthly && i === 3
-                                              ? <>प्राप्त<br />तासिका</>
-                                              : !isMonthly && i === 5
-                                                ? <>शिक्षक<br />स्वाक्षरी</>
-                                                : isMonthly
+                                          : !isMonthly && i === 1
+                                            ? <span className="whitespace-nowrap">आठवडा</span>
+                                            : !isMonthly && i === 2
+                                              ? <>कामाचे<br />दिवस</>
+                                              : !isMonthly && i === 3
+                                                ? <>प्राप्त<br />तासिका</>
+                                                : !isMonthly && i === 5
+                                                  ? <>शिक्षक<br />स्वाक्षरी</>
+                                                  : isMonthly
                                             ? isSecEng
                                               ? i === 0
                                                 ? "Day"
@@ -4291,7 +4485,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 : i === 1
                                                   ? (hText.replace(/\/?\s*उपघटक/g, "").replace(/\/\s*$/, "").trim() || "पाठ / घटक")
                                                   : i === 5
-                                                    ? "साधन तंत्रे"
+                                                    ? "साधन\nतंत्रे"
                                                     : i === 6
                                                       ? "शैक्षणिक\nसाहित्य"
                                                       : isMonthly
@@ -4499,6 +4693,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 cellClasses += " text-center font-bold text-slate-900 text-xs sm:text-[13.5px] whitespace-pre-line break-words leading-relaxed sm:leading-6";
                                               } else if (cIdx === 3) {
                                                 cellClasses += " text-center font-medium text-slate-900 text-xs sm:text-[13px] whitespace-pre-line break-words";
+                                              } else if (cIdx === 5 || cIdx === 6) {
+                                                cellClasses += ` text-center font-medium text-slate-900 ${mobileTableViewMode === 'fit' ? 'text-[8.5px] min-[360px]:text-[9.5px] sm:text-xs' : 'text-xs sm:text-[13px]'} whitespace-nowrap leading-snug`;
                                               } else {
                                                 cellClasses += " text-left text-slate-900 text-xs sm:text-[13.5px] whitespace-pre-line break-words leading-relaxed sm:leading-6";
                                               }
@@ -4522,35 +4718,37 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                   pageBreakInside: "avoid",
                                                   breakInside: "avoid",
                                                   verticalAlign: "middle",
-                                                  textAlign: isExam || cIdx <= 3 || (!isMonthly && cIdx === 5) ? "center" : "left",
+                                                  textAlign: isExam || cIdx <= 3 || (!isMonthly && cIdx === 5) || (isMonthly && (cIdx === 5 || cIdx === 6)) ? "center" : "left",
                                                   fontFamily: "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif",
                                                   backgroundColor: isExam ? "#fffbeb" : undefined,
                                                   ...(isMonthly
                                                     ? (cIdx === 0
-                                                      ? { width: "3.5%", minWidth: "28px", maxWidth: "40px", padding: "4px 2px" }
+                                                      ? { width: "3.5%", minWidth: "26px", maxWidth: "38px", padding: "4px 2px" }
                                                       : cIdx === 4
-                                                        ? { width: "34.5%" }
+                                                        ? { width: "27%" }
                                                         : cIdx === 1
-                                                          ? { width: "11%" }
+                                                          ? { width: "10.5%" }
                                                           : cIdx === 2
-                                                            ? { width: "19%" }
+                                                            ? { width: "17.5%" }
                                                             : cIdx === 3
-                                                              ? { width: "14%" }
-                                                              : cIdx === 5 || cIdx === 6
-                                                                ? { width: "9%" }
-                                                                : {})
+                                                              ? { width: "13.5%" }
+                                                              : cIdx === 5
+                                                                ? { width: "12.5%", minWidth: "55px", whiteSpace: "nowrap", textAlign: "center" }
+                                                                : cIdx === 6
+                                                                  ? { width: "15.5%", minWidth: "75px", whiteSpace: "nowrap", textAlign: "center" }
+                                                                  : {})
                                                     : (cIdx === 0
                                                       ? { width: "8.5%", minWidth: "48px", maxWidth: "65px", padding: "2px 2px" }
                                                       : cIdx === 1
-                                                        ? { width: "5.5%", minWidth: "32px", maxWidth: "42px", padding: "2px 1px" }
+                                                        ? { width: "8%", minWidth: "48px", maxWidth: "60px", padding: "2px 1px", whiteSpace: "nowrap" }
                                                       : cIdx === 2
-                                                        ? { width: "6.5%", minWidth: "38px", maxWidth: "50px", padding: "2px 1px" }
+                                                        ? { width: "6.5%", minWidth: "40px", maxWidth: "52px", padding: "2px 1px" }
                                                       : cIdx === 3
-                                                        ? { width: "6.5%", minWidth: "38px", maxWidth: "50px", padding: "2px 1px" }
+                                                        ? { width: "6.5%", minWidth: "40px", maxWidth: "52px", padding: "2px 1px" }
                                                       : cIdx === 4
-                                                        ? { width: "62%", padding: "2px 6px" }
+                                                        ? { width: "59.5%", padding: "2px 6px" }
                                                       : cIdx === 5
-                                                        ? { width: "11%", minWidth: "55px", maxWidth: "75px", padding: "2px 2px" }
+                                                        ? { width: "11%", minWidth: "60px", maxWidth: "80px", padding: "2px 2px" }
                                                       : {})),
                                                 }}
                                               >

@@ -1547,6 +1547,7 @@ export function DocumentEditorViewer({
                           </div>
 
                           {/* Line 3: Class, Subject, Total Marks (3 columns) */}
+                          {/* Line 3: Class, Subject, Roll No */}
                           <div
                             className="flex items-center justify-between font-bold mt-2 pt-1 border-t border-slate-200 uppercase gap-1"
                             style={{ fontSize: `${Math.max(10, Math.round(13.5 * pageScale))}px` }}
@@ -1558,25 +1559,6 @@ export function DocumentEditorViewer({
                             <div className="text-center">
                               <span className="whitespace-nowrap">{isEng ? "SUB – " : "विषय - "}</span>
                               <span className="font-black">{hb.subjectName || (isEng ? "MATH" : "भाषा")}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="whitespace-nowrap">{isEng ? "TOTAL MARKS - " : "एकूण गुण - "}</span>
-                              <span className="font-black">{hb.totalMarks || (isEng ? "20" : "२०")}</span>
-                            </div>
-                          </div>
-
-                          {/* Line 4: Student Name & Roll No */}
-                          <div
-                            className="flex items-center justify-between font-semibold mt-2 gap-1.5"
-                            style={{ fontSize: `${Math.max(10, Math.round(12.5 * pageScale))}px` }}
-                          >
-                            <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                              <span className="font-bold whitespace-nowrap shrink-0">
-                                {isEng ? "STUDENT NAME :" : "विद्यार्थ्याचे नाव :-"}
-                              </span>
-                              <span className="flex-1 border-b border-slate-900 inline-block min-w-0 font-bold px-1 text-slate-950 truncate">
-                                {hb.studentName && hb.studentName !== "_____________________" ? hb.studentName : ""}
-                              </span>
                             </div>
                             <div className="flex items-center gap-1.5 pl-1.5 shrink-0">
                               <span className="font-bold whitespace-nowrap">
@@ -1591,6 +1573,34 @@ export function DocumentEditorViewer({
                                 }}
                               >
                                 {hb.rollNo}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Line 4: Student Name & Total Marks */}
+                          <div
+                            className="flex items-center justify-between font-semibold mt-2 gap-1.5"
+                            style={{ fontSize: `${Math.max(10, Math.round(12.5 * pageScale))}px` }}
+                          >
+                            <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                              <span className="font-bold whitespace-nowrap shrink-0">
+                                {isEng ? "STUDENT NAME :" : "विद्यार्थ्याचे नाव :-"}
+                              </span>
+                              <span className="flex-1 border-b border-slate-900 inline-block min-w-0 font-bold px-1 text-slate-950 truncate">
+                                {hb.studentName && hb.studentName !== "_____________________" ? hb.studentName : ""}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 pl-1.5 shrink-0">
+                              <span className="font-bold whitespace-nowrap">{isEng ? "TOTAL MARKS - " : "एकूण गुण - "}</span>
+                              <div
+                                className="border-2 border-slate-900 rounded-sm flex items-center justify-center font-black bg-white shrink-0"
+                                style={{
+                                  width: `${Math.max(24, Math.round(28 * pageScale))}px`,
+                                  height: `${Math.max(24, Math.round(28 * pageScale))}px`,
+                                  fontSize: `${Math.max(10, Math.round(12 * pageScale))}px`,
+                                }}
+                              >
+                                {hb.totalMarks || (isEng ? "20" : "२०")}
                               </div>
                             </div>
                           </div>
@@ -2124,13 +2134,18 @@ export function DocumentEditorViewer({
                   <div className="text-center font-black text-xs sm:text-sm my-1 text-slate-900">
                     {headerForm.examTitle || "आकारिक मूल्यमापन चाचणी क्र. १"}
                   </div>
-                  {/* Line 3: Class, Subject, Marks */}
+                  {/* Line 3: Class, Subject, Roll No */}
                   <div className="flex items-center justify-between text-xs font-bold mt-1.5 pt-1 border-t border-slate-200">
                     <div>इयत्ता - <span className="font-black">{headerForm.className || "१ ली"}</span></div>
                     <div>विषय - <span className="font-black">{headerForm.subjectName || "भाषा"}</span></div>
-                    <div>एकूण गुण - <span className="font-black">{headerForm.totalMarks || "२०"}</span></div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span>हजेरी क्रमांक -</span>
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs bg-white">
+                        {headerForm.rollNo}
+                      </div>
+                    </div>
                   </div>
-                  {/* Line 4: Student Name & Roll No */}
+                  {/* Line 4: Student Name & Total Marks */}
                   <div className="flex items-center justify-between text-xs font-semibold mt-1.5">
                     <div className="flex-1 flex items-center gap-1">
                       <span>विद्यार्थ्याचे नाव :-</span>
@@ -2138,10 +2153,10 @@ export function DocumentEditorViewer({
                         {headerForm.studentName && headerForm.studentName !== "_____________________" ? headerForm.studentName : ""}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 pl-2 shrink-0">
-                      <span>हजेरी क्रमांक -</span>
+                    <div className="shrink-0 pl-2 flex items-center gap-1.5">
+                      <span className="font-bold">एकूण गुण - </span>
                       <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-slate-900 rounded-sm flex items-center justify-center font-black text-xs bg-white">
-                        {headerForm.rollNo}
+                        {headerForm.totalMarks || "२०"}
                       </div>
                     </div>
                   </div>

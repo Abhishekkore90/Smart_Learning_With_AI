@@ -1078,14 +1078,14 @@ export async function exportDocumentToPdf(
 
         const isEng = Boolean(headerBox.isEnglish);
 
-        // 3. Line 1: School Name & Kendra, Taluka, Jilha
+        // 3. Line 1: School Name (dedicated full width line)
         ctx.fillStyle = "#0f172a";
         ctx.font = 'bold 16px "Noto Sans Devanagari", sans-serif';
         ctx.textBaseline = "top";
         const schoolLabel = isEng ? "SCHOOL NAME : " : "शाळेचे नाव : ";
-        ctx.fillText(`${schoolLabel}${headerBox.schoolName || ""}`, bx + 16, by + 12);
+        ctx.fillText(`${schoolLabel}${headerBox.schoolName || ""}`, bx + 16, by + 10);
 
-        // Kendra, Taluka, Jilha sub-details on top right of the box
+        // Kendra, Taluka, Jilha sub-details on dedicated second line
         const subParts = [
           headerBox.kendra ? (isEng ? `Center: ${headerBox.kendra}` : `केंद्र : ${headerBox.kendra}`) : "",
           headerBox.taluka ? (isEng ? `Taluka: ${headerBox.taluka}` : `तालुका : ${headerBox.taluka}`) : "",
@@ -1093,10 +1093,9 @@ export async function exportDocumentToPdf(
         ].filter(Boolean);
         if (subParts.length > 0) {
           const subText = subParts.join("  |  ");
-          ctx.font = 'bold 11px "Noto Sans Devanagari", sans-serif';
+          ctx.font = 'bold 11.5px "Noto Sans Devanagari", sans-serif';
           ctx.fillStyle = "#334155";
-          const subMetrics = ctx.measureText(subText);
-          ctx.fillText(subText, bx + bw - subMetrics.width - 16, by + 15);
+          ctx.fillText(subText, bx + 16, by + 30);
           ctx.fillStyle = "#0f172a";
         }
 
@@ -1104,20 +1103,31 @@ export async function exportDocumentToPdf(
         ctx.font = 'bold 16px "Noto Sans Devanagari", sans-serif';
         const titleText = headerBox.examTitle || (isEng ? "FORMATIVE EVALUATION TEST 1" : "आकारिक मूल्यमापन चाचणी क्र. १");
         const titleMetrics = ctx.measureText(titleText);
-        ctx.fillText(titleText, bx + (bw - titleMetrics.width) / 2, by + 40);
+        ctx.fillText(titleText, bx + (bw - titleMetrics.width) / 2, by + 48);
 
-        // 5. Line 3: Class, Subject, Marks
+        // 5. Line 3: Class, Subject, Roll No
         ctx.font = 'bold 13px "Noto Sans Devanagari", sans-serif';
         const classLabel = isEng ? `STD - ${headerBox.className || "1"}` : `इयत्ता - ${headerBox.className || "१ ली"}`;
         ctx.fillText(classLabel, bx + 16, by + 68);
         const subjText = isEng ? `SUB - ${headerBox.subjectName || "MATH"}` : `विषय - ${headerBox.subjectName || "भाषा"}`;
         const subjMetrics = ctx.measureText(subjText);
         ctx.fillText(subjText, bx + (bw - subjMetrics.width) / 2, by + 68);
-        const marksText = isEng ? `TOTAL MARKS - ${headerBox.totalMarks || "20"}` : `एकूण गुण - ${headerBox.totalMarks || "२०"}`;
-        const marksMetrics = ctx.measureText(marksText);
-        ctx.fillText(marksText, bx + bw - marksMetrics.width - 16, by + 68);
 
-        // 6. Line 4: Student Name & Roll No
+        // Roll no square box on Line 3
+        const rollLabel = isEng ? "ROLL NO.-" : "हजेरी क्रमांक -";
+        const rollMetrics = ctx.measureText(rollLabel);
+        const rollBoxX = bx + bw - 44;
+        const rollBoxY = by + 62;
+        ctx.fillText(rollLabel, rollBoxX - rollMetrics.width - 8, by + 68);
+        drawCanvasRoundedRect(ctx, rollBoxX, rollBoxY, 26, 26, 2);
+        ctx.strokeStyle = "#0f172a";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        if (headerBox.rollNo) {
+          ctx.fillText(headerBox.rollNo, rollBoxX + 6, rollBoxY + 5);
+        }
+
+        // 6. Line 4: Student Name & Total Marks
         ctx.font = 'bold 12.5px "Noto Sans Devanagari", sans-serif';
         const studentLabel = isEng ? "STUDENT NAME :" : "विद्यार्थ्याचे नाव :-";
         ctx.fillText(studentLabel, bx + 16, by + 96);
@@ -1133,19 +1143,18 @@ export async function exportDocumentToPdf(
           ctx.fillText(headerBox.studentName, bx + 16 + sLabelWidth + 10, by + 96);
         }
 
-        // Roll no square box
-        const rollLabel = isEng ? "ROLL NO.-" : "हजेरी क्रमांक -";
-        const rollMetrics = ctx.measureText(rollLabel);
-        const rollBoxX = bx + bw - 44;
-        const rollBoxY = by + 90;
-        ctx.fillText(rollLabel, rollBoxX - rollMetrics.width - 8, by + 96);
-        drawCanvasRoundedRect(ctx, rollBoxX, rollBoxY, 26, 26, 2);
+        // Total marks square box on Line 4
+        const marksLabel = isEng ? "TOTAL MARKS -" : "एकूण गुण -";
+        const marksMetrics = ctx.measureText(marksLabel);
+        const marksBoxX = bx + bw - 44;
+        const marksBoxY = by + 90;
+        ctx.fillText(marksLabel, marksBoxX - marksMetrics.width - 8, by + 96);
+        drawCanvasRoundedRect(ctx, marksBoxX, marksBoxY, 26, 26, 2);
         ctx.strokeStyle = "#0f172a";
         ctx.lineWidth = 1.5;
         ctx.stroke();
-        if (headerBox.rollNo) {
-          ctx.fillText(headerBox.rollNo, rollBoxX + 6, rollBoxY + 5);
-        }
+        const marksVal = headerBox.totalMarks || (isEng ? "20" : "२०");
+        ctx.fillText(marksVal, marksBoxX + 4, marksBoxY + 5);
 
         // 7. Line 5: Date & Marks Obtained
         ctx.fillText(headerBox.examDate || (isEng ? "DATE -   /   / 2026" : "दि.   /   / २०२६"), bx + 16, by + 124);
@@ -1329,25 +1338,30 @@ export function printDocument(model: DocumentModel): void {
             <div style="position: absolute; left: 2.0%; top: 0.5%; width: 96.0%; height: 25.5%; background: white; z-index: 45;"></div>
             <!-- 1. Clean rectangular header box -->
             <div style="position: absolute; left: 4.0%; top: 1.6%; width: 92.0%; min-height: 22.6%; background: white; border: 2px solid #0f172a; border-radius: 0px; padding: 10px 14px; box-sizing: border-box; font-family: 'Noto Sans Devanagari', sans-serif; z-index: 50; color: #0f172a;">
-              <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; font-weight: 800; margin-bottom: 4px; gap: 8px;">
-                <div style="flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                  <span style="white-space: nowrap;">${isEng ? 'SCHOOL NAME :' : 'शाळेचे नाव :'}</span> ${escapeHtml(hb.schoolName || '')}
-                </div>
-                ${(hb.kendra || hb.taluka || hb.jilha) ? `
-                  <div style="font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; display: flex; gap: 8px;">
-                    ${hb.kendra ? `<span>${isEng ? 'Center:' : 'केंद्र:'} <b>${escapeHtml(hb.kendra)}</b></span>` : ''}
-                    ${hb.taluka ? `<span>${isEng ? 'Taluka:' : 'तालुका:'} <b>${escapeHtml(hb.taluka)}</b></span>` : ''}
-                    ${hb.jilha ? `<span>${isEng ? 'Dist:' : 'जिल्हा:'} <b>${escapeHtml(hb.jilha)}</b></span>` : ''}
-                  </div>
-                ` : ''}
+              <div style="font-size: 15px; font-weight: 800; margin-bottom: 2px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <span style="white-space: nowrap;">${isEng ? 'SCHOOL NAME :' : 'शाळेचे नाव :'}</span> ${escapeHtml(hb.schoolName || '')}
               </div>
+              ${(hb.kendra || hb.taluka || hb.jilha) ? `
+                <div style="font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  ${hb.kendra ? `<span>${isEng ? 'Center:' : 'केंद्र:'} <b>${escapeHtml(hb.kendra)}</b></span>` : ''}
+                  ${hb.kendra && (hb.taluka || hb.jilha) ? `<span style="color: #94a3b8; font-weight: normal;">|</span>` : ''}
+                  ${hb.taluka ? `<span>${isEng ? 'Taluka:' : 'तालुका:'} <b>${escapeHtml(hb.taluka)}</b></span>` : ''}
+                  ${(hb.kendra || hb.taluka) && hb.jilha ? `<span style="color: #94a3b8; font-weight: normal;">|</span>` : ''}
+                  ${hb.jilha ? `<span>${isEng ? 'Dist:' : 'जिल्हा:'} <b>${escapeHtml(hb.jilha)}</b></span>` : ''}
+                </div>
+              ` : ''}
               <div style="font-size: 15px; font-weight: 800; text-align: center; margin: 4px 0;">
                 ${escapeHtml(hb.examTitle || (isEng ? 'FORMATIVE EVALUATION TEST 1' : 'आकारिक मूल्यमापन चाचणी क्र. १'))}
               </div>
-              <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-top: 6px; padding-top: 4px; border-top: 1px solid #e2e8f0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; margin-top: 6px; padding-top: 4px; border-top: 1px solid #e2e8f0;">
                 <div>${isEng ? 'STD - ' : 'इयत्ता - '}${escapeHtml(hb.className || (isEng ? '1' : '१ ली'))}</div>
                 <div>${isEng ? 'SUB - ' : 'विषय - '}${escapeHtml(hb.subjectName || (isEng ? 'MATH' : 'भाषा'))}</div>
-                <div>${isEng ? 'TOTAL MARKS - ' : 'एकूण गुण - '}${escapeHtml(hb.totalMarks || (isEng ? '20' : '२०'))}</div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span>${isEng ? 'ROLL NO. -' : 'हजेरी क्रमांक -'}</span>
+                  <div style="width: 26px; height: 26px; border: 2px solid #0f172a; border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; background: white;">
+                    ${escapeHtml(hb.rollNo || '')}
+                  </div>
+                </div>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; font-weight: 700; margin-top: 6px;">
                 <div style="display: flex; align-items: center; gap: 4px; flex: 1;">
@@ -1357,9 +1371,9 @@ export function printDocument(model: DocumentModel): void {
                   </span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span>${isEng ? 'ROLL NO. -' : 'हजेरी क्रमांक -'}</span>
+                  <span>${isEng ? 'TOTAL MARKS - ' : 'एकूण गुण - '}</span>
                   <div style="width: 26px; height: 26px; border: 2px solid #0f172a; border-radius: 2px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; background: white;">
-                    ${escapeHtml(hb.rollNo || '')}
+                    ${escapeHtml(hb.totalMarks || (isEng ? '20' : '२०'))}
                   </div>
                 </div>
               </div>
