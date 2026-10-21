@@ -278,7 +278,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           widthPct = 81.2;
           heightPct = 3.66;
         } else if (fieldAttr === 'data-field="exam-title"') {
-          topPct = 5.9;
+          topPct = 6.8;
         }
 
         // Font formatting

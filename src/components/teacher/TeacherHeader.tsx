@@ -124,17 +124,17 @@ export function TeacherHeader() {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* WhatsApp Group for Queries */}
+        {/* WhatsApp Group for Join */}
         <a
           href="https://chat.whatsapp.com/IUcC4XskSSQF8dFpQWUMb4?s=sh&p=a&mlu=4&ilr=4"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-emerald-50 hover:bg-[#25D366] text-emerald-800 hover:text-white border border-emerald-300 hover:border-[#25D366] rounded-xl text-xs font-black transition-all shadow-xs active:scale-95 group/wa shrink-0 cursor-pointer"
-          title="शंका / मदतीसाठी WhatsApp ग्रुप जॉईन करा (Join WhatsApp Group for Queries)"
+          title="WhatsApp ग्रुप जॉईन करा (Join WhatsApp Group)"
         >
           <WhatsAppIcon className="size-4 fill-[#25D366] group-hover/wa:fill-white transition-colors shrink-0" />
           <span className="hidden sm:inline font-extrabold text-[11px] sm:text-xs text-emerald-900 group-hover/wa:text-white">
-            {lang === "mr" ? "WhatsApp शंका / मदत" : "WhatsApp Queries"}
+            {lang === "mr" ? "WhatsApp जॉईन" : "WhatsApp Join"}
           </span>
         </a>
 

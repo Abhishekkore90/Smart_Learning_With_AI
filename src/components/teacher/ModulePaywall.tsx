@@ -727,7 +727,7 @@ export function ModulePaywall({
               title="WhatsApp ग्रुप जॉईन करा"
             >
               <WhatsAppIcon className="size-4 fill-white" />
-              <span>WhatsApp Queries ग्रुप</span>
+              <span>WhatsApp Join ग्रुप</span>
             </a>
           </div>
 

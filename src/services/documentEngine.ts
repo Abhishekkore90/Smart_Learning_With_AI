@@ -1095,7 +1095,8 @@ export async function exportDocumentToPdf(
           const subText = subParts.join("  |  ");
           ctx.font = 'bold 11.5px "Noto Sans Devanagari", sans-serif';
           ctx.fillStyle = "#334155";
-          ctx.fillText(subText, bx + 16, by + 30);
+          const subMetrics = ctx.measureText(subText);
+          ctx.fillText(subText, bx + (bw - subMetrics.width) / 2, by + 28);
           ctx.fillStyle = "#0f172a";
         }
 
@@ -1103,7 +1104,7 @@ export async function exportDocumentToPdf(
         ctx.font = 'bold 16px "Noto Sans Devanagari", sans-serif';
         const titleText = headerBox.examTitle || (isEng ? "FORMATIVE EVALUATION TEST 1" : "आकारिक मूल्यमापन चाचणी क्र. १");
         const titleMetrics = ctx.measureText(titleText);
-        ctx.fillText(titleText, bx + (bw - titleMetrics.width) / 2, by + 48);
+        ctx.fillText(titleText, bx + (bw - titleMetrics.width) / 2, by + 50);
 
         // 5. Line 3: Class, Subject, Roll No
         ctx.font = 'bold 13px "Noto Sans Devanagari", sans-serif';
@@ -1342,7 +1343,7 @@ export function printDocument(model: DocumentModel): void {
                 <span style="white-space: nowrap;">${isEng ? 'SCHOOL NAME :' : 'शाळेचे नाव :'}</span> ${escapeHtml(hb.schoolName || '')}
               </div>
               ${(hb.kendra || hb.taluka || hb.jilha) ? `
-                <div style="font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <div style="font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; gap: 8px; margin-bottom: 7px;">
                   ${hb.kendra ? `<span>${isEng ? 'Center:' : 'केंद्र:'} <b>${escapeHtml(hb.kendra)}</b></span>` : ''}
                   ${hb.kendra && (hb.taluka || hb.jilha) ? `<span style="color: #94a3b8; font-weight: normal;">|</span>` : ''}
                   ${hb.taluka ? `<span>${isEng ? 'Taluka:' : 'तालुका:'} <b>${escapeHtml(hb.taluka)}</b></span>` : ''}
@@ -1350,7 +1351,7 @@ export function printDocument(model: DocumentModel): void {
                   ${hb.jilha ? `<span>${isEng ? 'Dist:' : 'जिल्हा:'} <b>${escapeHtml(hb.jilha)}</b></span>` : ''}
                 </div>
               ` : ''}
-              <div style="font-size: 15px; font-weight: 800; text-align: center; margin: 4px 0;">
+              <div style="font-size: 15px; font-weight: 800; text-align: center; margin: 6px 0 5px 0;">
                 ${escapeHtml(hb.examTitle || (isEng ? 'FORMATIVE EVALUATION TEST 1' : 'आकारिक मूल्यमापन चाचणी क्र. १'))}
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; margin-top: 6px; padding-top: 4px; border-top: 1px solid #e2e8f0;">

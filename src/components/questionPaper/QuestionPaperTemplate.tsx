@@ -511,7 +511,7 @@ export function QuestionPaperTemplate({
 
                   {/* Line 2: Remaining Location Fields (Kendra | Taluka | Jilha) */}
                   {(data.kendra || data.taluka || data.jilha) && (
-                    <div className="flex flex-wrap items-center gap-x-2.5 sm:gap-x-4 gap-y-1 text-[11px] sm:text-xs font-bold text-slate-800 pt-0.5">
+                    <div className="flex flex-wrap items-center justify-center text-center w-full gap-x-2.5 sm:gap-x-4 gap-y-1 text-[11px] sm:text-xs font-bold text-slate-800 pt-0.5 mb-1 sm:mb-2">
                       {data.kendra && (
                         <span className="whitespace-nowrap">
                           <span className="text-slate-700 font-bold">केंद्र : </span>
@@ -543,7 +543,7 @@ export function QuestionPaperTemplate({
             </div>
 
             {/* Exam Title */}
-            <div className="text-center my-1.5 sm:my-2">
+            <div className="text-center my-2 sm:my-3">
               {isEditing ? (
                 <input
                   type="text"

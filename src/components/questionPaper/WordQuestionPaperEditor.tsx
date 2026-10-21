@@ -698,7 +698,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     if (cleanJilha) subParts.push(`<span style="white-space: nowrap; font-size: inherit;"><strong style="font-size: inherit; font-weight: 700; color: #0f172a;">जिल्हा :</strong> <span style="font-size: inherit; font-weight: 700; color: #0f172a;">${escapeHtmlStr(cleanJilha)}</span></span>`);
 
     const subInfoHtml = subParts.length > 0 
-      ? `<div class="qp-sub-location" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0; font-size: inherit; font-weight: 700; color: #0f172a; white-space: nowrap;">${subParts.join('<span style="color: #94a3b8; font-weight: normal; margin: 0 4px; font-size: inherit;">|</span>')}</div>`
+      ? `<div class="qp-sub-location" style="display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; gap: 8px; flex-shrink: 0; font-size: inherit; font-weight: 700; color: #0f172a; white-space: nowrap;">${subParts.join('<span style="color: #94a3b8; font-weight: normal; margin: 0 4px; font-size: inherit;">|</span>')}</div>`
       : "";
 
     // Ensure header-dots-mask exists strictly inside the box (never touching the left or right column borders)
@@ -729,7 +729,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           }
         }
         // Position mask cleanly behind text and below top border, with enough height for 2 dedicated lines
-        mask.style.cssText = "position: absolute; left: 10.4%; top: 2.5%; width: 81.2%; height: 5.6%; background: #ffffff; z-index: 2; pointer-events: none;";
+        mask.style.cssText = "position: absolute; left: 10.4%; top: 2.5%; width: 81.2%; height: 6.2%; background: #ffffff; z-index: 2; pointer-events: none;";
       }
     });
 
@@ -788,7 +788,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
                 <strong style="white-space: nowrap; color: #0f172a; font-size: inherit; font-weight: 700;">${labelText} </strong>
                 <span class="qp-school-text" style="font-weight: 700; color: #0f172a; margin-left: 5px; font-size: inherit; white-space: normal; word-break: break-word;">${escapeHtmlStr(clean)}</span>
               </div>
-              ${subInfoHtml ? `<div style="display: flex; align-items: center; width: 100%; margin-top: 1px; font-size: inherit; overflow: visible;">${subInfoHtml}</div>` : ""}
+              ${subInfoHtml ? `<div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 1px; font-size: inherit; overflow: visible;">${subInfoHtml}</div>` : ""}
             </div>
           `;
         } else {
@@ -798,7 +798,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
                 <strong style="white-space: nowrap; color: #0f172a; font-size: inherit; font-weight: 700;">${labelText} </strong>
                 <span style="display: inline-block; width: 220px; border-bottom: 1.5px dotted #94a3b8; margin-left: 5px; height: 1em; vertical-align: middle;"></span>
               </div>
-              ${subInfoHtml ? `<div style="display: flex; align-items: center; width: 100%; margin-top: 1px; font-size: inherit; overflow: visible;">${subInfoHtml}</div>` : ""}
+              ${subInfoHtml ? `<div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 1px; font-size: inherit; overflow: visible;">${subInfoHtml}</div>` : ""}
             </div>
           `;
         }
@@ -821,7 +821,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
       if (isExamTitle) {
         el.setAttribute("data-field", "exam-title");
-        el.style.top = "5.9%";
+        el.style.top = "6.8%";
         el.style.zIndex = "10";
       }
     });
@@ -842,7 +842,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
                   <strong style="white-space: nowrap; color: #0f172a; font-size: inherit; font-weight: 700;">${labelText} </strong>
                   <span class="qp-school-text" style="font-weight: 700; color: #0f172a; margin-left: 4px; font-size: inherit; white-space: normal; word-break: break-word;">${escapeHtmlStr(clean)}</span>
                 </div>
-                ${subInfoHtml ? `<div style="display: flex; align-items: center; width: 100%; margin-top: 2px; font-size: inherit; overflow: visible;">${subInfoHtml}</div>` : ""}
+                ${subInfoHtml ? `<div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 2px; font-size: inherit; overflow: visible;">${subInfoHtml}</div>` : ""}
               </div>
             `;
           } else {
@@ -851,7 +851,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
                 <div class="qp-school-name-block" style="display: block; width: 100%; overflow: visible;">
                   <strong style="white-space: nowrap; color: #0f172a; font-size: inherit; font-weight: 700;">${labelText} </strong>....................................................
                 </div>
-                ${subInfoHtml ? `<div style="display: flex; align-items: center; width: 100%; margin-top: 2px; font-size: inherit; overflow: visible;">${subInfoHtml}</div>` : ""}
+                ${subInfoHtml ? `<div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 2px; font-size: inherit; overflow: visible;">${subInfoHtml}</div>` : ""}
               </div>
             `;
           }
@@ -2382,7 +2382,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           font-weight: 700 !important;
         }
         .vml-page-wrapper [data-field="exam-title"] {
-          top: 5.9% !important;
+          top: 6.8% !important;
           z-index: 10 !important;
           overflow: visible !important;
         }
@@ -2395,7 +2395,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           top: 2.2% !important;
           width: 81.2% !important;
           max-width: 81.2% !important;
-          height: 5.6% !important;
+          height: 6.2% !important;
           background: #ffffff !important;
           z-index: 2 !important;
           pointer-events: none !important;
@@ -2404,12 +2404,15 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         .qp-sub-location {
           display: flex !important;
           align-items: center !important;
+          justify-content: center !important;
+          text-align: center !important;
+          width: 100% !important;
           gap: 6px !important;
           flex-shrink: 0 !important;
           white-space: nowrap !important;
           font-size: clamp(6.8px, 1.8cqw, 11pt) !important;
           font-weight: 700 !important;
-          margin-top: 1px !important;
+          margin-top: 2px !important;
           line-height: 1.2 !important;
         }
         .qp-sub-location strong,
@@ -2504,9 +2507,12 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           .qp-sub-location {
             display: flex !important;
             align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            width: 100% !important;
             font-size: clamp(6.0px, 1.7cqw, 10pt) !important;
             gap: 4px !important;
-            margin-top: 1px !important;
+            margin-top: 2px !important;
             line-height: 1.2 !important;
           }
           .qp-sub-location strong,
@@ -2516,7 +2522,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             font-weight: inherit !important;
           }
           .vml-page-wrapper [data-field="exam-title"] {
-            top: 5.7% !important;
+            top: 6.8% !important;
             font-size: clamp(7.5px, 2.2cqw, 13pt) !important;
             z-index: 10 !important;
           }
@@ -2533,7 +2539,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             top: 2.5% !important;
             width: 81.2% !important;
             max-width: 81.2% !important;
-            height: 4.8% !important;
+            height: 6.2% !important;
           }
         }
         @media screen and (min-width: 480px) and (max-width: 768px) {

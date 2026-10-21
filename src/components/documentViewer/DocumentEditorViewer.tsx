@@ -1513,7 +1513,7 @@ export function DocumentEditorViewer({
 
                             {(hb.kendra || hb.taluka || hb.jilha) && (
                               <div
-                                className="shrink-0 font-bold text-slate-700 flex items-center gap-2 whitespace-nowrap pl-1"
+                                className="w-full justify-center text-center font-bold text-slate-700 flex items-center gap-2 whitespace-nowrap mb-1"
                                 style={{ fontSize: `${Math.max(10, Math.round(12 * pageScale))}px` }}
                               >
                                 {hb.kendra && (
@@ -1540,7 +1540,7 @@ export function DocumentEditorViewer({
 
                           {/* Line 2: Exam Title (Centered, bold) */}
                           <div
-                            className="text-center font-black text-slate-900 tracking-wide my-1 uppercase truncate"
+                            className="text-center font-black text-slate-900 tracking-wide my-1.5 uppercase truncate"
                             style={{ fontSize: `${Math.max(11, Math.round(16 * pageScale))}px` }}
                           >
                             <h2>{hb.examTitle || (isEng ? "FORMATIVE EVALUATION TEST 1" : "आकारिक मूल्यमापन चाचणी क्र. १")}</h2>
@@ -2123,7 +2123,7 @@ export function DocumentEditorViewer({
                       <span className="text-slate-950 font-black border-b border-dotted border-slate-400 flex-1 px-1">{headerForm.schoolName || "____________________"}</span>
                     </div>
                     {(headerForm.kendra || headerForm.taluka || headerForm.jilha) && (
-                      <div className="text-[11px] font-bold text-slate-700 flex items-center gap-2 shrink-0">
+                      <div className="text-[11px] font-bold text-slate-700 flex items-center justify-center text-center w-full gap-2 shrink-0 mb-1">
                         {headerForm.kendra && <span>केंद्र: <b className="text-slate-950">{headerForm.kendra}</b></span>}
                         {headerForm.taluka && <span>तालुका: <b className="text-slate-950">{headerForm.taluka}</b></span>}
                         {headerForm.jilha && <span>जिल्हा: <b className="text-slate-950">{headerForm.jilha}</b></span>}
@@ -2131,7 +2131,7 @@ export function DocumentEditorViewer({
                     )}
                   </div>
                   {/* Line 2: Exam Title */}
-                  <div className="text-center font-black text-xs sm:text-sm my-1 text-slate-900">
+                  <div className="text-center font-black text-xs sm:text-sm my-1.5 text-slate-900">
                     {headerForm.examTitle || "आकारिक मूल्यमापन चाचणी क्र. १"}
                   </div>
                   {/* Line 3: Class, Subject, Roll No */}

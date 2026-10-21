@@ -2682,10 +2682,10 @@ function DailyAssemblyContent() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-[#25D366] text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-md active:scale-95 border border-white/20 hover:border-[#25D366] cursor-pointer"
-                title="शंका / मदतीसाठी अधिकृत WhatsApp ग्रुप जॉईन करा"
+                title="अधिकृत WhatsApp ग्रुप जॉईन करा"
               >
                 <MessageCircle className="size-4 text-emerald-400" />
-                <span>Queries ग्रुप</span>
+                <span>Join ग्रुप</span>
               </a>
             </div>
           </div>

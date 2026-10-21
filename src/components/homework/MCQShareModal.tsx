@@ -136,9 +136,8 @@ export const MCQShareModal: React.FC<MCQShareModalProps> = ({
       try {
         await navigator.share({
           title: quiz.title,
-          text: `🎯 स्मार्ट लर्निंग MCQ स्वाध्याय: ${quiz.title}${
-            teacherName.trim() ? ` (वर्ग शिक्षक: ${teacherName.trim()})` : ""
-          }`,
+          text: `🎯 स्मार्ट लर्निंग MCQ स्वाध्याय: ${quiz.title}${teacherName.trim() ? ` (वर्ग शिक्षक: ${teacherName.trim()})` : ""
+            }`,
           url: shareableUrl,
         });
         toast.success("लिंक यशस्वीरीत्या शेअर केली!");
@@ -252,11 +251,10 @@ export const MCQShareModal: React.FC<MCQShareModalProps> = ({
                 type="button"
                 onClick={handleSaveInformation}
                 disabled={isSaving}
-                className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all active:scale-95 cursor-pointer shadow-sm shrink-0 ${
-                  isSaved
+                className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all active:scale-95 cursor-pointer shadow-sm shrink-0 ${isSaved
                     ? "bg-emerald-600 text-white shadow-emerald-200 dark:shadow-none"
                     : "bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white shadow-indigo-200 dark:shadow-none"
-                }`}
+                  }`}
               >
                 {isSaving ? (
                   <Loader2 className="size-3.5 animate-spin text-white" />
@@ -279,7 +277,8 @@ export const MCQShareModal: React.FC<MCQShareModalProps> = ({
                   type="text"
                   readOnly
                   value={shareableUrl}
-                  className="bg-transparent text-xs text-slate-600 dark:text-slate-300 outline-none w-full font-mono truncate"
+                  className="bg-transparent text-xs text-slate-600 dark:text-slate-300 outl
+                  ine-none w-full font-mono truncate"
                 />
                 <button
                   type="button"

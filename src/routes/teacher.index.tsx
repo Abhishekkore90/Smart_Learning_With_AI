@@ -430,10 +430,10 @@ function TeacherDashboard() {
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-extrabold bg-[#25D366]/20 hover:bg-[#25D366] text-white border border-[#25D366]/40 backdrop-blur-md shadow-xs transition-all active:scale-95 group/wa cursor-pointer"
-                            title="शंका / मदतीसाठी WhatsApp ग्रुप जॉईन करा (Join WhatsApp Group for Queries)"
+                            title="WhatsApp ग्रुप जॉईन करा (Join WhatsApp Group)"
                           >
                             <WhatsAppIcon className="size-3.5 fill-[#25D366] group-hover/wa:fill-white transition-colors" />
-                            <span className="text-[10px] font-black text-emerald-100 group-hover/wa:text-white">Queries</span>
+                            <span className="text-[10px] font-black text-emerald-100 group-hover/wa:text-white">Join</span>
                           </a>
 
                           <button
