@@ -1518,19 +1518,19 @@ export function DocumentEditorViewer({
                               >
                                 {hb.kendra && (
                                   <span>
-                                    <span className="text-slate-500 font-semibold">{isEng ? "Center:" : "केंद्र:"}</span>{" "}
+                                    <span className="text-slate-950 font-bold">{isEng ? "Center:" : "केंद्र:"}</span>{" "}
                                     <span className="font-black text-slate-900">{hb.kendra}</span>
                                   </span>
                                 )}
                                 {hb.taluka && (
                                   <span>
-                                    <span className="text-slate-500 font-semibold">{isEng ? "Taluka:" : "तालुका:"}</span>{" "}
+                                    <span className="text-slate-950 font-bold">{isEng ? "Taluka:" : "तालुका:"}</span>{" "}
                                     <span className="font-black text-slate-900">{hb.taluka}</span>
                                   </span>
                                 )}
                                 {hb.jilha && (
                                   <span>
-                                    <span className="text-slate-500 font-semibold">{isEng ? "Dist:" : "जिल्हा:"}</span>{" "}
+                                    <span className="text-slate-950 font-bold">{isEng ? "Dist:" : "जिल्हा:"}</span>{" "}
                                     <span className="font-black text-slate-900">{hb.jilha}</span>
                                   </span>
                                 )}
@@ -2123,10 +2123,10 @@ export function DocumentEditorViewer({
                       <span className="text-slate-950 font-black border-b border-dotted border-slate-400 flex-1 px-1">{headerForm.schoolName || "____________________"}</span>
                     </div>
                     {(headerForm.kendra || headerForm.taluka || headerForm.jilha) && (
-                      <div className="text-[11px] font-bold text-slate-700 flex items-center justify-center text-center w-full gap-2 shrink-0 mb-1">
-                        {headerForm.kendra && <span>केंद्र: <b className="text-slate-950">{headerForm.kendra}</b></span>}
-                        {headerForm.taluka && <span>तालुका: <b className="text-slate-950">{headerForm.taluka}</b></span>}
-                        {headerForm.jilha && <span>जिल्हा: <b className="text-slate-950">{headerForm.jilha}</b></span>}
+                      <div className="text-[11px] font-bold text-slate-900 flex items-center justify-center text-center w-full gap-2 shrink-0 mb-1">
+                        {headerForm.kendra && <span><b className="font-black text-slate-950">केंद्र:</b> <b className="text-slate-950">{headerForm.kendra}</b></span>}
+                        {headerForm.taluka && <span><b className="font-black text-slate-950">तालुका:</b> <b className="text-slate-950">{headerForm.taluka}</b></span>}
+                        {headerForm.jilha && <span><b className="font-black text-slate-950">जिल्हा:</b> <b className="text-slate-950">{headerForm.jilha}</b></span>}
                       </div>
                     )}
                   </div>

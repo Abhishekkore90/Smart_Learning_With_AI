@@ -720,23 +720,38 @@ function AdminModulePaymentsPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ${
-                            item.enabled && item.price > 0
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-emerald-100 text-emerald-800"
-                          }`}
-                        >
-                          {item.enabled && item.price > 0 ? (
-                            <>
-                              <Lock className="size-3" /> पेड सबस्क्रिप्शन
-                            </>
-                          ) : (
-                            <>
-                              <Unlock className="size-3" /> मोफत (FREE)
-                            </>
-                          )}
-                        </span>
+                        {(() => {
+                          const hasClassPrices =
+                            item.classPrices &&
+                            Object.values(item.classPrices).some((p) => typeof p === "number" && p > 0);
+                          const isPaidSub =
+                            item.enabled &&
+                            (item.price > 0 ||
+                              (item.monthlyPrice ?? 0) > 0 ||
+                              (item.yearlyPrice ?? 0) > 0 ||
+                              (item.perStudentPrice ?? 0) > 0 ||
+                              hasClassPrices);
+
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                                isPaidSub
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-emerald-100 text-emerald-800"
+                              }`}
+                            >
+                              {isPaidSub ? (
+                                <>
+                                  <Lock className="size-3" /> पेड सबस्क्रिप्शन
+                                </>
+                              ) : (
+                                <>
+                                  <Unlock className="size-3" /> मोफत (FREE)
+                                </>
+                              )}
+                            </span>
+                          );
+                        })()}
                         <h4 className="text-sm font-black text-slate-900 mt-1.5 leading-snug">{mod.title || item.title}</h4>
                       </div>
 

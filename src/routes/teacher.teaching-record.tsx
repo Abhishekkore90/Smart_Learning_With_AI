@@ -190,14 +190,18 @@ function TeachingRecordPage() {
   const normClass = normClassMap[selectedClass || ""] || (selectedClass || "").toLowerCase();
   const currentClassKey = `${normMedium}_${normClass}`;
 
-  const currentClassPrice = teachingPricing.classPrices?.[currentClassKey] ?? teachingPricing.price ?? 299;
+  const hasSpecificClassPrice =
+    teachingPricing.classPrices &&
+    typeof teachingPricing.classPrices[currentClassKey] === "number";
+  const currentClassPrice = hasSpecificClassPrice
+    ? (teachingPricing.classPrices![currentClassKey] as number)
+    : (typeof teachingPricing.price === "number" ? teachingPricing.price : 299);
 
   const isCurrentClassUnlocked =
     !selectedClass ||
     !selectedMedium ||
     isSuperAdmin ||
     teachingPricing.enabled === false ||
-    teachingPricing.price === 0 ||
     currentClassPrice === 0 ||
     unlockedClassMediums.includes(currentClassKey) ||
     unlockedClassMediums.includes(`${normMedium}_ALL`) ||

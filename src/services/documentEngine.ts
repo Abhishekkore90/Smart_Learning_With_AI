@@ -1344,11 +1344,11 @@ export function printDocument(model: DocumentModel): void {
               </div>
               ${(hb.kendra || hb.taluka || hb.jilha) ? `
                 <div style="font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; gap: 8px; margin-bottom: 7px;">
-                  ${hb.kendra ? `<span>${isEng ? 'Center:' : 'केंद्र:'} <b>${escapeHtml(hb.kendra)}</b></span>` : ''}
+                  ${hb.kendra ? `<span><b>${isEng ? 'Center:' : 'केंद्र:'}</b> <b>${escapeHtml(hb.kendra)}</b></span>` : ''}
                   ${hb.kendra && (hb.taluka || hb.jilha) ? `<span style="color: #94a3b8; font-weight: normal;">|</span>` : ''}
-                  ${hb.taluka ? `<span>${isEng ? 'Taluka:' : 'तालुका:'} <b>${escapeHtml(hb.taluka)}</b></span>` : ''}
+                  ${hb.taluka ? `<span><b>${isEng ? 'Taluka:' : 'तालुका:'}</b> <b>${escapeHtml(hb.taluka)}</b></span>` : ''}
                   ${(hb.kendra || hb.taluka) && hb.jilha ? `<span style="color: #94a3b8; font-weight: normal;">|</span>` : ''}
-                  ${hb.jilha ? `<span>${isEng ? 'Dist:' : 'जिल्हा:'} <b>${escapeHtml(hb.jilha)}</b></span>` : ''}
+                  ${hb.jilha ? `<span><b>${isEng ? 'Dist:' : 'जिल्हा:'}</b> <b>${escapeHtml(hb.jilha)}</b></span>` : ''}
                 </div>
               ` : ''}
               <div style="font-size: 15px; font-weight: 800; text-align: center; margin: 6px 0 5px 0;">

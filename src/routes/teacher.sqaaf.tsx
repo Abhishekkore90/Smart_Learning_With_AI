@@ -38,7 +38,7 @@ async function fetchGoogleDriveImages(url: string): Promise<{ src: string }[]> {
       if (!response.ok) return [];
       const json = await response.json();
       const html = json.contents;
-      
+
       const fileIds: string[] = [];
       const regex = /file\/d\/([a-zA-Z0-9_-]{25,})/g;
       let match;
@@ -430,7 +430,7 @@ const PhotoUploader = ({
               localStorage.setItem(`sqaaf_file_name_${standardId}_${selectedOptionIdx}_${idx}`, file.name);
               localStorage.setItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`, cdnUrl);
               localStorage.setItem(`sqaaf_file_type_${standardId}_${selectedOptionIdx}_${idx}`, file.type);
-            } catch (e) {}
+            } catch (e) { }
             return;
           }
         }
@@ -445,7 +445,7 @@ const PhotoUploader = ({
         localStorage.setItem(`sqaaf_file_name_${standardId}_${selectedOptionIdx}_${idx}`, file.name);
         localStorage.setItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`, compressed);
         localStorage.setItem(`sqaaf_file_type_${standardId}_${selectedOptionIdx}_${idx}`, file.type);
-      } catch (err) {}
+      } catch (err) { }
     });
 
     toast.info(lang === "mr" ? "फाईल्स Bunny Storage वर अपलोड होत आहेत..." : "Uploading files to Bunny Storage...");
@@ -4023,7 +4023,7 @@ export const standardsDetailData: Record<number, {
         text: "३.१ शाळा विद्यार्थ्यांची गैरहजेरी व गळती रोखण्यासाठी पावले उचलते."
       }, {
         text: "४.१ सर्व नोंदणीकृत मुले कायम ठेवली आणि पुढील इयत्तेमध्ये शंभर टक्के संक्रमण केली जातात.",
-}],
+      }],
       evidenceUrl: "https://drive.google.com/drive/folders/1EzfcyGjMuW1XolVe7nCyopoHkLT6"
     },
     en: {
@@ -5165,7 +5165,7 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions, udise: pro
         let currentOpts: string[] = [];
         const savedOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}_${idx}`);
         if (savedOpts) {
-          try { currentOpts = JSON.parse(savedOpts); } catch {}
+          try { currentOpts = JSON.parse(savedOpts); } catch { }
         }
 
         const configDocId = `${num}_${idx}`;
@@ -5335,7 +5335,7 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions, udise: pro
           </div>
         ) : (
           <div className="text-[13px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
-            {isSelected && isNotApplicable 
+            {isSelected && isNotApplicable
               ? (selectedLang === "mr" ? "लागू नाही" : "Not applicable")
               : (selectedLang === "mr" ? "अपूर्ण / प्रतिसाद दिलेला नाही" : "Incomplete / No response")}
           </div>
@@ -5486,9 +5486,9 @@ function AutoFitTableWrapper({
       style={
         scale < 1
           ? {
-              height: contentHeight ? `${Math.ceil(contentHeight * scale)}px` : "auto",
-              overflow: "hidden",
-            }
+            height: contentHeight ? `${Math.ceil(contentHeight * scale)}px` : "auto",
+            overflow: "hidden",
+          }
           : {}
       }
     >
@@ -5497,11 +5497,11 @@ function AutoFitTableWrapper({
         style={
           scale < 1
             ? {
-                transform: `scale(${scale})`,
-                transformOrigin: "top left",
-                width: `${targetWidth}px`,
-                minWidth: `${targetWidth}px`,
-              }
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+              width: `${targetWidth}px`,
+              minWidth: `${targetWidth}px`,
+            }
             : { width: "100%" }
         }
       >
@@ -5716,7 +5716,7 @@ function TeacherSqaafPage() {
           } else {
             const localSaved = localStorage.getItem(`sqaaf_selected_options_${academicYear}`) || localStorage.getItem("sqaaf_selected_options");
             if (localSaved) {
-              try { setSelectedOptions(JSON.parse(localSaved)); } catch {}
+              try { setSelectedOptions(JSON.parse(localSaved)); } catch { }
             }
           }
           if (data.completedStandards && Array.isArray(data.completedStandards)) {
@@ -5727,7 +5727,7 @@ function TeacherSqaafPage() {
           } else {
             const localSaved = localStorage.getItem(`sqaaf_completed_standards_${academicYear}`) || localStorage.getItem("sqaaf_completed_standards");
             if (localSaved) {
-              try { setCompletedStandards(new Set(JSON.parse(localSaved))); } catch {}
+              try { setCompletedStandards(new Set(JSON.parse(localSaved))); } catch { }
             }
           }
           if (data.externalOptions) {
@@ -5737,7 +5737,7 @@ function TeacherSqaafPage() {
           } else {
             const localSaved = localStorage.getItem(`sqaaf_external_options_${academicYear}`) || localStorage.getItem("sqaaf_external_options");
             if (localSaved) {
-              try { setExternalOptions(JSON.parse(localSaved)); } catch {}
+              try { setExternalOptions(JSON.parse(localSaved)); } catch { }
             }
           }
           if (data.schoolInfo) {
@@ -6232,9 +6232,9 @@ function TeacherSqaafPage() {
       margin: [10, 10, 10, 10],
       filename: `SQAAF_Summary_Manual_${new Date().toISOString().slice(0, 10)}.pdf`,
       image: { type: "jpeg", quality: 0.82 },
-      html2canvas: { 
-        scale: 1.5, 
-        useCORS: true, 
+      html2canvas: {
+        scale: 1.5,
+        useCORS: true,
         logging: false,
         windowWidth: 793
       },
@@ -6406,7 +6406,7 @@ function TeacherSqaafPage() {
                     parsedOpts = docSnap.data().options;
                     localStorage.setItem(`sqaaf_evidence_options_config_${num}_${idx}`, JSON.stringify(parsedOpts));
                   }
-                } catch (e) {}
+                } catch (e) { }
               }
 
               // Fallback to real sub-points from detail
@@ -6430,7 +6430,7 @@ function TeacherSqaafPage() {
               let dbFilePreviews: Record<number, string> = {};
               let dbFileNames: Record<number, string> = {};
               const hasLocalSubData = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_0`) !== null ||
-                                      localStorage.getItem(`sqaaf_checked_${num}_${idx}_0`) !== null;
+                localStorage.getItem(`sqaaf_checked_${num}_${idx}_0`) !== null;
               if (udise && !hasLocalSubData) {
                 try {
                   const fetchPromise = getDoc(doc(db, "sqaaf_evidence_responses", `${udise}_${num}_${idx}`));
@@ -6442,7 +6442,7 @@ function TeacherSqaafPage() {
                     if (rData?.filePreviews) dbFilePreviews = rData.filePreviews;
                     if (rData?.fileNames) dbFileNames = rData.fileNames;
                   }
-                } catch (e) {}
+                } catch (e) { }
               }
 
               let checkedOptions: { title: string }[] = [];
@@ -6455,7 +6455,7 @@ function TeacherSqaafPage() {
                 if (!isChecked && idx === 0) {
                   isChecked = localStorage.getItem(`sqaaf_evidence_checked_${num}_${pIdx}`) === "true";
                 }
-                
+
                 // Show ONLY selected/checked sub-options in text list
                 if (isChecked) {
                   checkedOptions.push({
@@ -6524,7 +6524,7 @@ function TeacherSqaafPage() {
                           label: link.label || (isMr ? "ड्राइव्ह फोटो" : "Drive Photo")
                         });
                       }
-                    } catch {}
+                    } catch { }
                   }
                 }
               }
@@ -7901,21 +7901,21 @@ function TeacherSqaafPage() {
                 <h3 style="font-size: 12px; font-weight: 900; margin: 0 0 4px 0; color: #0f172a; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 2px;">शाळेची माहिती</h3>
                 <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; table-layout: fixed;">
                   ${(() => {
-                    const infoFields = [
-                      { label: "शाळेचे नाव", val: schoolName },
-                      { label: "U Dise No", val: udise },
-                      { label: "मुख्याध्यापक", val: headmaster },
-                      { label: "पत्ता", val: address },
-                      { label: "केंद्र", val: centerName },
-                      { label: "तालुका", val: taluka },
-                      { label: "जिल्हा", val: district }
-                    ].filter(f => f.val && f.val.trim() !== "");
+              const infoFields = [
+                { label: "शाळेचे नाव", val: schoolName },
+                { label: "U Dise No", val: udise },
+                { label: "मुख्याध्यापक", val: headmaster },
+                { label: "पत्ता", val: address },
+                { label: "केंद्र", val: centerName },
+                { label: "तालुका", val: taluka },
+                { label: "जिल्हा", val: district }
+              ].filter(f => f.val && f.val.trim() !== "");
 
-                    let rowsHtml = "";
-                    for (let i = 0; i < infoFields.length; i += 2) {
-                      const f1 = infoFields[i];
-                      const f2 = infoFields[i+1];
-                      rowsHtml += `<tr>
+              let rowsHtml = "";
+              for (let i = 0; i < infoFields.length; i += 2) {
+                const f1 = infoFields[i];
+                const f2 = infoFields[i + 1];
+                rowsHtml += `<tr>
                         <td style="border: 1px solid #cbd5e1; padding: 3px 6px; font-weight: 900; width: 15%; background-color: #f8fafc; word-wrap: break-word;">${f1.label}</td>
                         <td style="border: 1px solid #cbd5e1; padding: 3px 6px; width: 35%; font-weight: bold; word-wrap: break-word;">${f1.val}</td>
                         ${f2 ? `
@@ -7923,9 +7923,9 @@ function TeacherSqaafPage() {
                         <td style="border: 1px solid #cbd5e1; padding: 3px 6px; width: 35%; font-weight: bold; word-wrap: break-word;">${f2.val}</td>
                         ` : `<td style="border: 1px solid #cbd5e1; padding: 3px 6px;" colspan="2"></td>`}
                       </tr>`;
-                    }
-                    return rowsHtml;
-                  })()}
+              }
+              return rowsHtml;
+            })()}
                 </table>
               </div>
 
@@ -8370,22 +8370,22 @@ function TeacherSqaafPage() {
         </div>
       </div>
     `;
- 
+
     printContainer.innerHTML = html;
- 
+
     const html2pdf = (await import("html2pdf.js")).default;
     const pdfOptions = {
       margin: [0, 0, 0, 0],
       filename: `SQAAF_Certificate_${schoolName.replace(/\s+/g, "_") || "School"}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true, 
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
         logging: false,
       },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: false },
     };
-    
+
     await html2pdf().set(pdfOptions).from(printContainer).save();
   };
 
@@ -8634,728 +8634,361 @@ function TeacherSqaafPage() {
 
       <main className={`${(activeStandardDetails !== null || view === "certificate" || view === "responses") ? "" : "lg:pl-0 pt-16"} min-h-screen transition-all duration-300`}>
         <ModulePaywall moduleId="sqaf-register" defaultTitle="शालेय गुणवत्ता आश्वासन व प्रमाणीकरण (SQAAF)">
-        {activeStandardDetails === null && (
-          <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-            <div className="absolute top-24 left-1/4 size-[500px] bg-amber-200/10 rounded-full blur-[100px] animate-pulse" />
-            <div className="absolute bottom-24 right-1/4 size-[600px] bg-teal-200/10 rounded-full blur-[120px]" />
-          </div>
-        )}
+          {activeStandardDetails === null && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+              <div className="absolute top-24 left-1/4 size-[500px] bg-amber-200/10 rounded-full blur-[100px] animate-pulse" />
+              <div className="absolute bottom-24 right-1/4 size-[600px] bg-teal-200/10 rounded-full blur-[120px]" />
+            </div>
+          )}
 
-        <div className={`w-full relative z-10 space-y-6 ${activeStandardDetails !== null ? "" : "p-4 md:p-6"}`}>
-          <AnimatePresence mode="wait">
-            {activeStandardDetails !== null && currentDetail ? (
-              <motion.div
-                key="details"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="bg-white min-h-screen w-full flex flex-col items-center"
-              >
-                <div className="w-full max-w-4xl p-5 md:p-8 flex flex-col space-y-6">
-                  {/* Clean Mobile-like Header matching screenshots */}
-                  <div className="flex items-center gap-4 py-2">
-                    <button
-                      onClick={() => setActiveStandardDetails(null)}
-                      className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                    >
-                      <ArrowLeft className="size-6 text-slate-800" strokeWidth={2.5} />
-                    </button>
-                    <div className="flex-1"></div>
-                  </div>
-
-                  <h2 className="text-[28px] font-black text-slate-900 tracking-tight">
-                    {selectedLang === "mr" ? `मानक क्र. ${toMarathiNumerals(activeStandardDetails)}` : `Standard No. ${activeStandardDetails}`}
-                  </h2>
-
-                  {/* Orange Detail Box */}
-                  <div className="bg-[#ffaf66] rounded-[1.5rem] p-6 shadow-sm text-slate-900 font-extrabold text-[15px] leading-relaxed">
-                    {renderBoldStandardNumber(currentDetail[selectedLang].orangeDesc)}
-                  </div>
-
-                  {/* Options Section */}
-                  <div className="space-y-4 pt-2">
-                    <h3 className="text-xl font-black text-slate-900">
-                      {selectedLang === "mr" ? "पर्याय" : "Options"}
-                    </h3>
-                    <div className="space-y-3">
-                      {groupedOptions.map((opt, idx) => {
-                        const isSelected = selectedOptions[activeStandardDetails] === idx;
-                        return (
-                          <div
-                            key={idx}
-                            onClick={() => selectOption(activeStandardDetails, idx)}
-                            className={`rounded-2xl p-5 border transition-all text-[13px] font-extrabold leading-relaxed cursor-pointer hover:scale-[1.01] hover:border-slate-300 whitespace-pre-line ${isSelected
-                              ? "bg-[#22c55e] text-slate-950 border-[#22c55e] shadow-md"
-                              : "bg-[#f1eff7] text-slate-700 border-slate-200/60 shadow-sm"
-                              }`}
-                          >
-                            {opt.text}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Evidences / Photo Upload Section */}
-                  <PhotoUploader
-                    standardId={activeStandardDetails}
-                    lang={selectedLang}
-                    evidenceUrl={currentDetail[selectedLang].evidenceUrl}
-                    selectedOptionIdx={selectedOptions[activeStandardDetails]}
-                  />
-
-                  {/* Divider */}
-                  <div className="border-t border-slate-100 pt-2" />
-
-                  {/* Photo / Google Drive Links Tab */}
-                  <DrivePhotoTab standardId={activeStandardDetails} lang={selectedLang} />
-
-                  {/* Dark Pill "Go Back" Button at Bottom Center */}
-                  <div className="flex justify-center pt-8 pb-10">
-                    <button
-                      onClick={() => setActiveStandardDetails(null)}
-                      className="bg-[#0f1123] text-white font-black px-12 py-4 rounded-full hover:bg-slate-800 transition-colors uppercase tracking-widest text-[13px] shadow-xl shadow-slate-900/20 active:scale-95"
-                    >
-                      Go Back
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ) : view === "info" ? (
-              <motion.div
-                key="info"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="min-h-screen w-full flex flex-col items-center bg-gradient-to-br from-slate-50 via-white to-orange-50/30"
-              >
-                {/* Header Banner */}
-                <div className="w-full bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500 px-6 md:px-10 py-8 flex items-center justify-between text-white relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-72 h-full bg-white/10 rounded-full blur-3xl pointer-events-none" />
-                  <div className="flex items-center gap-4">
-                    <div className="size-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-                      <School className="size-6 text-white" />
-                    </div>
-                    <div>
-                      <h1 className="text-2xl md:text-3xl font-black tracking-tight">{t.infoTitle}</h1>
-                      <p className="text-[11px] font-bold text-orange-50 mt-0.5">{t.infoSubtitle}</p>
-                    </div>
-                  </div>
-                  {/* Language Toggle */}
-                  <button
-                    onClick={toggleLanguage}
-                    className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all shadow-sm flex items-center gap-2 text-white border border-white/20"
-                  >
-                    <Languages className="size-5" />
-                    <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
-                      {selectedLang === "mr" ? "English" : "मराठी"}
-                    </span>
-                  </button>
-                </div>
-
-                {/* Form Content */}
-                <div className="w-full max-w-2xl px-4 md:px-0 py-8 md:py-12 space-y-6">
-                  {/* Form Card */}
-                  <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
-                    {/* Card Header */}
-                    <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-6 md:px-8 py-5 flex items-center gap-3">
-                      <div className="size-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                        <FileText className="size-4 text-amber-400" />
-                      </div>
-                      <div>
-                        <h2 className="text-white font-bold text-sm">{selectedLang === "mr" ? "शाळेची मूलभूत माहिती" : "Basic School Details"}</h2>
-                        <p className="text-slate-400 text-[10px] font-semibold">{selectedLang === "mr" ? "ही माहिती SQAAF अहवालात वापरली जाईल" : "This information will be used in the SQAAF report"}</p>
-                      </div>
-                    </div>
-
-                    {/* Form Fields */}
-                    <div className="p-6 md:p-8 space-y-5">
-                      {/* School Name */}
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                          <School className="size-3 text-orange-500" />
-                          {t.infoSchoolName}
-                        </label>
-                        <input
-                          type="text"
-                          value={infoSchoolName}
-                          onChange={(e) => setInfoSchoolName(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                          placeholder={selectedLang === "mr" ? "शाळेचे नाव टाका" : "Enter school name"}
-                        />
-                      </div>
-
-                      {/* 2-Column Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        {/* Headmaster Name */}
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                            <User className="size-3 text-orange-500" />
-                            {t.infoHeadmaster}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoHeadmaster}
-                            onChange={(e) => setInfoHeadmaster(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                            placeholder={selectedLang === "mr" ? "मुख्याध्यापकाचे नाव" : "Headmaster name"}
-                          />
-                        </div>
-
-                        {/* UDISE */}
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                            <School className="size-3 text-orange-500" />
-                            {t.infoUdise}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoUdise}
-                            onChange={(e) => setInfoUdise(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 font-mono placeholder:text-slate-400 outline-none transition-all"
-                            placeholder={selectedLang === "mr" ? "UDISE क्रमांक टाका" : "Enter UDISE code"}
-                          />
-                        </div>
-                      </div>
-
-                      {/* School Address */}
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                          <MapPin className="size-3 text-orange-500" />
-                          {t.infoAddress}
-                        </label>
-                        <input
-                          type="text"
-                          value={infoAddress}
-                          onChange={(e) => setInfoAddress(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                          placeholder={selectedLang === "mr" ? "शाळेचा पूर्ण पत्ता" : "Full school address"}
-                        />
-                      </div>
-
-                      {/* Center Name */}
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                          <Building2 className="size-3 text-orange-500" />
-                          {t.infoCenterName}
-                        </label>
-                        <input
-                          type="text"
-                          value={infoCenterName}
-                          onChange={(e) => setInfoCenterName(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                          placeholder={selectedLang === "mr" ? "केंद्राचे नाव टाका" : "Enter center name"}
-                        />
-                      </div>
-
-                      {/* 2-Column: Taluka & District */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        {/* Taluka */}
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                            <MapPin className="size-3 text-orange-500" />
-                            {t.infoTaluka}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoTaluka}
-                            onChange={(e) => setInfoTaluka(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                            placeholder={selectedLang === "mr" ? "तालुका" : "Taluka"}
-                          />
-                        </div>
-
-                        {/* District */}
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                            <MapPin className="size-3 text-orange-500" />
-                            {t.infoDistrict}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoDistrict}
-                            onChange={(e) => setInfoDistrict(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                            placeholder={selectedLang === "mr" ? "जिल्हा" : "District"}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="px-6 md:px-8 pb-8">
+          <div className={`w-full relative z-10 space-y-6 ${activeStandardDetails !== null ? "" : "p-4 md:p-6"}`}>
+            <AnimatePresence mode="wait">
+              {activeStandardDetails !== null && currentDetail ? (
+                <motion.div
+                  key="details"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="bg-white min-h-screen w-full flex flex-col items-center"
+                >
+                  <div className="w-full max-w-4xl p-5 md:p-8 flex flex-col space-y-6">
+                    {/* Clean Mobile-like Header matching screenshots */}
+                    <div className="flex items-center gap-4 py-2">
                       <button
-                        onClick={handleInfoSubmit}
-                        className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-black py-4 rounded-2xl text-sm uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3"
+                        onClick={() => setActiveStandardDetails(null)}
+                        className="p-2 hover:bg-slate-100 rounded-full transition-colors"
                       >
-                        <span>{t.infoProceed}</span>
-                        <ChevronRight className="size-5" />
+                        <ArrowLeft className="size-6 text-slate-800" strokeWidth={2.5} />
+                      </button>
+                      <div className="flex-1"></div>
+                    </div>
+
+                    <h2 className="text-[28px] font-black text-slate-900 tracking-tight">
+                      {selectedLang === "mr" ? `मानक क्र. ${toMarathiNumerals(activeStandardDetails)}` : `Standard No. ${activeStandardDetails}`}
+                    </h2>
+
+                    {/* Orange Detail Box */}
+                    <div className="bg-[#ffaf66] rounded-[1.5rem] p-6 shadow-sm text-slate-900 font-extrabold text-[15px] leading-relaxed">
+                      {renderBoldStandardNumber(currentDetail[selectedLang].orangeDesc)}
+                    </div>
+
+                    {/* Options Section */}
+                    <div className="space-y-4 pt-2">
+                      <h3 className="text-xl font-black text-slate-900">
+                        {selectedLang === "mr" ? "पर्याय" : "Options"}
+                      </h3>
+                      <div className="space-y-3">
+                        {groupedOptions.map((opt, idx) => {
+                          const isSelected = selectedOptions[activeStandardDetails] === idx;
+                          return (
+                            <div
+                              key={idx}
+                              onClick={() => selectOption(activeStandardDetails, idx)}
+                              className={`rounded-2xl p-5 border transition-all text-[13px] font-extrabold leading-relaxed cursor-pointer hover:scale-[1.01] hover:border-slate-300 whitespace-pre-line ${isSelected
+                                ? "bg-[#22c55e] text-slate-950 border-[#22c55e] shadow-md"
+                                : "bg-[#f1eff7] text-slate-700 border-slate-200/60 shadow-sm"
+                                }`}
+                            >
+                              {opt.text}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Evidences / Photo Upload Section */}
+                    <PhotoUploader
+                      standardId={activeStandardDetails}
+                      lang={selectedLang}
+                      evidenceUrl={currentDetail[selectedLang].evidenceUrl}
+                      selectedOptionIdx={selectedOptions[activeStandardDetails]}
+                    />
+
+                    {/* Divider */}
+                    <div className="border-t border-slate-100 pt-2" />
+
+                    {/* Photo / Google Drive Links Tab */}
+                    <DrivePhotoTab standardId={activeStandardDetails} lang={selectedLang} />
+
+                    {/* Dark Pill "Go Back" Button at Bottom Center */}
+                    <div className="flex justify-center pt-8 pb-10">
+                      <button
+                        onClick={() => setActiveStandardDetails(null)}
+                        className="bg-[#0f1123] text-white font-black px-12 py-4 rounded-full hover:bg-slate-800 transition-colors uppercase tracking-widest text-[13px] shadow-xl shadow-slate-900/20 active:scale-95"
+                      >
+                        Go Back
                       </button>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            ) : view === "dashboard" ? (
-              <motion.div
-                key="dashboard"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="bg-white/80 backdrop-blur-md rounded-[1.75rem] sm:rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col min-h-[82vh] w-full"
-              >
-                {/* Header Banner */}
-                <div className="bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500 px-4 sm:px-8 py-4 sm:py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 text-white border-b border-black/5 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-full bg-white/10 rounded-full blur-3xl pointer-events-none" />
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <Link
-                      to="/teacher"
-                      className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer border border-white/20 active:scale-95 shrink-0"
-                      title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
-                    >
-                      <ArrowLeft className="size-4.5 sm:size-5" />
-                    </Link>
-                    <div className="size-10 sm:size-12 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner shrink-0">
-                      <School className="size-5 sm:size-6 text-white" />
+                </motion.div>
+              ) : view === "info" ? (
+                <motion.div
+                  key="info"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="min-h-screen w-full flex flex-col items-center bg-gradient-to-br from-slate-50 via-white to-orange-50/30"
+                >
+                  {/* Header Banner */}
+                  <div className="w-full bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500 px-6 md:px-10 py-8 flex items-center justify-between text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-72 h-full bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                        <School className="size-6 text-white" />
+                      </div>
+                      <div>
+                        <h1 className="text-2xl md:text-3xl font-black tracking-tight">{t.infoTitle}</h1>
+                        <p className="text-[11px] font-bold text-orange-50 mt-0.5">{t.infoSubtitle}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight font-sans leading-tight">{t.title}</h1>
-                      <p className="text-[10px] font-black uppercase tracking-wider sm:tracking-widest text-orange-50 leading-tight">{t.subtitle}</p>
-                    </div>
-                  </div>
-
-                  {/* Academic Year & Language Controls */}
-                  <div className="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-3 w-full sm:w-auto shrink-0 flex-wrap">
-                    {/* Academic Year Selector */}
-                    <div className="flex items-center gap-2 bg-slate-900/30 backdrop-blur-md px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border border-white/20 text-white shadow-sm max-w-full">
-                      <span className="text-xs font-black uppercase tracking-wider hidden sm:inline text-amber-200 shrink-0">
-                        {selectedLang === "mr" ? "शैक्षणिक वर्ष:" : "Academic Year:"}
-                      </span>
-                      <select
-                        value={academicYear}
-                        onChange={(e) => handleAcademicYearChange(e.target.value)}
-                        className="bg-slate-900 text-amber-300 border border-amber-400/40 rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-1 text-xs font-extrabold outline-none cursor-pointer hover:bg-slate-950 transition-colors max-w-full"
-                      >
-                        {academicYearsList.map((item) => (
-                          <option key={item.value} value={item.value}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Language Selector Button */}
+                    {/* Language Toggle */}
                     <button
                       onClick={toggleLanguage}
-                      className="p-2.5 sm:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl sm:rounded-2xl transition-all shadow-sm flex items-center gap-1.5 sm:gap-2 text-white border border-white/20 cursor-pointer shrink-0"
+                      className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all shadow-sm flex items-center gap-2 text-white border border-white/20"
                     >
-                      <Languages className="size-4.5 sm:size-5" />
-                      <span className="text-xs font-black uppercase tracking-wider">
+                      <Languages className="size-5" />
+                      <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
                         {selectedLang === "mr" ? "English" : "मराठी"}
                       </span>
                     </button>
                   </div>
-                </div>
 
-                {/* Content */}
-                <div className="p-6 md:p-10 space-y-10 flex flex-col flex-1 w-full max-w-6xl mx-auto">
-                  {/* Read-only School details card matching image 2 */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-[#eef5cb] border border-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 space-y-6 shadow-sm w-full"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                      <div>
-                        <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">{t.infoSchoolName}</span>
-                        <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
-                          {infoSchoolName || profile?.schoolName || ""}
-                        </h2>
-                      </div>
-
-                      <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
-                        {(infoUdise || profile?.udise) && (
-                          <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
-                            {infoUdise || profile?.udise}
-                          </div>
-                        )}
-                        <button
-                          onClick={() => setView("info")}
-                          className="bg-slate-900 text-[#eef5cb] p-2.5 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform flex-shrink-0"
-                          title={selectedLang === "mr" ? "माहिती संपादित करा" : "Edit Information"}
-                        >
-                          <Edit className="size-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {(() => {
-                      const fields = [
-                        { label: t.infoHeadmaster, val: infoHeadmaster || profile?.fullName },
-                        { label: t.infoAddress, val: infoAddress || profile?.address },
-                        { label: t.infoCenterName, val: infoCenterName },
-                        { label: t.infoTaluka, val: infoTaluka },
-                        { label: t.infoDistrict, val: infoDistrict },
-                      ].filter((f) => f.val && f.val.trim() !== "");
-
-                      if (fields.length === 0) return null;
-
-                      return (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
-                          {fields.map((f, idx) => (
-                            <div key={idx}>
-                              <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
-                                {f.label}
-                              </span>
-                              <p className="font-bold text-slate-900">{f.val}</p>
-                            </div>
-                          ))}
+                  {/* Form Content */}
+                  <div className="w-full max-w-2xl px-4 md:px-0 py-8 md:py-12 space-y-6">
+                    {/* Form Card */}
+                    <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                      {/* Card Header */}
+                      <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-6 md:px-8 py-5 flex items-center gap-3">
+                        <div className="size-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                          <FileText className="size-4 text-amber-400" />
                         </div>
-                      );
-                    })()}
-                  </motion.div>
-
-                  {/* Actions Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-                    {/* Card 1: View */}
-                    <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
-                      <div>
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-[16px] font-bold text-slate-900">{t.viewSub}</h4>
-                        </div>
-                        <hr className="border-slate-900/40 mb-4" />
-                        <p className="text-[14px] text-slate-700 mb-6">{t.viewDesc}</p>
-                      </div>
-                      <div className="flex justify-end mt-auto">
-                        <button
-                          onClick={() => setView("summary")}
-                          className="bg-[#1e1b4b] text-white px-8 py-3 rounded-3xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm active:scale-95 transition-transform"
-                        >
-                          {t.viewBtn}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Card 2: Download PDF (Table Format) */}
-                    <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
-                      <div>
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-[16px] font-bold text-slate-900">
-                            {selectedLang === "mr" ? "स्वयं मूल्यांकन व बाह्य मूल्यांकन अहवाल" : "Self & External Evaluation Report"}
-                          </h4>
-                        </div>
-                        <hr className="border-slate-900/40 mb-4" />
-                        <p className="text-[14px] text-slate-700 mb-6">
-                          {selectedLang === "mr"
-                            ? "तुमचा मूल्यमापन अहवाल तक्ता स्वरूपात (Table Format) पीडीएफ म्हणून डाऊनलोड करा."
-                            : "Download your evaluation report in table format as a PDF."}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 mt-auto">
-                        <button
-                          onClick={() => setView("table_report")}
-                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                        >
-                          <Eye className="size-4" />
-                          <span>{selectedLang === "mr" ? "पहा" : "View"}</span>
-                        </button>
-                        <button
-                          onClick={() => handleDownloadPdf("table", "download")}
-                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                        >
-                          <Download className="size-4" />
-                          <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download"}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Card 3: School Responses */}
-                    <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
-                      <div>
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-[16px] font-bold text-slate-900">
-                            {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
-                          </h4>
-                        </div>
-                        <hr className="border-slate-900/40 mb-4" />
-                        <p className="text-[14px] text-slate-700 mb-6">
-                          {selectedLang === "mr"
-                            ? "तुमचा शाळा प्रतिसाद अहवाल पहा आणि पीडीएफ स्वरूपात डाऊनलोड करा."
-                            : "View your school responses report and download it in PDF format."}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 mt-auto">
-                        <button
-                          onClick={() => setView("responses")}
-                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                        >
-                          <Eye className="size-4" />
-                          <span>{selectedLang === "mr" ? "पहा" : "View"}</span>
-                        </button>
-                        <button
-                          onClick={() => handleDownloadPdf("responses", "download")}
-                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                        >
-                          <Download className="size-4" />
-                          <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download"}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Card 4: Summary Report */}
-                    <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
-                      <div>
-                        <div className="flex items-center gap-3 mb-5">
-                          <div className="size-10 rounded-xl bg-[#e5e7eb] flex items-center justify-center">
-                            <FileText className="size-5 text-[#1e1b4b]" />
-                          </div>
-                          <h3 className="text-[17px] font-black text-[#1e1b4b] leading-tight">
-                            {selectedLang === "mr" ? "एकत्रित गुण अहवाल" : "Consolidated Marks Report"}
-                          </h3>
-                        </div>
-                        <hr className="border-slate-900/40 mb-4" />
-                        <p className="text-[14px] text-slate-700 mb-6">
-                          {selectedLang === "mr"
-                            ? "नवीन अहवालाची रचना लवकरच अपडेट केली जाईल."
-                            : "New report structure will be updated soon."}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 mt-auto">
-                        <button
-                          onClick={() => setView("manual_summary")}
-                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                        >
-                          <Eye className="size-4" />
-                          <span>{selectedLang === "mr" ? "पहा" : "View"}</span>
-                        </button>
-                        <button
-                          onClick={() => handleDownloadPdf("summary", "download")}
-                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                        >
-                          <Download className="size-4" />
-                          <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download PDF"}</span>
-                        </button>
-                      </div>
-                    </div>
-
-
-
-
-                  </div>
-                </div>
-              </motion.div>
-            ) : view === "table_report" ? (
-              <motion.div
-                key="table_report"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white h-screen w-full flex flex-col overflow-hidden relative"
-              >
-                {/* Header bar */}
-                <div className="bg-[#ffaf66] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-slate-900 border-b border-black/5 z-30 w-full gap-4 shadow-sm flex-shrink-0">
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => setView("dashboard")}
-                      className="p-2 hover:bg-black/10 rounded-full transition-colors"
-                    >
-                      <ArrowLeft className="size-6 text-slate-900" strokeWidth={2.5} />
-                    </button>
-                    <span className="text-lg font-bold tracking-tight">
-                      {selectedLang === "mr" ? "तक्ता अहवाल अहवाल" : "Table Report Review"}
-                    </span>
-                  </div>
-
-                  {/* Actions on the right side of header */}
-                  <div className="flex items-center gap-3">
-                    {/* Language Selector */}
-                    <div className="flex bg-white/20 backdrop-blur-md rounded-xl p-1 gap-1 border border-black/15">
-                      <button
-                        onClick={() => setSelectedLang("mr")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${selectedLang === "mr"
-                          ? "bg-[#1e1b4b] text-white shadow-sm"
-                          : "text-slate-900 hover:bg-white/10"
-                          }`}
-                      >
-                        मराठी
-                      </button>
-                      <button
-                        onClick={() => setSelectedLang("en")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${selectedLang === "en"
-                          ? "bg-[#1e1b4b] text-white shadow-sm"
-                          : "text-slate-900 hover:bg-white/10"
-                          }`}
-                      >
-                        English
-                      </button>
-                    </div>
-
-                    {/* PDF Download Button */}
-                    <button
-                      onClick={() => handleDownloadPdf("table")}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-[#1e1b4b] text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm"
-                    >
-                      <Download className="size-4 text-white" />
-                      <span>{selectedLang === "mr" ? "PDF डाऊनलोड" : "Download PDF"}</span>
-                    </button>
-
-                    {/* Edit / Save Button */}
-                    <button
-                      onClick={() => {
-                        if (isEditingTable) {
-                          toast.success(selectedLang === "mr" ? "बदल जतन केले आहेत." : "Changes saved successfully.");
-                        }
-                        setIsEditingTable(!isEditingTable);
-                      }}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-[#1e1b4b] text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm animate-none"
-                    >
-                      {isEditingTable ? (
-                        <>
-                          <CheckCircle2 className="size-4 text-green-400" />
-                          <span>{selectedLang === "mr" ? "जतन करा" : "Save Changes"}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Edit className="size-4 text-white" />
-                          <span>{selectedLang === "mr" ? "संपादित करा" : "Edit Report"}</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="w-full flex-1 overflow-y-auto">
-                  <div className="max-w-full mx-auto px-5 md:px-8 py-6 space-y-6 pb-24">
-                  <div className="flex justify-between items-center">
-                    <h2 className="text-[22px] font-bold text-slate-900 mb-1">
-                      {selectedLang === "mr" ? "मूल्यांकन तक्ता अहवाल" : "Assessment Table Report"}
-                    </h2>
-                  </div>
-                  <hr className="border-slate-900 mb-6" />
-
-                  {/* School details block */}
-                  {isEditingTable ? (
-                    <div className="bg-[#f8fafc] border border-slate-200 rounded-[1.5rem] p-6 shadow-sm w-full space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="text-xs font-bold text-slate-500 block mb-1">
-                            {selectedLang === "mr" ? "शाळेचे नाव" : "School Name"}
+                          <h2 className="text-white font-bold text-sm">{selectedLang === "mr" ? "शाळेची मूलभूत माहिती" : "Basic School Details"}</h2>
+                          <p className="text-slate-400 text-[10px] font-semibold">{selectedLang === "mr" ? "ही माहिती SQAAF अहवालात वापरली जाईल" : "This information will be used in the SQAAF report"}</p>
+                        </div>
+                      </div>
+
+                      {/* Form Fields */}
+                      <div className="p-6 md:p-8 space-y-5">
+                        {/* School Name */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                            <School className="size-3 text-orange-500" />
+                            {t.infoSchoolName}
                           </label>
                           <input
                             type="text"
                             value={infoSchoolName}
-                            onChange={(e) => {
-                              setInfoSchoolName(e.target.value);
-                              updateLocalStorageInfo("schoolName", e.target.value);
-                            }}
-                            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
+                            onChange={(e) => setInfoSchoolName(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                            placeholder={selectedLang === "mr" ? "शाळेचे नाव टाका" : "Enter school name"}
                           />
                         </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-500 block mb-1">
-                            {selectedLang === "mr" ? "यू-डायस क्रमांक" : "UDISE Code"}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoUdise}
-                            onChange={(e) => {
-                              setInfoUdise(e.target.value);
-                              updateLocalStorageInfo("udise", e.target.value);
-                            }}
-                            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold font-mono"
-                          />
+
+                        {/* 2-Column Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          {/* Headmaster Name */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                              <User className="size-3 text-orange-500" />
+                              {t.infoHeadmaster}
+                            </label>
+                            <input
+                              type="text"
+                              value={infoHeadmaster}
+                              onChange={(e) => setInfoHeadmaster(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                              placeholder={selectedLang === "mr" ? "मुख्याध्यापकाचे नाव" : "Headmaster name"}
+                            />
+                          </div>
+
+                          {/* UDISE */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                              <School className="size-3 text-orange-500" />
+                              {t.infoUdise}
+                            </label>
+                            <input
+                              type="text"
+                              value={infoUdise}
+                              onChange={(e) => setInfoUdise(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 font-mono placeholder:text-slate-400 outline-none transition-all"
+                              placeholder={selectedLang === "mr" ? "UDISE क्रमांक टाका" : "Enter UDISE code"}
+                            />
+                          </div>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label className="text-xs font-bold text-slate-500 block mb-1">
-                            {selectedLang === "mr" ? "मुख्याध्यापक" : "Headmaster"}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoHeadmaster}
-                            onChange={(e) => {
-                              setInfoHeadmaster(e.target.value);
-                              updateLocalStorageInfo("headmaster", e.target.value);
-                            }}
-                            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-500 block mb-1">
-                            {selectedLang === "mr" ? "पत्ता" : "Address"}
+
+                        {/* School Address */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                            <MapPin className="size-3 text-orange-500" />
+                            {t.infoAddress}
                           </label>
                           <input
                             type="text"
                             value={infoAddress}
-                            onChange={(e) => {
-                              setInfoAddress(e.target.value);
-                              updateLocalStorageInfo("address", e.target.value);
-                            }}
-                            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
+                            onChange={(e) => setInfoAddress(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                            placeholder={selectedLang === "mr" ? "शाळेचा पूर्ण पत्ता" : "Full school address"}
                           />
                         </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-500 block mb-1">
-                            {selectedLang === "mr" ? "केंद्र" : "Center"}
+
+                        {/* Center Name */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                            <Building2 className="size-3 text-orange-500" />
+                            {t.infoCenterName}
                           </label>
                           <input
                             type="text"
                             value={infoCenterName}
-                            onChange={(e) => {
-                              setInfoCenterName(e.target.value);
-                              updateLocalStorageInfo("centerName", e.target.value);
-                            }}
-                            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
+                            onChange={(e) => setInfoCenterName(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                            placeholder={selectedLang === "mr" ? "केंद्राचे नाव टाका" : "Enter center name"}
                           />
+                        </div>
+
+                        {/* 2-Column: Taluka & District */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          {/* Taluka */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                              <MapPin className="size-3 text-orange-500" />
+                              {t.infoTaluka}
+                            </label>
+                            <input
+                              type="text"
+                              value={infoTaluka}
+                              onChange={(e) => setInfoTaluka(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                              placeholder={selectedLang === "mr" ? "तालुका" : "Taluka"}
+                            />
+                          </div>
+
+                          {/* District */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                              <MapPin className="size-3 text-orange-500" />
+                              {t.infoDistrict}
+                            </label>
+                            <input
+                              type="text"
+                              value={infoDistrict}
+                              onChange={(e) => setInfoDistrict(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                              placeholder={selectedLang === "mr" ? "जिल्हा" : "District"}
+                            />
+                          </div>
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs font-bold text-slate-500 block mb-1">
-                            {selectedLang === "mr" ? "तालुका" : "Taluka"}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoTaluka}
-                            onChange={(e) => {
-                              setInfoTaluka(e.target.value);
-                              updateLocalStorageInfo("taluka", e.target.value);
-                            }}
-                            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-500 block mb-1">
-                            {selectedLang === "mr" ? "जिल्हा" : "District"}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoDistrict}
-                            onChange={(e) => {
-                              setInfoDistrict(e.target.value);
-                              updateLocalStorageInfo("district", e.target.value);
-                            }}
-                            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
-                          />
-                        </div>
+
+                      {/* Submit Button */}
+                      <div className="px-6 md:px-8 pb-8">
+                        <button
+                          onClick={handleInfoSubmit}
+                          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-black py-4 rounded-2xl text-sm uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3"
+                        >
+                          <span>{t.infoProceed}</span>
+                          <ChevronRight className="size-5" />
+                        </button>
                       </div>
                     </div>
-                  ) : (
-                    <div className="bg-[#eef5cb] border border-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 space-y-6 shadow-sm w-full">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
-                          {infoSchoolName || profile?.schoolName || ""}
-                        </h2>
+                  </div>
+                </motion.div>
+              ) : view === "dashboard" ? (
+                <motion.div
+                  key="dashboard"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col min-h-[82vh] w-full"
+                >
+                  {/* Header Banner */}
+                  <div className="bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500 px-8 py-8 flex items-center justify-between text-white border-b border-black/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-full bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="flex items-center gap-4">
+                      <Link
+                        to="/teacher"
+                        className="p-2.5 rounded-2xl bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer border border-white/20 active:scale-95 shrink-0"
+                        title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
+                      >
+                        <ArrowLeft className="size-5" />
+                      </Link>
+                      <div className="size-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                        <School className="size-6 text-white" />
+                      </div>
+                      <div>
+                        <h1 className="text-2xl md:text-3xl font-black tracking-tight font-sans">{t.title}</h1>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-50">{t.subtitle}</p>
+                      </div>
+                    </div>
 
-                        {(infoUdise || profile?.udise) && (
-                          <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
-                            {infoUdise || profile?.udise}
-                          </div>
-                        )}
+                    {/* Academic Year & Language Controls */}
+                    <div className="flex items-center gap-3">
+                      {/* Academic Year Selector */}
+                      <div className="flex items-center gap-2 bg-slate-900/30 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 text-white shadow-sm">
+                        <span className="text-xs font-black uppercase tracking-wider hidden sm:inline text-amber-200">
+                          {selectedLang === "mr" ? "शैक्षणिक वर्ष:" : "Academic Year:"}
+                        </span>
+                        <select
+                          value={academicYear}
+                          onChange={(e) => handleAcademicYearChange(e.target.value)}
+                          className="bg-slate-900 text-amber-300 border border-amber-400/40 rounded-xl px-3 py-1 text-xs font-extrabold outline-none cursor-pointer hover:bg-slate-950 transition-colors"
+                        >
+                          {academicYearsList.map((item) => (
+                            <option key={item.value} value={item.value}>
+                              {item.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Language Selector Button */}
+                      <button
+                        onClick={toggleLanguage}
+                        className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all shadow-sm flex items-center gap-2 text-white border border-white/20 cursor-pointer"
+                      >
+                        <Languages className="size-5" />
+                        <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
+                          {selectedLang === "mr" ? "English" : "मराठी"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-6 md:p-10 space-y-10 flex flex-col flex-1 w-full max-w-6xl mx-auto">
+                    {/* Read-only School details card matching image 2 */}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1 }}
+                      className="bg-[#eef5cb] border border-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 space-y-6 shadow-sm w-full"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div>
+                          <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">{t.infoSchoolName}</span>
+                          <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
+                            {infoSchoolName || profile?.schoolName || ""}
+                          </h2>
+                        </div>
+
+                        <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
+                          {(infoUdise || profile?.udise) && (
+                            <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
+                              {infoUdise || profile?.udise}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => setView("info")}
+                            className="bg-slate-900 text-[#eef5cb] p-2.5 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform flex-shrink-0"
+                            title={selectedLang === "mr" ? "माहिती संपादित करा" : "Edit Information"}
+                          >
+                            <Edit className="size-4" />
+                          </button>
+                        </div>
                       </div>
 
                       {(() => {
@@ -9382,1011 +9015,1378 @@ function TeacherSqaafPage() {
                           </div>
                         );
                       })()}
-                    </div>
-                  )}
+                    </motion.div>
 
-                  {/* Assessment Table */}
-                  <AutoFitTableWrapper targetWidth={1000} className="border border-slate-200 rounded-[2rem] bg-white shadow-md">
-                    <table className="w-full min-w-[1000px] divide-y divide-slate-200 text-xs">
-                      <thead>
-                        <tr className="bg-slate-200 text-slate-900 font-black">
-                          <th className="px-3 py-4 text-center font-black border-r border-slate-300 bg-slate-200 text-slate-950 text-xs sm:text-sm w-[50px]">{selectedLang === "mr" ? "अ.क्र." : "Sr."}</th>
-                          <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-slate-200 text-slate-950 text-xs sm:text-sm w-[200px]">{selectedLang === "mr" ? "मानक" : "Standard"}</th>
-                          <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-red-100 text-red-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर १" : "Level 1"}</th>
-                          <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-orange-100 text-orange-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर २" : "Level 2"}</th>
-                          <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-amber-100 text-amber-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर ३" : "Level 3"}</th>
-                          <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-emerald-100 text-emerald-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर ४" : "Level 4"}</th>
-                          <th className="px-3 py-4 text-center font-black border-r border-slate-300 bg-purple-100 text-purple-950 text-xs sm:text-sm w-[80px]">{selectedLang === "mr" ? "स्वमूल्यांकन" : "Self Eval"}</th>
-                          <th className="px-3 py-4 text-center font-black bg-indigo-100 text-indigo-950 text-xs sm:text-sm w-[80px]">{selectedLang === "mr" ? "बाह्यमूल्यांकन" : "Ext Eval"}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 bg-white">
-                        {standards.map((num) => {
-                          const detail = getStandardDetail(num);
-                          const langData = detail?.[selectedLang];
-                          const orangeDesc = langData?.orangeDesc || (selectedLang === "mr" ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`);
-                          const options = getGroupedOptions(num, selectedLang);
-
-                          const selectedIdx = selectedOptions[num];
-                          const isSelected = selectedIdx !== undefined && selectedIdx !== null;
-                          const isNotApplicable = selectedIdx === options.length - 1;
-
-                          const extIdx = externalOptions[num];
-                          const hasExt = extIdx !== undefined && extIdx !== null;
-                          const isExtNotApplicable = extIdx === options.length - 1;
-
-                          return (
-                            <tr key={num} className={`hover:bg-slate-50 transition-all ${isNotApplicable ? 'opacity-70' : ''}`}>
-                              {/* Sr. */}
-                              <td className="px-3 py-4 text-center font-black border-r border-slate-100 text-slate-800">
-                                {selectedLang === "mr" ? toMarathiNumerals(num) : num}
-                              </td>
-
-                              {/* Standard */}
-                              <td className="px-3 py-4 text-left font-bold border-r border-slate-100 text-slate-900 leading-relaxed font-sans">
-                                {orangeDesc}
-                              </td>
-
-                              {/* Levels 1 to 4 */}
-                              {[0, 1, 2, 3].map((levelIdx) => {
-                                const opt = options[levelIdx];
-                                const isCellSelected = isSelected && Number(selectedIdx) === levelIdx;
-                                const cellBg = isCellSelected
-                                  ? "bg-green-50 border-2 border-green-500 font-bold text-green-950 font-sans"
-                                  : "text-slate-600 font-sans";
-
-                                return (
-                                  <td
-                                    key={levelIdx}
-                                    onClick={() => {
-                                      if (isEditingTable) {
-                                        selectOption(num, levelIdx);
-                                      }
-                                    }}
-                                    className={`px-3 py-4 text-left border-r border-slate-100 leading-relaxed whitespace-pre-line ${cellBg} ${isEditingTable ? 'cursor-pointer hover:bg-slate-100/50' : ''}`}
-                                  >
-                                    {opt?.text || "—"}
-                                  </td>
-                                );
-                              })}
-
-                              {/* Self Eval */}
-                              <td className={`px-2 py-4 text-center border-r border-slate-100 ${isSelected ? (isNotApplicable ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 font-black text-amber-800') : 'text-slate-400'}`}>
-                                {isEditingTable ? (
-                                  <select
-                                    value={selectedIdx !== undefined ? selectedIdx : ""}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      if (val === "") {
-                                        const updated = { ...selectedOptions };
-                                        delete updated[num];
-                                        setSelectedOptions(updated);
-                                        localStorage.setItem("sqaf_selected_options", JSON.stringify(updated));
-
-                                        const updatedCompleted = new Set(completedStandards);
-                                        updatedCompleted.delete(num);
-                                        setCompletedStandards(updatedCompleted);
-                                        localStorage.setItem("sqaf_completed_standards", JSON.stringify(Array.from(updatedCompleted)));
-                                      } else {
-                                        selectOption(num, Number(val));
-                                      }
-                                    }}
-                                    className="bg-transparent text-xs font-black focus:outline-none w-full text-center"
-                                  >
-                                    <option value="">—</option>
-                                    <option value="0">1</option>
-                                    <option value="1">2</option>
-                                    <option value="2">3</option>
-                                    <option value="3">4</option>
-                                    <option value="4">{selectedLang === "mr" ? "लागू नाही" : "N/A"}</option>
-                                  </select>
-                                ) : (
-                                  <span>
-                                    {isSelected
-                                      ? (isNotApplicable ? (selectedLang === "mr" ? "लागू नाही" : "N/A") : (selectedIdx + 1))
-                                      : "—"}
-                                  </span>
-                                )}
-                              </td>
-
-                              {/* Ext Eval */}
-                              <td className={`px-2 py-4 text-center ${hasExt ? (isExtNotApplicable ? 'bg-slate-100 text-slate-500' : 'bg-indigo-50 font-black text-indigo-800') : 'text-slate-400'}`}>
-                                {isEditingTable ? (
-                                  <select
-                                    value={extIdx !== undefined ? extIdx : ""}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      const updated = { ...externalOptions };
-                                      if (val === "") {
-                                        delete updated[num];
-                                      } else {
-                                        updated[num] = Number(val);
-                                      }
-                                      setExternalOptions(updated);
-                                      localStorage.setItem("sqaaf_external_options", JSON.stringify(updated));
-                                    }}
-                                    className="bg-transparent text-xs font-black focus:outline-none w-full text-center"
-                                  >
-                                    <option value="">—</option>
-                                    <option value="0">1</option>
-                                    <option value="1">2</option>
-                                    <option value="2">3</option>
-                                    <option value="3">4</option>
-                                    <option value="4">{selectedLang === "mr" ? "लागू नाही" : "N/A"}</option>
-                                  </select>
-                                ) : (
-                                  <span>
-                                    {hasExt
-                                      ? (isExtNotApplicable ? (selectedLang === "mr" ? "लागू नाही" : "N/A") : (extIdx + 1))
-                                      : "—"}
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </AutoFitTableWrapper>
-
-                  {/* Summary Totals Table */}
-                  <div className="border border-slate-300 rounded-[2rem] bg-white shadow-md p-4 sm:p-6 w-full space-y-4 mt-10 overflow-hidden">
-                    <h3 className="text-[14px] md:text-[16px] font-black text-slate-900 uppercase tracking-wider text-center">
-                      {selectedLang === "mr" ? "SQAAF - क्षेत्र, उपक्षेत्र, आणि मानके / बेंच मार्किंग व बाह्यमूल्यांकन स्टेटमेंट" : "SQAAF - Domain, Sub-domain and Standards / Benchmarking & External Evaluation Statement"}
-                    </h3>
-                    <AutoFitTableWrapper targetWidth={1000}>
-                      <table className="min-w-[1000px] w-full border-collapse border border-slate-300 text-xs text-slate-950">
-                      <thead>
-                        <tr className="bg-slate-50 text-slate-900 font-bold border-b border-slate-300">
-                          <th rowSpan={2} className="border border-slate-300 px-3 py-3 text-center w-[10%]">{selectedLang === "mr" ? "मानक क्र." : "Standard Range"}</th>
-                          <th rowSpan={2} className="border border-slate-300 px-3 py-3 text-center w-[8%]">{selectedLang === "mr" ? "लागू मानके" : "Applicable Standards"}</th>
-                          <th rowSpan={2} className="border border-slate-300 px-3 py-3 text-left w-[32%]">{selectedLang === "mr" ? "क्षेत्र" : "Domain"}</th>
-                          <th colSpan={5} className="border border-slate-300 px-3 py-2 text-center bg-amber-500/5">{selectedLang === "mr" ? "स्वयं मूल्यमापन (Self Evaluation)" : "Self Evaluation"}</th>
-                          <th colSpan={5} className="border border-slate-300 px-3 py-2 text-center bg-indigo-500/5">{selectedLang === "mr" ? "बाह्य मूल्यमापन (External Evaluation)" : "External Evaluation"}</th>
-                        </tr>
-                        <tr className="bg-slate-50 text-slate-900 font-bold border-b border-slate-300">
-                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर १" : "Lvl 1"}</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर २" : "Lvl 2"}</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ३" : "Lvl 3"}</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ४" : "Lvl 4"}</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center bg-amber-100 font-black">{selectedLang === "mr" ? "एकूण" : "Total"}</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर १" : "Lvl 1"}</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर २" : "Lvl 2"}</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ३" : "Lvl 3"}</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ४" : "Lvl 4"}</th>
-                          <th className="border border-slate-300 px-2 py-2 text-center bg-indigo-100 font-black">{selectedLang === "mr" ? "एकूण" : "Total"}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {domainSummaryData.rows.map((row) => (
-                          <tr key={row.id} className="hover:bg-slate-50 font-semibold border-b border-slate-300">
-                            <td className="border border-slate-300 px-3 py-3 text-center leading-relaxed">
-                              <div>{selectedLang === "mr" ? `${toMarathiNumerals(row.start)} ते ${toMarathiNumerals(row.end)}` : `${row.start} to ${row.end}`}</div>
-                              {row.naText && (
-                                <div className="text-[10px] text-slate-500 font-bold mt-1">
-                                  {selectedLang === "mr" 
-                                    ? `${row.naText} लागू नाही` 
-                                    : `${row.naText} N/A`}
-                                </div>
-                              )}
-                            </td>
-                            <td className="border border-slate-300 px-3 py-3 text-center font-black">{selectedLang === "mr" ? toMarathiNumerals(row.appCount) : row.appCount}</td>
-                            <td className="border border-slate-300 px-3 py-3 text-left font-bold text-slate-800 leading-relaxed">{selectedLang === "mr" ? row.nameMr : row.nameEn}</td>
-                            
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL1)} × १ = ${toMarathiNumerals(row.selfL1 * 1)}` : `${row.selfL1} × 1 = ${row.selfL1 * 1}`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL2)} × २ = ${toMarathiNumerals(row.selfL2 * 2)}` : `${row.selfL2} × 2 = ${row.selfL2 * 2}`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL3)} × ३ = ${toMarathiNumerals(row.selfL3 * 3)}` : `${row.selfL3} × 3 = ${row.selfL3 * 3}`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL4)} × ४ = ${toMarathiNumerals(row.selfL4 * 4)}` : `${row.selfL4} × 4 = ${row.selfL4 * 4}`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-black bg-amber-50 text-amber-900 whitespace-nowrap">{selectedLang === "mr" ? toMarathiNumerals(row.selfObt) : row.selfObt}</td>
-                            
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL1)} × १ = ${toMarathiNumerals(row.extL1 * 1)}` : `${row.extL1} × 1 = ${row.extL1 * 1}`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL2)} × २ = ${toMarathiNumerals(row.extL2 * 2)}` : `${row.extL2} × 2 = ${row.extL2 * 2}`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL3)} × ३ = ${toMarathiNumerals(row.extL3 * 3)}` : `${row.extL3} × 3 = ${row.extL3 * 3}`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL4)} × ४ = ${toMarathiNumerals(row.extL4 * 4)}` : `${row.extL4} × 4 = ${row.extL4 * 4}`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-black bg-indigo-50 text-indigo-900">{row.extObt ? (selectedLang === "mr" ? toMarathiNumerals(row.extObt) : row.extObt) : ""}</td>
-                          </tr>
-                        ))}
-                        
-                        {/* Summary totals rows */}
-                        <tr className="bg-slate-50 font-black border-b border-slate-300">
-                          <td className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-3 py-3 text-center">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.totalApplicable) : domainSummaryData.totalApplicable}</td>
-                          <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "एकूण" : "Total"}</td>
-                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-2 py-3 text-center bg-amber-100 text-amber-950 font-black text-sm">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.selfObtTotal) : domainSummaryData.selfObtTotal}</td>
-                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-2 py-3 text-center bg-indigo-100 text-indigo-950 font-black text-sm">{domainSummaryData.extObtTotal ? (selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.extObtTotal) : domainSummaryData.extObtTotal) : ""}</td>
-                        </tr>
-                        <tr className="bg-slate-50 font-black border-b border-slate-300">
-                          <td colSpan={2} className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "एकूण पैकी" : "Out of Total"}</td>
-                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-2 py-3 text-center bg-amber-150 text-slate-900 text-sm font-black">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.totalPossibleMarks) : domainSummaryData.totalPossibleMarks}</td>
-                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-2 py-3 text-center bg-indigo-150 text-slate-900 text-sm font-black"></td>
-                        </tr>
-                        <tr className="bg-slate-50 font-black border-b border-slate-300">
-                          <td colSpan={2} className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "टक्केवारी" : "Percentage"}</td>
-                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-2 py-3 text-center bg-green-50 text-green-700 text-sm font-black">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.overallSelfPct) : domainSummaryData.overallSelfPct}%</td>
-                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-2 py-3 text-center bg-green-50 text-green-700 text-sm font-black">{domainSummaryData.overallExtPct ? `${selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.overallExtPct) : domainSummaryData.overallExtPct}%` : ""}</td>
-                        </tr>
-                        <tr className="bg-slate-50 font-black border-b border-slate-300">
-                          <td colSpan={2} className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "श्रेणी" : "Grade"}</td>
-                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-2 py-3 text-center bg-blue-50 text-blue-800 text-base font-black">{domainSummaryData.selfGrade}</td>
-                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
-                          <td className="border border-slate-300 px-2 py-3 text-center bg-blue-50 text-blue-800 text-base font-black">{domainSummaryData.overallExtPct ? domainSummaryData.extGrade : ""}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-
-                    {/* Principal Signature Option under table */}
-                    <div className="flex justify-end pt-6 pb-6 px-4">
-                      <div className="text-center">
-                        <div className="h-16"></div>
-                        <div className="w-60 border-b-2 border-slate-900 mb-1.5 h-0"></div>
-                        <div className="text-sm font-black text-slate-900 uppercase tracking-wide">
-                          {selectedLang === "mr" ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}
+                    {/* Actions Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                      {/* Card 1: View */}
+                      <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
+                        <div>
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-[16px] font-bold text-slate-900">{t.viewSub}</h4>
+                          </div>
+                          <hr className="border-slate-900/40 mb-4" />
+                          <p className="text-[14px] text-slate-700 mb-6">{t.viewDesc}</p>
+                        </div>
+                        <div className="flex justify-end mt-auto">
+                          <button
+                            onClick={() => setView("summary")}
+                            className="bg-[#1e1b4b] text-white px-8 py-3 rounded-3xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm active:scale-95 transition-transform"
+                          >
+                            {t.viewBtn}
+                          </button>
                         </div>
                       </div>
-                    </div>
-                  </AutoFitTableWrapper>
-                </div>
-                </div>
-              </div>
 
-                {/* Fixed Floating Download Button */}
-                <div className="fixed bottom-6 right-6 z-50">
-                  <button
-                    onClick={() => handleDownloadPdf("table")}
-                    className="bg-[#1e1b4b] text-white px-6 py-3.5 rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-xl shadow-indigo-950/30 active:scale-95 flex items-center gap-2 border border-white/20"
-                  >
-                    <Download className="size-4 text-amber-400" />
-                    <span>{selectedLang === "mr" ? "PDF डाऊनलोड" : "Download PDF"}</span>
-                  </button>
-                </div>
-              </motion.div>
-            ) : view === "responses" ? (
-              <motion.div
-                key="responses"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white h-screen w-full flex flex-col overflow-hidden relative"
-              >
-                {/* Orange Header bar */}
-                <div className="bg-[#ffaf66] px-6 py-4 w-full z-30 shadow-sm flex-shrink-0 flex items-center gap-4 text-slate-900">
-                  <button
-                    onClick={() => setView("dashboard")}
-                    className="p-2 hover:bg-black/10 rounded-full transition-colors flex items-center justify-center"
-                  >
-                    <ArrowLeft className="size-6 text-slate-900" strokeWidth={2.5} />
-                  </button>
-                  <span className="text-lg font-bold tracking-tight">
-                    {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
-                  </span>
-                </div>
-
-                {/* Content */}
-                <div className="w-full flex-1 overflow-y-auto">
-                  <div className="max-w-full mx-auto px-5 md:px-8 py-6 pb-24">
-                  <hr className="border-slate-300 mb-6" />
-                  <h2 className="text-[22px] font-bold text-slate-900 mb-1">
-                    {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
-                  </h2>
-                  <hr className="border-slate-900 mb-6" />
-
-                  {/* Read-only School details card matching screenshot 1 */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-[#eef5cb] border border-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 space-y-6 shadow-sm w-full mb-8"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                      <div>
-                        <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">{t.infoSchoolName}</span>
-                        <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
-                          {infoSchoolName || profile?.schoolName || ""}
-                        </h2>
+                      {/* Card 2: Download PDF (Table Format) */}
+                      <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
+                        <div>
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-[16px] font-bold text-slate-900">
+                              {selectedLang === "mr" ? "स्वयं मूल्यांकन व बाह्य मूल्यांकन अहवाल" : "Self & External Evaluation Report"}
+                            </h4>
+                          </div>
+                          <hr className="border-slate-900/40 mb-4" />
+                          <p className="text-[14px] text-slate-700 mb-6">
+                            {selectedLang === "mr"
+                              ? "तुमचा मूल्यमापन अहवाल तक्ता स्वरूपात (Table Format) पीडीएफ म्हणून डाऊनलोड करा."
+                              : "Download your evaluation report in table format as a PDF."}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mt-auto">
+                          <button
+                            onClick={() => setView("table_report")}
+                            className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                          >
+                            <Eye className="size-4" />
+                            <span>{selectedLang === "mr" ? "पहा" : "View"}</span>
+                          </button>
+                          <button
+                            onClick={() => handleDownloadPdf("table", "download")}
+                            className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                          >
+                            <Download className="size-4" />
+                            <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download"}</span>
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
-                        {(infoUdise || profile?.udise) && (
-                          <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
-                            {infoUdise || profile?.udise}
+                      {/* Card 3: School Responses */}
+                      <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
+                        <div>
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-[16px] font-bold text-slate-900">
+                              {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
+                            </h4>
                           </div>
-                        )}
+                          <hr className="border-slate-900/40 mb-4" />
+                          <p className="text-[14px] text-slate-700 mb-6">
+                            {selectedLang === "mr"
+                              ? "तुमचा शाळा प्रतिसाद अहवाल पहा आणि पीडीएफ स्वरूपात डाऊनलोड करा."
+                              : "View your school responses report and download it in PDF format."}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mt-auto">
+                          <button
+                            onClick={() => setView("responses")}
+                            className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                          >
+                            <Eye className="size-4" />
+                            <span>{selectedLang === "mr" ? "पहा" : "View"}</span>
+                          </button>
+                          <button
+                            onClick={() => handleDownloadPdf("responses", "download")}
+                            className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                          >
+                            <Download className="size-4" />
+                            <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download"}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Card 4: Summary Report */}
+                      <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
+                        <div>
+                          <div className="flex items-center gap-3 mb-5">
+                            <div className="size-10 rounded-xl bg-[#e5e7eb] flex items-center justify-center">
+                              <FileText className="size-5 text-[#1e1b4b]" />
+                            </div>
+                            <h3 className="text-[17px] font-black text-[#1e1b4b] leading-tight">
+                              {selectedLang === "mr" ? "एकत्रित गुण अहवाल" : "Consolidated Marks Report"}
+                            </h3>
+                          </div>
+                          <hr className="border-slate-900/40 mb-4" />
+                          <p className="text-[14px] text-slate-700 mb-6">
+                            {selectedLang === "mr"
+                              ? "नवीन अहवालाची रचना लवकरच अपडेट केली जाईल."
+                              : "New report structure will be updated soon."}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mt-auto">
+                          <button
+                            onClick={() => setView("manual_summary")}
+                            className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                          >
+                            <Eye className="size-4" />
+                            <span>{selectedLang === "mr" ? "पहा" : "View"}</span>
+                          </button>
+                          <button
+                            onClick={() => handleDownloadPdf("summary", "download")}
+                            className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                          >
+                            <Download className="size-4" />
+                            <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download PDF"}</span>
+                          </button>
+                        </div>
+                      </div>
+
+
+
+
+                    </div>
+                  </div>
+                </motion.div>
+              ) : view === "table_report" ? (
+                <motion.div
+                  key="table_report"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-white h-screen w-full flex flex-col overflow-hidden relative"
+                >
+                  {/* Header bar */}
+                  <div className="bg-[#ffaf66] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-slate-900 border-b border-black/5 z-30 w-full gap-4 shadow-sm flex-shrink-0">
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setView("dashboard")}
+                        className="p-2 hover:bg-black/10 rounded-full transition-colors"
+                      >
+                        <ArrowLeft className="size-6 text-slate-900" strokeWidth={2.5} />
+                      </button>
+                      <span className="text-lg font-bold tracking-tight">
+                        {selectedLang === "mr" ? "तक्ता अहवाल अहवाल" : "Table Report Review"}
+                      </span>
+                    </div>
+
+                    {/* Actions on the right side of header */}
+                    <div className="flex items-center gap-3">
+                      {/* Language Selector */}
+                      <div className="flex bg-white/20 backdrop-blur-md rounded-xl p-1 gap-1 border border-black/15">
                         <button
-                          onClick={() => setView("info")}
-                          className="bg-slate-900 text-[#eef5cb] p-2.5 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform flex-shrink-0"
-                          title={selectedLang === "mr" ? "माहिती संपादित करा" : "Edit Information"}
+                          onClick={() => setSelectedLang("mr")}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${selectedLang === "mr"
+                            ? "bg-[#1e1b4b] text-white shadow-sm"
+                            : "text-slate-900 hover:bg-white/10"
+                            }`}
                         >
-                          <Edit className="size-4" />
+                          मराठी
+                        </button>
+                        <button
+                          onClick={() => setSelectedLang("en")}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${selectedLang === "en"
+                            ? "bg-[#1e1b4b] text-white shadow-sm"
+                            : "text-slate-900 hover:bg-white/10"
+                            }`}
+                        >
+                          English
                         </button>
                       </div>
+
+                      {/* PDF Download Button */}
+                      <button
+                        onClick={() => handleDownloadPdf("table")}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-[#1e1b4b] text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm"
+                      >
+                        <Download className="size-4 text-white" />
+                        <span>{selectedLang === "mr" ? "PDF डाऊनलोड" : "Download PDF"}</span>
+                      </button>
+
+                      {/* Edit / Save Button */}
+                      <button
+                        onClick={() => {
+                          if (isEditingTable) {
+                            toast.success(selectedLang === "mr" ? "बदल जतन केले आहेत." : "Changes saved successfully.");
+                          }
+                          setIsEditingTable(!isEditingTable);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-[#1e1b4b] text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm animate-none"
+                      >
+                        {isEditingTable ? (
+                          <>
+                            <CheckCircle2 className="size-4 text-green-400" />
+                            <span>{selectedLang === "mr" ? "जतन करा" : "Save Changes"}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Edit className="size-4 text-white" />
+                            <span>{selectedLang === "mr" ? "संपादित करा" : "Edit Report"}</span>
+                          </>
+                        )}
+                      </button>
                     </div>
-
-                    {(() => {
-                      const fields = [
-                        { label: t.infoHeadmaster, val: infoHeadmaster || profile?.fullName },
-                        { label: t.infoAddress, val: infoAddress || profile?.address },
-                        { label: t.infoCenterName, val: infoCenterName },
-                        { label: t.infoTaluka, val: infoTaluka },
-                        { label: t.infoDistrict, val: infoDistrict },
-                      ].filter((f) => f.val && f.val.trim() !== "");
-
-                      if (fields.length === 0) return null;
-
-                      return (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
-                          {fields.map((f, idx) => (
-                            <div key={idx}>
-                              <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
-                                {f.label}
-                              </span>
-                              <p className="font-bold text-slate-900">{f.val}</p>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </motion.div>
-
-                  {/* Response Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {(() => {
-                      const answeredEntries = Array.from({ length: 128 }, (_, i) => {
-                        const num = i + 1;
-                        const idx = selectedOptions[num] !== undefined
-                          ? selectedOptions[num]
-                          : (selectedOptions as any)?.[num.toString()];
-                        return { num, idx };
-                      });
-
-                      return answeredEntries.map(({ num, idx }) => (
-                        <SqaafResponseCard
-                          key={num}
-                          num={num}
-                          idx={idx}
-                          selectedLang={selectedLang}
-                          selectedOptions={selectedOptions}
-                          udise={infoUdise || profile?.udise}
-                        />
-                      ));
-                    })()}
                   </div>
-                </div>
-              </div>
 
-                {/* Fixed Save Button */}
-                <div className="absolute bottom-0 left-0 right-0 w-full bg-gradient-to-t from-white via-white to-white/0 z-20">
-                  <div className="max-w-full mx-auto w-full flex justify-end px-5 md:px-8 py-4">
+                  {/* Content */}
+                  <div className="w-full flex-1 overflow-y-auto">
+                    <div className="max-w-full mx-auto px-5 md:px-8 py-6 space-y-6 pb-24">
+                      <div className="flex justify-between items-center">
+                        <h2 className="text-[22px] font-bold text-slate-900 mb-1">
+                          {selectedLang === "mr" ? "मूल्यांकन तक्ता अहवाल" : "Assessment Table Report"}
+                        </h2>
+                      </div>
+                      <hr className="border-slate-900 mb-6" />
+
+                      {/* School details block */}
+                      {isEditingTable ? (
+                        <div className="bg-[#f8fafc] border border-slate-200 rounded-[1.5rem] p-6 shadow-sm w-full space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 block mb-1">
+                                {selectedLang === "mr" ? "शाळेचे नाव" : "School Name"}
+                              </label>
+                              <input
+                                type="text"
+                                value={infoSchoolName}
+                                onChange={(e) => {
+                                  setInfoSchoolName(e.target.value);
+                                  updateLocalStorageInfo("schoolName", e.target.value);
+                                }}
+                                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 block mb-1">
+                                {selectedLang === "mr" ? "यू-डायस क्रमांक" : "UDISE Code"}
+                              </label>
+                              <input
+                                type="text"
+                                value={infoUdise}
+                                onChange={(e) => {
+                                  setInfoUdise(e.target.value);
+                                  updateLocalStorageInfo("udise", e.target.value);
+                                }}
+                                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold font-mono"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 block mb-1">
+                                {selectedLang === "mr" ? "मुख्याध्यापक" : "Headmaster"}
+                              </label>
+                              <input
+                                type="text"
+                                value={infoHeadmaster}
+                                onChange={(e) => {
+                                  setInfoHeadmaster(e.target.value);
+                                  updateLocalStorageInfo("headmaster", e.target.value);
+                                }}
+                                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 block mb-1">
+                                {selectedLang === "mr" ? "पत्ता" : "Address"}
+                              </label>
+                              <input
+                                type="text"
+                                value={infoAddress}
+                                onChange={(e) => {
+                                  setInfoAddress(e.target.value);
+                                  updateLocalStorageInfo("address", e.target.value);
+                                }}
+                                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 block mb-1">
+                                {selectedLang === "mr" ? "केंद्र" : "Center"}
+                              </label>
+                              <input
+                                type="text"
+                                value={infoCenterName}
+                                onChange={(e) => {
+                                  setInfoCenterName(e.target.value);
+                                  updateLocalStorageInfo("centerName", e.target.value);
+                                }}
+                                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 block mb-1">
+                                {selectedLang === "mr" ? "तालुका" : "Taluka"}
+                              </label>
+                              <input
+                                type="text"
+                                value={infoTaluka}
+                                onChange={(e) => {
+                                  setInfoTaluka(e.target.value);
+                                  updateLocalStorageInfo("taluka", e.target.value);
+                                }}
+                                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 block mb-1">
+                                {selectedLang === "mr" ? "जिल्हा" : "District"}
+                              </label>
+                              <input
+                                type="text"
+                                value={infoDistrict}
+                                onChange={(e) => {
+                                  setInfoDistrict(e.target.value);
+                                  updateLocalStorageInfo("district", e.target.value);
+                                }}
+                                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-[#eef5cb] border border-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 space-y-6 shadow-sm w-full">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
+                              {infoSchoolName || profile?.schoolName || ""}
+                            </h2>
+
+                            {(infoUdise || profile?.udise) && (
+                              <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
+                                {infoUdise || profile?.udise}
+                              </div>
+                            )}
+                          </div>
+
+                          {(() => {
+                            const fields = [
+                              { label: t.infoHeadmaster, val: infoHeadmaster || profile?.fullName },
+                              { label: t.infoAddress, val: infoAddress || profile?.address },
+                              { label: t.infoCenterName, val: infoCenterName },
+                              { label: t.infoTaluka, val: infoTaluka },
+                              { label: t.infoDistrict, val: infoDistrict },
+                            ].filter((f) => f.val && f.val.trim() !== "");
+
+                            if (fields.length === 0) return null;
+
+                            return (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                                {fields.map((f, idx) => (
+                                  <div key={idx}>
+                                    <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
+                                      {f.label}
+                                    </span>
+                                    <p className="font-bold text-slate-900">{f.val}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Assessment Table */}
+                      <AutoFitTableWrapper targetWidth={1000} className="border border-slate-200 rounded-[2rem] bg-white shadow-md">
+                        <table className="w-full min-w-[1000px] divide-y divide-slate-200 text-xs">
+                          <thead>
+                            <tr className="bg-slate-200 text-slate-900 font-black">
+                              <th className="px-3 py-4 text-center font-black border-r border-slate-300 bg-slate-200 text-slate-950 text-xs sm:text-sm w-[50px]">{selectedLang === "mr" ? "अ.क्र." : "Sr."}</th>
+                              <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-slate-200 text-slate-950 text-xs sm:text-sm w-[200px]">{selectedLang === "mr" ? "मानक" : "Standard"}</th>
+                              <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-red-100 text-red-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर १" : "Level 1"}</th>
+                              <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-orange-100 text-orange-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर २" : "Level 2"}</th>
+                              <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-amber-100 text-amber-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर ३" : "Level 3"}</th>
+                              <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-emerald-100 text-emerald-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर ४" : "Level 4"}</th>
+                              <th className="px-3 py-4 text-center font-black border-r border-slate-300 bg-purple-100 text-purple-950 text-xs sm:text-sm w-[80px]">{selectedLang === "mr" ? "स्वमूल्यांकन" : "Self Eval"}</th>
+                              <th className="px-3 py-4 text-center font-black bg-indigo-100 text-indigo-950 text-xs sm:text-sm w-[80px]">{selectedLang === "mr" ? "बाह्यमूल्यांकन" : "Ext Eval"}</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 bg-white">
+                            {standards.map((num) => {
+                              const detail = getStandardDetail(num);
+                              const langData = detail?.[selectedLang];
+                              const orangeDesc = langData?.orangeDesc || (selectedLang === "mr" ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`);
+                              const options = getGroupedOptions(num, selectedLang);
+
+                              const selectedIdx = selectedOptions[num];
+                              const isSelected = selectedIdx !== undefined && selectedIdx !== null;
+                              const isNotApplicable = selectedIdx === options.length - 1;
+
+                              const extIdx = externalOptions[num];
+                              const hasExt = extIdx !== undefined && extIdx !== null;
+                              const isExtNotApplicable = extIdx === options.length - 1;
+
+                              return (
+                                <tr key={num} className={`hover:bg-slate-50 transition-all ${isNotApplicable ? 'opacity-70' : ''}`}>
+                                  {/* Sr. */}
+                                  <td className="px-3 py-4 text-center font-black border-r border-slate-100 text-slate-800">
+                                    {selectedLang === "mr" ? toMarathiNumerals(num) : num}
+                                  </td>
+
+                                  {/* Standard */}
+                                  <td className="px-3 py-4 text-left font-bold border-r border-slate-100 text-slate-900 leading-relaxed font-sans">
+                                    {orangeDesc}
+                                  </td>
+
+                                  {/* Levels 1 to 4 */}
+                                  {[0, 1, 2, 3].map((levelIdx) => {
+                                    const opt = options[levelIdx];
+                                    const isCellSelected = isSelected && Number(selectedIdx) === levelIdx;
+                                    const cellBg = isCellSelected
+                                      ? "bg-green-50 border-2 border-green-500 font-bold text-green-950 font-sans"
+                                      : "text-slate-600 font-sans";
+
+                                    return (
+                                      <td
+                                        key={levelIdx}
+                                        onClick={() => {
+                                          if (isEditingTable) {
+                                            selectOption(num, levelIdx);
+                                          }
+                                        }}
+                                        className={`px-3 py-4 text-left border-r border-slate-100 leading-relaxed whitespace-pre-line ${cellBg} ${isEditingTable ? 'cursor-pointer hover:bg-slate-100/50' : ''}`}
+                                      >
+                                        {opt?.text || "—"}
+                                      </td>
+                                    );
+                                  })}
+
+                                  {/* Self Eval */}
+                                  <td className={`px-2 py-4 text-center border-r border-slate-100 ${isSelected ? (isNotApplicable ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 font-black text-amber-800') : 'text-slate-400'}`}>
+                                    {isEditingTable ? (
+                                      <select
+                                        value={selectedIdx !== undefined ? selectedIdx : ""}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          if (val === "") {
+                                            const updated = { ...selectedOptions };
+                                            delete updated[num];
+                                            setSelectedOptions(updated);
+                                            localStorage.setItem("sqaf_selected_options", JSON.stringify(updated));
+
+                                            const updatedCompleted = new Set(completedStandards);
+                                            updatedCompleted.delete(num);
+                                            setCompletedStandards(updatedCompleted);
+                                            localStorage.setItem("sqaf_completed_standards", JSON.stringify(Array.from(updatedCompleted)));
+                                          } else {
+                                            selectOption(num, Number(val));
+                                          }
+                                        }}
+                                        className="bg-transparent text-xs font-black focus:outline-none w-full text-center"
+                                      >
+                                        <option value="">—</option>
+                                        <option value="0">1</option>
+                                        <option value="1">2</option>
+                                        <option value="2">3</option>
+                                        <option value="3">4</option>
+                                        <option value="4">{selectedLang === "mr" ? "लागू नाही" : "N/A"}</option>
+                                      </select>
+                                    ) : (
+                                      <span>
+                                        {isSelected
+                                          ? (isNotApplicable ? (selectedLang === "mr" ? "लागू नाही" : "N/A") : (selectedIdx + 1))
+                                          : "—"}
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  {/* Ext Eval */}
+                                  <td className={`px-2 py-4 text-center ${hasExt ? (isExtNotApplicable ? 'bg-slate-100 text-slate-500' : 'bg-indigo-50 font-black text-indigo-800') : 'text-slate-400'}`}>
+                                    {isEditingTable ? (
+                                      <select
+                                        value={extIdx !== undefined ? extIdx : ""}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          const updated = { ...externalOptions };
+                                          if (val === "") {
+                                            delete updated[num];
+                                          } else {
+                                            updated[num] = Number(val);
+                                          }
+                                          setExternalOptions(updated);
+                                          localStorage.setItem("sqaaf_external_options", JSON.stringify(updated));
+                                        }}
+                                        className="bg-transparent text-xs font-black focus:outline-none w-full text-center"
+                                      >
+                                        <option value="">—</option>
+                                        <option value="0">1</option>
+                                        <option value="1">2</option>
+                                        <option value="2">3</option>
+                                        <option value="3">4</option>
+                                        <option value="4">{selectedLang === "mr" ? "लागू नाही" : "N/A"}</option>
+                                      </select>
+                                    ) : (
+                                      <span>
+                                        {hasExt
+                                          ? (isExtNotApplicable ? (selectedLang === "mr" ? "लागू नाही" : "N/A") : (extIdx + 1))
+                                          : "—"}
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </AutoFitTableWrapper>
+
+                      {/* Summary Totals Table */}
+                      <div className="border border-slate-300 rounded-[2rem] bg-white shadow-md p-4 sm:p-6 w-full space-y-4 mt-10 overflow-hidden">
+                        <h3 className="text-[14px] md:text-[16px] font-black text-slate-900 uppercase tracking-wider text-center">
+                          {selectedLang === "mr" ? "SQAAF - क्षेत्र, उपक्षेत्र, आणि मानके / बेंच मार्किंग व बाह्यमूल्यांकन स्टेटमेंट" : "SQAAF - Domain, Sub-domain and Standards / Benchmarking & External Evaluation Statement"}
+                        </h3>
+                        <AutoFitTableWrapper targetWidth={1000}>
+                          <table className="min-w-[1000px] w-full border-collapse border border-slate-300 text-xs text-slate-950">
+                            <thead>
+                              <tr className="bg-slate-50 text-slate-900 font-bold border-b border-slate-300">
+                                <th rowSpan={2} className="border border-slate-300 px-3 py-3 text-center w-[10%]">{selectedLang === "mr" ? "मानक क्र." : "Standard Range"}</th>
+                                <th rowSpan={2} className="border border-slate-300 px-3 py-3 text-center w-[8%]">{selectedLang === "mr" ? "लागू मानके" : "Applicable Standards"}</th>
+                                <th rowSpan={2} className="border border-slate-300 px-3 py-3 text-left w-[32%]">{selectedLang === "mr" ? "क्षेत्र" : "Domain"}</th>
+                                <th colSpan={5} className="border border-slate-300 px-3 py-2 text-center bg-amber-500/5">{selectedLang === "mr" ? "स्वयं मूल्यमापन (Self Evaluation)" : "Self Evaluation"}</th>
+                                <th colSpan={5} className="border border-slate-300 px-3 py-2 text-center bg-indigo-500/5">{selectedLang === "mr" ? "बाह्य मूल्यमापन (External Evaluation)" : "External Evaluation"}</th>
+                              </tr>
+                              <tr className="bg-slate-50 text-slate-900 font-bold border-b border-slate-300">
+                                <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर १" : "Lvl 1"}</th>
+                                <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर २" : "Lvl 2"}</th>
+                                <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ३" : "Lvl 3"}</th>
+                                <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ४" : "Lvl 4"}</th>
+                                <th className="border border-slate-300 px-2 py-2 text-center bg-amber-100 font-black">{selectedLang === "mr" ? "एकूण" : "Total"}</th>
+                                <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर १" : "Lvl 1"}</th>
+                                <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर २" : "Lvl 2"}</th>
+                                <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ३" : "Lvl 3"}</th>
+                                <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ४" : "Lvl 4"}</th>
+                                <th className="border border-slate-300 px-2 py-2 text-center bg-indigo-100 font-black">{selectedLang === "mr" ? "एकूण" : "Total"}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {domainSummaryData.rows.map((row) => (
+                                <tr key={row.id} className="hover:bg-slate-50 font-semibold border-b border-slate-300">
+                                  <td className="border border-slate-300 px-3 py-3 text-center leading-relaxed">
+                                    <div>{selectedLang === "mr" ? `${toMarathiNumerals(row.start)} ते ${toMarathiNumerals(row.end)}` : `${row.start} to ${row.end}`}</div>
+                                    {row.naText && (
+                                      <div className="text-[10px] text-slate-500 font-bold mt-1">
+                                        {selectedLang === "mr"
+                                          ? `${row.naText} लागू नाही`
+                                          : `${row.naText} N/A`}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="border border-slate-300 px-3 py-3 text-center font-black">{selectedLang === "mr" ? toMarathiNumerals(row.appCount) : row.appCount}</td>
+                                  <td className="border border-slate-300 px-3 py-3 text-left font-bold text-slate-800 leading-relaxed">{selectedLang === "mr" ? row.nameMr : row.nameEn}</td>
+
+                                  <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL1)} × १ = ${toMarathiNumerals(row.selfL1 * 1)}` : `${row.selfL1} × 1 = ${row.selfL1 * 1}`) : ""}</td>
+                                  <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL2)} × २ = ${toMarathiNumerals(row.selfL2 * 2)}` : `${row.selfL2} × 2 = ${row.selfL2 * 2}`) : ""}</td>
+                                  <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL3)} × ३ = ${toMarathiNumerals(row.selfL3 * 3)}` : `${row.selfL3} × 3 = ${row.selfL3 * 3}`) : ""}</td>
+                                  <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL4)} × ४ = ${toMarathiNumerals(row.selfL4 * 4)}` : `${row.selfL4} × 4 = ${row.selfL4 * 4}`) : ""}</td>
+                                  <td className="border border-slate-300 px-2 py-3 text-center font-black bg-amber-50 text-amber-900 whitespace-nowrap">{selectedLang === "mr" ? toMarathiNumerals(row.selfObt) : row.selfObt}</td>
+
+                                  <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL1)} × १ = ${toMarathiNumerals(row.extL1 * 1)}` : `${row.extL1} × 1 = ${row.extL1 * 1}`) : ""}</td>
+                                  <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL2)} × २ = ${toMarathiNumerals(row.extL2 * 2)}` : `${row.extL2} × 2 = ${row.extL2 * 2}`) : ""}</td>
+                                  <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL3)} × ३ = ${toMarathiNumerals(row.extL3 * 3)}` : `${row.extL3} × 3 = ${row.extL3 * 3}`) : ""}</td>
+                                  <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL4)} × ४ = ${toMarathiNumerals(row.extL4 * 4)}` : `${row.extL4} × 4 = ${row.extL4 * 4}`) : ""}</td>
+                                  <td className="border border-slate-300 px-2 py-3 text-center font-black bg-indigo-50 text-indigo-900">{row.extObt ? (selectedLang === "mr" ? toMarathiNumerals(row.extObt) : row.extObt) : ""}</td>
+                                </tr>
+                              ))}
+
+                              {/* Summary totals rows */}
+                              <tr className="bg-slate-50 font-black border-b border-slate-300">
+                                <td className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-3 py-3 text-center">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.totalApplicable) : domainSummaryData.totalApplicable}</td>
+                                <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "एकूण" : "Total"}</td>
+                                <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-2 py-3 text-center bg-amber-100 text-amber-950 font-black text-sm">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.selfObtTotal) : domainSummaryData.selfObtTotal}</td>
+                                <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-2 py-3 text-center bg-indigo-100 text-indigo-950 font-black text-sm">{domainSummaryData.extObtTotal ? (selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.extObtTotal) : domainSummaryData.extObtTotal) : ""}</td>
+                              </tr>
+                              <tr className="bg-slate-50 font-black border-b border-slate-300">
+                                <td colSpan={2} className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "एकूण पैकी" : "Out of Total"}</td>
+                                <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-2 py-3 text-center bg-amber-150 text-slate-900 text-sm font-black">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.totalPossibleMarks) : domainSummaryData.totalPossibleMarks}</td>
+                                <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-2 py-3 text-center bg-indigo-150 text-slate-900 text-sm font-black"></td>
+                              </tr>
+                              <tr className="bg-slate-50 font-black border-b border-slate-300">
+                                <td colSpan={2} className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "टक्केवारी" : "Percentage"}</td>
+                                <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-2 py-3 text-center bg-green-50 text-green-700 text-sm font-black">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.overallSelfPct) : domainSummaryData.overallSelfPct}%</td>
+                                <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-2 py-3 text-center bg-green-50 text-green-700 text-sm font-black">{domainSummaryData.overallExtPct ? `${selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.overallExtPct) : domainSummaryData.overallExtPct}%` : ""}</td>
+                              </tr>
+                              <tr className="bg-slate-50 font-black border-b border-slate-300">
+                                <td colSpan={2} className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "श्रेणी" : "Grade"}</td>
+                                <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-2 py-3 text-center bg-blue-50 text-blue-800 text-base font-black">{domainSummaryData.selfGrade}</td>
+                                <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                                <td className="border border-slate-300 px-2 py-3 text-center bg-blue-50 text-blue-800 text-base font-black">{domainSummaryData.overallExtPct ? domainSummaryData.extGrade : ""}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+
+                          {/* Principal Signature Option under table */}
+                          <div className="flex justify-end pt-6 pb-6 px-4">
+                            <div className="text-center">
+                              <div className="h-16"></div>
+                              <div className="w-60 border-b-2 border-slate-900 mb-1.5 h-0"></div>
+                              <div className="text-sm font-black text-slate-900 uppercase tracking-wide">
+                                {selectedLang === "mr" ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}
+                              </div>
+                            </div>
+                          </div>
+                        </AutoFitTableWrapper>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fixed Floating Download Button */}
+                  <div className="fixed bottom-6 right-6 z-50">
                     <button
-                      onClick={() => handleDownloadPdf("responses")}
-                      className="bg-[#1e1b4b] text-white px-8 py-3.5 rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-indigo-950/20 active:scale-95 flex items-center gap-2"
+                      onClick={() => handleDownloadPdf("table")}
+                      className="bg-[#1e1b4b] text-white px-6 py-3.5 rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-xl shadow-indigo-950/30 active:scale-95 flex items-center gap-2 border border-white/20"
                     >
-                      <Download className="size-4" />
-                      <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download PDF"}</span>
+                      <Download className="size-4 text-amber-400" />
+                      <span>{selectedLang === "mr" ? "PDF डाऊनलोड" : "Download PDF"}</span>
                     </button>
                   </div>
-                </div>
-              </motion.div>
-            ) : view === "certificate" ? (
-              <motion.div
-                key="certificate"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-[#f8fafc] min-h-screen w-full flex flex-col items-center"
-              >
-                {/* Orange Header bar */}
-                <div className="bg-[#ffaf66] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-slate-900 border-b border-black/5 relative z-20 w-full gap-4">
-                  <div className="flex items-center gap-4">
+                </motion.div>
+              ) : view === "responses" ? (
+                <motion.div
+                  key="responses"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-white h-screen w-full flex flex-col overflow-hidden relative"
+                >
+                  {/* Orange Header bar */}
+                  <div className="bg-[#ffaf66] px-6 py-4 w-full z-30 shadow-sm flex-shrink-0 flex items-center gap-4 text-slate-900">
                     <button
                       onClick={() => setView("dashboard")}
-                      className="p-2 hover:bg-black/10 rounded-full transition-colors"
+                      className="p-2 hover:bg-black/10 rounded-full transition-colors flex items-center justify-center"
                     >
                       <ArrowLeft className="size-6 text-slate-900" strokeWidth={2.5} />
                     </button>
                     <span className="text-lg font-bold tracking-tight">
-                      {certLang === "mr" ? "प्रमाणपत्र" : "Certificate"}
+                      {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
                     </span>
                   </div>
 
-                  {/* Actions on the right side of orange header */}
-                  <div className="flex items-center gap-3">
-                    {/* Language Selector */}
-                    <div className="flex bg-white/20 backdrop-blur-md rounded-xl p-1 gap-1 border border-black/15">
-                      <button
-                        onClick={() => setCertLang("mr")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "mr"
-                          ? "bg-[#1e1b4b] text-white shadow-sm"
-                          : "text-slate-900 hover:bg-white/10"
-                          }`}
+                  {/* Content */}
+                  <div className="w-full flex-1 overflow-y-auto">
+                    <div className="max-w-full mx-auto px-5 md:px-8 py-6 pb-24">
+                      <hr className="border-slate-300 mb-6" />
+                      <h2 className="text-[22px] font-bold text-slate-900 mb-1">
+                        {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
+                      </h2>
+                      <hr className="border-slate-900 mb-6" />
+
+                      {/* Read-only School details card matching screenshot 1 */}
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="bg-[#eef5cb] border border-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 space-y-6 shadow-sm w-full mb-8"
                       >
-                        मराठी
-                      </button>
-                      <button
-                        onClick={() => setCertLang("en")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "en"
-                          ? "bg-[#1e1b4b] text-white shadow-sm"
-                          : "text-slate-900 hover:bg-white/10"
-                          }`}
-                      >
-                        English
-                      </button>
-                    </div>
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                          <div>
+                            <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">{t.infoSchoolName}</span>
+                            <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
+                              {infoSchoolName || profile?.schoolName || ""}
+                            </h2>
+                          </div>
 
-                    {/* Edit / Save Button */}
-                    <button
-                      onClick={handleEditToggle}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#1e1b4b] text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm"
-                    >
-                      {isEditingCert ? (
-                        <>
-                          <CheckCircle2 className="size-4 text-green-400" />
-                          <span>{certLang === "mr" ? "जतन करा" : "Save Changes"}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Edit className="size-4 text-white" />
-                          <span>{certLang === "mr" ? "संपादित करा" : "Edit Certificate"}</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Certificate Canvas Area */}
-                <div className="flex-1 w-full flex items-center justify-center p-4 md:p-8 overflow-y-auto">
-                  <div
-                    id="certificate-container"
-                    className="relative bg-white shadow-2xl rounded-sm w-full max-w-[650px] aspect-[1/1.4] p-8 md:p-12 flex flex-col justify-between items-center overflow-hidden border border-slate-200"
-                    style={{
-                      backgroundImage: 'radial-gradient(circle, #fdfbf7 0%, #fff 100%)'
-                    }}
-                  >
-                    {/* Gold Corner and Double Border Design */}
-                    {/* Outer border */}
-                    <div className="absolute inset-4 border-[3px] border-[#d4af37] pointer-events-none" />
-                    {/* Inner thin border */}
-                    <div className="absolute inset-6 border border-[#bf953f] pointer-events-none" />
-
-                    {/* Top Left Corner */}
-                    <svg className="absolute top-7 left-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M 48,2 L 2,2 L 2,48" />
-                      <path d="M 40,8 L 8,8 L 8,40" />
-                    </svg>
-                    {/* Top Right Corner */}
-                    <svg className="absolute top-7 right-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M 0,2 L 46,2 L 46,48" />
-                      <path d="M 8,8 L 40,8 L 40,40" />
-                    </svg>
-                    {/* Bottom Left Corner */}
-                    <svg className="absolute bottom-7 left-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M 48,46 L 2,46 L 2,0" />
-                      <path d="M 40,40 L 8,40 L 8,8" />
-                    </svg>
-                    {/* Bottom Right Corner */}
-                    <svg className="absolute bottom-7 right-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M 0,46 L 46,46 L 46,0" />
-                      <path d="M 8,40 L 40,40 L 40,8" />
-                    </svg>
-
-                    {/* Elegant Gold Waves */}
-                    <svg className="absolute top-0 right-0 w-[50%] h-[50%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#bf953f" />
-                          <stop offset="25%" stopColor="#fcf6ba" />
-                          <stop offset="50%" stopColor="#b38728" />
-                          <stop offset="75%" stopColor="#fbf5b7" />
-                          <stop offset="100%" stopColor="#aa771c" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M 200,0 L 200,150 C 180,120 150,80 120,60 C 90,40 50,20 0,0 Z" fill="url(#gold-grad)" opacity="0.15" />
-                      <path d="M 200,0 L 200,120 C 170,100 145,60 115,45 C 85,30 55,15 15,0 Z" fill="url(#gold-grad)" opacity="0.3" />
-                      <path d="M 200,0 L 200,90 C 185,75 160,50 130,35 C 100,20 70,10 30,0 Z" fill="url(#gold-grad)" opacity="0.5" />
-                      <path d="M 200,0 L 200,60 C 190,50 170,30 145,20 C 120,10 90,5 50,0 Z" fill="url(#gold-grad)" opacity="0.8" />
-                    </svg>
-
-                    <svg className="absolute bottom-0 left-0 w-[50%] h-[50%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none">
-                      <path d="M 0,200 L 0,50 C 20,80 50,120 80,140 C 110,160 150,180 200,200 Z" fill="url(#gold-grad)" opacity="0.15" />
-                      <path d="M 0,200 L 0,80 C 30,100 55,140 85,155 C 115,170 145,185 185,200 Z" fill="url(#gold-grad)" opacity="0.3" />
-                      <path d="M 0,200 L 0,110 C 15,125 40,150 70,165 C 100,180 130,190 170,200 Z" fill="url(#gold-grad)" opacity="0.5" />
-                      <path d="M 0,200 L 0,140 C 10,150 30,170 55,180 C 80,190 110,195 150,200 Z" fill="url(#gold-grad)" opacity="0.8" />
-                    </svg>
-
-                    {/* Certificate Content */}
-                    <div className="relative z-10 w-full flex flex-col items-center my-auto px-4 text-center space-y-4">
-                      {/* Header */}
-                      <h1 className="text-[#1e3b8b] font-serif font-black text-base sm:text-lg md:text-xl leading-snug tracking-wide max-w-[90%] uppercase">
-                        {certLang === "mr"
-                          ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र"
-                          : "State Council For Educational Research and Training Maharashtra"}
-                      </h1>
-
-                      <div className="h-[2px] w-24 bg-[#bf953f] my-2" />
-
-                      {/* Certificate Title (Editable) */}
-                      {isEditingCert ? (
-                        <div className="w-full px-4">
-                          <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
-                            {certLang === "mr" ? "प्रमाणपत्र शीर्षक" : "Certificate Title"}
-                          </label>
-                          <input
-                            type="text"
-                            value={certLang === "mr" ? certTitleMr : certTitleEn}
-                            onChange={(e) => certLang === "mr" ? setCertTitleMr(e.target.value) : setCertTitleEn(e.target.value)}
-                            className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-[#0e7490] font-sans font-black text-xs md:text-sm tracking-[0.15em] uppercase focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
-                          />
-                        </div>
-                      ) : (
-                        <h2 className="text-[#0e7490] font-sans font-black text-[10px] sm:text-xs tracking-[0.2em] uppercase">
-                          {certLang === "mr" ? certTitleMr : certTitleEn}
-                        </h2>
-                      )}
-
-                      {/* Certify Text */}
-                      <p className="text-slate-500 font-serif italic text-xs sm:text-sm md:text-base">
-                        {certLang === "mr" ? "याद्वारे प्रमाणित करण्यात येते की," : "This is to certify that"}
-                      </p>
-
-                      {/* School Name (Editable) */}
-                      {isEditingCert ? (
-                        <div className="w-full px-4">
-                          <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
-                            {certLang === "mr" ? "शाळेचे नाव" : "School Name"}
-                          </label>
-                          <input
-                            type="text"
-                            value={certSchoolName}
-                            onChange={(e) => setCertSchoolName(e.target.value)}
-                            className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-slate-900 font-serif font-bold text-sm sm:text-base uppercase focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
-                          />
-                        </div>
-                      ) : (
-                        <h3 className="text-slate-900 font-serif font-bold text-sm sm:text-base md:text-lg uppercase border-b-2 border-slate-300 pb-1 px-4 min-w-[70%] tracking-wide">
-                          {certSchoolName}
-                        </h3>
-                      )}
-
-                      {/* UDISE (Editable) */}
-                      {isEditingCert ? (
-                        <div className="w-full max-w-[220px] px-4">
-                          <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
-                            {certLang === "mr" ? "यू-डायस क्रमांक" : "UDISE Code"}
-                          </label>
-                          <div className="flex items-center justify-center gap-1.5 w-full">
-                            <span className="text-[#bf953f] text-lg">—</span>
-                            <input
-                              type="text"
-                              value={certUdise}
-                              onChange={(e) => setCertUdise(e.target.value)}
-                              className="text-center w-full bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-1.5 text-slate-800 font-serif font-bold text-xs sm:text-sm tracking-wider focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
-                            />
-                            <span className="text-[#bf953f] text-lg">—</span>
+                          <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
+                            {(infoUdise || profile?.udise) && (
+                              <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
+                                {infoUdise || profile?.udise}
+                              </div>
+                            )}
+                            <button
+                              onClick={() => setView("info")}
+                              className="bg-slate-900 text-[#eef5cb] p-2.5 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform flex-shrink-0"
+                              title={selectedLang === "mr" ? "माहिती संपादित करा" : "Edit Information"}
+                            >
+                              <Edit className="size-4" />
+                            </button>
                           </div>
                         </div>
-                      ) : (
-                        <div className="text-slate-700 font-serif font-bold text-xs sm:text-sm md:text-base border-b border-slate-300 pb-1 px-4 min-w-[50%] tracking-widest text-center mt-2">
-                          {certUdise}
-                        </div>
-                      )}
 
-                      {/* Description Paragraph (Editable) */}
-                      {isEditingCert ? (
-                        <div className="w-full px-4">
-                          <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
-                            {certLang === "mr" ? "मुख्य मजकूर" : "Main Description"}
-                          </label>
-                          <textarea
-                            value={certLang === "mr" ? certDescMr : certDescEn}
-                            onChange={(e) => certLang === "mr" ? setCertDescMr(e.target.value) : setCertDescEn(e.target.value)}
-                            rows={3}
-                            className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-slate-700 font-serif text-[11px] sm:text-xs md:text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
-                          />
-                        </div>
-                      ) : (
-                        <p className="text-slate-700 font-serif text-[11px] sm:text-xs md:text-sm leading-relaxed max-w-[90%] mx-auto">
-                          {certLang === "mr" ? certDescMr : certDescEn}
-                        </p>
-                      )}
+                        {(() => {
+                          const fields = [
+                            { label: t.infoHeadmaster, val: infoHeadmaster || profile?.fullName },
+                            { label: t.infoAddress, val: infoAddress || profile?.address },
+                            { label: t.infoCenterName, val: infoCenterName },
+                            { label: t.infoTaluka, val: infoTaluka },
+                            { label: t.infoDistrict, val: infoDistrict },
+                          ].filter((f) => f.val && f.val.trim() !== "");
 
-                      {/* Signature Footer */}
-                      <div className="space-y-1 pt-4">
-                        <p className="text-[#1e3b8b] font-sans font-black text-[10px] uppercase tracking-wider">
-                          {certLang === "mr" ? "एस.सी.ई.आर.टी. महाराष्ट्र" : "SCERT Maharashtra"}
-                        </p>
-                        <p className="text-slate-500 text-[8px] sm:text-[9px] font-bold leading-normal">
-                          {certLang === "mr" ? (
-                            <>
-                              राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र, पुणे.<br />
-                              (एस.सी.ई.आर.टी.)<br />
-                              ७०८, सदाशिव पेठ, कुमठेकर मार्ग, पुणे – ४११0३0<br />
-                              महाराष्ट्र, भारत
-                            </>
-                          ) : (
-                            <>
-                              State Council For Educational Research and Training, Maharashtra, Pune.<br />
-                              (SCERT)<br />
-                              708, Sadashiv Peth, Kumthekar Marg, Pune – 411030<br />
-                              Maharashtra, India
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                          if (fields.length === 0) return null;
 
-                {/* Floating / fixed Save PDF button at bottom right */}
-                <div className="fixed bottom-6 right-6 z-30">
-                  <button
-                    onClick={handleSavePdf}
-                    className="bg-[#0f1123] text-white font-semibold px-8 py-3 rounded-full hover:bg-slate-800 transition-all uppercase tracking-wider text-xs shadow-2xl active:scale-95 flex items-center gap-2"
-                  >
-                    <FileText className="size-4" />
-                    Save PDF
-                  </button>
-                </div>
-              </motion.div>
-            ) : view === "summary" ? (
-              <motion.div
-                key="summary"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col min-h-[82vh] w-full"
-              >
-                {/* Header navigation */}
-                <div className="px-8 py-6 flex items-center justify-between text-slate-800 border-b border-slate-100 bg-slate-50/30">
-                  <button
-                    onClick={() => setView("dashboard")}
-                    className="group px-6 py-2.5 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-full transition-all duration-300 flex items-center gap-2 font-black text-slate-700 text-xs uppercase tracking-wider shadow-sm"
-                  >
-                    <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
-                    <span>{t.backBtn}</span>
-                  </button>
-
-                  {/* Language Selector & Reset Buttons in Summary view */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={handleResetData}
-                      className="px-5 py-2.5 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 rounded-2xl transition-all shadow-sm flex items-center gap-2 text-red-600 text-xs font-black uppercase tracking-wider cursor-pointer active:scale-95"
-                    >
-                      <Trash2 className="size-4" />
-                      <span>{selectedLang === "mr" ? "डेटा साफ करा" : "Reset Data"}</span>
-                    </button>
-
-                    <button
-                      onClick={toggleLanguage}
-                      className="p-3 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-2xl transition-all shadow-sm flex items-center gap-2 text-slate-700 border border-slate-200"
-                    >
-                      <Languages className="size-5" />
-                      <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
-                        {selectedLang === "mr" ? "English" : "मराठी"}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-4 sm:p-6 md:p-8 flex flex-col gap-6 sm:gap-10 flex-1 w-full">
-                  {/* Top Section: Premium Summary Analytics Card */}
-                  <div className="w-full flex justify-center">
-                    <div className="w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl sm:rounded-[2.5rem] p-3.5 sm:p-8 md:p-10 shadow-xl relative overflow-hidden border border-orange-400/20">
-                      <div className="absolute top-0 right-0 size-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-                      <div className="absolute -bottom-10 -left-10 size-64 bg-black/10 rounded-full blur-3xl pointer-events-none" />
-
-                      <div className="space-y-1 sm:space-y-2 text-center border-b border-white/20 pb-3 sm:pb-6 relative z-10 mb-3.5 sm:mb-8">
-                        <span className="text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-[0.25em] sm:tracking-[0.3em] text-orange-100">Audit Status</span>
-                        <h2 className="text-lg sm:text-2xl md:text-4xl font-black tracking-tight">{t.summaryTitle}</h2>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 md:gap-6 font-bold text-xs sm:text-[15px] relative z-10">
-                        <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                          <span className="text-orange-50 font-bold sm:font-medium text-[11px] sm:text-sm md:text-base text-center sm:text-left mb-1.5 sm:mb-0 leading-tight">{t.totalStands}</span>
-                          <span className="bg-white/20 text-white px-2.5 sm:px-5 py-1 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[50px] sm:min-w-[70px] text-center shadow-inner border border-white/30">{totalStandards}</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                          <span className="text-orange-50 font-bold sm:font-medium text-[11px] sm:text-sm md:text-base text-center sm:text-left mb-1.5 sm:mb-0 leading-tight">{t.completedStands}</span>
-                          <span className="bg-white/20 text-white px-2.5 sm:px-5 py-1 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[50px] sm:min-w-[70px] text-center shadow-inner border border-white/30">{completedCount}</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                          <span className="text-orange-50 font-bold sm:font-medium text-[11px] sm:text-sm md:text-base text-center sm:text-left mb-1.5 sm:mb-0 leading-tight">{t.uncompletedStands}</span>
-                          <span className="bg-white/20 text-white px-2.5 sm:px-5 py-1 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[50px] sm:min-w-[70px] text-center shadow-inner border border-white/30">{uncompletedCount}</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                          <span className="text-orange-50 font-bold sm:font-medium text-[11px] sm:text-sm md:text-base text-center sm:text-left mb-1.5 sm:mb-0 leading-tight">{t.applicableStands}</span>
-                          <span className="bg-white/20 text-white px-2.5 sm:px-5 py-1 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[50px] sm:min-w-[70px] text-center shadow-inner border border-white/30">{applicableCount}</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                          <span className="text-orange-50 font-bold sm:font-medium text-[11px] sm:text-sm md:text-base text-center sm:text-left mb-1.5 sm:mb-0 leading-tight">{t.notApplicableStands}</span>
-                          <span className="bg-white/20 text-white px-2.5 sm:px-5 py-1 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[50px] sm:min-w-[70px] text-center shadow-inner border border-white/30">{notApplicableCount}</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-amber-400/20 rounded-xl sm:rounded-2xl border border-amber-300/40 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                          <span className="text-white font-black sm:font-bold text-[11px] sm:text-sm md:text-base text-center sm:text-left mb-1.5 sm:mb-0 leading-tight">{t.marksRatio}</span>
-                          <span className="bg-amber-300 text-slate-900 px-3 sm:px-5 py-1 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[70px] sm:min-w-[90px] text-center shadow-md">{obtainedMarks} / {totalMarks}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bottom Section: Premium Interactive Grid for 128 Standards */}
-                  <div className="w-full space-y-6">
-                    <div className="space-y-1 text-center md:text-left">
-                      <div className="flex items-center justify-center md:justify-start gap-3">
-                        <h3 className="text-3xl font-black text-slate-900 tracking-tight">{t.standards}</h3>
-                        <span className="bg-teal-500 text-white font-black text-xs px-3.5 py-1 rounded-full shadow-md shadow-teal-500/20">{standards.length}</span>
-                      </div>
-                      <p className="text-slate-400 font-bold text-sm">{t.clickHint}</p>
-                    </div>
-
-                    {/* Desktop Premium Grid Layout */}
-                    <div
-                      ref={gridRef}
-                      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5"
-                    >
-                      {standards.map((num, i) => {
-                        const isCompleted = completedStandards.has(num);
-                        const isLastSelected = lastSelectedStandard === num;
-                        return (
-                          <motion.div
-                            key={num}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: Math.min(i * 0.015, 0.3) }}
-                            whileHover={{ scale: 1.03, y: -3 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => {
-                              if (num <= 128) {
-                                if (gridRef.current) {
-                                  const scrollPos = gridRef.current.scrollTop;
-                                  setSavedScrollPosition(scrollPos);
-                                  localStorage.setItem("sqaaf_saved_scroll_position", scrollPos.toString());
-                                }
-                                const winScrollPos = window.scrollY;
-                                setSavedWindowScrollPosition(winScrollPos);
-                                localStorage.setItem("sqaaf_saved_window_scroll_position", winScrollPos.toString());
-
-                                setLastSelectedStandard(num);
-                                localStorage.setItem("sqaaf_last_selected_standard", num.toString());
-                                setActiveStandardDetails(num);
-                              }
-                            }}
-                            className={`relative border-2 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 cursor-pointer group overflow-hidden ${isCompleted
-                              ? "bg-gradient-to-br from-green-50 to-green-100/50 border-green-500 hover:shadow-green-100"
-                              : "bg-gradient-to-br from-white to-slate-50 border-slate-200/80 hover:border-slate-400 hover:shadow-slate-100"
-                              } ${isLastSelected
-                                ? "ring-4 ring-indigo-600/50 border-indigo-500 shadow-xl scale-[1.02] z-10"
-                                : ""
-                              }`}
-                          >
-                            <div
-                              className={`absolute -right-6 -bottom-6 size-20 rounded-full blur-lg transition-all duration-300 pointer-events-none ${isCompleted
-                                ? "bg-green-500/10 group-hover:bg-green-500/20"
-                                : "bg-slate-500/5 group-hover:bg-slate-500/10"
-                                }`}
-                            />
-
-                            <div className="flex justify-between items-start gap-4">
-                              <div className="space-y-1">
-                                <span
-                                  className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${isCompleted ? "text-green-700 bg-green-100" : "text-slate-500 bg-slate-100"
-                                    }`}
-                                >
-                                  {selectedLang === "mr" ? "मानक" : "Standard"}
-                                </span>
-                                <h4
-                                  className={`font-extrabold text-sm transition-colors ${isCompleted ? "text-green-950" : "text-slate-800"
-                                    }`}
-                                >
-                                  {selectedLang === "mr"
-                                    ? `मानक क्र. ${toMarathiNumerals(num)}`
-                                    : `Standard No. ${num}`}
-                                </h4>
-                              </div>
-                              <div
-                                className={`size-8 rounded-full flex items-center justify-center shadow-md transition-all ${isCompleted
-                                  ? "bg-green-500 text-white shadow-green-500/20 group-hover:scale-110"
-                                  : "bg-slate-100 text-slate-300 group-hover:bg-slate-200"
-                                  }`}
-                              >
-                                <CheckCircle2 className="size-4" strokeWidth={2.5} />
-                              </div>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ) : view === "manual_summary" ? (
-              <motion.div
-                key="manual_summary"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-[#f8fafc] min-h-screen w-full flex flex-col"
-              >
-                {/* Header bar */}
-                <div className="bg-[#ffaf66] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-slate-900 border-b border-black/5 relative z-20 w-full gap-4">
-                  <div className="flex items-center gap-4">
-                    <button onClick={() => setView("dashboard")} className="p-2 hover:bg-black/10 rounded-full transition-colors">
-                      <ArrowLeft className="size-5" />
-                    </button>
-                    <div className="flex flex-col">
-                      <h2 className="text-xl font-black">{selectedLang === "mr" ? "मॅन्युअल गुणनोंद तक्ता" : "Manual Marks Table"}</h2>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDownloadPdf("summary", "download")}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1e1b4b] text-white hover:bg-slate-800 transition-colors shadow-sm"
-                  >
-                    <Download className="size-4" />
-                    <span>{selectedLang === "mr" ? "PDF डाऊनलोड करा" : "Download PDF"}</span>
-                  </button>
-                </div>
-
-                {/* Form Content */}
-                <div className="p-4 sm:p-8 overflow-y-auto max-h-[85vh]">
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8 max-w-6xl mx-auto">
-                    <h3 className="text-lg font-bold mb-4">{selectedLang === "mr" ? "शाळेची माहिती" : "School Information"}</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">शाळेचे नाव</label>
-                        <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoSchoolName || "-"}</div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">U Dise No</label>
-                        <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoUdise || "-"}</div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">तालुका</label>
-                        <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoTaluka || "-"}</div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">जिल्हा</label>
-                        <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoDistrict || "-"}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 sm:p-6 max-w-6xl mx-auto overflow-hidden">
-                    <h3 className="text-lg font-bold mb-4 px-2">{selectedLang === "mr" ? "मूल्यांकन तपशील" : "Evaluation Details"}</h3>
-                    <AutoFitTableWrapper targetWidth={850}>
-                      <table className="w-full min-w-[850px] border-collapse table-fixed text-sm">
-                      <thead>
-                        <tr className="bg-slate-50">
-                          <th className="border border-slate-200 p-2 w-[5%]">अ. क्र.</th>
-                          <th className="border border-slate-200 p-2 w-[25%]">क्षेत्राचे नाव</th>
-                          <th className="border border-slate-200 p-2 w-[10%]">मानक क्र.</th>
-                          <th className="border border-slate-200 p-2 w-[12%]">लागू नसलेली मानके</th>
-                          <th className="border border-slate-200 p-2 w-[8%]">लागू मानक<br />संख्या</th>
-                          <th className="border border-slate-200 p-2 w-[8%]">स्तर १</th>
-                          <th className="border border-slate-200 p-2 w-[8%]">स्तर २</th>
-                          <th className="border border-slate-200 p-2 w-[8%]">स्तर ३</th>
-                          <th className="border border-slate-200 p-2 w-[8%]">स्तर ४</th>
-                          <th className="border border-slate-200 p-2 w-[8%]">एकूण गुण</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {manualData.map((row, i) => {
-                          const rowTotal = (Number(row.l1 || 0) * 1) + (Number(row.l2 || 0) * 2) + (Number(row.l3 || 0) * 3) + (Number(row.l4 || 0) * 4);
                           return (
-                            <tr key={row.id}>
-                              <td className="border border-slate-200 p-2 text-center">{i + 1}</td>
-                              <td className="border border-slate-200 p-2 font-medium text-[11px] leading-tight">{row.name}</td>
-                              <td className="border border-slate-200 p-2 text-center text-[12px]">{row.stds}</td>
-                              <td className="border border-slate-200 p-1 text-center text-[12px] text-slate-700">
-                                {row.notApp || "-"}
-                              </td>
-                              <td className="border border-slate-200 p-1 text-center font-bold text-[#1e1b4b]">
-                                {row.app}
-                              </td>
-                              <td className="border border-slate-200 p-1 text-center font-bold bg-red-50 text-slate-700">
-                                {row.l1}
-                              </td>
-                              <td className="border border-slate-200 p-1 text-center font-bold bg-orange-50 text-slate-700">
-                                {row.l2}
-                              </td>
-                              <td className="border border-slate-200 p-1 text-center font-bold bg-amber-50 text-slate-700">
-                                {row.l3}
-                              </td>
-                              <td className="border border-slate-200 p-1 text-center font-bold bg-green-50 text-slate-700">
-                                {row.l4}
-                              </td>
-                              <td className="border border-slate-200 p-2 text-center font-bold text-lg text-[#1e1b4b]">{rowTotal}</td>
-                            </tr>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                              {fields.map((f, idx) => (
+                                <div key={idx}>
+                                  <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
+                                    {f.label}
+                                  </span>
+                                  <p className="font-bold text-slate-900">{f.val}</p>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </motion.div>
+
+                      {/* Response Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {(() => {
+                          const answeredEntries = Array.from({ length: 128 }, (_, i) => {
+                            const num = i + 1;
+                            const idx = selectedOptions[num] !== undefined
+                              ? selectedOptions[num]
+                              : (selectedOptions as any)?.[num.toString()];
+                            return { num, idx };
+                          });
+
+                          return answeredEntries.map(({ num, idx }) => (
+                            <SqaafResponseCard
+                              key={num}
+                              num={num}
+                              idx={idx}
+                              selectedLang={selectedLang}
+                              selectedOptions={selectedOptions}
+                              udise={infoUdise || profile?.udise}
+                            />
+                          ));
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fixed Save Button */}
+                  <div className="absolute bottom-0 left-0 right-0 w-full bg-gradient-to-t from-white via-white to-white/0 z-20">
+                    <div className="max-w-full mx-auto w-full flex justify-end px-5 md:px-8 py-4">
+                      <button
+                        onClick={() => handleDownloadPdf("responses")}
+                        className="bg-[#1e1b4b] text-white px-8 py-3.5 rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-indigo-950/20 active:scale-95 flex items-center gap-2"
+                      >
+                        <Download className="size-4" />
+                        <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download PDF"}</span>
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : view === "certificate" ? (
+                <motion.div
+                  key="certificate"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-[#f8fafc] min-h-screen w-full flex flex-col items-center"
+                >
+                  {/* Orange Header bar */}
+                  <div className="bg-[#ffaf66] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-slate-900 border-b border-black/5 relative z-20 w-full gap-4">
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setView("dashboard")}
+                        className="p-2 hover:bg-black/10 rounded-full transition-colors"
+                      >
+                        <ArrowLeft className="size-6 text-slate-900" strokeWidth={2.5} />
+                      </button>
+                      <span className="text-lg font-bold tracking-tight">
+                        {certLang === "mr" ? "प्रमाणपत्र" : "Certificate"}
+                      </span>
+                    </div>
+
+                    {/* Actions on the right side of orange header */}
+                    <div className="flex items-center gap-3">
+                      {/* Language Selector */}
+                      <div className="flex bg-white/20 backdrop-blur-md rounded-xl p-1 gap-1 border border-black/15">
+                        <button
+                          onClick={() => setCertLang("mr")}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "mr"
+                            ? "bg-[#1e1b4b] text-white shadow-sm"
+                            : "text-slate-900 hover:bg-white/10"
+                            }`}
+                        >
+                          मराठी
+                        </button>
+                        <button
+                          onClick={() => setCertLang("en")}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "en"
+                            ? "bg-[#1e1b4b] text-white shadow-sm"
+                            : "text-slate-900 hover:bg-white/10"
+                            }`}
+                        >
+                          English
+                        </button>
+                      </div>
+
+                      {/* Edit / Save Button */}
+                      <button
+                        onClick={handleEditToggle}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#1e1b4b] text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm"
+                      >
+                        {isEditingCert ? (
+                          <>
+                            <CheckCircle2 className="size-4 text-green-400" />
+                            <span>{certLang === "mr" ? "जतन करा" : "Save Changes"}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Edit className="size-4 text-white" />
+                            <span>{certLang === "mr" ? "संपादित करा" : "Edit Certificate"}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Certificate Canvas Area */}
+                  <div className="flex-1 w-full flex items-center justify-center p-4 md:p-8 overflow-y-auto">
+                    <div
+                      id="certificate-container"
+                      className="relative bg-white shadow-2xl rounded-sm w-full max-w-[650px] aspect-[1/1.4] p-8 md:p-12 flex flex-col justify-between items-center overflow-hidden border border-slate-200"
+                      style={{
+                        backgroundImage: 'radial-gradient(circle, #fdfbf7 0%, #fff 100%)'
+                      }}
+                    >
+                      {/* Gold Corner and Double Border Design */}
+                      {/* Outer border */}
+                      <div className="absolute inset-4 border-[3px] border-[#d4af37] pointer-events-none" />
+                      {/* Inner thin border */}
+                      <div className="absolute inset-6 border border-[#bf953f] pointer-events-none" />
+
+                      {/* Top Left Corner */}
+                      <svg className="absolute top-7 left-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M 48,2 L 2,2 L 2,48" />
+                        <path d="M 40,8 L 8,8 L 8,40" />
+                      </svg>
+                      {/* Top Right Corner */}
+                      <svg className="absolute top-7 right-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M 0,2 L 46,2 L 46,48" />
+                        <path d="M 8,8 L 40,8 L 40,40" />
+                      </svg>
+                      {/* Bottom Left Corner */}
+                      <svg className="absolute bottom-7 left-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M 48,46 L 2,46 L 2,0" />
+                        <path d="M 40,40 L 8,40 L 8,8" />
+                      </svg>
+                      {/* Bottom Right Corner */}
+                      <svg className="absolute bottom-7 right-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M 0,46 L 46,46 L 46,0" />
+                        <path d="M 8,40 L 40,40 L 40,8" />
+                      </svg>
+
+                      {/* Elegant Gold Waves */}
+                      <svg className="absolute top-0 right-0 w-[50%] h-[50%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#bf953f" />
+                            <stop offset="25%" stopColor="#fcf6ba" />
+                            <stop offset="50%" stopColor="#b38728" />
+                            <stop offset="75%" stopColor="#fbf5b7" />
+                            <stop offset="100%" stopColor="#aa771c" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M 200,0 L 200,150 C 180,120 150,80 120,60 C 90,40 50,20 0,0 Z" fill="url(#gold-grad)" opacity="0.15" />
+                        <path d="M 200,0 L 200,120 C 170,100 145,60 115,45 C 85,30 55,15 15,0 Z" fill="url(#gold-grad)" opacity="0.3" />
+                        <path d="M 200,0 L 200,90 C 185,75 160,50 130,35 C 100,20 70,10 30,0 Z" fill="url(#gold-grad)" opacity="0.5" />
+                        <path d="M 200,0 L 200,60 C 190,50 170,30 145,20 C 120,10 90,5 50,0 Z" fill="url(#gold-grad)" opacity="0.8" />
+                      </svg>
+
+                      <svg className="absolute bottom-0 left-0 w-[50%] h-[50%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none">
+                        <path d="M 0,200 L 0,50 C 20,80 50,120 80,140 C 110,160 150,180 200,200 Z" fill="url(#gold-grad)" opacity="0.15" />
+                        <path d="M 0,200 L 0,80 C 30,100 55,140 85,155 C 115,170 145,185 185,200 Z" fill="url(#gold-grad)" opacity="0.3" />
+                        <path d="M 0,200 L 0,110 C 15,125 40,150 70,165 C 100,180 130,190 170,200 Z" fill="url(#gold-grad)" opacity="0.5" />
+                        <path d="M 0,200 L 0,140 C 10,150 30,170 55,180 C 80,190 110,195 150,200 Z" fill="url(#gold-grad)" opacity="0.8" />
+                      </svg>
+
+                      {/* Certificate Content */}
+                      <div className="relative z-10 w-full flex flex-col items-center my-auto px-4 text-center space-y-4">
+                        {/* Header */}
+                        <h1 className="text-[#1e3b8b] font-serif font-black text-base sm:text-lg md:text-xl leading-snug tracking-wide max-w-[90%] uppercase">
+                          {certLang === "mr"
+                            ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र"
+                            : "State Council For Educational Research and Training Maharashtra"}
+                        </h1>
+
+                        <div className="h-[2px] w-24 bg-[#bf953f] my-2" />
+
+                        {/* Certificate Title (Editable) */}
+                        {isEditingCert ? (
+                          <div className="w-full px-4">
+                            <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
+                              {certLang === "mr" ? "प्रमाणपत्र शीर्षक" : "Certificate Title"}
+                            </label>
+                            <input
+                              type="text"
+                              value={certLang === "mr" ? certTitleMr : certTitleEn}
+                              onChange={(e) => certLang === "mr" ? setCertTitleMr(e.target.value) : setCertTitleEn(e.target.value)}
+                              className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-[#0e7490] font-sans font-black text-xs md:text-sm tracking-[0.15em] uppercase focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
+                            />
+                          </div>
+                        ) : (
+                          <h2 className="text-[#0e7490] font-sans font-black text-[10px] sm:text-xs tracking-[0.2em] uppercase">
+                            {certLang === "mr" ? certTitleMr : certTitleEn}
+                          </h2>
+                        )}
+
+                        {/* Certify Text */}
+                        <p className="text-slate-500 font-serif italic text-xs sm:text-sm md:text-base">
+                          {certLang === "mr" ? "याद्वारे प्रमाणित करण्यात येते की," : "This is to certify that"}
+                        </p>
+
+                        {/* School Name (Editable) */}
+                        {isEditingCert ? (
+                          <div className="w-full px-4">
+                            <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
+                              {certLang === "mr" ? "शाळेचे नाव" : "School Name"}
+                            </label>
+                            <input
+                              type="text"
+                              value={certSchoolName}
+                              onChange={(e) => setCertSchoolName(e.target.value)}
+                              className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-slate-900 font-serif font-bold text-sm sm:text-base uppercase focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
+                            />
+                          </div>
+                        ) : (
+                          <h3 className="text-slate-900 font-serif font-bold text-sm sm:text-base md:text-lg uppercase border-b-2 border-slate-300 pb-1 px-4 min-w-[70%] tracking-wide">
+                            {certSchoolName}
+                          </h3>
+                        )}
+
+                        {/* UDISE (Editable) */}
+                        {isEditingCert ? (
+                          <div className="w-full max-w-[220px] px-4">
+                            <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
+                              {certLang === "mr" ? "यू-डायस क्रमांक" : "UDISE Code"}
+                            </label>
+                            <div className="flex items-center justify-center gap-1.5 w-full">
+                              <span className="text-[#bf953f] text-lg">—</span>
+                              <input
+                                type="text"
+                                value={certUdise}
+                                onChange={(e) => setCertUdise(e.target.value)}
+                                className="text-center w-full bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-1.5 text-slate-800 font-serif font-bold text-xs sm:text-sm tracking-wider focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
+                              />
+                              <span className="text-[#bf953f] text-lg">—</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-slate-700 font-serif font-bold text-xs sm:text-sm md:text-base border-b border-slate-300 pb-1 px-4 min-w-[50%] tracking-widest text-center mt-2">
+                            {certUdise}
+                          </div>
+                        )}
+
+                        {/* Description Paragraph (Editable) */}
+                        {isEditingCert ? (
+                          <div className="w-full px-4">
+                            <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
+                              {certLang === "mr" ? "मुख्य मजकूर" : "Main Description"}
+                            </label>
+                            <textarea
+                              value={certLang === "mr" ? certDescMr : certDescEn}
+                              onChange={(e) => certLang === "mr" ? setCertDescMr(e.target.value) : setCertDescEn(e.target.value)}
+                              rows={3}
+                              className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-slate-700 font-serif text-[11px] sm:text-xs md:text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
+                            />
+                          </div>
+                        ) : (
+                          <p className="text-slate-700 font-serif text-[11px] sm:text-xs md:text-sm leading-relaxed max-w-[90%] mx-auto">
+                            {certLang === "mr" ? certDescMr : certDescEn}
+                          </p>
+                        )}
+
+                        {/* Signature Footer */}
+                        <div className="space-y-1 pt-4">
+                          <p className="text-[#1e3b8b] font-sans font-black text-[10px] uppercase tracking-wider">
+                            {certLang === "mr" ? "एस.सी.ई.आर.टी. महाराष्ट्र" : "SCERT Maharashtra"}
+                          </p>
+                          <p className="text-slate-500 text-[8px] sm:text-[9px] font-bold leading-normal">
+                            {certLang === "mr" ? (
+                              <>
+                                राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र, पुणे.<br />
+                                (एस.सी.ई.आर.टी.)<br />
+                                ७०८, सदाशिव पेठ, कुमठेकर मार्ग, पुणे – ४११0३0<br />
+                                महाराष्ट्र, भारत
+                              </>
+                            ) : (
+                              <>
+                                State Council For Educational Research and Training, Maharashtra, Pune.<br />
+                                (SCERT)<br />
+                                708, Sadashiv Peth, Kumthekar Marg, Pune – 411030<br />
+                                Maharashtra, India
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Floating / fixed Save PDF button at bottom right */}
+                  <div className="fixed bottom-6 right-6 z-30">
+                    <button
+                      onClick={handleSavePdf}
+                      className="bg-[#0f1123] text-white font-semibold px-8 py-3 rounded-full hover:bg-slate-800 transition-all uppercase tracking-wider text-xs shadow-2xl active:scale-95 flex items-center gap-2"
+                    >
+                      <FileText className="size-4" />
+                      Save PDF
+                    </button>
+                  </div>
+                </motion.div>
+              ) : view === "summary" ? (
+                <motion.div
+                  key="summary"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col min-h-[82vh] w-full"
+                >
+                  {/* Header navigation */}
+                  <div className="px-8 py-6 flex items-center justify-between text-slate-800 border-b border-slate-100 bg-slate-50/30">
+                    <button
+                      onClick={() => setView("dashboard")}
+                      className="group px-6 py-2.5 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-full transition-all duration-300 flex items-center gap-2 font-black text-slate-700 text-xs uppercase tracking-wider shadow-sm"
+                    >
+                      <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
+                      <span>{t.backBtn}</span>
+                    </button>
+
+                    {/* Language Selector & Reset Buttons in Summary view */}
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={handleResetData}
+                        className="px-5 py-2.5 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 rounded-2xl transition-all shadow-sm flex items-center gap-2 text-red-600 text-xs font-black uppercase tracking-wider cursor-pointer active:scale-95"
+                      >
+                        <Trash2 className="size-4" />
+                        <span>{selectedLang === "mr" ? "डेटा साफ करा" : "Reset Data"}</span>
+                      </button>
+
+                      <button
+                        onClick={toggleLanguage}
+                        className="p-3 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-2xl transition-all shadow-sm flex items-center gap-2 text-slate-700 border border-slate-200"
+                      >
+                        <Languages className="size-5" />
+                        <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
+                          {selectedLang === "mr" ? "English" : "मराठी"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-6 md:p-8 flex flex-col gap-10 flex-1 w-full">
+                    {/* Top Section: Premium Summary Analytics Card */}
+                    <div className="w-full flex justify-center">
+                      <div className="w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-[2.5rem] p-8 md:p-10 shadow-xl relative overflow-hidden border border-orange-400/20">
+                        <div className="absolute top-0 right-0 size-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-10 -left-10 size-64 bg-black/10 rounded-full blur-3xl pointer-events-none" />
+
+                        <div className="space-y-2 text-center border-b border-white/20 pb-6 relative z-10 mb-8">
+                          <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] text-orange-100">Audit Status</span>
+                          <h2 className="text-2xl md:text-4xl font-black tracking-tight">{t.summaryTitle}</h2>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 font-bold text-[15px] relative z-10">
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.totalStands}</span>
+                            <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{totalStandards}</span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.completedStands}</span>
+                            <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{completedCount}</span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.uncompletedStands}</span>
+                            <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{uncompletedCount}</span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.applicableStands}</span>
+                            <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{applicableCount}</span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.notApplicableStands}</span>
+                            <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{notApplicableCount}</span>
+                          </div>
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-amber-400/20 rounded-2xl border border-amber-300/40 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-white font-bold text-center sm:text-left mb-2 sm:mb-0">{t.marksRatio}</span>
+                            <span className="bg-amber-300 text-slate-900 px-5 py-2 rounded-xl text-sm font-black min-w-[90px] text-center shadow-md">{obtainedMarks} / {totalMarks}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Section: Premium Interactive Grid for 128 Standards */}
+                    <div className="w-full space-y-6">
+                      <div className="space-y-1 text-center md:text-left">
+                        <div className="flex items-center justify-center md:justify-start gap-3">
+                          <h3 className="text-3xl font-black text-slate-900 tracking-tight">{t.standards}</h3>
+                          <span className="bg-teal-500 text-white font-black text-xs px-3.5 py-1 rounded-full shadow-md shadow-teal-500/20">{standards.length}</span>
+                        </div>
+                        <p className="text-slate-400 font-bold text-sm">{t.clickHint}</p>
+                      </div>
+
+                      {/* Desktop Premium Grid Layout */}
+                      <div
+                        ref={gridRef}
+                        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5"
+                      >
+                        {standards.map((num, i) => {
+                          const isCompleted = completedStandards.has(num);
+                          const isLastSelected = lastSelectedStandard === num;
+                          return (
+                            <motion.div
+                              key={num}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: Math.min(i * 0.015, 0.3) }}
+                              whileHover={{ scale: 1.03, y: -3 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => {
+                                if (num <= 128) {
+                                  if (gridRef.current) {
+                                    const scrollPos = gridRef.current.scrollTop;
+                                    setSavedScrollPosition(scrollPos);
+                                    localStorage.setItem("sqaaf_saved_scroll_position", scrollPos.toString());
+                                  }
+                                  const winScrollPos = window.scrollY;
+                                  setSavedWindowScrollPosition(winScrollPos);
+                                  localStorage.setItem("sqaaf_saved_window_scroll_position", winScrollPos.toString());
+
+                                  setLastSelectedStandard(num);
+                                  localStorage.setItem("sqaaf_last_selected_standard", num.toString());
+                                  setActiveStandardDetails(num);
+                                }
+                              }}
+                              className={`relative border-2 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 cursor-pointer group overflow-hidden ${isCompleted
+                                ? "bg-gradient-to-br from-green-50 to-green-100/50 border-green-500 hover:shadow-green-100"
+                                : "bg-gradient-to-br from-white to-slate-50 border-slate-200/80 hover:border-slate-400 hover:shadow-slate-100"
+                                } ${isLastSelected
+                                  ? "ring-4 ring-indigo-600/50 border-indigo-500 shadow-xl scale-[1.02] z-10"
+                                  : ""
+                                }`}
+                            >
+                              <div
+                                className={`absolute -right-6 -bottom-6 size-20 rounded-full blur-lg transition-all duration-300 pointer-events-none ${isCompleted
+                                  ? "bg-green-500/10 group-hover:bg-green-500/20"
+                                  : "bg-slate-500/5 group-hover:bg-slate-500/10"
+                                  }`}
+                              />
+
+                              <div className="flex justify-between items-start gap-4">
+                                <div className="space-y-1">
+                                  <span
+                                    className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${isCompleted ? "text-green-700 bg-green-100" : "text-slate-500 bg-slate-100"
+                                      }`}
+                                  >
+                                    {selectedLang === "mr" ? "मानक" : "Standard"}
+                                  </span>
+                                  <h4
+                                    className={`font-extrabold text-sm transition-colors ${isCompleted ? "text-green-950" : "text-slate-800"
+                                      }`}
+                                  >
+                                    {selectedLang === "mr"
+                                      ? `मानक क्र. ${toMarathiNumerals(num)}`
+                                      : `Standard No. ${num}`}
+                                  </h4>
+                                </div>
+                                <div
+                                  className={`size-8 rounded-full flex items-center justify-center shadow-md transition-all ${isCompleted
+                                    ? "bg-green-500 text-white shadow-green-500/20 group-hover:scale-110"
+                                    : "bg-slate-100 text-slate-300 group-hover:bg-slate-200"
+                                    }`}
+                                >
+                                  <CheckCircle2 className="size-4" strokeWidth={2.5} />
+                                </div>
+                              </div>
+                            </motion.div>
                           );
                         })}
-                        <tr className="bg-slate-50 font-bold">
-                          <td className="border border-slate-200 p-2" colSpan={3}></td>
-                          <td className="border border-slate-200 p-2 text-right">एकूण</td>
-                          <td className="border border-slate-200 p-2 text-center text-lg text-[#1e1b4b]">
-                            {manualData.reduce((sum, row) => sum + Number(row.app || 0), 0)}
-                          </td>
-                          <td className="border border-slate-200 p-2" colSpan={4}></td>
-                          <td className="border border-slate-200 p-2 text-center text-xl text-[#1e1b4b]">{manualObtainedMarks}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    </AutoFitTableWrapper>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : view === "manual_summary" ? (
+                <motion.div
+                  key="manual_summary"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-[#f8fafc] min-h-screen w-full flex flex-col"
+                >
+                  {/* Header bar */}
+                  <div className="bg-[#ffaf66] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-slate-900 border-b border-black/5 relative z-20 w-full gap-4">
+                    <div className="flex items-center gap-4">
+                      <button onClick={() => setView("dashboard")} className="p-2 hover:bg-black/10 rounded-full transition-colors">
+                        <ArrowLeft className="size-5" />
+                      </button>
+                      <div className="flex flex-col">
+                        <h2 className="text-xl font-black">{selectedLang === "mr" ? "मॅन्युअल गुणनोंद तक्ता" : "Manual Marks Table"}</h2>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDownloadPdf("summary", "download")}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1e1b4b] text-white hover:bg-slate-800 transition-colors shadow-sm"
+                    >
+                      <Download className="size-4" />
+                      <span>{selectedLang === "mr" ? "PDF डाऊनलोड करा" : "Download PDF"}</span>
+                    </button>
+                  </div>
 
-                    <div className="mt-8 flex flex-col md:flex-row gap-8 items-start">
-                      <div className="w-full md:w-1/2">
-                        <div className="mb-2 text-xs font-semibold text-slate-500">श्रेणी तक्ता</div>
-                        <table className="w-full border-collapse text-sm text-center">
+                  {/* Form Content */}
+                  <div className="p-4 sm:p-8 overflow-y-auto max-h-[85vh]">
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8 max-w-6xl mx-auto">
+                      <h3 className="text-lg font-bold mb-4">{selectedLang === "mr" ? "शाळेची माहिती" : "School Information"}</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">शाळेचे नाव</label>
+                          <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoSchoolName || "-"}</div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">U Dise No</label>
+                          <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoUdise || "-"}</div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">तालुका</label>
+                          <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoTaluka || "-"}</div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-500 mb-1">जिल्हा</label>
+                          <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoDistrict || "-"}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 sm:p-6 max-w-6xl mx-auto overflow-hidden">
+                      <h3 className="text-lg font-bold mb-4 px-2">{selectedLang === "mr" ? "मूल्यांकन तपशील" : "Evaluation Details"}</h3>
+                      <AutoFitTableWrapper targetWidth={850}>
+                        <table className="w-full min-w-[850px] border-collapse table-fixed text-sm">
                           <thead>
                             <tr className="bg-slate-50">
-                              <th className="border border-slate-200 p-2">श्रेणी</th>
-                              <th className="border border-slate-200 p-2">टक्केवारी</th>
+                              <th className="border border-slate-200 p-2 w-[5%]">अ. क्र.</th>
+                              <th className="border border-slate-200 p-2 w-[25%]">क्षेत्राचे नाव</th>
+                              <th className="border border-slate-200 p-2 w-[10%]">मानक क्र.</th>
+                              <th className="border border-slate-200 p-2 w-[12%]">लागू नसलेली मानके</th>
+                              <th className="border border-slate-200 p-2 w-[8%]">लागू मानक<br />संख्या</th>
+                              <th className="border border-slate-200 p-2 w-[8%]">स्तर १</th>
+                              <th className="border border-slate-200 p-2 w-[8%]">स्तर २</th>
+                              <th className="border border-slate-200 p-2 w-[8%]">स्तर ३</th>
+                              <th className="border border-slate-200 p-2 w-[8%]">स्तर ४</th>
+                              <th className="border border-slate-200 p-2 w-[8%]">एकूण गुण</th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr><td className="border border-slate-200 p-2 font-bold text-green-700">A+</td><td className="border border-slate-200 p-2">९१ ते १००</td></tr>
-                            <tr><td className="border border-slate-200 p-2 font-bold text-green-600">A</td><td className="border border-slate-200 p-2">८१ ते ९०</td></tr>
-                            <tr><td className="border border-slate-200 p-2 font-bold text-yellow-600">B+</td><td className="border border-slate-200 p-2">७१ ते ८०</td></tr>
-                            <tr><td className="border border-slate-200 p-2 font-bold text-orange-500">B</td><td className="border border-slate-200 p-2">६१ ते ७०</td></tr>
-                            <tr><td className="border border-slate-200 p-2 font-bold text-orange-600">C+</td><td className="border border-slate-200 p-2">५१ ते ६०</td></tr>
-                            <tr><td className="border border-slate-200 p-2 font-bold text-red-600">C</td><td className="border border-slate-200 p-2">५० पेक्षा कमी</td></tr>
+                            {manualData.map((row, i) => {
+                              const rowTotal = (Number(row.l1 || 0) * 1) + (Number(row.l2 || 0) * 2) + (Number(row.l3 || 0) * 3) + (Number(row.l4 || 0) * 4);
+                              return (
+                                <tr key={row.id}>
+                                  <td className="border border-slate-200 p-2 text-center">{i + 1}</td>
+                                  <td className="border border-slate-200 p-2 font-medium text-[11px] leading-tight">{row.name}</td>
+                                  <td className="border border-slate-200 p-2 text-center text-[12px]">{row.stds}</td>
+                                  <td className="border border-slate-200 p-1 text-center text-[12px] text-slate-700">
+                                    {row.notApp || "-"}
+                                  </td>
+                                  <td className="border border-slate-200 p-1 text-center font-bold text-[#1e1b4b]">
+                                    {row.app}
+                                  </td>
+                                  <td className="border border-slate-200 p-1 text-center font-bold bg-red-50 text-slate-700">
+                                    {row.l1}
+                                  </td>
+                                  <td className="border border-slate-200 p-1 text-center font-bold bg-orange-50 text-slate-700">
+                                    {row.l2}
+                                  </td>
+                                  <td className="border border-slate-200 p-1 text-center font-bold bg-amber-50 text-slate-700">
+                                    {row.l3}
+                                  </td>
+                                  <td className="border border-slate-200 p-1 text-center font-bold bg-green-50 text-slate-700">
+                                    {row.l4}
+                                  </td>
+                                  <td className="border border-slate-200 p-2 text-center font-bold text-lg text-[#1e1b4b]">{rowTotal}</td>
+                                </tr>
+                              );
+                            })}
+                            <tr className="bg-slate-50 font-bold">
+                              <td className="border border-slate-200 p-2" colSpan={3}></td>
+                              <td className="border border-slate-200 p-2 text-right">एकूण</td>
+                              <td className="border border-slate-200 p-2 text-center text-lg text-[#1e1b4b]">
+                                {manualData.reduce((sum, row) => sum + Number(row.app || 0), 0)}
+                              </td>
+                              <td className="border border-slate-200 p-2" colSpan={4}></td>
+                              <td className="border border-slate-200 p-2 text-center text-xl text-[#1e1b4b]">{manualObtainedMarks}</td>
+                            </tr>
                           </tbody>
                         </table>
-                      </div>
+                      </AutoFitTableWrapper>
 
-                      <div className="w-full md:w-1/2 bg-white rounded-xl p-6 border-2 border-dashed border-slate-300 shadow-sm">
-                        <div className="flex justify-between items-center mb-4">
-                          <span className="font-semibold text-slate-700">एकूण शक्य गुण:</span>
-                          <span className="text-xl font-bold bg-slate-100 px-3 py-1 rounded-md">{manualData.reduce((sum, row) => sum + Number(row.app || 0), 0) * 4}</span>
+                      <div className="mt-8 flex flex-col md:flex-row gap-8 items-start">
+                        <div className="w-full md:w-1/2">
+                          <div className="mb-2 text-xs font-semibold text-slate-500">श्रेणी तक्ता</div>
+                          <table className="w-full border-collapse text-sm text-center">
+                            <thead>
+                              <tr className="bg-slate-50">
+                                <th className="border border-slate-200 p-2">श्रेणी</th>
+                                <th className="border border-slate-200 p-2">टक्केवारी</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr><td className="border border-slate-200 p-2 font-bold text-green-700">A+</td><td className="border border-slate-200 p-2">९१ ते १००</td></tr>
+                              <tr><td className="border border-slate-200 p-2 font-bold text-green-600">A</td><td className="border border-slate-200 p-2">८१ ते ९०</td></tr>
+                              <tr><td className="border border-slate-200 p-2 font-bold text-yellow-600">B+</td><td className="border border-slate-200 p-2">७१ ते ८०</td></tr>
+                              <tr><td className="border border-slate-200 p-2 font-bold text-orange-500">B</td><td className="border border-slate-200 p-2">६१ ते ७०</td></tr>
+                              <tr><td className="border border-slate-200 p-2 font-bold text-orange-600">C+</td><td className="border border-slate-200 p-2">५१ ते ६०</td></tr>
+                              <tr><td className="border border-slate-200 p-2 font-bold text-red-600">C</td><td className="border border-slate-200 p-2">५० पेक्षा कमी</td></tr>
+                            </tbody>
+                          </table>
                         </div>
-                        <div className="flex justify-between items-center mb-4">
-                          <span className="font-semibold text-slate-700">शाळा प्राप्त गुण:</span>
-                          <span className="w-24 px-3 py-1 bg-amber-50 border-2 border-amber-300 rounded-lg text-xl font-bold text-center shadow-inner">{manualObtainedMarks}</span>
-                        </div>
-                        <div className="flex justify-between items-center mb-6">
-                          <span className="font-semibold text-slate-700">टक्केवारी:</span>
-                          <span className="w-24 px-3 py-1 bg-blue-50 border-2 border-blue-200 rounded-lg text-xl font-bold text-center shadow-inner text-blue-700">
-                            {(() => {
-                              const totalApp = manualData.reduce((sum, row) => sum + Number(row.app || 0), 0);
-                              const totalPoss = totalApp * 4;
-                              const obt = Number(manualObtainedMarks || 0);
-                              if (totalPoss === 0) return "0%";
-                              const pct = (obt / totalPoss) * 100;
-                              return `${Number(pct.toFixed(2))}%`;
-                            })()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center pt-4 border-t-2 border-slate-100">
-                          <span className="font-bold text-slate-700">प्राप्त श्रेणी:</span>
-                          <span className="text-4xl font-black text-green-600 drop-shadow-sm">
-                            {(() => {
-                              const totalApp = manualData.reduce((sum, row) => sum + Number(row.app || 0), 0);
-                              const obt = Number(manualObtainedMarks || 0);
-                              const pct = totalApp > 0 ? Math.round((obt / (totalApp * 4)) * 100) : 0;
-                              if (pct >= 91) return "A+";
-                              if (pct >= 81) return "A";
-                              if (pct >= 71) return "B+";
-                              if (pct >= 61) return "B";
-                              if (pct >= 51) return "C+";
-                              return "C";
-                            })()}
-                          </span>
+
+                        <div className="w-full md:w-1/2 bg-white rounded-xl p-6 border-2 border-dashed border-slate-300 shadow-sm">
+                          <div className="flex justify-between items-center mb-4">
+                            <span className="font-semibold text-slate-700">एकूण शक्य गुण:</span>
+                            <span className="text-xl font-bold bg-slate-100 px-3 py-1 rounded-md">{manualData.reduce((sum, row) => sum + Number(row.app || 0), 0) * 4}</span>
+                          </div>
+                          <div className="flex justify-between items-center mb-4">
+                            <span className="font-semibold text-slate-700">शाळा प्राप्त गुण:</span>
+                            <span className="w-24 px-3 py-1 bg-amber-50 border-2 border-amber-300 rounded-lg text-xl font-bold text-center shadow-inner">{manualObtainedMarks}</span>
+                          </div>
+                          <div className="flex justify-between items-center mb-6">
+                            <span className="font-semibold text-slate-700">टक्केवारी:</span>
+                            <span className="w-24 px-3 py-1 bg-blue-50 border-2 border-blue-200 rounded-lg text-xl font-bold text-center shadow-inner text-blue-700">
+                              {(() => {
+                                const totalApp = manualData.reduce((sum, row) => sum + Number(row.app || 0), 0);
+                                const totalPoss = totalApp * 4;
+                                const obt = Number(manualObtainedMarks || 0);
+                                if (totalPoss === 0) return "0%";
+                                const pct = (obt / totalPoss) * 100;
+                                return `${Number(pct.toFixed(2))}%`;
+                              })()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center pt-4 border-t-2 border-slate-100">
+                            <span className="font-bold text-slate-700">प्राप्त श्रेणी:</span>
+                            <span className="text-4xl font-black text-green-600 drop-shadow-sm">
+                              {(() => {
+                                const totalApp = manualData.reduce((sum, row) => sum + Number(row.app || 0), 0);
+                                const obt = Number(manualObtainedMarks || 0);
+                                const pct = totalApp > 0 ? Math.round((obt / (totalApp * 4)) * 100) : 0;
+                                if (pct >= 91) return "A+";
+                                if (pct >= 81) return "A";
+                                if (pct >= 71) return "B+";
+                                if (pct >= 61) return "B";
+                                if (pct >= 51) return "C+";
+                                return "C";
+                              })()}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
         </ModulePaywall>
       </main>
 

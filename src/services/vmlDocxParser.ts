@@ -165,7 +165,112 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         );
       });
 
-      const hasSchoolHeader = hasSchoolNameOnPage && hasStudentOrStdOnPage;
+      const hasSchoolHeader = pIdx === 1 || (hasSchoolNameOnPage && hasStudentOrStdOnPage);
+
+      // Extract all header metadata from Word document's shapes before skipping them
+      let headerSchoolName = "";
+      let headerKendra = "";
+      let headerTaluka = "";
+      let headerJilha = "";
+      let headerExamTitle = "";
+      let headerClass = "";
+      let headerSubject = "";
+      let headerTotalMarks = "";
+      let headerDate = "";
+
+      for (const s of shapes) {
+        const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+        const raw = tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+        const txt = decodeXmlEntities(raw).trim();
+        if (!txt) continue;
+
+        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+        const topRatio = sTop / pageHeightPt;
+
+        if (topRatio < 0.255) {
+          // School Name
+          if (!headerSchoolName && (txt.includes("शाळेचे नाव") || /school\s*name/i.test(txt))) {
+            const clean = txt
+              .replace(/^(?:शाळेचे\s*नाव|school\s*name)\s*[:\-–—]?\s*/i, "")
+              .replace(/^[_.\s\-–—]+$/, "")
+              .trim();
+            if (clean) headerSchoolName = clean;
+          }
+
+          // Kendra, Taluka, Jilha
+          if (!headerKendra && (txt.includes("केंद्र") || txt.includes("केंद्र-"))) {
+            const m = txt.match(/केंद्र\s*[:\-–—]?\s*([^\s|•,]+)/i);
+            if (m && m[1]) headerKendra = m[1].trim();
+          }
+          if (!headerTaluka && (txt.includes("तालुका") || txt.startsWith("ता.") || txt.includes("ता."))) {
+            const m = txt.match(/(?:तालुका|ता\.)\s*[:\-–—]?\s*([^\s|•,]+)/i);
+            if (m && m[1]) headerTaluka = m[1].trim();
+          }
+          if (!headerJilha && (txt.includes("जिल्हा") || txt.startsWith("जि.") || txt.includes("जि."))) {
+            const m = txt.match(/(?:जिल्हा|जि\.)\s*[:\-–—]?\s*([^\s|•,]+)/i);
+            if (m && m[1]) headerJilha = m[1].trim();
+          }
+
+          // Exam Title
+          if (!headerExamTitle && (txt.includes("मूल्यमापन") || txt.includes("चाचणी") || txt.includes("परीक्षा") || /test|exam|evaluation/i.test(txt)) && sTop < 80) {
+            headerExamTitle = txt;
+          }
+
+          // Class
+          if (!headerClass && (txt.includes("इयत्ता") || /std|class/i.test(txt))) {
+            const m = txt.match(/इयत्ता\s*[-:–—]?\s*([०-९0-9]+(?:\s*(?:ली|री|थी|वी))?|पहिली|दुसरी|तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी|[१-८])/i);
+            if (m) headerClass = m[0].trim();
+          }
+
+          // Subject
+          if (!headerSubject && txt.includes("विषय")) {
+            const m = txt.match(/विषय\s*[-:–—]?\s*([^\n\r,•()]+)/i);
+            if (m && m[1]?.trim()) headerSubject = m[1].trim();
+          }
+
+          // Total Marks
+          if (!headerTotalMarks) {
+            const m = txt.match(/(?:एकूण\s*गुण|total\s*marks)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
+            if (m && m[1]) headerTotalMarks = m[1].trim();
+          }
+
+          // Date
+          if (!headerDate && (txt.includes("दि.") || txt.includes("दिनांक") || /date/i.test(txt))) {
+            const m = txt.match(/(?:दिनांक|दि\.?|date)\s*[:\-–—]?\s*([0-9०-९\/\-.]+)/i);
+            if (m && m[1]) headerDate = m[1].trim();
+          }
+        }
+      }
+
+      let schoolNameShapeTop = 999;
+      let studentNameShapeTop = -1;
+      shapes.forEach((s) => {
+        const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+        const txt = tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+        if (txt.includes("शाळेचे नाव") || /school\s*name/i.test(txt)) {
+          schoolNameShapeTop = Math.min(schoolNameShapeTop, sTop);
+        }
+        if (txt.includes("विद्यार्थ्याचे नाव") || /student\s*name/i.test(txt)) {
+          studentNameShapeTop = Math.max(studentNameShapeTop, sTop);
+        }
+      });
+
+      // Detect if this page has an inline school header (Line 4) like Class 3 & 4
+      const allPageText = shapes.map((s) => {
+        const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+        return tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+      }).join(" ");
+
+      const isInlineSchoolHeader =
+        hasSchoolHeader &&
+        ((schoolNameShapeTop > 65 && (studentNameShapeTop < 0 || schoolNameShapeTop > studentNameShapeTop)) ||
+          allPageText.includes("इयत्ता- तिसरी") ||
+          allPageText.includes("इयत्ता- चौथी") ||
+          allPageText.includes("इयत्ता - ३") ||
+          allPageText.includes("इयत्ता - ४") ||
+          allPageText.includes("३री") ||
+          allPageText.includes("४थी"));
 
       for (const s of shapes) {
         const styleStr = s.match(/style="([^"]+)"/)?.[1] || "";
@@ -191,32 +296,19 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         let widthPt = widthMatch ? parseFloat(widthMatch[1]) : 120;
         let heightPt = heightMatch ? parseFloat(heightMatch[1]) : 32;
 
-        // Check if this shape is purely underlines/dots in the top header area
-        const isOnlyUnderlines = /^[\s\-_.~=—–•\.]+$/.test(trimmedText);
-        if (isOnlyUnderlines && topPt < 45) {
-          // Skip redundant underline shape at top header because school-name element and header-dots-mask handle it cleanly
-          continue;
-        }
-
         const topRatio = topPt / pageHeightPt;
         const leftRatio = leftPt / pageWidthPt;
-        const isInRightHeaderQuadrant =
-          (topPt < 185 || topRatio < 0.22) && (leftPt > pageWidthPt * 0.52 || leftRatio > 0.52);
 
-        const isHeaderMarksOrRoll =
-          hasSchoolHeader &&
-          isInRightHeaderQuadrant &&
-          (
-            trimmedText.includes("हजेरी") ||
-            /roll\s*no/i.test(trimmedText) ||
-            trimmedText.includes("गुण") ||
-            /total\s*marks|obtained\s*marks|marks/i.test(trimmedText) ||
-            /^[\s\-_.~=—–•\[\]\(\)]*$/.test(trimmedText) ||
-            !trimmedText
-          );
+        const isQ =
+          trimmedText.includes("प्रश्न") ||
+          trimmedText.includes("प्र.") ||
+          /q(?:ue)?\.?\s*[0-9]/i.test(trimmedText) ||
+          /^[०-९0-9]+\s*[\)\.]\s*(?:कंसातील|योग्य|रिकाम्या|खालील|जोड्या|एका)/.test(trimmedText);
 
-        if (isHeaderMarksOrRoll) {
-          // Suppress raw scattered shape or old box in the school header box; reconstructed cleanly via code below
+        // USER INSTRUCTION: Keep the Word document's header box completely blank/empty!
+        // Do not add any of the Word file's old shapes, dots, lines or boxes in the header area (< 0.255).
+        // Our unified structure will be placed in that blank box with the fetched info.
+        if (hasSchoolHeader && topRatio < 0.255 && !isQ) {
           continue;
         }
 
@@ -233,10 +325,16 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
         if (isSchoolNameText) {
           fieldAttr = 'data-field="school-name"';
-          // Span box comfortably up to ~81.2% inside the border (497pt / 612pt)
-          widthPt = Math.max(widthPt, 497);
-          heightPt = 28;
-          extraBoxStyle = "z-index: 10; white-space: normal !important; overflow: visible !important; display: flex; align-items: flex-start; max-width: 81.2% !important;";
+          if (isInlineSchoolHeader) {
+            fieldAttr += ' data-field-mode="inline"';
+            widthPt = Math.max(widthPt, 320);
+            extraBoxStyle = "z-index: 10; white-space: normal !important; overflow: visible !important; display: flex; align-items: flex-start;";
+          } else {
+            // Span box comfortably up to ~81.2% inside the border (497pt / 612pt)
+            widthPt = Math.max(widthPt, 497);
+            heightPt = 28;
+            extraBoxStyle = "z-index: 10; white-space: normal !important; overflow: visible !important; display: flex; align-items: flex-start; max-width: 81.2% !important;";
+          }
 
           const isEng = /school/i.test(trimmedText) || !trimmedText.includes("शाळेचे");
           const cleanName = trimmedText
@@ -246,10 +344,19 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
           const label = isEng ? "SCHOOL NAME -" : "शाळेचे नाव :";
 
-          if (cleanName) {
-            shapeInnerHtml = `<div class="qp-school-name-block" style="background: #ffffff; padding: 0 2px; display: block; flex: 1; min-width: 0; margin-right: 14px; overflow: visible;"><strong style="white-space: nowrap; color: #0f172a;">${label} </strong><span class="qp-school-text" style="font-weight: 700; color: #0f172a; margin-left: 6px; white-space: normal; word-break: break-word;" title="${escapeHtml(cleanName)}">${escapeHtml(cleanName)}</span></div>`;
+          if (isInlineSchoolHeader) {
+            const inlineLabel = isEng ? "SCHOOL NAME -" : "शाळेचे नाव-";
+            if (cleanName) {
+              shapeInnerHtml = `<span style="background: #ffffff; padding: 0 2px; white-space: nowrap;"><strong>${inlineLabel} </strong><span class="qp-school-text" style="font-weight: 700; color: #0f172a; margin-left: 4px;">${escapeHtml(cleanName)}</span></span>`;
+            } else {
+              shapeInnerHtml = `<span style="background: #ffffff; padding: 0 2px; white-space: nowrap;"><strong>${inlineLabel} </strong><span style="display: inline-block; width: 160px; border-bottom: 1.5px dotted #94a3b8; margin-left: 4px; height: 1em; vertical-align: middle;"></span></span>`;
+            }
           } else {
-            shapeInnerHtml = `<div class="qp-school-name-block" style="background: #ffffff; padding: 0 2px; display: block; flex: 1; min-width: 0; margin-right: 14px; overflow: visible;"><strong style="white-space: nowrap; color: #0f172a;">${label} </strong><span style="display: inline-block; width: 140px; border-bottom: 1.5px dotted #94a3b8; margin-left: 6px; height: 1em; vertical-align: middle;"></span></div>`;
+            if (cleanName) {
+              shapeInnerHtml = `<div class="qp-school-name-block" style="background: #ffffff; padding: 0 2px; display: block; flex: 1; min-width: 0; margin-right: 14px; overflow: visible;"><strong style="white-space: nowrap; color: #0f172a;">${label} </strong><span class="qp-school-text" style="font-weight: 700; color: #0f172a; margin-left: 6px; white-space: normal; word-break: break-word;" title="${escapeHtml(cleanName)}">${escapeHtml(cleanName)}</span></div>`;
+            } else {
+              shapeInnerHtml = `<div class="qp-school-name-block" style="background: #ffffff; padding: 0 2px; display: block; flex: 1; min-width: 0; margin-right: 14px; overflow: visible;"><strong style="white-space: nowrap; color: #0f172a;">${label} </strong><span style="display: inline-block; width: 140px; border-bottom: 1.5px dotted #94a3b8; margin-left: 6px; height: 1em; vertical-align: middle;"></span></div>`;
+            }
           }
         } else if (
           (trimmedText.includes("चाचणी") || trimmedText.includes("मूल्यमापन") || trimmedText.includes("परीक्षा") || /test|evaluation/i.test(trimmedText)) &&
@@ -258,13 +365,36 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           fieldAttr = 'data-field="exam-title"';
           extraBoxStyle = "z-index: 10; overflow: visible !important;";
         } else if (
-          (trimmedText.includes("दि.") || /date\s*[:\-–—]?/i.test(trimmedText)) &&
+          (trimmedText.includes("दि.") || trimmedText.includes("दिनांक") || /date\s*[:\-–—]?/i.test(trimmedText)) &&
           (trimmedText.includes("२०२") || trimmedText.includes("202") || trimmedText.includes("/"))
         ) {
           fieldAttr = 'data-field="exam-date"';
-          widthPt = Math.max(widthPt, 200);
+          widthPt = Math.max(widthPt, 160);
           heightPt = 28;
-          extraBoxStyle = "z-index: 10; white-space: nowrap !important; overflow: hidden !important;";
+          extraBoxStyle = "z-index: 10; white-space: nowrap !important; overflow: visible !important;";
+        }
+
+        if (isInlineSchoolHeader && topPt < 200) {
+          // Line 5: Kendra, Taluka, Jilha strictly before topPt 160
+          if (topPt < 160) {
+            if (trimmedText.startsWith("केंद्र") || trimmedText.includes("केंद्र-")) {
+              fieldAttr = 'data-field="kendra-name"';
+              extraBoxStyle += " width: auto !important; min-width: 90px !important; z-index: 10; white-space: nowrap !important; overflow: visible !important;";
+            } else if (trimmedText === "ता." || trimmedText.startsWith("ता.")) {
+              fieldAttr = 'data-field="taluka-name"';
+              extraBoxStyle += " width: auto !important; min-width: 90px !important; z-index: 10; white-space: nowrap !important; overflow: visible !important;";
+            } else if (trimmedText === "जि." || trimmedText.startsWith("जि.")) {
+              fieldAttr = 'data-field="jilha-name"';
+              extraBoxStyle += " width: auto !important; min-width: 90px !important; z-index: 10; white-space: nowrap !important; overflow: visible !important;";
+            }
+          }
+          // Line 6: Teacher signature strictly at or below topPt 160
+          else if (topPt >= 160) {
+            if (trimmedText.includes("शिक्षकांची स्वाक्षरी") || trimmedText.includes("स्वाक्षरी-")) {
+              fieldAttr = 'data-field="teacher-sign"';
+              extraBoxStyle += " width: auto !important; min-width: 140px !important; z-index: 10; white-space: nowrap !important; overflow: visible !important;";
+            }
+          }
         }
 
         let leftPct = Math.max(0, Math.min(99.5, (leftPt / pageWidthPt) * 100));
@@ -273,12 +403,16 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         let heightPct = (heightPt / pageHeightPt) * 100;
 
         if (isSchoolNameText) {
-          leftPct = 10.458;
-          topPct = 2.3;
-          widthPct = 81.2;
-          heightPct = 3.66;
+          if (!isInlineSchoolHeader) {
+            leftPct = 10.458;
+            topPct = 2.3;
+            widthPct = 81.2;
+            heightPct = 3.66;
+          }
         } else if (fieldAttr === 'data-field="exam-title"') {
-          topPct = 6.8;
+          if (!isInlineSchoolHeader) {
+            topPct = 6.8;
+          }
         }
 
         // Font formatting
@@ -303,7 +437,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           ? `'${docFont}', 'Noto Sans Devanagari', 'Tiro Devanagari Marathi', 'Nirmala UI', 'Mangal', sans-serif`
           : `'Noto Sans Devanagari', 'Tiro Devanagari Marathi', 'Nirmala UI', 'Mangal', sans-serif`;
 
-        const isSchoolNameField = fieldAttr === 'data-field="school-name"';
+        const isSchoolNameField = fieldAttr.includes('data-field="school-name"');
 
         // 1. Check if shape is a marks indicator, e.g. "(1)", "( 1 )", "(2)", "(3)", "(गुण २)", "( Marks 2 )"
         const isMarksShape =
@@ -380,47 +514,6 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         `);
       }
 
-      if (hasSchoolHeader) {
-        const isEngPage = subjectKey === "english" || subjectKey === "semi" || /TOTAL MARKS/i.test(allPageRawText);
-        const rollLabel = isEngPage ? "ROLL NO. -" : "हजेरी क्रमांक -";
-        const totalLabel = isEngPage ? "TOTAL MARKS -" : "एकूण गुण -";
-        const obtLabel = isEngPage ? "OBTAINED MARKS -" : "मिळालेले गुण -";
-        const displayTotalMarks = isEngPage
-          ? (pageTotalMarks.replace(/[०-९]/g, (d) => "0123456789"["०१२३४५६७८९".indexOf(d)]))
-          : pageTotalMarks;
-
-        shapesHtml.push(`
-          <div
-            class="qp-header-marks-block"
-            data-field="qp-header-marks-block"
-            contenteditable="false"
-            style="position: absolute; right: 10.458%; top: 10.9%; width: 23.0%; height: 10.2%; z-index: 12; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; font-family: 'Noto Sans Devanagari', 'Tiro Devanagari Marathi', 'Nirmala UI', sans-serif; pointer-events: auto;"
-          >
-            <!-- 1. हजेरी क्रमांक -->
-            <div style="display: flex; align-items: center; justify-content: flex-end; gap: clamp(2px, 0.7cqw, 6px); width: 100%;">
-              <span style="font-size: clamp(6.0px, 1.8cqw, 10.5pt); font-weight: 700; color: #0f172a; white-space: nowrap; background: #ffffff; padding: 0 2px;">${rollLabel}</span>
-              <div style="width: clamp(16px, 5.0cqw, 34px); height: clamp(12px, 3.5cqw, 24px); border: clamp(1px, 0.22cqw, 1.5px) solid #0f172a; border-radius: clamp(2px, 0.5cqw, 4px); background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: clamp(6.5px, 1.9cqw, 11pt); font-weight: 800; color: #0f172a; flex-shrink: 0; box-sizing: border-box;"></div>
-            </div>
-
-            <!-- 2. एकूण गुण (with box for fetched marks) -->
-            <div style="display: flex; align-items: center; justify-content: flex-end; gap: clamp(2px, 0.7cqw, 6px); width: 100%;">
-              <span style="font-size: clamp(6.0px, 1.8cqw, 10.5pt); font-weight: 700; color: #0f172a; white-space: nowrap; background: #ffffff; padding: 0 2px;">${totalLabel}</span>
-              <div
-                contenteditable="true"
-                data-field="total-marks-box"
-                title="एकूण गुण संपादित करा"
-                style="width: clamp(16px, 5.0cqw, 34px); height: clamp(12px, 3.5cqw, 24px); border: clamp(1px, 0.22cqw, 1.5px) solid #0f172a; border-radius: clamp(2px, 0.5cqw, 4px); background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: clamp(6.5px, 1.9cqw, 11pt); font-weight: 800; color: #0f172a; flex-shrink: 0; box-sizing: border-box; cursor: text; outline: none;"
-              >${escapeHtml(displayTotalMarks)}</div>
-            </div>
-
-            <!-- 3. मिळालेले गुण -->
-            <div style="display: flex; align-items: center; justify-content: flex-end; gap: clamp(2px, 0.7cqw, 6px); width: 100%;">
-              <span style="font-size: clamp(6.0px, 1.8cqw, 10.5pt); font-weight: 700; color: #0f172a; white-space: nowrap; background: #ffffff; padding: 0 2px;">${obtLabel}</span>
-              <div style="width: clamp(16px, 5.0cqw, 34px); height: clamp(12px, 3.5cqw, 24px); border: clamp(1px, 0.22cqw, 1.5px) solid #0f172a; border-radius: clamp(2px, 0.5cqw, 4px); background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: clamp(6.5px, 1.9cqw, 11pt); font-weight: 800; color: #0f172a; flex-shrink: 0; box-sizing: border-box;"></div>
-            </div>
-          </div>
-        `);
-      }
 
       pagesHtml.push(`
         <div
@@ -428,6 +521,16 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           data-page-index="${pIdx}"
           data-subject-key="${subjectKey}"
           data-subject-label="${subjectLabel}"
+          data-is-inline-header="${isInlineSchoolHeader ? "true" : "false"}"
+          data-extracted-school="${escapeHtml(headerSchoolName)}"
+          data-extracted-kendra="${escapeHtml(headerKendra)}"
+          data-extracted-taluka="${escapeHtml(headerTaluka)}"
+          data-extracted-jilha="${escapeHtml(headerJilha)}"
+          data-extracted-title="${escapeHtml(headerExamTitle)}"
+          data-extracted-class="${escapeHtml(headerClass)}"
+          data-extracted-subject="${escapeHtml(headerSubject)}"
+          data-extracted-marks="${escapeHtml(headerTotalMarks)}"
+          data-extracted-date="${escapeHtml(headerDate)}"
           style="position: relative; width: 100%; max-width: ${Math.round(pageWidthPt * (4/3))}px; aspect-ratio: ${pageWidthPt} / ${pageHeightPt}; margin: 0 auto 32px auto; background: #ffffff; box-shadow: 0 6px 24px -2px rgba(0, 0, 0, 0.18); border-radius: 2px; overflow: hidden; container-type: inline-size;"
         >
           ${
@@ -435,14 +538,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
               ? `<img src="${bgDataUrl}" alt="पृष्ठ ${pIdx} डिझाईन बॉर्डर्स" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; z-index: 1;" />`
               : ""
           }
-          ${
-            hasSchoolHeader
-              ? `
-                <div class="header-dots-mask" style="position: absolute; left: 10.4%; top: 2.5%; width: 81.2%; height: 4.8%; background: #ffffff; z-index: 2; pointer-events: none;"></div>
-                <div class="header-orphan-boxes-mask" style="position: absolute; right: 8.9%; top: 13.8%; width: 7.8%; height: 9.1%; background: #ffffff; z-index: 2; pointer-events: none;"></div>
-              `
-              : ""
-          }
+
           <div class="vml-shapes-layer" style="position: absolute; inset: 0; z-index: 3;">
             ${shapesHtml.join("\n")}
           </div>

@@ -318,15 +318,21 @@ function TeacherDashboard() {
       "question-paper": 199,
     };
 
+    const hasClassPrices =
+      itemPricing?.classPrices &&
+      Object.values(itemPricing.classPrices).some((p) => typeof p === "number" && p > 0);
+
     // If admin set price === 0 or enabled === false, or timetable/paripath default is free
     const isFree =
       modId === "special-day" ||
       itemPricing?.enabled === false ||
-      itemPricing?.price === 0 ||
-      itemPricing?.monthlyPrice === 0 ||
-      itemPricing?.yearlyPrice === 0 ||
-      itemPricing?.perStudentPrice === 0 ||
-      (!itemPricing && defaultPrices[modId] === 0);
+      (!hasClassPrices && (
+        itemPricing?.price === 0 ||
+        itemPricing?.monthlyPrice === 0 ||
+        itemPricing?.yearlyPrice === 0 ||
+        itemPricing?.perStudentPrice === 0 ||
+        (!itemPricing && defaultPrices[modId] === 0)
+      ));
 
     const isParipathMatch = (m: string) =>
       ["special-day", "paripath", "daily-assembly", "month-paripath"].includes(m);
@@ -344,7 +350,11 @@ function TeacherDashboard() {
 
     let priceDisplay = "";
     if (!isFree) {
-      if (modId === "mdm-register" && itemPricing?.yearlyPrice) {
+      if (hasClassPrices && itemPricing?.classPrices) {
+        const prices = Object.values(itemPricing.classPrices).filter((p): p is number => typeof p === "number" && p > 0);
+        const minPrice = prices.length > 0 ? Math.min(...prices) : (itemPricing?.price || 299);
+        priceDisplay = `₹${minPrice}/इयत्ता`;
+      } else if (modId === "mdm-register" && itemPricing?.yearlyPrice) {
         priceDisplay = `₹${itemPricing.yearlyPrice}`;
       } else if (modId === "hpc-card" && itemPricing?.perStudentPrice) {
         priceDisplay = `₹${itemPricing.perStudentPrice}`;

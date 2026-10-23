@@ -859,10 +859,10 @@ const WorksheetDocumentContent: React.FC<WorksheetDocumentContentProps> = ({
         <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight leading-tight">
           {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
         </h1>
-        <div className="text-xs font-bold text-slate-700 flex items-center justify-center gap-2 flex-wrap">
-          {schoolProfile.kendra && <span>केंद्र: {schoolProfile.kendra}</span>}
-          {schoolProfile.taluka && <span>• तालुका: {schoolProfile.taluka}</span>}
-          {schoolProfile.district && <span>• जिल्हा: {schoolProfile.district}</span>}
+        <div className="text-xs font-bold text-slate-900 flex items-center justify-center gap-2 flex-wrap">
+          {schoolProfile.kendra && <span><b className="font-black text-slate-950">केंद्र:</b> {schoolProfile.kendra}</span>}
+          {schoolProfile.taluka && <span>• <b className="font-black text-slate-950">तालुका:</b> {schoolProfile.taluka}</span>}
+          {schoolProfile.district && <span>• <b className="font-black text-slate-950">जिल्हा:</b> {schoolProfile.district}</span>}
         </div>
 
         {/* Highlighted Ribbon */}

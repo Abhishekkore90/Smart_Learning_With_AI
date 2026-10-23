@@ -1,5 +1,6 @@
 
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createPortal } from "react-dom";
 import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
@@ -58,6 +59,7 @@ const getHtml2PdfEngine = async () => {
   return html2pdf;
 };
 import MDMCertificate from "@/components/teacher/MDMCertificate";
+import A4DocumentMobileScaleWrapper from "@/components/teacher/A4DocumentMobileScaleWrapper";
 import {
   calculateCookHelperCount,
   calculateHonorariumDetails,
@@ -337,6 +339,20 @@ function TeacherMDMPage() {
   const t_global = DICTIONARY[lang];
   const { tab } = Route.useSearch();
   const [activeTab, setActiveTab] = useState<string>("quantity");
+
+  const handleTabClick = (tabId: string) => {
+    setActiveTab(tabId);
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setTimeout(() => {
+        const el = document.getElementById("mdm-content-workspace");
+        if (el) {
+          const yOffset = -72;
+          const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: y, behavior: "smooth" });
+        }
+      }, 50);
+    }
+  };
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -3263,33 +3279,6 @@ function TeacherMDMPage() {
   const [damagedRecords, setDamagedRecords] = useState<
     { id: string; item: string; qty: string; date: string; reason: string }[]
   >([]);
-  const topScrollRef = React.useRef<HTMLDivElement>(null);
-  const tableScrollRef = React.useRef<HTMLDivElement>(null);
-  const isSyncingTop = React.useRef(false);
-  const isSyncingTable = React.useRef(false);
-  const [tableScrollWidth, setTableScrollWidth] = useState(2550);
-
-  const handleTopScroll = () => {
-    if (!isSyncingTop.current && tableScrollRef.current && topScrollRef.current) {
-      isSyncingTable.current = true;
-      tableScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
-    }
-    isSyncingTop.current = false;
-  };
-
-  const handleTableScroll = () => {
-    if (!isSyncingTable.current && tableScrollRef.current && topScrollRef.current) {
-      isSyncingTop.current = true;
-      topScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
-    }
-    isSyncingTable.current = false;
-  };
-
-  useEffect(() => {
-    if (tableScrollRef.current) {
-      setTableScrollWidth(tableScrollRef.current.scrollWidth || 2550);
-    }
-  }, [registerRecords, registerDate, registerClass, activeTab]);
 
   const formatDateDDMMYYYY = (dateStr: string) => {
     if (!dateStr) return "";
@@ -7775,7 +7764,20 @@ function TeacherMDMPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-0 pt-20 min-h-screen pb-20 relative z-10">
+      <style>{`
+        @media screen and (max-width: 768px) {
+          html, body {
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+          }
+          .a4-document-mobile-scale-wrapper {
+            overflow-x: hidden !important;
+            max-width: 100% !important;
+          }
+        }
+      `}</style>
+
+      <main className="lg:pl-0 pt-20 min-h-screen pb-20 relative z-10 w-full max-w-full overflow-x-hidden">
         <ModulePaywall moduleId="mdm-register" defaultTitle="माध्यान्ह भोजन योजना नोंदवही (MDM Register)">
           <div className="p-2.5 sm:p-4 md:p-8 space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
             {/* Back to Dashboard Button */}
@@ -7790,7 +7792,7 @@ function TeacherMDMPage() {
             </div>
 
           {/* ===== MDM CATEGORY GROUPED NAVIGATION BAR ===== */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl p-5 md:p-6 space-y-5">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xl p-3.5 sm:p-5 md:p-6 space-y-4 sm:space-y-5 w-full max-w-full overflow-hidden">
             {/* Title Row */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-4">
               <div className="flex items-center gap-3 sm:gap-3.5">
@@ -7822,7 +7824,7 @@ function TeacherMDMPage() {
             {/* Grouped Category Tabs */}
             <div className="space-y-4">
               {/* Category 1: STOCK (साठा) */}
-              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent p-4 md:p-5 rounded-2xl border border-emerald-200/60 shadow-sm space-y-3">
+              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent p-3 sm:p-4 md:p-5 rounded-2xl border border-emerald-200/60 shadow-sm space-y-3">
                 <div className="flex items-center gap-2 text-xs font-black uppercase text-emerald-800 tracking-wider">
                   <Package className="w-4 h-4 text-emerald-600" />
                   <span>STOCK (साठा व्यवस्थापन)</span>
@@ -7840,10 +7842,10 @@ function TeacherMDMPage() {
                     return (
                       <button
                         key={sub.id}
-                        onClick={() => setActiveTab(sub.id)}
+                        onClick={() => handleTabClick(sub.id)}
                         className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 border ${
                           isActive
-                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-600 shadow-lg shadow-emerald-500/30 scale-[1.03]"
+                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-600 shadow-lg shadow-emerald-500/30 sm:scale-[1.03]"
                             : "bg-white/90 text-slate-700 border-slate-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50/60 hover:shadow-md"
                         }`}
                       >
@@ -7858,7 +7860,7 @@ function TeacherMDMPage() {
               {/* Other Categories Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* MENU SETUP */}
-                <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent p-4 md:p-5 rounded-2xl border border-amber-200/60 shadow-sm flex flex-col justify-between space-y-3">
+                <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent p-3 sm:p-4 md:p-5 rounded-2xl border border-amber-200/60 shadow-sm flex flex-col justify-between space-y-3">
                   <div className="flex items-center gap-2 text-xs font-black uppercase text-amber-800 tracking-wider">
                     <ClipboardList className="w-4 h-4 text-amber-600" />
                     <span>MENU SETUP (रेसिपी व मेनू)</span>
@@ -7874,10 +7876,10 @@ function TeacherMDMPage() {
                       return (
                         <button
                           key={sub.id}
-                          onClick={() => setActiveTab(sub.id)}
+                          onClick={() => handleTabClick(sub.id)}
                           className={`flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 border text-center ${
                             isActive
-                              ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-500 shadow-lg shadow-orange-500/30 scale-[1.02]"
+                              ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-500 shadow-lg shadow-orange-500/30 sm:scale-[1.02]"
                               : "bg-white/90 text-slate-700 border-slate-200 hover:border-amber-400 hover:text-amber-700 hover:bg-amber-50/60 hover:shadow-md"
                           }`}
                         >
@@ -7890,7 +7892,7 @@ function TeacherMDMPage() {
                 </div>
 
                 {/* DAILY OPERATIONS */}
-                <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-transparent p-4 md:p-5 rounded-2xl border border-blue-200/60 shadow-sm flex flex-col justify-between space-y-3">
+                <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-transparent p-3 sm:p-4 md:p-5 rounded-2xl border border-blue-200/60 shadow-sm flex flex-col justify-between space-y-3">
                   <div className="flex items-center gap-2 text-xs font-black uppercase text-blue-800 tracking-wider">
                     <Calendar className="w-4 h-4 text-blue-600" />
                     <span>DAILY & CALENDAR (कामकाज)</span>
@@ -7905,15 +7907,15 @@ function TeacherMDMPage() {
                       return (
                         <button
                           key={sub.id}
-                          onClick={() => setActiveTab(sub.id)}
+                          onClick={() => handleTabClick(sub.id)}
                           className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-all duration-200 border ${
                             isActive
-                              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 shadow-lg shadow-blue-500/30 scale-[1.03]"
+                              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 shadow-lg shadow-blue-500/30 sm:scale-[1.03]"
                               : "bg-white/90 text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50/60 hover:shadow-md"
                           }`}
                         >
                           <SubIcon className={`w-4 h-4 ${isActive ? "text-white" : "text-blue-600"}`} />
-                          <span className="whitespace-nowrap">{sub.label}</span>
+                          <span className="whitespace-normal text-center leading-tight">{sub.label}</span>
                         </button>
                       );
                     })}
@@ -7921,7 +7923,7 @@ function TeacherMDMPage() {
                 </div>
 
                 {/* REPORTS */}
-                <div className="bg-gradient-to-r from-purple-500/10 via-violet-500/5 to-transparent p-4 md:p-5 rounded-2xl border border-purple-200/60 shadow-sm flex flex-col justify-between space-y-3">
+                <div className="bg-gradient-to-r from-purple-500/10 via-violet-500/5 to-transparent p-3 sm:p-4 md:p-5 rounded-2xl border border-purple-200/60 shadow-sm flex flex-col justify-between space-y-3">
                   <div className="flex items-center gap-2 text-xs font-black uppercase text-purple-800 tracking-wider">
                     <FileSpreadsheet className="w-4 h-4 text-purple-600" />
                     <span>REPORTS (शासकीय अहवाल)</span>
@@ -7938,15 +7940,15 @@ function TeacherMDMPage() {
                       return (
                         <button
                           key={sub.id}
-                          onClick={() => setActiveTab(sub.id)}
+                          onClick={() => handleTabClick(sub.id)}
                           className={`flex items-center justify-center gap-1.5 px-2.5 py-3 rounded-xl text-sm font-bold transition-all duration-200 border ${
                             isActive
-                              ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white border-purple-600 shadow-lg shadow-purple-500/30 scale-[1.03]"
+                              ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white border-purple-600 shadow-lg shadow-purple-500/30 sm:scale-[1.03]"
                               : "bg-white/90 text-slate-700 border-slate-200 hover:border-purple-400 hover:text-purple-700 hover:bg-purple-50/60 hover:shadow-md"
                           }`}
                         >
                           <SubIcon className={`w-4 h-4 ${isActive ? "text-white" : "text-purple-600"}`} />
-                          <span className="whitespace-nowrap">{sub.label}</span>
+                          <span className="whitespace-normal text-center leading-tight">{sub.label}</span>
                         </button>
                       );
                     })}
@@ -7957,6 +7959,7 @@ function TeacherMDMPage() {
           </div>
 
           {/* Main Content Workspace Panel */}
+          <div id="mdm-content-workspace" className="scroll-mt-20">
           {loading ? (
             <div className="h-[450px] bg-slate-100/50 border border-slate-200 rounded-[3rem] flex flex-col items-center justify-center text-slate-500 gap-6">
               <Loader2 className="size-12 animate-spin text-teal-500" />
@@ -8164,6 +8167,7 @@ function TeacherMDMPage() {
 
                         return (
                           <div className="space-y-4">
+                            <A4DocumentMobileScaleWrapper targetWidth={720}>
                             <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white">
                               <table className="w-full text-left border-collapse min-w-[720px]">
                                 <thead>
@@ -8263,6 +8267,7 @@ function TeacherMDMPage() {
                                 </tbody>
                               </table>
                             </div>
+                            </A4DocumentMobileScaleWrapper>
 
                             {/* Summary Totals Cards */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-200">
@@ -8736,6 +8741,7 @@ function TeacherMDMPage() {
                       )}
 
                       {/* Vertical Items List Table */}
+                      <A4DocumentMobileScaleWrapper targetWidth={800}>
                       <div className="w-full overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse min-w-[800px]">
                           <thead>
@@ -8907,6 +8913,7 @@ function TeacherMDMPage() {
                           </tbody>
                         </table>
                       </div>
+                      </A4DocumentMobileScaleWrapper>
                     </div>
 
                     {/* Save / Update Button */}
@@ -9277,6 +9284,7 @@ function TeacherMDMPage() {
                       })()}
 
                       {/* Main Incoming Stock Table */}
+                      <A4DocumentMobileScaleWrapper targetWidth={750}>
                       <div className="w-full overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse min-w-[750px]">
                           <thead>
@@ -9390,6 +9398,7 @@ function TeacherMDMPage() {
                           </tbody>
                         </table>
                       </div>
+                      </A4DocumentMobileScaleWrapper>
                     </div>
 
                     {/* Bottom Cards: Individual Incoming Entry & Recent Incoming Stock Logs */}
@@ -9676,6 +9685,7 @@ function TeacherMDMPage() {
                       })()}
 
                       {/* Main Loksahabhag Stock Table */}
+                      <A4DocumentMobileScaleWrapper targetWidth={750}>
                       <div className="w-full overflow-x-auto border-0">
                         <table className="w-full text-left text-xs border-collapse min-w-[750px]">
                           <thead>
@@ -9822,6 +9832,7 @@ function TeacherMDMPage() {
                           </tbody>
                         </table>
                       </div>
+                      </A4DocumentMobileScaleWrapper>
                     </div>
 
                     {/* Bottom Cards: Individual Donation Entry & Recent Donation Entries */}
@@ -9981,7 +9992,7 @@ function TeacherMDMPage() {
                     </div>
 
                     {/* Main Table Card (इतर तक्त्यांप्रमाणेच उभा तक्ता) */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                    <div className="bg-white p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm space-y-4 sm:space-y-6 overflow-hidden">
                       {/* Top Controls: Filter & Save */}
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
                         <div className="flex flex-wrap items-center gap-3">
@@ -10109,6 +10120,7 @@ function TeacherMDMPage() {
                       })()}
 
                       {/* Main Damaged Stock Table */}
+                      <A4DocumentMobileScaleWrapper targetWidth={750}>
                       <div className="w-full overflow-x-auto border-0">
                         <table className="w-full text-left text-xs border-collapse min-w-[750px]">
                           <thead>
@@ -10284,6 +10296,7 @@ function TeacherMDMPage() {
                           </tbody>
                         </table>
                       </div>
+                      </A4DocumentMobileScaleWrapper>
                     </div>
 
                     {/* Bottom Cards: Individual Damaged Entry & Recent Damaged Logs */}
@@ -10792,6 +10805,7 @@ function TeacherMDMPage() {
                       </div>
 
                       {/* Scrollable Matrix Table */}
+                      <A4DocumentMobileScaleWrapper targetWidth={1200}>
                       <div className="w-full overflow-x-auto border border-slate-300 rounded-xl shadow-2xs max-h-[600px] overflow-y-auto">
                         <table className="w-full border-collapse text-slate-900 bg-white min-w-[1200px] text-xs">
                           <thead className="sticky top-0 z-30">
@@ -10948,6 +10962,7 @@ function TeacherMDMPage() {
                           </tbody>
                         </table>
                       </div>
+                      </A4DocumentMobileScaleWrapper>
 
                       {/* Bottom Save Action Bar */}
                       <div className="flex items-center justify-between pt-2">
@@ -11534,7 +11549,7 @@ function TeacherMDMPage() {
                       </div>
 
                       {/* Right Column: Month Register Matrix Table (7 cols) */}
-                      <div className="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+                      <div className="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-sm p-3 sm:p-4 space-y-3 w-full max-w-full overflow-hidden">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                           <div>
                             <h3 className="font-bold text-base text-slate-800">महिन्याच्या नोंदी</h3>
@@ -11573,27 +11588,9 @@ function TeacherMDMPage() {
                           })()}
                         </div>
 
-                        {/* Top Horizontal Scrollbar Bar & Indicator */}
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between px-1">
-                            <span className="text-[11px] font-extrabold text-indigo-700 flex items-center gap-1">
-                              <span>↔️</span> पुढील माहिती पाहण्यासाठी वरचा स्क्रोल बार (Top Scrollbar):
-                            </span>
-                          </div>
-                          <div
-                            ref={topScrollRef}
-                            onScroll={handleTopScroll}
-                            className="w-full overflow-x-auto overflow-y-hidden border border-indigo-200 rounded-t-lg bg-indigo-50/80 p-0.5 cursor-pointer shadow-inner"
-                          >
-                            <div style={{ width: `${tableScrollWidth}px`, height: "8px" }} />
-                          </div>
-                        </div>
-
                         {/* Scrollable Month Matrix Table */}
                         <div
-                          ref={tableScrollRef}
-                          onScroll={handleTableScroll}
-                          className="w-full overflow-x-auto max-h-[620px] overflow-y-auto border border-slate-200 border-t-0 rounded-b-lg shadow-2xs"
+                          className="w-full overflow-x-auto max-h-[620px] overflow-y-auto border border-slate-200 rounded-xl shadow-2xs"
                         >
                           <table className="w-full border-collapse text-left text-xs bg-white">
                             <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-700 uppercase z-10">
@@ -12831,6 +12828,7 @@ function TeacherMDMPage() {
                           <div className="h-px w-full bg-slate-300" />
 
                           {/* Table Section */}
+                          <A4DocumentMobileScaleWrapper targetWidth={1000}>
                           <div className="w-full overflow-x-auto">
                             <table className="w-full border-collapse border border-slate-300 text-slate-900 bg-white min-w-[1000px]">
                               <thead>
@@ -12951,6 +12949,7 @@ function TeacherMDMPage() {
                               </tbody>
                             </table>
                           </div>
+                          </A4DocumentMobileScaleWrapper>
 
                           {/* Save Button Row */}
                           <div className="py-2 w-full flex justify-start">
@@ -12967,12 +12966,13 @@ function TeacherMDMPage() {
                       {/* B-Form Report Modal (Current Stock "B" Form Report Overlay) */}
                       {showStockReportModal && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm font-sans p-4">
-                          <div className="bg-white p-6 rounded-md shadow-2xl border border-slate-200 w-full max-w-[95%] max-h-[95vh] flex flex-col relative print:shadow-none print:border-none print:w-full print:max-w-full print:p-0 print:h-auto font-sans text-slate-900 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.25)]">
+                          <div className="bg-white p-6 rounded-md shadow-2xl border border-slate-200 w-full max-w-[95%] max-h-[95vh] flex flex-col relative print:shadow-none print:border-none print:w-full print:max-w-full print:p-0 print:h-auto font-sans text-slate-900 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.25)] overflow-x-hidden">
                             {/* Printable Area */}
-                            <div
-                              className="border border-black flex-1 overflow-visible print:overflow-visible bg-white print:border-none"
-                              id="stock-report-print"
-                            >
+                            <A4DocumentMobileScaleWrapper targetWidth={1120}>
+                              <div
+                                className="border border-black flex-1 overflow-visible print:overflow-visible bg-white print:border-none w-full"
+                                id="stock-report-print"
+                              >
                               {/* Header */}
                               <div className="flex justify-between items-center text-black border-b border-black p-4 font-sans print:border-b-2">
                                 {/* Left Column */}
@@ -13207,7 +13207,6 @@ function TeacherMDMPage() {
                                   ))}
                                 </tbody>
                               </table>
-                            </div>
 
                             {/* Additional details row */}
                             <div className="flex flex-col lg:flex-row border-t border-black p-4 justify-between items-stretch gap-6 print:border-t-2">
@@ -13362,7 +13361,8 @@ function TeacherMDMPage() {
                                 </div>
                               </div>
                             </div>
-                          </div>
+                            </div>
+                          </A4DocumentMobileScaleWrapper>
 
                           <style>{`
                             @media print {
@@ -13402,6 +13402,7 @@ function TeacherMDMPage() {
                             </button>
                           </div>
                         </div>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -13438,7 +13439,7 @@ function TeacherMDMPage() {
                           <select
                             value={stockDemandMonth}
                             onChange={(e) => setStockDemandMonth(e.target.value)}
-                            className="h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none min-w-[140px]"
+                            className="h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-auto sm:min-w-[140px]"
                           >
                             {["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"].map((m) => (
                               <option key={m} value={m}>{m}</option>
@@ -13453,7 +13454,7 @@ function TeacherMDMPage() {
                           <select
                             value={stockDemandYear}
                             onChange={(e) => setStockDemandYear(e.target.value)}
-                            className="h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none min-w-[120px]"
+                            className="h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-auto sm:min-w-[120px]"
                           >
                             <option value="2023-24">2023-24</option>
                             <option value="2024-25">2024-25</option>
@@ -13476,7 +13477,7 @@ function TeacherMDMPage() {
                               const newPat = getDynamicPatSankhya(profile, newCls);
                               if (newPat > 0) setStockDemandPatSankhya(newPat.toString());
                             }}
-                            className="h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none min-w-[170px]"
+                            className="h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-auto sm:min-w-[170px]"
                           >
                             <option value="1 To 5">इयत्ता १ ली ते ५ वी (प्राथमिक)</option>
                             <option value="6 To 8">इयत्ता ६ वी ते ८ वी (उच्च प्राथमिक)</option>
@@ -13535,7 +13536,9 @@ function TeacherMDMPage() {
 
                     {/* Printable Official Government Stock Demand Report Document */}
                     <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-300 shadow-md space-y-4 print:p-0 print:border-none print:shadow-none font-sans text-slate-900">
-                      <div id="stock-demand-report-print" className="bg-white p-3 space-y-3 border border-slate-300 rounded-xl">
+                      <div id="stock-demand-report-print" className="bg-white p-3 space-y-3 border border-slate-300 rounded-xl overflow-x-hidden">
+                        <A4DocumentMobileScaleWrapper targetWidth={794}>
+                          <div className="w-full">
                         {(() => {
                           const monthEng = MARATHI_TO_ENGLISH_MONTHS[stockDemandMonth] || "September";
                           const yearParts = (stockDemandYear || "2026-27").split("-");
@@ -13736,6 +13739,8 @@ function TeacherMDMPage() {
                             </div>
                           </div>
                         </div>
+                          </div>
+                        </A4DocumentMobileScaleWrapper>
                       </div>
                     </div>
                   </div>
@@ -14228,7 +14233,8 @@ function TeacherMDMPage() {
                             : defaultDays;
 
                           return (
-                            <div className="space-y-3 font-sans text-slate-900 print-page p-4 bg-white flex flex-col justify-between min-h-[1157px] print:min-h-0 h-full">
+                            <A4DocumentMobileScaleWrapper targetWidth={850}>
+                              <div className="space-y-3 font-sans text-slate-900 print-page p-4 bg-white flex flex-col justify-between min-h-[1157px] print:min-h-0 h-full w-full">
                               <div className="space-y-2 flex-1 flex flex-col">
                               {/* Title Header */}
                               <div className="text-center space-y-0.5 mb-1">
@@ -14377,6 +14383,7 @@ function TeacherMDMPage() {
                                 </div>
                               </div>
                             </div>
+                          </A4DocumentMobileScaleWrapper>
                           );
                         })()}
 
@@ -14433,7 +14440,8 @@ function TeacherMDMPage() {
                             });
 
                             return (
-                              <div key={`page-${startDay}`} className={`w-full poshan-pdf-page bg-white p-3 md:p-5 flex flex-col justify-between border border-slate-300 rounded-xl shadow-xs print:border-none print:shadow-none print:p-0 min-h-[1157px] print:min-h-0 ${isFirstPage ? "mb-6 print:mb-0" : "html2pdf__page-break print:break-before-page"}`}>
+                              <A4DocumentMobileScaleWrapper key={`page-${startDay}`} targetWidth={1750}>
+                                <div className={`w-full poshan-pdf-page bg-white p-3 md:p-5 flex flex-col justify-between border border-slate-300 rounded-xl shadow-xs print:border-none print:shadow-none print:p-0 min-h-[1157px] print:min-h-0 ${isFirstPage ? "mb-6 print:mb-0" : "html2pdf__page-break print:break-before-page"}`}>
                                 <div className="flex-1 flex flex-col justify-between h-full space-y-2">
                                 {isFirstPage && (
                                   <div className="text-center mb-4 space-y-1">
@@ -14637,7 +14645,8 @@ function TeacherMDMPage() {
                                   </div>
                                 )}
                               </div>
-                            );
+                            </A4DocumentMobileScaleWrapper>
+                          );
                           };
 
                           return (
@@ -14696,10 +14705,11 @@ function TeacherMDMPage() {
                           const pudheManagi = Math.max(0, parseFloat(((pat || 0) * nextMonthDays * perStudentRiceRate).toFixed(1)));
 
                           return (
-                            <div className="space-y-3 print-page p-4 bg-white flex flex-col justify-between min-h-[1157px] print:min-h-0">
-                              <div className="space-y-2">
-                              <div className="text-center space-y-1 mb-2 pt-1">
-                                <p className="text-xs font-bold text-slate-700">पंचायत समिती {profile?.taluka || ""} ( शिक्षण विभाग {profile?.district || ""} )</p>
+                            <A4DocumentMobileScaleWrapper targetWidth={1120}>
+                              <div className="space-y-3 print-page p-4 bg-white flex flex-col justify-between min-h-[1157px] print:min-h-0 w-full">
+                                <div className="space-y-2">
+                                <div className="text-center space-y-1 mb-2 pt-1">
+                                  <p className="text-xs font-bold text-slate-700">पंचायत समिती {profile?.taluka || ""} ( शिक्षण विभाग {profile?.district || ""} )</p>
                                 <h2 className="text-sm md:text-base font-black text-slate-900 tracking-tight uppercase">
                                   प्रधानमंत्री पोषण शक्ती निर्माण योजना तांदूळ शिजवून दिल्याचा अहवाल
                                 </h2>
@@ -14827,9 +14837,9 @@ function TeacherMDMPage() {
                                   <p className="text-xs text-slate-500 mt-0.5">{schoolName}</p>
                                 </div>
                               </div>
-
                             </div>
-                          );
+                          </A4DocumentMobileScaleWrapper>
+                        );
                         })()}
 
                         {/* === MASIK SATHA NODVAHI (प्रपत्र ब) — EXACT PDF FORMAT === */}
@@ -14945,8 +14955,9 @@ function TeacherMDMPage() {
                           const ekunGrant = vegCost + fuelCost;
 
                           return (
-                            <div className="space-y-2.5 print-page p-4 bg-white text-black font-sans flex flex-col justify-start border border-black shadow-xs">
-                              <div className="text-center space-y-1 mb-2">
+                            <A4DocumentMobileScaleWrapper targetWidth={850}>
+                              <div className="space-y-2.5 print-page p-4 bg-white text-black font-sans flex flex-col justify-start border border-black shadow-xs w-full">
+                                <div className="text-center space-y-1 mb-2">
                                 <h2 className="text-sm md:text-base font-black text-black tracking-tight">
                                   प्रधानमंत्री पोषण शक्ती निर्माण योजना : मासिक साठा नोंदवही प्रपत्र (ब)
                                 </h2>
@@ -15066,9 +15077,9 @@ function TeacherMDMPage() {
                                   <p className="text-xs text-black font-bold mt-0.5">{schoolName}</p>
                                 </div>
                               </div>
-
                             </div>
-                          );
+                          </A4DocumentMobileScaleWrapper>
+                        );
                         })()}
 
                         {/* === MASIK TANDUL SHIJVUN DILYACHE BILL — EXACT PDF FORMAT === */}
@@ -15114,8 +15125,9 @@ function TeacherMDMPage() {
                           const kamacheDivs = dailyData.filter(d => d.labharthi > 0).length;
 
                           return (
-                            <div className="space-y-2.5 print-page p-4 bg-white text-black font-sans flex flex-col justify-start border border-black shadow-xs">
-                              {/* Title */}
+                            <A4DocumentMobileScaleWrapper targetWidth={1000}>
+                              <div className="space-y-2.5 print-page p-4 bg-white text-black font-sans flex flex-col justify-start border border-black shadow-xs w-full">
+                                {/* Title */}
                               <div className="text-center space-y-1 mb-1">
                                 <p className="text-xs font-bold text-black">पंचायत समिती {profile?.taluka || ""} ( शिक्षण विभाग {profile?.district || ""} )</p>
                                 <h2 className="text-sm font-black text-black tracking-tight">
@@ -15209,9 +15221,9 @@ function TeacherMDMPage() {
                                   <p className="text-xs text-black font-bold mt-0.5">{schoolName}</p>
                                 </div>
                               </div>
-
                             </div>
-                          );
+                          </A4DocumentMobileScaleWrapper>
+                        );
                         })()}
 
 
@@ -15225,7 +15237,7 @@ function TeacherMDMPage() {
 
                 {/* Certificate Tab */}
                 {activeTab === "monthly-report" && (
-                  <div className="bg-white p-2 sm:p-4 border border-slate-300 w-full min-h-[500px] flex flex-col items-stretch overflow-x-auto">
+                  <div className="bg-white p-2 sm:p-4 border border-slate-300 w-full min-h-[500px] flex flex-col items-stretch overflow-x-hidden">
                     <div className="w-full max-w-full space-y-6">
                       <div className="text-center py-2 flex flex-col sm:flex-row items-center justify-between gap-3">
                         <h2 className="text-2xl font-black text-[#004C99]">
@@ -15671,7 +15683,8 @@ function TeacherMDMPage() {
                                 const classEnrolled = (isPrimary ? primaryMaxEnrolled : upperMaxEnrolled) || classRegData.enrolled || 0;
 
                                 return (
-                                  <div className="print-page b-form-page border border-slate-400 p-4 md:p-6 bg-white text-black font-sans text-xs relative w-full min-w-[1000px] min-h-[960px] shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0">
+                                  <A4DocumentMobileScaleWrapper targetWidth={1600}>
+                                    <div className="print-page b-form-page border border-slate-400 p-4 md:p-6 bg-white text-black font-sans text-xs relative w-full min-w-[1000px] min-h-[960px] shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0">
                                     <div className="flex-1 flex flex-col justify-between h-full">
                                       {/* Top Header matching Image 2 */}
                                       <div className="text-center space-y-0.5 mb-2 border-b-2 border-black pb-1.5">
@@ -15893,6 +15906,7 @@ function TeacherMDMPage() {
                                         </div>
                                     </div>
                                   </div>
+                                </A4DocumentMobileScaleWrapper>
                                 );
                               };
 
@@ -15957,7 +15971,8 @@ function TeacherMDMPage() {
                                 }
 
                                 return (
-                                  <div key={cls} className="print-page border border-slate-400 p-4 bg-white text-black font-sans relative w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0 mb-6 h-full">
+                                  <A4DocumentMobileScaleWrapper targetWidth={850}>
+                                    <div key={cls} className="print-page border border-slate-400 p-4 bg-white text-black font-sans relative w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0 mb-6 h-full">
                                     <div className="flex-1 flex flex-col">
                                       {/* Top Header */}
                                       <div className="text-center space-y-0.5 mb-2">
@@ -16067,6 +16082,7 @@ function TeacherMDMPage() {
                                       </div>
                                     </div>
                                   </div>
+                                </A4DocumentMobileScaleWrapper>
                                 );
                               };
 
@@ -16125,7 +16141,8 @@ function TeacherMDMPage() {
                                 ];
 
                                 return (
-                                  <div key={cls} className="print-page border border-slate-400 p-6 bg-white text-black font-sans text-xs relative w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0 mb-6">
+                                  <A4DocumentMobileScaleWrapper targetWidth={950}>
+                                    <div key={cls} className="print-page border border-slate-400 p-6 bg-white text-black font-sans text-xs relative w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0 mb-6">
                                     <div>
                                       {/* Top Header */}
                                       <div className="text-center space-y-1 mb-3">
@@ -16330,6 +16347,7 @@ function TeacherMDMPage() {
                                       </div>
                                     </div>
                                   </div>
+                                </A4DocumentMobileScaleWrapper>
                                 );
                               };
 
@@ -16362,7 +16380,8 @@ function TeacherMDMPage() {
                                   {/* View 2: Monthly B-Form / Reconciliation */}
                                   {selectedReportCategory === "masik_goshwara" && (
                                     <>
-                                      <MDMCertificate
+                                      <A4DocumentMobileScaleWrapper targetWidth={850}>
+                                        <MDMCertificate
                                         subTab={monthlySubTab}
                                         reportYear={reportYear}
                                         marathiMonthName={marathiMonthName}
@@ -16403,6 +16422,7 @@ function TeacherMDMPage() {
                                          upperRajyaShare="1.04"
                                          totalGrantAll={totalGrantAll}
                                       />
+                                    </A4DocumentMobileScaleWrapper>
 
                                   {/* 1 to 5 Reconciliation Report View */}
                                   {(monthlySubTab === "1-5" || monthlySubTab === "1-8") && (
@@ -16531,7 +16551,7 @@ function TeacherMDMPage() {
                               }}
                               className={`py-3 px-4 rounded-xl border-2 font-bold text-xs transition-all ${
                                 annualReportYear === y
-                                  ? "bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]"
+                                  ? "bg-emerald-600 text-white border-emerald-600 shadow-md sm:scale-[1.02]"
                                   : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50 hover:border-emerald-300"
                               }`}
                             >
@@ -16621,10 +16641,11 @@ function TeacherMDMPage() {
                         </div>
 
                         {/* Printable Learnify Yearly MDM Report Card */}
-                        <div
-                          id="annual-report-print"
-                          className="border border-slate-300 bg-white p-6 rounded-2xl shadow-xs font-sans text-xs space-y-4 overflow-visible print:border-none print:shadow-none print:p-0"
-                        >
+                        <A4DocumentMobileScaleWrapper targetWidth={1120}>
+                          <div
+                            id="annual-report-print"
+                            className="border border-slate-300 bg-white p-6 rounded-2xl shadow-xs font-sans text-xs space-y-4 overflow-visible print:border-none print:shadow-none print:p-0 w-full"
+                          >
                           {/* Header Block */}
                           {!annualReportType.includes("धान्याची") && (
                           <div className="border border-slate-300 rounded-xl p-4 bg-white text-center space-y-0">
@@ -17100,7 +17121,8 @@ function TeacherMDMPage() {
                               <p className="text-slate-400 font-normal">( Headmaster Signature & Stamp )</p>
                             </div>
                           </div>
-                        </div>
+                          </div>
+                        </A4DocumentMobileScaleWrapper>
                       </div>
                     )}
                   </div>
@@ -17108,6 +17130,7 @@ function TeacherMDMPage() {
               </motion.div>
             </AnimatePresence>
           )}
+          </div>
           </div>
         </ModulePaywall>
       </main>

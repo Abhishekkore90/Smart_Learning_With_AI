@@ -817,18 +817,28 @@ export function AcademicPlanningSystem({
   }, []);
 
   const currentClassKey = `${selectedMedium}_${selectedClass}`;
-  const currentClassPrice = planningPricing.classPrices?.[currentClassKey] ?? planningPricing.price ?? 299;
+  const hasSpecificClassPrice =
+    planningPricing.classPrices &&
+    typeof planningPricing.classPrices[currentClassKey] === "number";
+  const currentClassPrice = hasSpecificClassPrice
+    ? (planningPricing.classPrices![currentClassKey] as number)
+    : (typeof planningPricing.price === "number" ? planningPricing.price : 299);
 
   const isCurrentClassUnlocked =
     mode === "admin" ||
     isSuperAdmin ||
     planningPricing.enabled === false ||
-    planningPricing.price === 0 ||
     currentClassPrice === 0 ||
     unlockedClassMediums.includes(currentClassKey) ||
     unlockedClassMediums.includes(`${selectedMedium}_ALL`) ||
     unlockedClassMediums.includes(`ALL_${selectedClass}`) ||
     unlockedClassMediums.includes("ALL");
+
+  useEffect(() => {
+    if (selectedClass && !isCurrentClassUnlocked && step === "subject") {
+      setStep("type");
+    }
+  }, [selectedClass, isCurrentClassUnlocked, step]);
 
   const handleBuyClassAccess = async () => {
     try {
@@ -4606,11 +4616,11 @@ export function AcademicPlanningSystem({
               <h1 className="text-xl sm:text-2xl font-black text-slate-950 uppercase tracking-wide">
                 {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
               </h1>
-              <div className="flex justify-center items-center gap-4 text-xs font-bold text-slate-800 pt-1">
-                {schoolProfile.kendraName && <span>केंद्र : {schoolProfile.kendraName}</span>}
-                {schoolProfile.talukaName && <span>तालुका : {schoolProfile.talukaName}</span>}
-                {schoolProfile.districtName && <span>जिल्हा : {schoolProfile.districtName}</span>}
-                {schoolProfile.udiseNumber && <span>UDISE : {schoolProfile.udiseNumber}</span>}
+              <div className="flex justify-center items-center gap-4 text-xs font-bold text-slate-900 pt-1">
+                {schoolProfile.kendraName && <span><b className="font-extrabold text-slate-950">केंद्र :</b> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName}</span></span>}
+                {schoolProfile.talukaName && <span><b className="font-extrabold text-slate-950">तालुका :</b> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName}</span></span>}
+                {schoolProfile.districtName && <span><b className="font-extrabold text-slate-950">जिल्हा :</b> <span className="font-extrabold text-slate-950">{schoolProfile.districtName}</span></span>}
+                {schoolProfile.udiseNumber && <span><b className="font-extrabold text-slate-950">UDISE क्र. :</b> <span className="font-mono font-extrabold text-slate-950">{schoolProfile.udiseNumber}</span></span>}
               </div>
             </div>
 

@@ -288,8 +288,8 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   };
 
   return (
-    <div className="print-page border border-slate-300 py-4 sm:py-6 px-3 sm:px-8 bg-white text-black font-sans text-xs relative w-full max-w-full mx-auto shadow-md flex flex-col justify-between overflow-x-auto print:w-full print:h-auto print:border-none print:shadow-none print:p-0 print:overflow-x-visible">
-      <div className="min-w-[700px] md:min-w-0 w-full flex flex-col justify-between h-full">
+    <div className="print-page border border-slate-300 py-4 sm:py-6 px-3 sm:px-8 bg-white text-black font-sans text-xs relative w-full max-w-full mx-auto shadow-md flex flex-col justify-between overflow-x-hidden print:w-full print:h-auto print:border-none print:shadow-none print:p-0 print:overflow-x-visible">
+      <div className="w-full flex flex-col justify-between h-full">
       <div>
         <CommonMDMReportHeader
           title="शालेय पोषण आहार उपयोगिता प्रमाणपत्र"

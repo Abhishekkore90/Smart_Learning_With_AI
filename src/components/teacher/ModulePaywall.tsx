@@ -56,6 +56,7 @@ interface ModulePricing {
   perStudentPrice?: number;
   monthlyPrice?: number;
   yearlyPrice?: number;
+  classPrices?: Record<string, number>;
 }
 
 const MONTH_OPTIONS = [
@@ -121,9 +122,13 @@ export function ModulePaywall({
   useEffect(() => {
     if (pricing) {
       latestPricingRef.current = pricing;
+      const hasClassPrices =
+        pricing.classPrices &&
+        Object.values(pricing.classPrices).some((p) => typeof p === "number" && p > 0);
+
       if (
         pricing.enabled === false ||
-        pricing.price === 0 ||
+        (!hasClassPrices && pricing.price === 0) ||
         pricing.monthlyPrice === 0 ||
         pricing.yearlyPrice === 0 ||
         pricing.perStudentPrice === 0
@@ -192,9 +197,13 @@ export function ModulePaywall({
           setPricing(pData);
           latestPricingRef.current = pData;
 
+          const hasClassPrices =
+            pData.classPrices &&
+            Object.values(pData.classPrices).some((p) => typeof p === "number" && p > 0);
+
           if (
             pData.enabled === false ||
-            pData.price === 0 ||
+            (!hasClassPrices && pData.price === 0) ||
             pData.monthlyPrice === 0 ||
             pData.yearlyPrice === 0 ||
             pData.perStudentPrice === 0
@@ -298,10 +307,14 @@ export function ModulePaywall({
               setPaymentInfo(paidData);
             } else {
               const currentPricing = latestPricingRef.current;
+              const hasClassPrices =
+                currentPricing?.classPrices &&
+                Object.values(currentPricing.classPrices).some((p) => typeof p === "number" && p > 0);
+
               const isPaywallOff =
                 currentPricing &&
                 (currentPricing.enabled === false ||
-                  currentPricing.price === 0 ||
+                  (!hasClassPrices && currentPricing.price === 0) ||
                   currentPricing.monthlyPrice === 0 ||
                   currentPricing.yearlyPrice === 0 ||
                   currentPricing.perStudentPrice === 0);

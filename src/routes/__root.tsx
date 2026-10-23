@@ -152,17 +152,9 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/Header";
 import { DiaryProcessingProvider } from "@/contexts/DiaryProcessingContext";
-import { setupGlobalDownloadClickListener } from "@/utils/mobileDownloadNotifier";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-
-  React.useEffect(() => {
-    const cleanup = setupGlobalDownloadClickListener();
-    return () => {
-      cleanup?.();
-    };
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

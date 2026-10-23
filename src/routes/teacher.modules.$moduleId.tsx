@@ -320,7 +320,7 @@ function ModulePage() {
         <ModulePaywall
           moduleId={moduleId}
           defaultTitle={config.m}
-          isPaidTab={moduleId !== "special-day" && moduleId !== "daily-assembly"}
+          isPaidTab={moduleId !== "special-day" && moduleId !== "daily-assembly" && moduleId !== "annual-monthly-planning"}
         >
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -469,20 +469,6 @@ function ModulePage() {
           </motion.div>
         </ModulePaywall>
       </main>
-
-      <nav className="md:hidden fixed bottom-4 left-4 right-4 h-20 bg-white/90 backdrop-blur-xl border border-slate-200 rounded-[2.5rem] shadow-2xl z-50 flex items-center justify-around px-8">
-        <Link to="/teacher" className="p-3 text-slate-400">
-          <Home className="size-6" />
-        </Link>
-        <button
-          className={`p-4 rounded-2xl ${config.color} text-white shadow-lg`}
-        >
-          <config.icon className="size-6" />
-        </button>
-        <Link to="/profile" className="p-3 text-slate-400">
-          <User className="size-6" />
-        </Link>
-      </nav>
     </div>
   );
 }
@@ -2109,8 +2095,8 @@ function DailyAssemblyContent() {
       <div class="pdf-section-box" style="border: 2px solid #2e7d32; border-radius: 10px; padding: 12px 18px; margin-top: 8px; margin-bottom: 14px; background: #f0fdf4; text-align: center; page-break-inside: avoid !important; break-inside: avoid !important; position: relative; overflow: hidden;">
         ${schoolInfo.schoolName ? `<div style="font-size: 18px; font-weight: 900; color: #166534; margin-bottom: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">शाळेचे नाव: ${schoolInfo.schoolName}</div>` : ''}
         <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #166534; border-top: 1px dashed #86efac; padding-top: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">
-          <span>केंद्र: ${schoolInfo.kendra || '-'} | युडायस (UDISE): ${schoolInfo.udise || '-'}</span>
-          <span>तालुका: ${schoolInfo.taluka || '-'} | जिल्हा: ${schoolInfo.jilha || '-'}</span>
+          <span><b>केंद्र:</b> ${schoolInfo.kendra || '-'} | <b>युडायस (UDISE):</b> ${schoolInfo.udise || '-'}</span>
+          <span><b>तालुका:</b> ${schoolInfo.taluka || '-'} | <b>जिल्हा:</b> ${schoolInfo.jilha || '-'}</span>
         </div>
       </div>
     ` : '';
@@ -2420,7 +2406,7 @@ function DailyAssemblyContent() {
       `}</style>
 
       {/* Mode Switcher: Daily Assembly vs Monthly Assembly Register */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-2.5 sm:p-3.5 bg-gradient-to-r from-[#0F172A] via-[#1E1B4B] to-[#0F172A] rounded-2xl md:rounded-[2.5rem] shadow-[0_20px_50px_-15px_rgba(30,27,75,0.5)] border border-indigo-500/40 pdf-hide gap-2.5 sm:gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-2.5 sm:p-3.5 bg-gradient-to-r from-[#0F172A] via-[#1E1B4B] to-[#0F172A] rounded-2xl md:rounded-[2.5rem] shadow-[0_20px_50px_-15px_rgba(30,27,75,0.5)] border border-indigo-500/40 pdf-hide gap-2.5 sm:gap-3 overflow-hidden">
         <button
           onClick={() => navigate({ to: "/teacher" })}
           className="flex items-center justify-center sm:justify-start gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-indigo-950/80 hover:bg-indigo-900 text-white font-bold text-xs md:text-sm uppercase tracking-wider border border-indigo-400/40 transition-all shadow-md active:scale-95 group shrink-0 w-full sm:w-auto"
@@ -2430,35 +2416,41 @@ function DailyAssemblyContent() {
           <span>मागे जा</span>
         </button>
 
-        <div className="flex gap-1.5 md:gap-2 p-1.5 md:p-2 bg-[#0B0F19] rounded-xl md:rounded-2xl border border-indigo-400/40 w-full sm:max-w-2xl shadow-inner">
+        <div className="grid grid-cols-2 gap-1.5 sm:flex md:gap-2 p-1.5 md:p-2 bg-[#0B0F19] rounded-xl md:rounded-2xl border border-indigo-400/40 w-full sm:max-w-2xl shadow-inner overflow-hidden">
           <button
             onClick={() => setAssemblyMode("daily")}
-            className={`flex-1 py-2.5 md:py-3 px-2 md:px-5 rounded-lg md:rounded-xl font-black text-[11px] sm:text-xs md:text-sm tracking-wide md:tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5 md:gap-2 ${
+            className={`w-full sm:flex-1 py-2 sm:py-2.5 md:py-3 px-1.5 sm:px-3 md:px-5 rounded-lg md:rounded-xl font-black text-[11px] sm:text-xs md:text-sm tracking-wide md:tracking-wider uppercase transition-all duration-300 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
               assemblyMode === "daily"
-                ? "bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 scale-[1.02]"
+                ? "bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 sm:scale-[1.02]"
                 : "bg-white/10 hover:bg-white/20 text-white font-extrabold border border-white/20 shadow-inner"
             }`}
           >
-            <BookMarked className="size-3.5 md:size-4 shrink-0" />
-            <span className="truncate">{lang === "en" ? "Daily Assembly" : "दैनिक परिपाठ"}</span>
-            <span className="px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-black bg-emerald-400/25 text-emerald-300 border border-emerald-300/30 shrink-0">
+            <div className="flex items-center justify-center gap-1 sm:gap-1.5 min-w-0">
+              <BookMarked className="size-3.5 md:size-4 shrink-0" />
+              <span className="text-[11px] sm:text-xs md:text-sm font-black whitespace-nowrap">
+                {lang === "en" ? "Daily Assembly" : "दैनिक परिपाठ"}
+              </span>
+            </div>
+            <span className="px-1.5 py-0.5 rounded-full text-[8.5px] sm:text-[9px] md:text-[10px] font-black bg-emerald-400/25 text-emerald-300 border border-emerald-300/30 shrink-0 whitespace-nowrap">
               {lang === "en" ? "FREE" : "मोफत (FREE)"}
             </span>
           </button>
 
           <button
             onClick={() => setAssemblyMode("monthly")}
-            className={`flex-1 py-2.5 md:py-3 px-2 md:px-5 rounded-lg md:rounded-xl font-black text-[11px] sm:text-xs md:text-sm tracking-wide md:tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5 md:gap-2 ${
+            className={`w-full sm:flex-1 py-2 sm:py-2.5 md:py-3 px-1.5 sm:px-3 md:px-5 rounded-lg md:rounded-xl font-black text-[11px] sm:text-xs md:text-sm tracking-wide md:tracking-wider uppercase transition-all duration-300 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
               assemblyMode === "monthly"
-                ? "bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/40 ring-2 ring-emerald-300/50 scale-[1.02]"
+                ? "bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/40 ring-2 ring-emerald-300/50 sm:scale-[1.02]"
                 : "bg-white/10 hover:bg-white/20 text-white font-extrabold border border-white/20 shadow-inner"
             }`}
           >
-            <Table className="size-3.5 md:size-4 shrink-0" />
-            <span className="truncate">
-              {lang === "en" ? "Monthly Assembly" : <><span className="hidden sm:inline">मासिक परिपाठ (रजिस्टर)</span><span className="sm:hidden">मासिक परिपाठ</span></>}
-            </span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-black border flex items-center gap-1 shrink-0 ${
+            <div className="flex items-center justify-center gap-1 sm:gap-1.5 min-w-0">
+              <Table className="size-3.5 md:size-4 shrink-0" />
+              <span className="text-[11px] sm:text-xs md:text-sm font-black whitespace-nowrap">
+                {lang === "en" ? "Monthly Assembly" : <><span className="hidden sm:inline">मासिक परिपाठ (रजिस्टर)</span><span className="sm:inline">मासिक परिपाठ</span></>}
+              </span>
+            </div>
+            <span className={`px-1.5 py-0.5 rounded-full text-[8.5px] sm:text-[9px] md:text-[10px] font-black border flex items-center gap-1 shrink-0 whitespace-nowrap ${
               assemblyMode === "monthly"
                 ? "bg-slate-900/30 text-slate-950 border-slate-950/20"
                 : "bg-amber-400/25 text-amber-300 border-amber-300/40"
@@ -2723,12 +2715,12 @@ function DailyAssemblyContent() {
                   )}
                   <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-3 border-t border-dashed border-[#86efac]">
                     <div className="text-sm md:text-base font-bold text-[#166534]">
-                      केंद्र: <span className="font-black text-[#15803d]">{schoolInfo.kendra || '-'}</span> &nbsp;|&nbsp; 
-                      युडायस (UDISE): <span className="font-black text-[#15803d]">{schoolInfo.udise || '-'}</span>
+                      <b className="font-black text-[#14532d]">केंद्र:</b> <span className="font-black text-[#15803d]">{schoolInfo.kendra || '-'}</span> &nbsp;|&nbsp; 
+                      <b className="font-black text-[#14532d]">युडायस (UDISE):</b> <span className="font-black text-[#15803d]">{schoolInfo.udise || '-'}</span>
                     </div>
                     <div className="text-sm md:text-base font-bold text-[#166534]">
-                      तालुका: <span className="font-black text-[#15803d]">{schoolInfo.taluka || '-'}</span> &nbsp;|&nbsp; 
-                      जिल्हा: <span className="font-black text-[#15803d]">{schoolInfo.jilha || '-'}</span>
+                      <b className="font-black text-[#14532d]">तालुका:</b> <span className="font-black text-[#15803d]">{schoolInfo.taluka || '-'}</span> &nbsp;|&nbsp; 
+                      <b className="font-black text-[#14532d]">जिल्हा:</b> <span className="font-black text-[#15803d]">{schoolInfo.jilha || '-'}</span>
                     </div>
                   </div>
                 </div>

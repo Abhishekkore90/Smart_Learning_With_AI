@@ -288,8 +288,8 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
               <div
                 key={idx}
                 className={`border rounded-3xl p-5 transition-all duration-300 ${isChecked
-                    ? "bg-white border-pink-300 shadow-md ring-1 ring-pink-100"
-                    : "bg-slate-50/70 border-slate-200/60 shadow-sm"
+                  ? "bg-white border-pink-300 shadow-md ring-1 ring-pink-100"
+                  : "bg-slate-50/70 border-slate-200/60 shadow-sm"
                   }`}
               >
                 {/* Header Row with Checkbox and Label */}
@@ -5387,774 +5387,111 @@ function TeacherSqafPage() {
 
       <main className={`${(activeStandardDetails !== null || view === "certificate") ? "" : "lg:pl-0 pt-16"} min-h-screen transition-all duration-300`}>
         <ModulePaywall moduleId="sqaf-register" defaultTitle="शालेय गुणवत्ता आश्वासन व प्रमाणीकरण (SQAAF)">
-        {activeStandardDetails === null && (
-          <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-            <div className="absolute top-24 left-1/4 size-[500px] bg-amber-200/10 rounded-full blur-[100px] animate-pulse" />
-            <div className="absolute bottom-24 right-1/4 size-[600px] bg-teal-200/10 rounded-full blur-[120px]" />
-          </div>
-        )}
+          {activeStandardDetails === null && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+              <div className="absolute top-24 left-1/4 size-[500px] bg-amber-200/10 rounded-full blur-[100px] animate-pulse" />
+              <div className="absolute bottom-24 right-1/4 size-[600px] bg-teal-200/10 rounded-full blur-[120px]" />
+            </div>
+          )}
 
-        <div className={`w-full relative z-10 space-y-6 ${activeStandardDetails !== null ? "" : "p-4 md:p-6"}`}>
-          <AnimatePresence mode="wait">
-            {activeStandardDetails !== null && currentDetail ? (
-              <motion.div
-                key="details"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="bg-white min-h-screen w-full flex flex-col items-center"
-              >
-                <div className="w-full max-w-lg p-5 md:p-8 flex flex-col space-y-6">
-                  {/* Clean Mobile-like Header matching screenshots */}
-                  <div className="flex items-center gap-4 py-2">
-                    <button
-                      onClick={() => setActiveStandardDetails(null)}
-                      className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                    >
-                      <ArrowLeft className="size-6 text-slate-800" strokeWidth={2.5} />
-                    </button>
-                    <div className="flex-1"></div>
-                  </div>
+          <div className={`w-full relative z-10 space-y-6 ${activeStandardDetails !== null ? "" : "p-4 md:p-6"}`}>
+            <AnimatePresence mode="wait">
+              {activeStandardDetails !== null && currentDetail ? (
+                <motion.div
+                  key="details"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="bg-white min-h-screen w-full flex flex-col items-center"
+                >
+                  <div className="w-full max-w-lg p-5 md:p-8 flex flex-col space-y-6">
+                    {/* Clean Mobile-like Header matching screenshots */}
+                    <div className="flex items-center gap-4 py-2">
+                      <button
+                        onClick={() => setActiveStandardDetails(null)}
+                        className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                      >
+                        <ArrowLeft className="size-6 text-slate-800" strokeWidth={2.5} />
+                      </button>
+                      <div className="flex-1"></div>
+                    </div>
 
-                  <h2 className="text-[28px] font-black text-slate-900 tracking-tight">
-                    {selectedLang === "mr" ? `मानक क्र. ${toMarathiNumerals(activeStandardDetails)}` : `Standard No. ${activeStandardDetails}`}
-                  </h2>
+                    <h2 className="text-[28px] font-black text-slate-900 tracking-tight">
+                      {selectedLang === "mr" ? `मानक क्र. ${toMarathiNumerals(activeStandardDetails)}` : `Standard No. ${activeStandardDetails}`}
+                    </h2>
 
-                  {/* Orange Detail Box */}
-                  <div className="bg-[#ffaf66] rounded-[1.5rem] p-6 shadow-sm text-slate-900 font-extrabold text-[15px] leading-relaxed">
-                    {currentDetail[selectedLang].orangeDesc}
-                  </div>
+                    {/* Orange Detail Box */}
+                    <div className="bg-[#ffaf66] rounded-[1.5rem] p-6 shadow-sm text-slate-900 font-extrabold text-[15px] leading-relaxed">
+                      {currentDetail[selectedLang].orangeDesc}
+                    </div>
 
-                  {/* Options Section */}
-                  <div className="space-y-4 pt-2">
-                    <h3 className="text-xl font-black text-slate-900">
-                      {selectedLang === "mr" ? "पर्याय" : "Options"}
-                    </h3>
-                    <div className="space-y-3">
-                      {groupedOptions.map((opt, idx) => {
-                        const isSelected = selectedOptions[activeStandardDetails] === idx;
-                        return (
-                          <div
-                            key={idx}
-                            onClick={() => selectOption(activeStandardDetails, idx)}
-                            className={`rounded-2xl p-5 border transition-all text-[13px] font-extrabold leading-relaxed cursor-pointer hover:scale-[1.01] hover:border-slate-300 whitespace-pre-line ${isSelected
+                    {/* Options Section */}
+                    <div className="space-y-4 pt-2">
+                      <h3 className="text-xl font-black text-slate-900">
+                        {selectedLang === "mr" ? "पर्याय" : "Options"}
+                      </h3>
+                      <div className="space-y-3">
+                        {groupedOptions.map((opt, idx) => {
+                          const isSelected = selectedOptions[activeStandardDetails] === idx;
+                          return (
+                            <div
+                              key={idx}
+                              onClick={() => selectOption(activeStandardDetails, idx)}
+                              className={`rounded-2xl p-5 border transition-all text-[13px] font-extrabold leading-relaxed cursor-pointer hover:scale-[1.01] hover:border-slate-300 whitespace-pre-line ${isSelected
                                 ? "bg-[#22c55e] text-slate-950 border-[#22c55e] shadow-md"
                                 : "bg-[#f1eff7] text-slate-700 border-slate-200/60 shadow-sm"
-                              }`}
-                          >
-                            {opt.text}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Evidences / Photo Upload Section */}
-                  <PhotoUploader
-                    standardId={activeStandardDetails}
-                    lang={selectedLang}
-                    evidenceUrl={currentDetail[selectedLang].evidenceUrl}
-                  />
-
-                  {/* Dark Pill "Go Back" Button at Bottom Center */}
-                  <div className="flex justify-center pt-8 pb-10">
-                    <button
-                      onClick={() => setActiveStandardDetails(null)}
-                      className="bg-[#0f1123] text-white font-black px-12 py-4 rounded-full hover:bg-slate-800 transition-colors uppercase tracking-widest text-[13px] shadow-xl shadow-slate-900/20 active:scale-95"
-                    >
-                      Go Back
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ) : view === "info" ? (
-              <motion.div
-                key="info"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="min-h-screen w-full flex flex-col items-center bg-gradient-to-br from-slate-50 via-white to-orange-50/30"
-              >
-                {/* Header Banner */}
-                <div className="w-full bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500 px-6 md:px-10 py-8 flex items-center justify-between text-white relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-72 h-full bg-white/10 rounded-full blur-3xl pointer-events-none" />
-                  <div className="flex items-center gap-4">
-                    <div className="size-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-                      <School className="size-6 text-white" />
-                    </div>
-                    <div>
-                      <h1 className="text-2xl md:text-3xl font-black tracking-tight">{t.infoTitle}</h1>
-                      <p className="text-[11px] font-bold text-orange-50 mt-0.5">{t.infoSubtitle}</p>
-                    </div>
-                  </div>
-                  {/* Language Toggle */}
-                  <button
-                    onClick={toggleLanguage}
-                    className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all shadow-sm flex items-center gap-2 text-white border border-white/20"
-                  >
-                    <Languages className="size-5" />
-                    <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
-                      {selectedLang === "mr" ? "English" : "मराठी"}
-                    </span>
-                  </button>
-                </div>
-
-                {/* Form Content */}
-                <div className="w-full max-w-2xl px-4 md:px-0 py-8 md:py-12 space-y-6">
-                  {/* Form Card */}
-                  <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
-                    {/* Card Header */}
-                    <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-6 md:px-8 py-5 flex items-center gap-3">
-                      <div className="size-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                        <FileText className="size-4 text-amber-400" />
-                      </div>
-                      <div>
-                        <h2 className="text-white font-bold text-sm">{selectedLang === "mr" ? "शाळेची मूलभूत माहिती" : "Basic School Details"}</h2>
-                        <p className="text-slate-400 text-[10px] font-semibold">{selectedLang === "mr" ? "ही माहिती SQAAF अहवालात वापरली जाईल" : "This information will be used in the SQAAF report"}</p>
-                      </div>
-                    </div>
-
-                    {/* Form Fields */}
-                    <div className="p-6 md:p-8 space-y-5">
-                      {/* School Name */}
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                          <School className="size-3 text-orange-500" />
-                          {t.infoSchoolName}
-                        </label>
-                        <input
-                          type="text"
-                          value={infoSchoolName}
-                          onChange={(e) => setInfoSchoolName(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                          placeholder={selectedLang === "mr" ? "शाळेचे नाव टाका" : "Enter school name"}
-                        />
-                      </div>
-
-                      {/* 2-Column Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        {/* Headmaster Name */}
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                            <User className="size-3 text-orange-500" />
-                            {t.infoHeadmaster}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoHeadmaster}
-                            onChange={(e) => setInfoHeadmaster(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                            placeholder={selectedLang === "mr" ? "मुख्याध्यापकाचे नाव" : "Headmaster name"}
-                          />
-                        </div>
-
-                        {/* UDISE */}
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                            <School className="size-3 text-orange-500" />
-                            {t.infoUdise}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoUdise}
-                            onChange={(e) => setInfoUdise(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 font-mono placeholder:text-slate-400 outline-none transition-all"
-                            placeholder={selectedLang === "mr" ? "UDISE क्रमांक टाका" : "Enter UDISE code"}
-                          />
-                        </div>
-                      </div>
-
-                      {/* School Address */}
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                          <MapPin className="size-3 text-orange-500" />
-                          {t.infoAddress}
-                        </label>
-                        <input
-                          type="text"
-                          value={infoAddress}
-                          onChange={(e) => setInfoAddress(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                          placeholder={selectedLang === "mr" ? "शाळेचा पूर्ण पत्ता" : "Full school address"}
-                        />
-                      </div>
-
-                      {/* Center Name */}
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                          <Building2 className="size-3 text-orange-500" />
-                          {t.infoCenterName}
-                        </label>
-                        <input
-                          type="text"
-                          value={infoCenterName}
-                          onChange={(e) => setInfoCenterName(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                          placeholder={selectedLang === "mr" ? "केंद्राचे नाव टाका" : "Enter center name"}
-                        />
-                      </div>
-
-                      {/* 2-Column: Taluka & District */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        {/* Taluka */}
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                            <MapPin className="size-3 text-orange-500" />
-                            {t.infoTaluka}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoTaluka}
-                            onChange={(e) => setInfoTaluka(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                            placeholder={selectedLang === "mr" ? "तालुका" : "Taluka"}
-                          />
-                        </div>
-
-                        {/* District */}
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
-                            <MapPin className="size-3 text-orange-500" />
-                            {t.infoDistrict}
-                          </label>
-                          <input
-                            type="text"
-                            value={infoDistrict}
-                            onChange={(e) => setInfoDistrict(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
-                            placeholder={selectedLang === "mr" ? "जिल्हा" : "District"}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Submit Button */}
-                    <div className="px-6 md:px-8 pb-8">
-                      <button
-                        onClick={handleInfoSubmit}
-                        className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-black py-4 rounded-2xl text-sm uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3"
-                      >
-                        <span>{t.infoProceed}</span>
-                        <ChevronRight className="size-5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ) : view === "dashboard" ? (
-              <motion.div
-                key="dashboard"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="bg-white/80 backdrop-blur-md rounded-[1.75rem] sm:rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col min-h-[82vh] w-full"
-              >
-                {/* Header Banner */}
-                <div className="bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500 px-4 sm:px-8 py-4 sm:py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4 text-white border-b border-black/5 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-full bg-white/10 rounded-full blur-3xl pointer-events-none" />
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <Link
-                      to="/teacher"
-                      className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer border border-white/20 active:scale-95 shrink-0"
-                      title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
-                    >
-                      <ArrowLeft className="size-4.5 sm:size-5" />
-                    </Link>
-                    <div className="size-10 sm:size-12 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner shrink-0">
-                      <School className="size-5 sm:size-6 text-white" />
-                    </div>
-                    <div className="min-w-0">
-                      <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight font-sans leading-tight">{t.title}</h1>
-                      <p className="text-[10px] font-black uppercase tracking-wider sm:tracking-widest text-orange-50 leading-tight">{t.subtitle}</p>
-                    </div>
-                  </div>
-
-                  {/* Academic Year & Language Controls */}
-                  <div className="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-3 w-full sm:w-auto shrink-0 flex-wrap">
-                    {/* Academic Year Selector */}
-                    <div className="flex items-center gap-2 bg-slate-900/30 backdrop-blur-md px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border border-white/20 text-white shadow-sm max-w-full">
-                      <span className="text-xs font-black uppercase tracking-wider hidden sm:inline text-amber-200 shrink-0">
-                        {selectedLang === "mr" ? "शैक्षणिक वर्ष:" : "Academic Year:"}
-                      </span>
-                      <select
-                        value={academicYear}
-                        onChange={(e) => handleAcademicYearChange(e.target.value)}
-                        className="bg-slate-900 text-amber-300 border border-amber-400/40 rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-1 text-xs font-extrabold outline-none cursor-pointer hover:bg-slate-950 transition-colors max-w-full"
-                      >
-                        {academicYearsList.map((item) => (
-                          <option key={item.value} value={item.value}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Language Selector Button */}
-                    <button
-                      onClick={toggleLanguage}
-                      className="p-2.5 sm:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl sm:rounded-2xl transition-all shadow-sm flex items-center gap-1.5 sm:gap-2 text-white border border-white/20 cursor-pointer shrink-0"
-                    >
-                      <Languages className="size-4.5 sm:size-5" />
-                      <span className="text-xs font-black uppercase tracking-wider">
-                        {selectedLang === "mr" ? "English" : "मराठी"}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-6 md:p-10 space-y-10 flex flex-col flex-1 w-full max-w-6xl mx-auto">
-                  {/* Read-only School details card matching first image */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-[#eef5cb] border border-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 space-y-6 shadow-sm w-full"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                      <div>
-                        <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">{t.infoSchoolName}</span>
-                        <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
-                          {infoSchoolName || profile?.schoolName || ""}
-                        </h2>
-                      </div>
-
-                      <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
-                        {(infoUdise || profile?.udise) && (
-                          <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
-                            {infoUdise || profile?.udise}
-                          </div>
-                        )}
-                        <button
-                          onClick={() => setView("info")}
-                          className="bg-slate-900 text-[#eef5cb] p-2.5 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform flex-shrink-0"
-                          title={selectedLang === "mr" ? "माहिती संपादित करा" : "Edit Information"}
-                        >
-                          <Edit className="size-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {(() => {
-                      const fields = [
-                        { label: t.infoHeadmaster, val: infoHeadmaster || profile?.fullName },
-                        { label: t.infoAddress, val: infoAddress || profile?.address },
-                        { label: t.infoCenterName, val: infoCenterName },
-                        { label: t.infoTaluka, val: infoTaluka },
-                        { label: t.infoDistrict, val: infoDistrict },
-                      ].filter((f) => f.val && f.val.trim() !== "");
-
-                      if (fields.length === 0) return null;
-
-                      return (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
-                          {fields.map((f, idx) => (
-                            <div key={idx}>
-                              <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
-                                {f.label}
-                              </span>
-                              <p className="font-bold text-slate-900">{f.val}</p>
+                                }`}
+                            >
+                              {opt.text}
                             </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </motion.div>
-
-                  {/* Actions Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-                    {/* Card 1: View */}
-                    <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
-                      <div>
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-[16px] font-bold text-slate-900">{t.viewSub}</h4>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleCard1();
-                            }}
-                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${card1Checked
-                                ? "border-slate-900 bg-slate-900 text-white"
-                                : "border-slate-400 bg-white text-transparent"
-                              }`}
-                          >
-                            {card1Checked && <CheckCircle2 className="size-4" />}
-                          </div>
-                        </div>
-                        <hr className="border-slate-900/40 mb-4" />
-                        <p className="text-[14px] text-slate-700 mb-6">{t.viewDesc}</p>
-                      </div>
-                      <div className="flex justify-end mt-auto">
-                        <button
-                          onClick={() => setView("summary")}
-                          className="bg-[#1e1b4b] text-white px-8 py-3 rounded-3xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm"
-                        >
-                          {t.viewBtn}
-                        </button>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    {/* Card 2: Download PDF */}
-                    <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
-                      <div>
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-[16px] font-bold text-slate-900">{t.downloadPdfSub}</h4>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleCard2();
-                            }}
-                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${card2Checked
-                                ? "border-slate-900 bg-slate-900 text-white"
-                                : "border-slate-400 bg-white text-transparent"
-                              }`}
-                          >
-                            {card2Checked && <CheckCircle2 className="size-4" />}
-                          </div>
-                        </div>
-                        <hr className="border-slate-900/40 mb-4" />
-                        <p className="text-[14px] text-slate-700 mb-4">{t.downloadPdfDesc}</p>
+                    {/* Evidences / Photo Upload Section */}
+                    <PhotoUploader
+                      standardId={activeStandardDetails}
+                      lang={selectedLang}
+                      evidenceUrl={currentDetail[selectedLang].evidenceUrl}
+                    />
 
-                        {/* Premium Language Selector Inside Card */}
-                        <div className="mb-6 space-y-2">
-                          <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">
-                            {selectedLang === "mr" ? "अहवाल भाषा / Report Language" : "Report Language"}
-                          </span>
-                          <div className="flex bg-slate-100 rounded-xl p-1 gap-1 border border-slate-200">
-                            <button
-                              onClick={() => setPdfLang("mr")}
-                              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${pdfLang === "mr"
-                                  ? "bg-[#1e1b4b] text-white shadow-sm"
-                                  : "text-slate-600 hover:bg-slate-200/50"
-                                }`}
-                            >
-                              मराठी
-                            </button>
-                            <button
-                              onClick={() => setPdfLang("en")}
-                              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${pdfLang === "en"
-                                  ? "bg-[#1e1b4b] text-white shadow-sm"
-                                  : "text-slate-600 hover:bg-slate-200/50"
-                                }`}
-                            >
-                              English
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex justify-end mt-auto">
-                        <button
-                          onClick={handleDownloadPdf}
-                          className="bg-[#1e1b4b] text-white px-8 py-3 rounded-3xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm active:scale-95 transition-transform"
-                        >
-                          {t.downloadBtn}
-                        </button>
-                      </div>
-                    </div>
-
-
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="pb-10 pt-4 flex justify-center bg-transparent mt-auto">
-                  <button
-                    onClick={handleDownloadPdf}
-                    className="bg-[#1e1b4b] text-white hover:bg-slate-800 rounded-full py-4 px-8 flex items-center gap-3 shadow-lg shadow-indigo-950/20 justify-center font-bold text-[15px] transition-all duration-300 active:scale-95"
-                  >
-                    <FileText className="size-5 text-amber-400" />
-                    <span>{selectedLang === "mr" ? "अहवाल डाऊनलोड करा" : "Download Report"}</span>
-                  </button>
-                </div>
-              </motion.div>
-            ) : view === "certificate" ? (
-              <motion.div
-                key="certificate"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-[#f8fafc] min-h-screen w-full flex flex-col items-center"
-              >
-                {/* Orange Header bar */}
-                <div className="bg-[#ffaf66] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-slate-900 border-b border-black/5 relative z-20 w-full gap-4">
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => setView("dashboard")}
-                      className="p-2 hover:bg-black/10 rounded-full transition-colors"
-                    >
-                      <ArrowLeft className="size-6 text-slate-900" strokeWidth={2.5} />
-                    </button>
-                    <span className="text-lg font-bold tracking-tight">
-                      {certLang === "mr" ? "प्रमाणपत्र" : "Certificate"}
-                    </span>
-                  </div>
-
-                  {/* Actions on the right side of orange header */}
-                  <div className="flex items-center gap-3">
-                    {/* Language Selector */}
-                    <div className="flex bg-white/20 backdrop-blur-md rounded-xl p-1 gap-1 border border-black/15">
+                    {/* Dark Pill "Go Back" Button at Bottom Center */}
+                    <div className="flex justify-center pt-8 pb-10">
                       <button
-                        onClick={() => setCertLang("mr")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "mr"
-                            ? "bg-[#1e1b4b] text-white shadow-sm"
-                            : "text-slate-900 hover:bg-white/10"
-                          }`}
+                        onClick={() => setActiveStandardDetails(null)}
+                        className="bg-[#0f1123] text-white font-black px-12 py-4 rounded-full hover:bg-slate-800 transition-colors uppercase tracking-widest text-[13px] shadow-xl shadow-slate-900/20 active:scale-95"
                       >
-                        मराठी
-                      </button>
-                      <button
-                        onClick={() => setCertLang("en")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "en"
-                            ? "bg-[#1e1b4b] text-white shadow-sm"
-                            : "text-slate-900 hover:bg-white/10"
-                          }`}
-                      >
-                        English
+                        Go Back
                       </button>
                     </div>
-
-                    {/* Edit / Save Button */}
-                    <button
-                      onClick={handleEditToggle}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#1e1b4b] text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm"
-                    >
-                      {isEditingCert ? (
-                        <>
-                          <CheckCircle2 className="size-4 text-green-400" />
-                          <span>{certLang === "mr" ? "जतन करा" : "Save Changes"}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Edit className="size-4 text-white" />
-                          <span>{certLang === "mr" ? "संपादित करा" : "Edit Certificate"}</span>
-                        </>
-                      )}
-                    </button>
                   </div>
-                </div>
-
-                {/* Certificate Canvas Area */}
-                <div className="flex-1 w-full flex items-center justify-center p-4 md:p-8 overflow-y-auto">
-                  <div
-                    id="certificate-container"
-                    className="relative bg-white shadow-2xl rounded-sm w-full max-w-[650px] aspect-[1/1.4] p-8 md:p-12 flex flex-col justify-between items-center overflow-hidden border border-slate-200"
-                    style={{
-                      backgroundImage: 'radial-gradient(circle, #fdfbf7 0%, #fff 100%)'
-                    }}
-                  >
-                    {/* Gold Corner and Double Border Design */}
-                    {/* Outer border */}
-                    <div className="absolute inset-4 border-[3px] border-[#d4af37] pointer-events-none" />
-                    {/* Inner thin border */}
-                    <div className="absolute inset-6 border border-[#bf953f] pointer-events-none" />
-
-                    {/* Top Left Corner */}
-                    <svg className="absolute top-7 left-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M 48,2 L 2,2 L 2,48" />
-                      <path d="M 40,8 L 8,8 L 8,40" />
-                    </svg>
-                    {/* Top Right Corner */}
-                    <svg className="absolute top-7 right-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M 0,2 L 46,2 L 46,48" />
-                      <path d="M 8,8 L 40,8 L 40,40" />
-                    </svg>
-                    {/* Bottom Left Corner */}
-                    <svg className="absolute bottom-7 left-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M 48,46 L 2,46 L 2,0" />
-                      <path d="M 40,40 L 8,40 L 8,8" />
-                    </svg>
-                    {/* Bottom Right Corner */}
-                    <svg className="absolute bottom-7 right-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M 0,46 L 46,46 L 46,0" />
-                      <path d="M 8,40 L 40,40 L 40,8" />
-                    </svg>
-
-                    {/* Elegant Gold Waves */}
-                    <svg className="absolute top-0 right-0 w-[50%] h-[50%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#bf953f" />
-                          <stop offset="25%" stopColor="#fcf6ba" />
-                          <stop offset="50%" stopColor="#b38728" />
-                          <stop offset="75%" stopColor="#fbf5b7" />
-                          <stop offset="100%" stopColor="#aa771c" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M 200,0 L 200,150 C 180,120 150,80 120,60 C 90,40 50,20 0,0 Z" fill="url(#gold-grad)" opacity="0.15" />
-                      <path d="M 200,0 L 200,120 C 170,100 145,60 115,45 C 85,30 55,15 15,0 Z" fill="url(#gold-grad)" opacity="0.3" />
-                      <path d="M 200,0 L 200,90 C 185,75 160,50 130,35 C 100,20 70,10 30,0 Z" fill="url(#gold-grad)" opacity="0.5" />
-                      <path d="M 200,0 L 200,60 C 190,50 170,30 145,20 C 120,10 90,5 50,0 Z" fill="url(#gold-grad)" opacity="0.8" />
-                    </svg>
-
-                    <svg className="absolute bottom-0 left-0 w-[50%] h-[50%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none">
-                      <path d="M 0,200 L 0,50 C 20,80 50,120 80,140 C 110,160 150,180 200,200 Z" fill="url(#gold-grad)" opacity="0.15" />
-                      <path d="M 0,200 L 0,80 C 30,100 55,140 85,155 C 115,170 145,185 185,200 Z" fill="url(#gold-grad)" opacity="0.3" />
-                      <path d="M 0,200 L 0,110 C 15,125 40,150 70,165 C 100,180 130,190 170,200 Z" fill="url(#gold-grad)" opacity="0.5" />
-                      <path d="M 0,200 L 0,140 C 10,150 30,170 55,180 C 80,190 110,195 150,200 Z" fill="url(#gold-grad)" opacity="0.8" />
-                    </svg>
-
-                    {/* Certificate Content */}
-                    <div className="relative z-10 w-full flex flex-col items-center my-auto px-4 text-center space-y-4">
-                      {/* Header */}
-                      <h1 className="text-[#1e3b8b] font-serif font-black text-base sm:text-lg md:text-xl leading-snug tracking-wide max-w-[90%] uppercase">
-                        {certLang === "mr"
-                          ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र"
-                          : "State Council For Educational Research and Training Maharashtra"}
-                      </h1>
-
-                      <div className="h-[2px] w-24 bg-[#bf953f] my-2" />
-
-                      {/* Certificate Title (Editable) */}
-                      {isEditingCert ? (
-                        <div className="w-full px-4">
-                          <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
-                            {certLang === "mr" ? "प्रमाणपत्र शीर्षक" : "Certificate Title"}
-                          </label>
-                          <input
-                            type="text"
-                            value={certLang === "mr" ? certTitleMr : certTitleEn}
-                            onChange={(e) => certLang === "mr" ? setCertTitleMr(e.target.value) : setCertTitleEn(e.target.value)}
-                            className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-[#0e7490] font-sans font-black text-xs md:text-sm tracking-[0.15em] uppercase focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
-                          />
-                        </div>
-                      ) : (
-                        <h2 className="text-[#0e7490] font-sans font-black text-[10px] sm:text-xs tracking-[0.2em] uppercase">
-                          {certLang === "mr" ? certTitleMr : certTitleEn}
-                        </h2>
-                      )}
-
-                      {/* Certify Text */}
-                      <p className="text-slate-500 font-serif italic text-xs sm:text-sm md:text-base">
-                        {certLang === "mr" ? "याद्वारे प्रमाणित करण्यात येते की," : "This is to certify that"}
-                      </p>
-
-                      {/* School Name (Editable) */}
-                      {isEditingCert ? (
-                        <div className="w-full px-4">
-                          <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
-                            {certLang === "mr" ? "शाळेचे नाव" : "School Name"}
-                          </label>
-                          <input
-                            type="text"
-                            value={certSchoolName}
-                            onChange={(e) => setCertSchoolName(e.target.value)}
-                            className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-slate-900 font-serif font-bold text-sm sm:text-base uppercase focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
-                          />
-                        </div>
-                      ) : (
-                        <h3 className="text-slate-900 font-serif font-bold text-sm sm:text-base md:text-lg uppercase border-b-2 border-slate-300 pb-1 px-4 min-w-[70%] tracking-wide">
-                          {certSchoolName}
-                        </h3>
-                      )}
-
-                      {/* UDISE (Editable) */}
-                      {isEditingCert ? (
-                        <div className="w-full max-w-[220px] px-4">
-                          <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
-                            {certLang === "mr" ? "यू-डायस क्रमांक" : "UDISE Code"}
-                          </label>
-                          <div className="flex items-center justify-center gap-1.5 w-full">
-                            <span className="text-[#bf953f] text-lg">—</span>
-                            <input
-                              type="text"
-                              value={certUdise}
-                              onChange={(e) => setCertUdise(e.target.value)}
-                              className="text-center w-full bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-1.5 text-slate-800 font-serif font-bold text-xs sm:text-sm tracking-wider focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
-                            />
-                            <span className="text-[#bf953f] text-lg">—</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center gap-1.5 text-slate-700 font-serif font-bold text-sm sm:text-base">
-                          <span className="text-[#bf953f] text-lg">—</span>
-                          <span className="tracking-widest">{certUdise}</span>
-                          <span className="text-[#bf953f] text-lg">—</span>
-                        </div>
-                      )}
-
-                      {/* Description Paragraph (Editable) */}
-                      {isEditingCert ? (
-                        <div className="w-full px-4">
-                          <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
-                            {certLang === "mr" ? "मुख्य मजकूर" : "Main Description"}
-                          </label>
-                          <textarea
-                            value={certLang === "mr" ? certDescMr : certDescEn}
-                            onChange={(e) => certLang === "mr" ? setCertDescMr(e.target.value) : setCertDescEn(e.target.value)}
-                            rows={3}
-                            className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-slate-700 font-serif text-[11px] sm:text-xs md:text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
-                          />
-                        </div>
-                      ) : (
-                        <p className="text-slate-700 font-serif text-[11px] sm:text-xs md:text-sm leading-relaxed max-w-[90%] mx-auto">
-                          {certLang === "mr" ? certDescMr : certDescEn}
-                        </p>
-                      )}
-
-                      {/* Signature Footer */}
-                      <div className="space-y-1 pt-4">
-                        <p className="text-[#1e3b8b] font-sans font-black text-[10px] uppercase tracking-wider">
-                          {certLang === "mr" ? "एस.सी.ई.आर.टी. महाराष्ट्र" : "SCERT Maharashtra"}
-                        </p>
-                        <p className="text-slate-500 text-[8px] sm:text-[9px] font-bold leading-normal">
-                          {certLang === "mr" ? (
-                            <>
-                              राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र, पुणे.<br />
-                              (एस.सी.ई.आर.टी.)<br />
-                              ७०८, सदाशिव पेठ, कुमठेकर मार्ग, पुणे – ४११0३0<br />
-                              महाराष्ट्र, भारत
-                            </>
-                          ) : (
-                            <>
-                              State Council For Educational Research and Training, Maharashtra, Pune.<br />
-                              (SCERT)<br />
-                              708, Sadashiv Peth, Kumthekar Marg, Pune – 411030<br />
-                              Maharashtra, India
-                            </>
-                          )}
-                        </p>
+                </motion.div>
+              ) : view === "info" ? (
+                <motion.div
+                  key="info"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="min-h-screen w-full flex flex-col items-center bg-gradient-to-br from-slate-50 via-white to-orange-50/30"
+                >
+                  {/* Header Banner */}
+                  <div className="w-full bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500 px-6 md:px-10 py-8 flex items-center justify-between text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-72 h-full bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                        <School className="size-6 text-white" />
+                      </div>
+                      <div>
+                        <h1 className="text-2xl md:text-3xl font-black tracking-tight">{t.infoTitle}</h1>
+                        <p className="text-[11px] font-bold text-orange-50 mt-0.5">{t.infoSubtitle}</p>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Floating / fixed Save PDF button at bottom right */}
-                <div className="fixed bottom-6 right-6 z-30">
-                  <button
-                    onClick={handleSavePdf}
-                    className="bg-[#0f1123] text-white font-semibold px-8 py-3 rounded-full hover:bg-slate-800 transition-all uppercase tracking-wider text-xs shadow-2xl active:scale-95 flex items-center gap-2"
-                  >
-                    <FileText className="size-4" />
-                    Save PDF
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="summary"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col min-h-[82vh] w-full"
-              >
-                {/* Header navigation */}
-                <div className="px-8 py-6 flex items-center justify-between text-slate-800 border-b border-slate-100 bg-slate-50/30">
-                  <button
-                    onClick={() => setView("dashboard")}
-                    className="group px-6 py-2.5 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-full transition-all duration-300 flex items-center gap-2 font-black text-slate-700 text-xs uppercase tracking-wider shadow-sm"
-                  >
-                    <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
-                    <span>{t.backBtn}</span>
-                  </button>
-
-                  {/* Language Selector Button with Automatic Toggle for Summary view */}
-                  <div>
+                    {/* Language Toggle */}
                     <button
                       onClick={toggleLanguage}
-                      className="p-3 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-2xl transition-all shadow-sm flex items-center gap-2 text-slate-700 border border-slate-200"
+                      className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all shadow-sm flex items-center gap-2 text-white border border-white/20"
                     >
                       <Languages className="size-5" />
                       <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
@@ -6162,134 +5499,797 @@ function TeacherSqafPage() {
                       </span>
                     </button>
                   </div>
-                </div>
 
-                <div className="p-6 md:p-8 flex flex-col lg:flex-row gap-8 flex-1 w-full">
-                  {/* Left Column: Premium Summary Analytics Card */}
-                  <div className="w-full lg:w-[420px] flex-shrink-0">
-                    <div className="bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 space-y-3 sm:space-y-8 shadow-xl relative overflow-hidden border border-orange-400/20 sticky top-24">
-                      <div className="absolute top-0 right-0 size-32 bg-white/10 rounded-full blur-2xl" />
-                      <div className="absolute -bottom-10 -left-10 size-40 bg-black/10 rounded-full blur-2xl" />
-
-                      <div className="space-y-1 sm:space-y-2 text-center border-b border-white/20 pb-3 sm:pb-6 relative z-10">
-                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-orange-100">Audit Status</span>
-                        <h2 className="text-xl sm:text-2xl font-black tracking-tight">{t.summaryTitle}</h2>
+                  {/* Form Content */}
+                  <div className="w-full max-w-2xl px-4 md:px-0 py-8 md:py-12 space-y-6">
+                    {/* Form Card */}
+                    <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                      {/* Card Header */}
+                      <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-6 md:px-8 py-5 flex items-center gap-3">
+                        <div className="size-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                          <FileText className="size-4 text-amber-400" />
+                        </div>
+                        <div>
+                          <h2 className="text-white font-bold text-sm">{selectedLang === "mr" ? "शाळेची मूलभूत माहिती" : "Basic School Details"}</h2>
+                          <p className="text-slate-400 text-[10px] font-semibold">{selectedLang === "mr" ? "ही माहिती SQAAF अहवालात वापरली जाईल" : "This information will be used in the SQAAF report"}</p>
+                        </div>
                       </div>
 
-                      <div className="space-y-2 sm:space-y-4 font-bold text-xs sm:text-[15px] relative z-10">
-                        <div className="flex justify-between items-center py-3 border-b border-white/10">
-                          <span className="text-orange-50 font-medium">{t.totalStands}</span>
-                          <span className="bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-xs font-black min-w-[60px] text-center shadow-inner border border-white/30">{totalStandards}</span>
+                      {/* Form Fields */}
+                      <div className="p-6 md:p-8 space-y-5">
+                        {/* School Name */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                            <School className="size-3 text-orange-500" />
+                            {t.infoSchoolName}
+                          </label>
+                          <input
+                            type="text"
+                            value={infoSchoolName}
+                            onChange={(e) => setInfoSchoolName(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                            placeholder={selectedLang === "mr" ? "शाळेचे नाव टाका" : "Enter school name"}
+                          />
                         </div>
-                        <div className="flex justify-between items-center py-3 border-b border-white/10">
-                          <span className="text-orange-50 font-medium">{t.completedStands}</span>
-                          <span className="bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-xs font-black min-w-[60px] text-center shadow-inner border border-white/30">{completedCount}</span>
+
+                        {/* 2-Column Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          {/* Headmaster Name */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                              <User className="size-3 text-orange-500" />
+                              {t.infoHeadmaster}
+                            </label>
+                            <input
+                              type="text"
+                              value={infoHeadmaster}
+                              onChange={(e) => setInfoHeadmaster(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                              placeholder={selectedLang === "mr" ? "मुख्याध्यापकाचे नाव" : "Headmaster name"}
+                            />
+                          </div>
+
+                          {/* UDISE */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                              <School className="size-3 text-orange-500" />
+                              {t.infoUdise}
+                            </label>
+                            <input
+                              type="text"
+                              value={infoUdise}
+                              onChange={(e) => setInfoUdise(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 font-mono placeholder:text-slate-400 outline-none transition-all"
+                              placeholder={selectedLang === "mr" ? "UDISE क्रमांक टाका" : "Enter UDISE code"}
+                            />
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center py-3 border-b border-white/10">
-                          <span className="text-orange-55 font-medium">{t.uncompletedStands}</span>
-                          <span className="bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-xs font-black min-w-[60px] text-center shadow-inner border border-white/30">{uncompletedCount}</span>
+
+                        {/* School Address */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                            <MapPin className="size-3 text-orange-500" />
+                            {t.infoAddress}
+                          </label>
+                          <input
+                            type="text"
+                            value={infoAddress}
+                            onChange={(e) => setInfoAddress(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                            placeholder={selectedLang === "mr" ? "शाळेचा पूर्ण पत्ता" : "Full school address"}
+                          />
                         </div>
-                        <div className="flex justify-between items-center py-3">
-                          <span className="text-orange-50 font-medium">{t.marksRatio}</span>
-                          <span className="bg-amber-300 text-slate-900 px-5 py-1.5 rounded-xl text-xs font-black min-w-[90px] text-center shadow-md">{obtainedMarks} / {totalMarks}</span>
+
+                        {/* Center Name */}
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                            <Building2 className="size-3 text-orange-500" />
+                            {t.infoCenterName}
+                          </label>
+                          <input
+                            type="text"
+                            value={infoCenterName}
+                            onChange={(e) => setInfoCenterName(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                            placeholder={selectedLang === "mr" ? "केंद्राचे नाव टाका" : "Enter center name"}
+                          />
                         </div>
+
+                        {/* 2-Column: Taluka & District */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                          {/* Taluka */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                              <MapPin className="size-3 text-orange-500" />
+                              {t.infoTaluka}
+                            </label>
+                            <input
+                              type="text"
+                              value={infoTaluka}
+                              onChange={(e) => setInfoTaluka(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                              placeholder={selectedLang === "mr" ? "तालुका" : "Taluka"}
+                            />
+                          </div>
+
+                          {/* District */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 ml-1 flex items-center gap-1.5">
+                              <MapPin className="size-3 text-orange-500" />
+                              {t.infoDistrict}
+                            </label>
+                            <input
+                              type="text"
+                              value={infoDistrict}
+                              onChange={(e) => setInfoDistrict(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-400/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                              placeholder={selectedLang === "mr" ? "जिल्हा" : "District"}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <div className="px-6 md:px-8 pb-8">
+                        <button
+                          onClick={handleInfoSubmit}
+                          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-black py-4 rounded-2xl text-sm uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3"
+                        >
+                          <span>{t.infoProceed}</span>
+                          <ChevronRight className="size-5" />
+                        </button>
                       </div>
                     </div>
                   </div>
-
-                  {/* Right Column: Premium Interactive Grid for 128 Standards */}
-                  <div className="flex-1 space-y-6">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-3xl font-black text-slate-900 tracking-tight">{t.standards}</h3>
-                        <span className="bg-teal-500 text-white font-black text-xs px-3.5 py-1 rounded-full shadow-md shadow-teal-500/20">{standards.length}</span>
+                </motion.div>
+              ) : view === "dashboard" ? (
+                <motion.div
+                  key="dashboard"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col min-h-[82vh] w-full"
+                >
+                  {/* Header Banner */}
+                  <div className="bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500 px-8 py-8 flex items-center justify-between text-white border-b border-black/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-full bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="flex items-center gap-4">
+                      <Link
+                        to="/teacher"
+                        className="p-2.5 rounded-2xl bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer border border-white/20 active:scale-95 shrink-0"
+                        title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
+                      >
+                        <ArrowLeft className="size-5" />
+                      </Link>
+                      <div className="size-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                        <School className="size-6 text-white" />
                       </div>
-                      <p className="text-slate-400 font-bold text-sm">{t.clickHint}</p>
+                      <div>
+                        <h1 className="text-2xl md:text-3xl font-black tracking-tight font-sans">{t.title}</h1>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-50">{t.subtitle}</p>
+                      </div>
                     </div>
 
-                    {/* Desktop Premium Grid Layout */}
-                    <div
-                      ref={gridRef}
-                      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5 max-h-[62vh] overflow-y-auto pr-3 scrollbar-thin"
+                    {/* Academic Year & Language Controls */}
+                    <div className="flex items-center gap-3">
+                      {/* Academic Year Selector */}
+                      <div className="flex items-center gap-2 bg-slate-900/30 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 text-white shadow-sm">
+                        <span className="text-xs font-black uppercase tracking-wider hidden sm:inline text-amber-200">
+                          {selectedLang === "mr" ? "शैक्षणिक वर्ष:" : "Academic Year:"}
+                        </span>
+                        <select
+                          value={academicYear}
+                          onChange={(e) => handleAcademicYearChange(e.target.value)}
+                          className="bg-slate-900 text-amber-300 border border-amber-400/40 rounded-xl px-3 py-1 text-xs font-extrabold outline-none cursor-pointer hover:bg-slate-950 transition-colors"
+                        >
+                          {academicYearsList.map((item) => (
+                            <option key={item.value} value={item.value}>
+                              {item.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Language Selector Button */}
+                      <button
+                        onClick={toggleLanguage}
+                        className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all shadow-sm flex items-center gap-2 text-white border border-white/20 cursor-pointer"
+                      >
+                        <Languages className="size-5" />
+                        <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
+                          {selectedLang === "mr" ? "English" : "मराठी"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-6 md:p-10 space-y-10 flex flex-col flex-1 w-full max-w-6xl mx-auto">
+                    {/* Read-only School details card matching first image */}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.1 }}
+                      className="bg-[#eef5cb] border border-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 space-y-6 shadow-sm w-full"
                     >
-                      {standards.map((num, i) => {
-                        const isCompleted = completedStandards.has(num);
-                        const isLastSelected = lastSelectedStandard === num;
-                        return (
-                          <motion.div
-                            key={num}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: Math.min(i * 0.015, 0.3) }}
-                            whileHover={{ scale: 1.03, y: -3 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => {
-                              if (num <= 128) {
-                                if (gridRef.current) {
-                                  const scrollPos = gridRef.current.scrollTop;
-                                  setSavedScrollPosition(scrollPos);
-                                  localStorage.setItem("sqaf_saved_scroll_position", scrollPos.toString());
-                                }
-                                const winScrollPos = window.scrollY;
-                                setSavedWindowScrollPosition(winScrollPos);
-                                localStorage.setItem("sqaf_saved_window_scroll_position", winScrollPos.toString());
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                        <div>
+                          <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">{t.infoSchoolName}</span>
+                          <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
+                            {infoSchoolName || profile?.schoolName || ""}
+                          </h2>
+                        </div>
 
-                                setLastSelectedStandard(num);
-                                localStorage.setItem("sqaf_last_selected_standard", num.toString());
-                                setActiveStandardDetails(num);
-                              }
-                            }}
-                            className={`relative border-2 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 cursor-pointer group overflow-hidden ${isCompleted
-                                ? "bg-gradient-to-br from-green-50 to-green-100/50 border-green-500 hover:shadow-green-100"
-                                : "bg-gradient-to-br from-white to-slate-50 border-slate-200/80 hover:border-slate-400 hover:shadow-slate-100"
-                              } ${isLastSelected
-                                ? "ring-4 ring-indigo-600/50 border-indigo-500 shadow-xl scale-[1.02] z-10"
-                                : ""
-                              }`}
+                        <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
+                          {(infoUdise || profile?.udise) && (
+                            <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
+                              {infoUdise || profile?.udise}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => setView("info")}
+                            className="bg-slate-900 text-[#eef5cb] p-2.5 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform flex-shrink-0"
+                            title={selectedLang === "mr" ? "माहिती संपादित करा" : "Edit Information"}
                           >
-                            <div
-                              className={`absolute -right-6 -bottom-6 size-20 rounded-full blur-lg transition-all duration-300 pointer-events-none ${isCompleted
-                                  ? "bg-green-500/10 group-hover:bg-green-500/20"
-                                  : "bg-slate-500/5 group-hover:bg-slate-500/10"
-                                }`}
-                            />
+                            <Edit className="size-4" />
+                          </button>
+                        </div>
+                      </div>
 
-                            <div className="flex justify-between items-start gap-4">
-                              <div className="space-y-1">
-                                <span
-                                  className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${isCompleted ? "text-green-700 bg-green-100" : "text-slate-500 bg-slate-100"
-                                    }`}
-                                >
-                                  {selectedLang === "mr" ? "मानक" : "Standard"}
+                      {(() => {
+                        const fields = [
+                          { label: t.infoHeadmaster, val: infoHeadmaster || profile?.fullName },
+                          { label: t.infoAddress, val: infoAddress || profile?.address },
+                          { label: t.infoCenterName, val: infoCenterName },
+                          { label: t.infoTaluka, val: infoTaluka },
+                          { label: t.infoDistrict, val: infoDistrict },
+                        ].filter((f) => f.val && f.val.trim() !== "");
+
+                        if (fields.length === 0) return null;
+
+                        return (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                            {fields.map((f, idx) => (
+                              <div key={idx}>
+                                <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
+                                  {f.label}
                                 </span>
-                                <h4
-                                  className={`font-extrabold text-sm transition-colors ${isCompleted ? "text-green-950" : "text-slate-800"
-                                    }`}
-                                >
-                                  {selectedLang === "mr"
-                                    ? `मानक क्र. ${toMarathiNumerals(num)}`
-                                    : `Standard No. ${num}`}
-                                </h4>
+                                <p className="font-bold text-slate-900">{f.val}</p>
                               </div>
-                              <div
-                                className={`size-8 rounded-full flex items-center justify-center shadow-md transition-all ${isCompleted
-                                    ? "bg-green-500 text-white shadow-green-500/20 group-hover:scale-110"
-                                    : "bg-slate-100 text-slate-300 group-hover:bg-slate-200"
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </motion.div>
+
+                    {/* Actions Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                      {/* Card 1: View */}
+                      <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
+                        <div>
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-[16px] font-bold text-slate-900">{t.viewSub}</h4>
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCard1();
+                              }}
+                              className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${card1Checked
+                                ? "border-slate-900 bg-slate-900 text-white"
+                                : "border-slate-400 bg-white text-transparent"
+                                }`}
+                            >
+                              {card1Checked && <CheckCircle2 className="size-4" />}
+                            </div>
+                          </div>
+                          <hr className="border-slate-900/40 mb-4" />
+                          <p className="text-[14px] text-slate-700 mb-6">{t.viewDesc}</p>
+                        </div>
+                        <div className="flex justify-end mt-auto">
+                          <button
+                            onClick={() => setView("summary")}
+                            className="bg-[#1e1b4b] text-white px-8 py-3 rounded-3xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm"
+                          >
+                            {t.viewBtn}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Card 2: Download PDF */}
+                      <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
+                        <div>
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-[16px] font-bold text-slate-900">{t.downloadPdfSub}</h4>
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCard2();
+                              }}
+                              className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${card2Checked
+                                ? "border-slate-900 bg-slate-900 text-white"
+                                : "border-slate-400 bg-white text-transparent"
+                                }`}
+                            >
+                              {card2Checked && <CheckCircle2 className="size-4" />}
+                            </div>
+                          </div>
+                          <hr className="border-slate-900/40 mb-4" />
+                          <p className="text-[14px] text-slate-700 mb-4">{t.downloadPdfDesc}</p>
+
+                          {/* Premium Language Selector Inside Card */}
+                          <div className="mb-6 space-y-2">
+                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">
+                              {selectedLang === "mr" ? "अहवाल भाषा / Report Language" : "Report Language"}
+                            </span>
+                            <div className="flex bg-slate-100 rounded-xl p-1 gap-1 border border-slate-200">
+                              <button
+                                onClick={() => setPdfLang("mr")}
+                                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${pdfLang === "mr"
+                                  ? "bg-[#1e1b4b] text-white shadow-sm"
+                                  : "text-slate-600 hover:bg-slate-200/50"
                                   }`}
                               >
-                                <CheckCircle2 className="size-4" strokeWidth={2.5} />
-                              </div>
+                                मराठी
+                              </button>
+                              <button
+                                onClick={() => setPdfLang("en")}
+                                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${pdfLang === "en"
+                                  ? "bg-[#1e1b4b] text-white shadow-sm"
+                                  : "text-slate-600 hover:bg-slate-200/50"
+                                  }`}
+                              >
+                                English
+                              </button>
                             </div>
-                          </motion.div>
-                        );
-                      })}
+                          </div>
+                        </div>
+                        <div className="flex justify-end mt-auto">
+                          <button
+                            onClick={handleDownloadPdf}
+                            className="bg-[#1e1b4b] text-white px-8 py-3 rounded-3xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm active:scale-95 transition-transform"
+                          >
+                            {t.downloadBtn}
+                          </button>
+                        </div>
+                      </div>
+
+
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+
+                  {/* Footer */}
+                  <div className="pb-10 pt-4 flex justify-center bg-transparent mt-auto">
+                    <button
+                      onClick={handleDownloadPdf}
+                      className="bg-[#1e1b4b] text-white hover:bg-slate-800 rounded-full py-4 px-8 flex items-center gap-3 shadow-lg shadow-indigo-950/20 justify-center font-bold text-[15px] transition-all duration-300 active:scale-95"
+                    >
+                      <FileText className="size-5 text-amber-400" />
+                      <span>{selectedLang === "mr" ? "अहवाल डाऊनलोड करा" : "Download Report"}</span>
+                    </button>
+                  </div>
+                </motion.div>
+              ) : view === "certificate" ? (
+                <motion.div
+                  key="certificate"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-[#f8fafc] min-h-screen w-full flex flex-col items-center"
+                >
+                  {/* Orange Header bar */}
+                  <div className="bg-[#ffaf66] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-slate-900 border-b border-black/5 relative z-20 w-full gap-4">
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setView("dashboard")}
+                        className="p-2 hover:bg-black/10 rounded-full transition-colors"
+                      >
+                        <ArrowLeft className="size-6 text-slate-900" strokeWidth={2.5} />
+                      </button>
+                      <span className="text-lg font-bold tracking-tight">
+                        {certLang === "mr" ? "प्रमाणपत्र" : "Certificate"}
+                      </span>
+                    </div>
+
+                    {/* Actions on the right side of orange header */}
+                    <div className="flex items-center gap-3">
+                      {/* Language Selector */}
+                      <div className="flex bg-white/20 backdrop-blur-md rounded-xl p-1 gap-1 border border-black/15">
+                        <button
+                          onClick={() => setCertLang("mr")}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "mr"
+                            ? "bg-[#1e1b4b] text-white shadow-sm"
+                            : "text-slate-900 hover:bg-white/10"
+                            }`}
+                        >
+                          मराठी
+                        </button>
+                        <button
+                          onClick={() => setCertLang("en")}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "en"
+                            ? "bg-[#1e1b4b] text-white shadow-sm"
+                            : "text-slate-900 hover:bg-white/10"
+                            }`}
+                        >
+                          English
+                        </button>
+                      </div>
+
+                      {/* Edit / Save Button */}
+                      <button
+                        onClick={handleEditToggle}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#1e1b4b] text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm"
+                      >
+                        {isEditingCert ? (
+                          <>
+                            <CheckCircle2 className="size-4 text-green-400" />
+                            <span>{certLang === "mr" ? "जतन करा" : "Save Changes"}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Edit className="size-4 text-white" />
+                            <span>{certLang === "mr" ? "संपादित करा" : "Edit Certificate"}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Certificate Canvas Area */}
+                  <div className="flex-1 w-full flex items-center justify-center p-4 md:p-8 overflow-y-auto">
+                    <div
+                      id="certificate-container"
+                      className="relative bg-white shadow-2xl rounded-sm w-full max-w-[650px] aspect-[1/1.4] p-8 md:p-12 flex flex-col justify-between items-center overflow-hidden border border-slate-200"
+                      style={{
+                        backgroundImage: 'radial-gradient(circle, #fdfbf7 0%, #fff 100%)'
+                      }}
+                    >
+                      {/* Gold Corner and Double Border Design */}
+                      {/* Outer border */}
+                      <div className="absolute inset-4 border-[3px] border-[#d4af37] pointer-events-none" />
+                      {/* Inner thin border */}
+                      <div className="absolute inset-6 border border-[#bf953f] pointer-events-none" />
+
+                      {/* Top Left Corner */}
+                      <svg className="absolute top-7 left-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M 48,2 L 2,2 L 2,48" />
+                        <path d="M 40,8 L 8,8 L 8,40" />
+                      </svg>
+                      {/* Top Right Corner */}
+                      <svg className="absolute top-7 right-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M 0,2 L 46,2 L 46,48" />
+                        <path d="M 8,8 L 40,8 L 40,40" />
+                      </svg>
+                      {/* Bottom Left Corner */}
+                      <svg className="absolute bottom-7 left-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M 48,46 L 2,46 L 2,0" />
+                        <path d="M 40,40 L 8,40 L 8,8" />
+                      </svg>
+                      {/* Bottom Right Corner */}
+                      <svg className="absolute bottom-7 right-7 w-12 h-12 pointer-events-none text-[#bf953f]" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M 0,46 L 46,46 L 46,0" />
+                        <path d="M 8,40 L 40,40 L 40,8" />
+                      </svg>
+
+                      {/* Elegant Gold Waves */}
+                      <svg className="absolute top-0 right-0 w-[50%] h-[50%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#bf953f" />
+                            <stop offset="25%" stopColor="#fcf6ba" />
+                            <stop offset="50%" stopColor="#b38728" />
+                            <stop offset="75%" stopColor="#fbf5b7" />
+                            <stop offset="100%" stopColor="#aa771c" />
+                          </linearGradient>
+                        </defs>
+                        <path d="M 200,0 L 200,150 C 180,120 150,80 120,60 C 90,40 50,20 0,0 Z" fill="url(#gold-grad)" opacity="0.15" />
+                        <path d="M 200,0 L 200,120 C 170,100 145,60 115,45 C 85,30 55,15 15,0 Z" fill="url(#gold-grad)" opacity="0.3" />
+                        <path d="M 200,0 L 200,90 C 185,75 160,50 130,35 C 100,20 70,10 30,0 Z" fill="url(#gold-grad)" opacity="0.5" />
+                        <path d="M 200,0 L 200,60 C 190,50 170,30 145,20 C 120,10 90,5 50,0 Z" fill="url(#gold-grad)" opacity="0.8" />
+                      </svg>
+
+                      <svg className="absolute bottom-0 left-0 w-[50%] h-[50%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none">
+                        <path d="M 0,200 L 0,50 C 20,80 50,120 80,140 C 110,160 150,180 200,200 Z" fill="url(#gold-grad)" opacity="0.15" />
+                        <path d="M 0,200 L 0,80 C 30,100 55,140 85,155 C 115,170 145,185 185,200 Z" fill="url(#gold-grad)" opacity="0.3" />
+                        <path d="M 0,200 L 0,110 C 15,125 40,150 70,165 C 100,180 130,190 170,200 Z" fill="url(#gold-grad)" opacity="0.5" />
+                        <path d="M 0,200 L 0,140 C 10,150 30,170 55,180 C 80,190 110,195 150,200 Z" fill="url(#gold-grad)" opacity="0.8" />
+                      </svg>
+
+                      {/* Certificate Content */}
+                      <div className="relative z-10 w-full flex flex-col items-center my-auto px-4 text-center space-y-4">
+                        {/* Header */}
+                        <h1 className="text-[#1e3b8b] font-serif font-black text-base sm:text-lg md:text-xl leading-snug tracking-wide max-w-[90%] uppercase">
+                          {certLang === "mr"
+                            ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र"
+                            : "State Council For Educational Research and Training Maharashtra"}
+                        </h1>
+
+                        <div className="h-[2px] w-24 bg-[#bf953f] my-2" />
+
+                        {/* Certificate Title (Editable) */}
+                        {isEditingCert ? (
+                          <div className="w-full px-4">
+                            <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
+                              {certLang === "mr" ? "प्रमाणपत्र शीर्षक" : "Certificate Title"}
+                            </label>
+                            <input
+                              type="text"
+                              value={certLang === "mr" ? certTitleMr : certTitleEn}
+                              onChange={(e) => certLang === "mr" ? setCertTitleMr(e.target.value) : setCertTitleEn(e.target.value)}
+                              className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-[#0e7490] font-sans font-black text-xs md:text-sm tracking-[0.15em] uppercase focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
+                            />
+                          </div>
+                        ) : (
+                          <h2 className="text-[#0e7490] font-sans font-black text-[10px] sm:text-xs tracking-[0.2em] uppercase">
+                            {certLang === "mr" ? certTitleMr : certTitleEn}
+                          </h2>
+                        )}
+
+                        {/* Certify Text */}
+                        <p className="text-slate-500 font-serif italic text-xs sm:text-sm md:text-base">
+                          {certLang === "mr" ? "याद्वारे प्रमाणित करण्यात येते की," : "This is to certify that"}
+                        </p>
+
+                        {/* School Name (Editable) */}
+                        {isEditingCert ? (
+                          <div className="w-full px-4">
+                            <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
+                              {certLang === "mr" ? "शाळेचे नाव" : "School Name"}
+                            </label>
+                            <input
+                              type="text"
+                              value={certSchoolName}
+                              onChange={(e) => setCertSchoolName(e.target.value)}
+                              className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-slate-900 font-serif font-bold text-sm sm:text-base uppercase focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
+                            />
+                          </div>
+                        ) : (
+                          <h3 className="text-slate-900 font-serif font-bold text-sm sm:text-base md:text-lg uppercase border-b-2 border-slate-300 pb-1 px-4 min-w-[70%] tracking-wide">
+                            {certSchoolName}
+                          </h3>
+                        )}
+
+                        {/* UDISE (Editable) */}
+                        {isEditingCert ? (
+                          <div className="w-full max-w-[220px] px-4">
+                            <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
+                              {certLang === "mr" ? "यू-डायस क्रमांक" : "UDISE Code"}
+                            </label>
+                            <div className="flex items-center justify-center gap-1.5 w-full">
+                              <span className="text-[#bf953f] text-lg">—</span>
+                              <input
+                                type="text"
+                                value={certUdise}
+                                onChange={(e) => setCertUdise(e.target.value)}
+                                className="text-center w-full bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-1.5 text-slate-800 font-serif font-bold text-xs sm:text-sm tracking-wider focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
+                              />
+                              <span className="text-[#bf953f] text-lg">—</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1.5 text-slate-700 font-serif font-bold text-sm sm:text-base">
+                            <span className="text-[#bf953f] text-lg">—</span>
+                            <span className="tracking-widest">{certUdise}</span>
+                            <span className="text-[#bf953f] text-lg">—</span>
+                          </div>
+                        )}
+
+                        {/* Description Paragraph (Editable) */}
+                        {isEditingCert ? (
+                          <div className="w-full px-4">
+                            <label className="text-[10px] text-slate-400 font-bold block mb-1 uppercase tracking-wider text-left">
+                              {certLang === "mr" ? "मुख्य मजकूर" : "Main Description"}
+                            </label>
+                            <textarea
+                              value={certLang === "mr" ? certDescMr : certDescEn}
+                              onChange={(e) => certLang === "mr" ? setCertDescMr(e.target.value) : setCertDescEn(e.target.value)}
+                              rows={3}
+                              className="w-full text-center bg-yellow-50/70 border border-[#bf953f]/50 rounded-xl p-2 text-slate-700 font-serif text-[11px] sm:text-xs md:text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-[#bf953f]"
+                            />
+                          </div>
+                        ) : (
+                          <p className="text-slate-700 font-serif text-[11px] sm:text-xs md:text-sm leading-relaxed max-w-[90%] mx-auto">
+                            {certLang === "mr" ? certDescMr : certDescEn}
+                          </p>
+                        )}
+
+                        {/* Signature Footer */}
+                        <div className="space-y-1 pt-4">
+                          <p className="text-[#1e3b8b] font-sans font-black text-[10px] uppercase tracking-wider">
+                            {certLang === "mr" ? "एस.सी.ई.आर.टी. महाराष्ट्र" : "SCERT Maharashtra"}
+                          </p>
+                          <p className="text-slate-500 text-[8px] sm:text-[9px] font-bold leading-normal">
+                            {certLang === "mr" ? (
+                              <>
+                                राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र, पुणे.<br />
+                                (एस.सी.ई.आर.टी.)<br />
+                                ७०८, सदाशिव पेठ, कुमठेकर मार्ग, पुणे – ४११0३0<br />
+                                महाराष्ट्र, भारत
+                              </>
+                            ) : (
+                              <>
+                                State Council For Educational Research and Training, Maharashtra, Pune.<br />
+                                (SCERT)<br />
+                                708, Sadashiv Peth, Kumthekar Marg, Pune – 411030<br />
+                                Maharashtra, India
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Floating / fixed Save PDF button at bottom right */}
+                  <div className="fixed bottom-6 right-6 z-30">
+                    <button
+                      onClick={handleSavePdf}
+                      className="bg-[#0f1123] text-white font-semibold px-8 py-3 rounded-full hover:bg-slate-800 transition-all uppercase tracking-wider text-xs shadow-2xl active:scale-95 flex items-center gap-2"
+                    >
+                      <FileText className="size-4" />
+                      Save PDF
+                    </button>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="summary"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col min-h-[82vh] w-full"
+                >
+                  {/* Header navigation */}
+                  <div className="px-8 py-6 flex items-center justify-between text-slate-800 border-b border-slate-100 bg-slate-50/30">
+                    <button
+                      onClick={() => setView("dashboard")}
+                      className="group px-6 py-2.5 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-full transition-all duration-300 flex items-center gap-2 font-black text-slate-700 text-xs uppercase tracking-wider shadow-sm"
+                    >
+                      <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
+                      <span>{t.backBtn}</span>
+                    </button>
+
+                    {/* Language Selector Button with Automatic Toggle for Summary view */}
+                    <div>
+                      <button
+                        onClick={toggleLanguage}
+                        className="p-3 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-2xl transition-all shadow-sm flex items-center gap-2 text-slate-700 border border-slate-200"
+                      >
+                        <Languages className="size-5" />
+                        <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
+                          {selectedLang === "mr" ? "English" : "मराठी"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-6 md:p-8 flex flex-col lg:flex-row gap-8 flex-1 w-full">
+                    {/* Left Column: Premium Summary Analytics Card */}
+                    <div className="w-full lg:w-[420px] flex-shrink-0">
+                      <div className="bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-[2.5rem] p-8 space-y-8 shadow-xl relative overflow-hidden border border-orange-400/20 sticky top-24">
+                        <div className="absolute top-0 right-0 size-32 bg-white/10 rounded-full blur-2xl" />
+                        <div className="absolute -bottom-10 -left-10 size-40 bg-black/10 rounded-full blur-2xl" />
+
+                        <div className="space-y-2 text-center border-b border-white/20 pb-6 relative z-10">
+                          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-100">Audit Status</span>
+                          <h2 className="text-2xl font-black tracking-tight">{t.summaryTitle}</h2>
+                        </div>
+
+                        <div className="space-y-4 font-bold text-[15px] relative z-10">
+                          <div className="flex justify-between items-center py-3 border-b border-white/10">
+                            <span className="text-orange-50 font-medium">{t.totalStands}</span>
+                            <span className="bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-xs font-black min-w-[60px] text-center shadow-inner border border-white/30">{totalStandards}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-3 border-b border-white/10">
+                            <span className="text-orange-50 font-medium">{t.completedStands}</span>
+                            <span className="bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-xs font-black min-w-[60px] text-center shadow-inner border border-white/30">{completedCount}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-3 border-b border-white/10">
+                            <span className="text-orange-55 font-medium">{t.uncompletedStands}</span>
+                            <span className="bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-xs font-black min-w-[60px] text-center shadow-inner border border-white/30">{uncompletedCount}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-3">
+                            <span className="text-orange-50 font-medium">{t.marksRatio}</span>
+                            <span className="bg-amber-300 text-slate-900 px-5 py-1.5 rounded-xl text-xs font-black min-w-[90px] text-center shadow-md">{obtainedMarks} / {totalMarks}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Premium Interactive Grid for 128 Standards */}
+                    <div className="flex-1 space-y-6">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-3xl font-black text-slate-900 tracking-tight">{t.standards}</h3>
+                          <span className="bg-teal-500 text-white font-black text-xs px-3.5 py-1 rounded-full shadow-md shadow-teal-500/20">{standards.length}</span>
+                        </div>
+                        <p className="text-slate-400 font-bold text-sm">{t.clickHint}</p>
+                      </div>
+
+                      {/* Desktop Premium Grid Layout */}
+                      <div
+                        ref={gridRef}
+                        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5 max-h-[62vh] overflow-y-auto pr-3 scrollbar-thin"
+                      >
+                        {standards.map((num, i) => {
+                          const isCompleted = completedStandards.has(num);
+                          const isLastSelected = lastSelectedStandard === num;
+                          return (
+                            <motion.div
+                              key={num}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3, delay: Math.min(i * 0.015, 0.3) }}
+                              whileHover={{ scale: 1.03, y: -3 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => {
+                                if (num <= 128) {
+                                  if (gridRef.current) {
+                                    const scrollPos = gridRef.current.scrollTop;
+                                    setSavedScrollPosition(scrollPos);
+                                    localStorage.setItem("sqaf_saved_scroll_position", scrollPos.toString());
+                                  }
+                                  const winScrollPos = window.scrollY;
+                                  setSavedWindowScrollPosition(winScrollPos);
+                                  localStorage.setItem("sqaf_saved_window_scroll_position", winScrollPos.toString());
+
+                                  setLastSelectedStandard(num);
+                                  localStorage.setItem("sqaf_last_selected_standard", num.toString());
+                                  setActiveStandardDetails(num);
+                                }
+                              }}
+                              className={`relative border-2 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 cursor-pointer group overflow-hidden ${isCompleted
+                                ? "bg-gradient-to-br from-green-50 to-green-100/50 border-green-500 hover:shadow-green-100"
+                                : "bg-gradient-to-br from-white to-slate-50 border-slate-200/80 hover:border-slate-400 hover:shadow-slate-100"
+                                } ${isLastSelected
+                                  ? "ring-4 ring-indigo-600/50 border-indigo-500 shadow-xl scale-[1.02] z-10"
+                                  : ""
+                                }`}
+                            >
+                              <div
+                                className={`absolute -right-6 -bottom-6 size-20 rounded-full blur-lg transition-all duration-300 pointer-events-none ${isCompleted
+                                  ? "bg-green-500/10 group-hover:bg-green-500/20"
+                                  : "bg-slate-500/5 group-hover:bg-slate-500/10"
+                                  }`}
+                              />
+
+                              <div className="flex justify-between items-start gap-4">
+                                <div className="space-y-1">
+                                  <span
+                                    className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${isCompleted ? "text-green-700 bg-green-100" : "text-slate-500 bg-slate-100"
+                                      }`}
+                                  >
+                                    {selectedLang === "mr" ? "मानक" : "Standard"}
+                                  </span>
+                                  <h4
+                                    className={`font-extrabold text-sm transition-colors ${isCompleted ? "text-green-950" : "text-slate-800"
+                                      }`}
+                                  >
+                                    {selectedLang === "mr"
+                                      ? `मानक क्र. ${toMarathiNumerals(num)}`
+                                      : `Standard No. ${num}`}
+                                  </h4>
+                                </div>
+                                <div
+                                  className={`size-8 rounded-full flex items-center justify-center shadow-md transition-all ${isCompleted
+                                    ? "bg-green-500 text-white shadow-green-500/20 group-hover:scale-110"
+                                    : "bg-slate-100 text-slate-300 group-hover:bg-slate-200"
+                                    }`}
+                                >
+                                  <CheckCircle2 className="size-4" strokeWidth={2.5} />
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </ModulePaywall>
       </main>
     </div>
