@@ -311,12 +311,12 @@ export async function parseExcelFile(file: File): Promise<ParsedTableResult> {
 
     rawHeaders.forEach((h, idx) => {
       const hl = h.toLowerCase().trim();
-      if (hl.includes("महिना") || hl.includes("month")) monthCol = idx;
-      else if (hl.includes("आठवडा") || hl.includes("week")) weeksCol = idx;
-      else if (hl.includes("कामाचे") || hl.includes("दिवस") || hl.includes("days") || hl.includes("working")) daysCol = idx;
-      else if (hl.includes("तासिका") || hl.includes("तास") || hl.includes("period")) periodsCol = idx;
-      else if (hl.includes("विषय") || hl.includes("घटक") || hl.includes("पाठ") || hl.includes("topic")) topicsCol = idx;
-      else if (hl.includes("निष्पत्ती") || hl.includes("outcome") || hl.includes("साध्य")) outcomesCol = idx;
+      if (hl.includes("महिना") || hl.includes("माह") || hl.includes("महीना") || hl.includes("month")) monthCol = idx;
+      else if (hl.includes("आठवडा") || hl.includes("सप्ताह") || hl.includes("week")) weeksCol = idx;
+      else if (hl.includes("कामाचे") || hl.includes("कार्य दिवस") || hl.includes("दिवस") || hl.includes("days") || hl.includes("working")) daysCol = idx;
+      else if (hl.includes("तासिका") || hl.includes("तास") || hl.includes("कालांश") || hl.includes("period")) periodsCol = idx;
+      else if (hl.includes("विषय") || hl.includes("घटक") || hl.includes("पाठ") || hl.includes("इकाई") || hl.includes("topic")) topicsCol = idx;
+      else if (hl.includes("निष्पत्ती") || hl.includes("निष्पत्ति") || hl.includes("outcome") || hl.includes("साध्य")) outcomesCol = idx;
     });
 
     let runningMonth = "जून";

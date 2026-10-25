@@ -184,9 +184,9 @@ function LandingPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(99,102,241,0.12),transparent_60%)] pointer-events-none z-10" />
 
         {/* Floating Cards Container on Left Side */}
-        <div className="relative z-20 w-full px-3 xs:px-4 sm:px-6 md:px-8 lg:px-10 pt-6 xs:pt-8 sm:pt-28 md:pt-32 pb-4 sm:pb-8 flex flex-col sm:flex-row justify-end sm:justify-start min-h-[460px] xs:min-h-[520px] sm:min-h-[620px] md:min-h-[680px] lg:min-h-[720px]">
+        <div className="relative z-20 w-full px-3 xs:px-4 sm:px-6 md:px-8 lg:px-10 pt-3 xs:pt-4 sm:pt-28 md:pt-32 pb-4 sm:pb-8 flex flex-col sm:flex-row justify-start min-h-[460px] xs:min-h-[520px] sm:min-h-[620px] md:min-h-[680px] lg:min-h-[720px]">
           
-          {/* MOBILE VIEW: Ultra-Compact Slim Vertical Stack at Bottom Left */}
+          {/* MOBILE VIEW: Ultra-Compact Slim Vertical Stack on Upper Left */}
           <motion.div
             initial="hidden"
             animate="show"
@@ -198,7 +198,7 @@ function LandingPage() {
                 transition: { staggerChildren: 0.08, delayChildren: 0.2 },
               },
             }}
-            className="flex flex-col gap-1.5 w-[165px] xs:w-[185px] mt-auto mb-1 sm:hidden"
+            className="flex flex-col gap-4 xs:gap-5 w-[170px] xs:w-[190px] mt-2 xs:mt-3 mb-auto sm:hidden"
           >
             {landingCards.map((card, index) => {
               const Icon = card.icon;

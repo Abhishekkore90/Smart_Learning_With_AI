@@ -15,6 +15,7 @@ import {
   Check,
   Terminal,
   Mic,
+  AlertCircle,
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { generateAIResponseCallable } from "@/lib/firebase";
@@ -563,6 +564,16 @@ function AIChatWorkspace() {
             <div className="flex items-center gap-3">
             </div>
           </header>
+
+          {/* Under Development Tip Banner */}
+          <div className="px-4 sm:px-6 md:px-12 pt-3 shrink-0">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-center gap-3 shadow-sm backdrop-blur-sm">
+              <AlertCircle className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <p className="text-xs sm:text-sm font-bold leading-relaxed">
+                <span className="font-extrabold text-amber-700 dark:text-amber-300">टीप -</span> हा विभाग अजून पूर्ण झालेला नाही हा विभाग तुम्हाला लवकरात लवकर उपलब्ध करून देण्यात येईल
+              </p>
+            </div>
+          </div>
 
           <div className={`flex-1 overflow-y-auto px-6 py-6 md:px-12 lg:px-16 ${
             !activeChat || activeChat.messages.length === 0

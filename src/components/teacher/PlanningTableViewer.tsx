@@ -609,8 +609,28 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
       const devYear = toDevanagariDigits("2026-27");
       const classNameMr = formatMarathiClassName(title || fileName || "1st");
       const isMonthly = (fileName || "").includes("मासिक") || (title || "").includes("मासिक");
-      const planTypeStr = isMonthly ? "संपूर्ण_मासिक_नियोजन" : "संपूर्ण_वार्षिक_नियोजन";
-      const exportFileName = `इयत्ता_${classNameMr}_${planTypeStr}_${devYear}.pdf`;
+
+      const getViewerSubjectName = (): string => {
+        const fLower = String(fileName || title || "").toLowerCase();
+        if (fLower.includes("कला") || fLower.includes("art")) return "कलाशिक्षण";
+        if (fLower.includes("कार्य") || fLower.includes("work")) return "कार्यशिक्षण";
+        if (fLower.includes("शारीरिक") || fLower.includes("pe") || fLower.includes("क्रीडा")) return "शारीरिक शिक्षण";
+        if (fLower.includes("मराठी")) return "मराठी";
+        if (fLower.includes("इंग्रजी") || fLower.includes("english")) return "इंग्रजी";
+        if (fLower.includes("गणित") || fLower.includes("math")) return "गणित";
+        if (fLower.includes("हिंदी") || fLower.includes("hindi")) return "हिंदी";
+        if (fLower.includes("परिसर") || fLower.includes("evs")) return "परिसर अभ्यास";
+        return "";
+      };
+
+      const realSubj = getViewerSubjectName().replace(/\s+/g, "_");
+      const exportFileName = isMonthly
+        ? (realSubj
+          ? `इयत्ता_${classNameMr}_${realSubj}_मासिक_नियोजन_${devYear}.pdf`
+          : `इयत्ता_${classNameMr}_संपूर्ण_मासिक_नियोजन_${devYear}.pdf`)
+        : (realSubj
+          ? `इयत्ता_${classNameMr}_${realSubj}_वार्षिक_नियोजन_${devYear}.pdf`
+          : `इयत्ता_${classNameMr}_संपूर्ण_वार्षिक_नियोजन_${devYear}.pdf`);
 
 
       const opt = {

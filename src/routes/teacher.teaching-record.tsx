@@ -18,7 +18,8 @@ import {
   Eye,
   Upload,
   GraduationCap,
-  User
+  User,
+  AlertCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { showToast as toast } from "@/lib/custom-toast";
@@ -789,6 +790,16 @@ function TeachingRecordPage() {
       </div>
 
       <main className="w-full pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
+        {/* Under Development Tip Banner */}
+        <div className="p-3 sm:p-5 md:p-6 pb-0 w-full max-w-[98%] xl:max-w-[96%] mx-auto print:hidden">
+          <div className="w-full p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-center gap-3 shadow-sm">
+            <AlertCircle className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className="text-xs sm:text-sm font-bold leading-relaxed">
+              <span className="font-extrabold text-amber-700 dark:text-amber-300">टीप -</span> हा विभाग अजून पूर्ण झालेला नाही हा विभाग तुम्हाला लवकरात लवकर उपलब्ध करून देण्यात येईल
+            </p>
+          </div>
+        </div>
+
         <ModulePaywall moduleId="teaching-record" defaultTitle="दैनिक अध्यापन टाचणवही (Teaching Diary)">
           <div className="p-3 sm:p-5 md:p-6 w-full max-w-[98%] xl:max-w-[96%] mx-auto space-y-6 print:p-0 print:max-w-full">
             <div className="flex items-center justify-between gap-4 print:hidden">

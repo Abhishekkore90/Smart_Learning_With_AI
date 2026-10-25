@@ -951,6 +951,28 @@ const isImageUrl = (url?: string) => {
   );
 };
 
+const normalizeTableHeader = (header: string, hIdx: number) => {
+  const defaultHeaders = [
+    "तासिका",
+    "विषय",
+    "अध्यापन मुद्दा / पाठ्यघटक",
+    "अध्ययन निष्पत्ती",
+    "अध्ययन अनुभव",
+    "साधन तंत्रे",
+    "शैक्षणिक साहित्य",
+  ];
+  if (!header) return defaultHeaders[hIdx] || "";
+  const h = header.trim();
+  if (/तास|तासिका|period|time/i.test(h)) return "तासिका";
+  if (/विषय|subject/i.test(h)) return "विषय";
+  if (/मुद्दा|पाठ्यांश|पाठ्यघटक|घटक|topic/i.test(h)) return "अध्यापन मुद्दा / पाठ्यघटक";
+  if (/निष्पत्ती|निष्पती|दर्शक|outcome/i.test(h)) return "अध्ययन निष्पत्ती";
+  if (/अनुभव|स्वरूप|कृती|experience/i.test(h)) return "अध्ययन अनुभव";
+  if (/साधन|तंत्र|tools/i.test(h)) return "साधन तंत्रे";
+  if (/साहित्य|materials/i.test(h)) return "शैक्षणिक साहित्य";
+  return defaultHeaders[hIdx] || h;
+};
+
 export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { pages: StructuredDayPage[], schoolProfile?: any, defaultBaseDate?: string }>(({ pages, schoolProfile, defaultBaseDate }, ref) => {
   const [dayRecords, setDayRecords] = useState<any[]>([]);
   const profile = useMemo(() => schoolProfile || getStoredSchoolProfile(), [schoolProfile]);
@@ -1055,7 +1077,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
       </div>
 
       {dayRecords.map((p, idx) => (
-        <div key={idx} className="bg-white p-2 sm:p-6 md:p-8 rounded-3xl border border-slate-200 shadow-md space-y-4 sm:space-y-6 day-card">
+        <div key={idx} className="bg-white p-1 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-md space-y-4 sm:space-y-6 day-card">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200 text-xs">
             <span className="font-extrabold text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-100 uppercase tracking-wider">
               {p.date ? `दिनांक: ${formatCleanDate(p.date)}` : `Day ${idx + 1}`}
@@ -1116,28 +1138,27 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
           )}
 
           {p.periods.length > 0 ? (
-            <div className="w-full overflow-hidden rounded-2xl border-2 border-slate-400 shadow-md max-w-full">
-              <table className="w-full min-w-0 sm:min-w-[920px] text-center text-xs sm:text-sm border-collapse border-2 border-slate-400 table-fixed">
+            <div className="w-full overflow-hidden rounded-xl border-2 border-slate-900 shadow-sm mt-2 sm:mt-4 max-w-full">
+              <table className="w-full min-w-0 sm:min-w-[920px] text-xs sm:text-sm border-collapse border-2 border-slate-900 table-fixed">
                 <colgroup>
                   <col className="w-[8%] sm:w-[55px]" />
-                  <col className="w-[13%] sm:w-[95px]" />
-                  <col className="w-[21%] sm:w-[150px]" />
-                  <col className="w-[23%] sm:w-[230px]" />
-                  <col className="w-[21%] sm:w-[200px]" />
-                  <col className="w-[7%] sm:w-[95px]" />
-                  <col className="w-[7%] sm:w-[95px]" />
+                  <col className="w-[13.5%] sm:w-[95px]" />
+                  <col className="w-[20.5%] sm:w-[150px]" />
+                  <col className="w-[23.5%] sm:w-[230px]" />
+                  <col className="w-[21.5%] sm:w-[200px]" />
+                  <col className="w-[6.5%] sm:w-[95px]" />
+                  <col className="w-[6.5%] sm:w-[95px]" />
                 </colgroup>
-                <thead className="bg-slate-100 text-slate-900 font-extrabold text-[9px] sm:text-xs md:text-sm border-b-2 border-slate-400">
+                <thead className="bg-slate-200 text-slate-950 font-black text-[9px] sm:text-xs md:text-sm border-b-2 border-slate-900">
                   <tr>
                     {(p.columnHeaders && p.columnHeaders.length > 0
-                      ? p.columnHeaders
-                      : ["तासिका", "विषय", "अध्ययन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती / अध्ययन दर्शक", "अध्ययनाचे स्वरूप (अनुभव / कृती)", "साधन तंत्रे", "शैक्षणिक साहित्य"]
+                      ? p.columnHeaders.map(normalizeTableHeader)
+                      : ["तासिका", "विषय", "अध्यापन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती", "अध्ययन अनुभव", "साधन तंत्रे", "शैक्षणिक साहित्य"]
                     ).map((header: string, hIdx: number) => {
                       return (
                         <th
                           key={hIdx}
-                          style={{ color: "#000000" }}
-                          className={`py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 bg-slate-200 text-black font-black break-words leading-tight sm:leading-snug text-center ${hIdx === 0 ? "bg-slate-300" : ""} border-r-2 border-slate-400`}
+                          className={`py-1.5 sm:py-2.5 px-0.5 ${hIdx === 3 || hIdx === 4 ? "sm:px-2" : "sm:px-1.5"} text-center bg-slate-200 text-slate-950 font-black ${hIdx < 6 ? "border-r border-slate-400" : ""} break-words leading-tight ${hIdx >= 2 ? "sm:leading-snug" : ""}`}
                         >
                           {header}
                         </th>
@@ -1145,19 +1166,63 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                     })}
                   </tr>
                 </thead>
-                <tbody className="divide-y-2 divide-slate-300 font-medium text-slate-800 bg-white text-[9px] sm:text-xs md:text-sm">
+                <tbody className="divide-y-2 divide-slate-400 font-medium text-slate-900 bg-white text-[9px] sm:text-xs md:text-sm">
                   {p.periods.map((row: any, rIdx: number) => (
                     <tr 
                       key={rIdx} 
-                      className="hover:bg-indigo-50/40 transition-colors group border-b-2 border-slate-300"
+                      className="hover:bg-indigo-50/40 transition-colors border-b-2 border-slate-400"
                     >
-                      <td className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-center font-black text-indigo-700 bg-indigo-50/50 align-middle break-words text-[9.5px] sm:text-xs md:text-sm">{row.period}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-bold text-slate-900 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight text-[9.5px] sm:text-xs md:text-sm">{row.subject}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-semibold text-slate-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words text-[9px] sm:text-xs md:text-sm">{row.topic}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 font-medium text-emerald-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words text-[9px] sm:text-xs md:text-sm">{row.outcome}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-slate-800 leading-tight outline-indigo-500 focus:bg-white text-center align-middle break-words text-[9px] sm:text-xs md:text-sm">{row.experience}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 border-r-2 border-slate-300 text-slate-700 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight text-[8.5px] sm:text-xs">{row.tools}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} className="p-1 sm:p-2.5 text-slate-700 outline-indigo-500 focus:bg-white text-center align-middle break-words leading-tight text-[8.5px] sm:text-xs">{row.materials}</td>
+                      <td className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-center font-black text-indigo-700 align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9.5px] sm:text-xs md:text-sm break-words">
+                        {row.period}
+                      </td>
+                      <td 
+                        suppressContentEditableWarning 
+                        contentEditable 
+                        onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")} 
+                        className="p-1 sm:p-2.5 border-r-2 border-slate-400 font-black text-slate-900 text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9.5px] sm:text-xs md:text-sm break-words leading-tight whitespace-nowrap sm:whitespace-normal"
+                      >
+                        {row.subject}
+                      </td>
+                      <td 
+                        suppressContentEditableWarning 
+                        contentEditable 
+                        onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} 
+                        className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-slate-900 font-extrabold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words leading-tight sm:leading-normal"
+                      >
+                        {row.topic}
+                      </td>
+                      <td 
+                        suppressContentEditableWarning 
+                        contentEditable 
+                        onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} 
+                        className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-emerald-600 font-extrabold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
+                      >
+                        {row.outcome || "-"}
+                      </td>
+                      <td 
+                        suppressContentEditableWarning 
+                        contentEditable 
+                        onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} 
+                        className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-slate-800 font-bold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
+                      >
+                        {row.experience || "-"}
+                      </td>
+                      <td 
+                        suppressContentEditableWarning 
+                        contentEditable 
+                        onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} 
+                        className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-slate-800 text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
+                      >
+                        {row.tools || "-"}
+                      </td>
+                      <td 
+                        suppressContentEditableWarning 
+                        contentEditable 
+                        onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} 
+                        className="p-1 sm:p-2.5 text-slate-800 text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
+                      >
+                        {row.materials || "-"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2375,7 +2440,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         </div>
       </div>
 
-      <div className="flex-1 w-full bg-slate-50 overflow-auto relative p-2 sm:p-4">
+      <div className="flex-1 w-full bg-slate-50 overflow-auto relative p-1 sm:p-4">
         {loadingContent || loadingPdf ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
             <Loader2 className="size-8 animate-spin text-indigo-600" />

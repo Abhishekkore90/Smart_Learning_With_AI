@@ -178,6 +178,11 @@ export function ModulePaywall({
           let pData: ModulePricing;
           if (snap.exists()) {
             pData = snap.data() as ModulePricing;
+            if (pData.features && Array.isArray(pData.features)) {
+              pData.features = pData.features.filter(
+                (f) => !f.toLowerCase().includes("cce") && !f.includes("CCE") && !f.includes("अन्लिमिटेड CCE")
+              );
+            }
           } else {
             pData = {
               id: moduleId,
@@ -185,9 +190,9 @@ export function ModulePaywall({
               price: 149,
               enabled: true,
               features: [
-                "अन्लिमिटेड CCE डेटा जनरेशन",
-                "A4 HD PDF रिपोर्ट डाऊनलोड",
+                "PDF & एक्सेल रिपोर्ट डाऊनलोड",
                 "सुरक्षित क्लाऊड बॅकअप",
+                "24/7 व्हॉट्सॲप आणि फोन सपोर्ट सुविधा",
               ],
               validityDays: 365,
               upiId: "smartlearning@upi",
@@ -705,7 +710,9 @@ export function ModulePaywall({
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(pricing?.features && pricing.features.length > 0
-                ? pricing.features
+                ? pricing.features.filter(
+                    (f) => !f.toLowerCase().includes("cce") && !f.includes("CCE") && !f.includes("अन्लिमिटेड CCE")
+                  )
                 : [
                     "अन्लिमिटेड डेटा एंट्री आणि ऑटोमॅटिक कॅल्क्युलेशन",
                     "A4 साईझ उच्च दर्जाची PDF डायरेक्ट डाऊनलोड",

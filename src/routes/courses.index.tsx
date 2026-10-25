@@ -35,6 +35,7 @@ import {
   Music,
   Languages,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase";
@@ -119,6 +120,16 @@ function InteractiveCourseSelection() {
         <StudentHeader />
 
         <main className="pt-16 min-h-screen relative overflow-hidden flex flex-col justify-center">
+          {/* Under Development Tip Banner */}
+          <div className="max-w-5xl mx-auto px-6 pt-6 w-full relative z-20">
+            <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-200 flex items-center gap-3 shadow-lg backdrop-blur-md">
+              <AlertCircle className="size-5 shrink-0 text-amber-400" />
+              <p className="text-xs sm:text-sm font-bold leading-relaxed text-amber-100">
+                <span className="font-extrabold text-amber-300">टीप -</span> हा विभाग अजून पूर्ण झालेला नाही हा विभाग तुम्हाला लवकरात लवकर उपलब्ध करून देण्यात येईल
+              </p>
+            </div>
+          </div>
+
           <div className="max-w-7xl mx-auto px-6 py-12 md:py-20 relative z-10 min-h-[80vh] flex flex-col justify-center w-full">
             <AnimatePresence mode="wait">
               {!userAction ? (

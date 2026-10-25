@@ -149,7 +149,7 @@ const MODULE_CARDS = [
     fallbackLabel: "१०. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी",
     to: "/teacher/modules/annual-monthly-planning",
     icon: Target,
-    description: "या विभागात आपणास इयत्ता पहिली ते आठवी पर्यंतचे मराठी तसेच सेमी माध्यमचे वार्षिक नियोजन मासिक नियोजन आणि प्रश्नपेढी उपलब्ध होईल. त्यात आपण शाळेचे नाव शिक्षकाचे नाव मुख्याध्यापकांचे नाव आवश्यक बाबी भरून प्रिंट काढून वापरता येईल जर आपणास त्यात बदल करायचा असेल तर एडिट करण्याची सोय सुद्धा उपलब्ध आहे.",
+    description: "या विभागात आपणास इयत्ता पहिली ते आठवी पर्यंतचे मराठी तसेच सेमी माध्यमचे वार्षिक नियोजन मासिक नियोजन आणि प्रश्नपेढी उपलब्ध होईल. त्यात आपण शाळेचे नाव शिक्षकाचे नाव मुख्याध्यापकांचे नाव आवश्यक बाबी भरून प्रिंट काढून वापरता येईल जर आपणास त्यात बदल करायचा असेल तर एडिट करण्याची सोय सुद्धा उपलब्ध आहे. सर्व विषयांचे आदर्श वार्षिक नियोजन. सर्व विषयांचे संपूर्ण मासिक नियोजन. अध्ययन निष्पत्तीसह सर्व विषयांची प्रश्नपेढी . A4 HD PDF व ऑनलाइन व्ह्यू.",
   },
   {
     moduleId: "teaching-record",
@@ -483,7 +483,7 @@ function TeacherDashboard() {
                       <div className="relative z-10 pt-2 sm:pt-2.5 border-t border-white/20 flex-1 flex flex-col justify-start">
                         <p
                           className={`text-[11.5px] sm:text-xs text-violet-100/95 font-medium leading-relaxed transition-all duration-300 ${
-                            isExpanded
+                            isExpanded || item.moduleId === "annual-monthly-planning"
                               ? "line-clamp-none text-white font-medium"
                               : "line-clamp-3 sm:line-clamp-3 group-hover:line-clamp-none"
                           }`}

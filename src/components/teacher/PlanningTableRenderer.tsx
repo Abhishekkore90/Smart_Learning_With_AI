@@ -23,6 +23,8 @@ import {
   isMetadataRow,
   isMonthBannerRow,
   getAcademicMonthRank,
+  isVacationText,
+  extractCleanMonthNameFromLine,
 } from "@/lib/smartSubjectSplitter";
 import { getBunnyStorageUrl, fetchBinaryFile } from "@/lib/bunny-auth-pdf";
 import {
@@ -674,12 +676,32 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     if (isMonthlyPlan) {
       let sectionsMap: Record<string, any> = (parsedWorkbook && parsedWorkbook.monthlySections) || {};
 
-      // If parsedWorkbook.monthlySections has only 1 month (or none), try splitting rawGrid or record rows
+      // If parsedWorkbook.monthlySections has only 1 month (or none), try splitting from subject rows, rawGrid, or record
       if (Object.keys(sectionsMap).length <= 1) {
         const currentRec = savedUserEditRecord || record;
-        let rowsToUse: string[][] = (parsedWorkbook?.rawGrid && parsedWorkbook.rawGrid.length > 0)
-          ? parsedWorkbook.rawGrid
-          : extractRowsFromRecord(currentRec);
+        let rowsToUse: string[][] = [];
+
+        // Priority 1: Match requested subject rows from parsedWorkbook.subjects
+        if (parsedWorkbook && Object.keys(parsedWorkbook.subjects).length > 0) {
+          const matchedSubjKey = Object.keys(parsedWorkbook.subjects).find((k) =>
+            areSubjectsEquivalent(k, resolvedSubjectName) ||
+            k.toLowerCase() === resolvedSubjectName.toLowerCase()
+          ) || Object.keys(parsedWorkbook.subjects)[0];
+
+          if (matchedSubjKey && parsedWorkbook.subjects[matchedSubjKey]?.rows?.length > 0) {
+            rowsToUse = parsedWorkbook.subjects[matchedSubjKey].rows;
+          }
+        }
+
+        // Priority 2: rawGrid
+        if (rowsToUse.length === 0 && parsedWorkbook?.rawGrid && parsedWorkbook.rawGrid.length > 0) {
+          rowsToUse = parsedWorkbook.rawGrid;
+        }
+
+        // Priority 3: extractRowsFromRecord
+        if (rowsToUse.length === 0) {
+          rowsToUse = extractRowsFromRecord(currentRec);
+        }
 
         if (rowsToUse.length > 0) {
           const fallbackSplit = splitRowsIntoMonthlySections(rowsToUse);
@@ -812,28 +834,82 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
     if (isMonthly) {
       const isEnglish = /[a-zA-Z]/.test(sec.subjectName || rawTitle);
-      const cleanMonth = (sec.subjectName || rawTitle).trim();
+      let cleanMonth = extractCleanMonthNameFromLine(sec.subjectName || "");
+      if (!cleanMonth && rawTitle) {
+        const strippedTitle = rawTitle
+          .replace(/monthly\s*(?:&|and)?\s*unit\s*planning/gi, "")
+          .replace(/month\s*[:-–]?/gi, "")
+          .trim();
+        cleanMonth = extractCleanMonthNameFromLine(strippedTitle) || (sec.subjectName || rawTitle).trim();
+      }
+      if (!cleanMonth) cleanMonth = (sec.subjectName || rawTitle).trim() || "June 2026";
 
       if (isEnglish) {
+        const getEnglishSubjectName = (subj: string): string => {
+          const s = (subj || "").trim().toLowerCase();
+          if (s.includes("गणित") || s.includes("math")) return "Mathematics";
+          if (s.includes("इंग्रजी") || s.includes("english")) return "English";
+          if (s.includes("विज्ञान") || s.includes("science")) return "Science";
+          if (s.includes("परिसर") || s.includes("evs")) return "EVS";
+          if (s.includes("हिंदी") || s.includes("hindi")) return "Hindi";
+          if (s.includes("मराठी") || s.includes("marathi")) return "Marathi";
+          if (s.includes("कलाशिक्षण") || s.includes("art")) return "Art";
+          if (s.includes("कार्यशिक्षण") || s.includes("work")) return "Work Experience";
+          if (s.includes("शारीरिक") || s.includes("pe") || s.includes("क्रीडा")) return "Physical Education";
+          return subj;
+        };
+
+        const enSubject = getEnglishSubjectName(realSubject);
+        const enMedium = displayMedium.toLowerCase().includes("semi") || displayMedium.includes("सेमी")
+          ? "Semi-English"
+          : (displayMedium.toLowerCase().includes("eng") || displayMedium.includes("इंग्रजी") ? "English" : displayMedium);
+
         return {
           isEnglish: true,
           segments: [
             "Monthly & Unit Planning",
             `Class : ${cleanEnCls}`,
             `Month : ${cleanMonth}`,
-            `Subject : ${realSubject}`,
-            `Medium : ${displayMedium}`,
+            `Subject : ${enSubject}`,
+            `Medium : ${enMedium}`,
           ],
-          fullText: `Monthly & Unit Planning  —  Class : ${cleanEnCls}  |  Month : ${cleanMonth}  |  Subject : ${realSubject}  |  Medium : ${displayMedium}`,
+          fullText: `Monthly & Unit Planning  —  Class : ${cleanEnCls}  |  Month : ${cleanMonth}  |  Subject : ${enSubject}  |  Medium : ${enMedium}`,
         };
       }
 
-      const monthRegex = /(जुन|जून|जुलै|ऑगस्ट|सप्टेंबर|सप्टें|ऑक्टोबर|ऑक्टो|नोव्हेंबर|नोव्हें|डिसेंबर|डिसे|जानेवारी|जाने|फेब्रुवारी|फेब्रु|मार्च\s*(?:\+|&|आणि|[-–/]|ते)?\s*एप्रिल|मार्च|एप्रिल|मे)(?:\s*[\d\u0966-\u096F]{4})?/i;
-      const match = rawTitle.match(monthRegex) || (sec.subjectName || "").match(monthRegex);
-      let monthName = match ? match[0].trim() : "जून २०२६";
+      // Priority 1: Extract clean month from sec.subjectName (which holds the exact month from file)
+      let detectedMonth: string | null = null;
+      if (sec.subjectName) {
+        detectedMonth = extractCleanMonthNameFromLine(sec.subjectName);
+        if (!detectedMonth && isMarathiMonth(sec.subjectName)) {
+          const canon = canonicalizeMarathiMonth(sec.subjectName);
+          const isNextYear = ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे"].includes(canon);
+          detectedMonth = `${canon} ${isNextYear ? "२०२७" : "२०२६"}`;
+        }
+      }
+
+      // Priority 2: Extract from rawTitle after stripping boilerplate to avoid matching 'जन' in 'नियोजन'
+      if (!detectedMonth && rawTitle) {
+        const strippedTitle = rawTitle
+          .replace(/अभ्यासक्रमाचे\s*मासिक\s*(?:व\s*घटक)?\s*नियोजन/gi, "")
+          .replace(/माहे\s*[:-–]?/gi, "")
+          .trim();
+        detectedMonth = extractCleanMonthNameFromLine(strippedTitle);
+      }
+
+      // Priority 3: Fallback regex on sec.subjectName or stripped title (without loose 'जन' token)
+      let monthName = detectedMonth;
+      if (!monthName) {
+        const safeMonthRegex = /(जुन|जून|जुलै|जुलाई|ऑगस्ट|ऑगष्ट|आगस्ट|अगस्त|अगस्ट|सप्टेंबर|सप्टें|सप्टे|सितंबर|सितम्बर|ऑक्टोबर|ऑक्टोंबर|ऑक्टो|अक्टूबर|अक्टोबर|नोव्हेंबर|नोव्हें|नोव्हे|नवंबर|नवम्बर|डिसेंबर|डिसें|डिसं|दिसंबर|दिसम्बर|जानेवारी|जाने|जनवरी|फेब्रुवारी|फेब्रु|फरवरी|मार्च\s*(?:\+|&|आणि|[-–/]|ते)?\s*एप्रिल|मार्च|एप्रिल|एप्रि|अप्रैल|मे|June|July|August|September|October|November|December|January|February|March|April|May)(?:\s*[\d\u0966-\u096F]{4})?/i;
+        const candidateText = (sec.subjectName || "").trim() || rawTitle.replace(/नियोजन/gi, "");
+        const match = candidateText.match(safeMonthRegex);
+        monthName = match ? match[0].trim() : (sec.subjectName ? sec.subjectName.trim() : "जून २०२६");
+      }
+
       if (monthName.startsWith("जुन")) monthName = monthName.replace("जुन", "जून");
       if (!monthName.includes("२०२६") && !monthName.includes("2026") && !monthName.includes("२०२७") && !monthName.includes("2027")) {
-        monthName += " २०२६";
+        const is2027 = /^(?:जानेवारी|जाने|जनवरी|फेब्रुवारी|फेब्रु|फरवरी|मार्च|एप्रिल|एप्रि|अप्रैल|मे|January|February|March|April|May)/i.test(monthName);
+        monthName += is2027 ? " २०२७" : " २०२६";
       }
 
       return {
@@ -1143,20 +1219,38 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
     // --- ANNUAL PLANNING (वार्षिक नियोजन) MATRIX BUILDER ---
     if (!isMonthlyPlan) {
-      // Step 1: Pre-sanitize rows so EVERY row strictly knows its month
+      // Step 1: Auto-detect whether month is placed in Col 0 or Col 1
+      let col0MonthCount = 0;
+      let col1MonthCount = 0;
+      for (let r = 0; r < Math.min(numRows, 25); r++) {
+        if (isMarathiMonth(String(rows[r]?.[0] || ""))) col0MonthCount++;
+        if (isMarathiMonth(String(rows[r]?.[1] || ""))) col1MonthCount++;
+      }
+      const monthColIdx = (col0MonthCount === 0 && col1MonthCount > 0) ? 1 : 0;
+
+      // Pre-sanitize rows so EVERY row strictly knows its month
       let activeMonth = "";
       const effectiveMonthPerRow: string[] = [];
 
       for (let r = 0; r < numRows; r++) {
-        let cell0 = String(rows[r]?.[0] || "").trim();
-        if (cell0 === "-" || cell0 === "null" || cell0 === "undefined") cell0 = "";
+        let cellM = String(rows[r]?.[monthColIdx] || "").trim();
+        if (cellM === "-" || cellM === "null" || cellM === "undefined") cellM = "";
 
-        // If cell0 is exam text (e.g. द्वितीय घटक चाचणी), move it to Col 4 (Topic) so it's not swallowed by month merging
-        if (isExamOrAssessmentText(cell0)) {
-          if (!rows[r][4] || rows[r][4] === "-" || rows[r][4] === "null" || rows[r][4] === "undefined") {
-            rows[r][4] = cell0;
+        // Fallback check on other column if not matched
+        if (!cellM || !isMarathiMonth(cellM)) {
+          if (isMarathiMonth(String(rows[r]?.[0] || ""))) {
+            cellM = String(rows[r]?.[0] || "").trim();
+          } else if (isMarathiMonth(String(rows[r]?.[1] || ""))) {
+            cellM = String(rows[r]?.[1] || "").trim();
           }
-          cell0 = "";
+        }
+
+        // If cell is exam text (e.g. द्वितीय घटक चाचणी), move it to Col 4 (Topic) so it's not swallowed by month merging
+        if (isExamOrAssessmentText(cellM)) {
+          if (!rows[r][4] || rows[r][4] === "-" || rows[r][4] === "null" || rows[r][4] === "undefined") {
+            rows[r][4] = cellM;
+          }
+          cellM = "";
         }
 
         // Check if ANY other cell in this row has exam text and Col 4 is missing it
@@ -1165,8 +1259,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           rows[r][4] = String(examCellInRow).trim();
         }
 
-        if (cell0 && isMarathiMonth(cell0)) {
-          activeMonth = canonicalizeMarathiMonth(cell0);
+        if (cellM && isMarathiMonth(cellM)) {
+          activeMonth = canonicalizeMarathiMonth(cellM);
         }
         effectiveMonthPerRow.push(activeMonth || "-");
       }
@@ -1338,7 +1432,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
     // --- MONTHLY PLANNING (मासिक नियोजन) MATRIX BUILDER ---
     // In monthly planning, EVERY cell and EVERY word must be preserved exactly as entered.
-    // No cells must ever be overwritten or erased with empty strings or hyphens.
+    // Pre-calculate Day continuity so no teaching rows are stuck with '-'
+    let monthlyActiveDay = 0;
+    const isJuneMonth = rows.some((row) => row.some((c) => /जून|जुन|june|jun/i.test(String(c))));
+    const hasDevanagariDigits = rows.some((row) => /[०-९]/.test(String(row[0] || "")));
+    const devanagariDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+    const toDevDigits = (num: number) => String(num).replace(/\d/g, (d) => devanagariDigits[parseInt(d, 10)]);
+
     let r = 0;
     while (r < numRows) {
       const currentRow = rows[r] || [];
@@ -1353,7 +1453,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       if (isBannerRow) {
         let examTitle = "";
         let primaryCol = 1;
-        for (let c = 0; c < numCols; c++) {
+        // Search columns 1 to numCols - 1 first, so Col 0 doesn't steal the title
+        for (let c = 1; c < numCols; c++) {
           const val = currentRow[c];
           if (isExamOrAssessmentText(val)) {
             examTitle = String(val).trim();
@@ -1361,19 +1462,29 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             break;
           }
         }
-        if (!examTitle) examTitle = "चाचणी / मूल्यमापन";
+        if (!examTitle) {
+          if (isExamOrAssessmentText(currentRow[0])) {
+            examTitle = String(currentRow[0]).trim();
+            primaryCol = 1;
+          } else {
+            examTitle = "चाचणी / मूल्यमापन";
+          }
+        }
 
-        // Preserve Col 0 (Day/Date)
-        const dVal = String(currentRow[0] || "").trim();
+        // Preserve Col 0 (Day/Date) - NEVER put long exam/vacation text in 45px Col 0!
+        let dVal = String(currentRow[0] || "").trim();
+        if (isExamOrAssessmentText(dVal)) {
+          dVal = "-";
+        }
         matrix[r][0] = { rowSpan: 1, skip: false, displayValue: dVal || "-" };
 
         for (let cIdx = 1; cIdx < numCols; cIdx++) {
           const rawVal = String(currentRow[cIdx] || "").trim();
           if (cIdx === primaryCol) {
             matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: examTitle, isExam: true };
-          } else if (rawVal && rawVal !== "-" && rawVal !== "null" && rawVal !== "undefined") {
+          } else if (rawVal && rawVal !== "-" && rawVal !== "null" && rawVal !== "undefined" && !isExamOrAssessmentText(rawVal)) {
             // NEVER erase existing content in any other cell of this row!
-            matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: rawVal, isExam: isExamOrAssessmentText(rawVal) };
+            matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: rawVal, isExam: false };
           } else {
             matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: "-", isExam: true };
           }
@@ -1382,7 +1493,29 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         r++;
       } else {
         // Col 0: दिवस (Day) / दिनांक cell - strictly 1 cell per row (no artificial merging)
-        const dVal = String(currentRow[0] || "").trim();
+        let dVal = String(currentRow[0] || "").trim();
+        if (isExamOrAssessmentText(dVal)) {
+          dVal = "-";
+        }
+
+        const engNumMatch = dVal.match(/^(\d{1,2})$/);
+        const devNumMatch = dVal.match(/^([०-९]{1,2})$/);
+        if (engNumMatch) {
+          monthlyActiveDay = parseInt(engNumMatch[1], 10);
+        } else if (devNumMatch) {
+          monthlyActiveDay = parseInt(devNumMatch[1].replace(/[०-९]/g, (d) => String(devanagariDigits.indexOf(d))), 10);
+        } else if ((dVal === "" || dVal === "-" || dVal === "null" || dVal === "undefined") && !isVacationText(currentRow.join(" "))) {
+          const hasLesson = Boolean(currentRow[1] && currentRow[1] !== "-" && !isVacationText(currentRow[1]));
+          if (hasLesson) {
+            if (monthlyActiveDay === 0) {
+              monthlyActiveDay = isJuneMonth ? 15 : 1;
+            } else {
+              monthlyActiveDay++;
+            }
+            dVal = hasDevanagariDigits ? toDevDigits(monthlyActiveDay) : String(monthlyActiveDay);
+          }
+        }
+
         matrix[r][0] = { rowSpan: 1, skip: false, displayValue: dVal || "-" };
 
         // Columns 1 to numCols - 1: preserve every cell
@@ -1395,14 +1528,88 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: "-" };
             } else {
               let span = 1;
-              while (
-                r + span < numRows &&
-                isEmptyValue(rows[r + span]?.[cIdx]) &&
-                // Do not span across different lessons if Col 1 has a new topic
-                (cIdx === 1 || isEmptyValue(rows[r + span]?.[1])) &&
-                rows[r + span].filter((c) => !isEmptyValue(c)).length > 0
-              ) {
-                span++;
+              const getEffectiveLesson = (rowIndex: number): string => {
+                for (let idx = rowIndex; idx >= 0; idx--) {
+                  const l = normalizeForCompare(rows[idx]?.[1]);
+                  if (!isEmptyValue(l)) return l;
+                }
+                return "";
+              };
+              const getEffectiveAim = (rowIndex: number): string => {
+                for (let idx = rowIndex; idx >= 0; idx--) {
+                  const a = normalizeForCompare(rows[idx]?.[3]);
+                  if (!isEmptyValue(a)) return a;
+                }
+                return "";
+              };
+
+              while (r + span < numRows) {
+                const nextRow = rows[r + span] || [];
+                // NEVER span into an exam, assessment, or vacation row!
+                if (isExamOrAssessmentRow(nextRow) || isExamOrAssessmentText(nextRow.join(" ")) || isVacationText(nextRow.join(" "))) {
+                  break;
+                }
+
+                const nextVal = String(nextRow[cIdx] || "").trim();
+                const isNextEmpty = isEmptyValue(nextVal);
+                const isNextIdentical = normalizeForCompare(nextVal) === normalizeForCompare(val);
+
+                // Col 1 (Lesson / Point): merge consecutive identical lessons or continuation rows
+                if (cIdx === 1) {
+                  if (isNextEmpty || isNextIdentical) {
+                    span++;
+                  } else {
+                    break;
+                  }
+                }
+                // Col 2 (Learning Outcomes): merge if under the same lesson AND outcome is identical or continuation
+                else if (cIdx === 2) {
+                  const currLesson = getEffectiveLesson(r);
+                  const nextLesson = normalizeForCompare(nextRow[1]);
+                  const sameLesson = isEmptyValue(nextLesson) || nextLesson === currLesson;
+
+                  if (sameLesson && (isNextEmpty || isNextIdentical)) {
+                    span++;
+                  } else {
+                    break;
+                  }
+                }
+                // Col 3 (Teaching Point / Aim): merge under same lesson if next is empty or identical
+                else if (cIdx === 3) {
+                  const currLesson = getEffectiveLesson(r);
+                  const nextLesson = normalizeForCompare(nextRow[1]);
+                  const sameLesson = isEmptyValue(nextLesson) || nextLesson === currLesson;
+
+                  if (sameLesson && (isNextEmpty || isNextIdentical)) {
+                    span++;
+                  } else {
+                    break;
+                  }
+                }
+                // Col 5 (Tool & Technique) & Col 6 (Educational Instrument): merge under same Aim if next is empty or identical
+                else if (cIdx === 5 || cIdx === 6) {
+                  const currAim = getEffectiveAim(r);
+                  const nextAim = normalizeForCompare(nextRow[3]);
+                  const sameAim = isEmptyValue(nextAim) || nextAim === currAim;
+
+                  if (sameAim && (isNextEmpty || isNextIdentical) && val !== "-") {
+                    span++;
+                  } else {
+                    break;
+                  }
+                }
+                // Col 4 (Structure of Teaching Experience) & other columns: merge only if under same lesson and values are identical and non-empty
+                else {
+                  const currLesson = getEffectiveLesson(r);
+                  const nextLesson = normalizeForCompare(nextRow[1]);
+                  const sameLesson = isEmptyValue(nextLesson) || nextLesson === currLesson;
+
+                  if (sameLesson && isNextIdentical && !isNextEmpty && val !== "-") {
+                    span++;
+                  } else {
+                    break;
+                  }
+                }
               }
 
               matrix[r][cIdx] = {
@@ -2653,10 +2860,35 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
     try {
       setIsGeneratingPdf(true);
-      const isSingleSubject = selectedSubjectFilter !== "all";
+
+      const getRealSubjectName = (): string => {
+        const fromProp = (selectedSubject || "").trim();
+        if (fromProp && fromProp !== "all" && fromProp !== "सर्व विषय" && !fromProp.includes("All Subjects") && !isMarathiMonth(fromProp)) {
+          return fromProp;
+        }
+        const fromRecord = (record?.subjectId || (record as any)?.subject || "").trim();
+        if (fromRecord && fromRecord !== "all" && fromRecord !== "सर्व विषय" && !fromRecord.includes("All Subjects") && !isMarathiMonth(fromRecord)) {
+          return fromRecord;
+        }
+        if (selectedSubjectFilter && selectedSubjectFilter !== "all" && selectedSubjectFilter !== "सर्व विषय" && !selectedSubjectFilter.includes("All Subjects") && !isMarathiMonth(selectedSubjectFilter)) {
+          return selectedSubjectFilter.trim();
+        }
+        const fLower = String(record?.fileName || (record as any)?.title || "").toLowerCase();
+        if (fLower.includes("कला") || fLower.includes("art")) return "कलाशिक्षण";
+        if (fLower.includes("कार्य") || fLower.includes("work")) return "कार्यशिक्षण";
+        if (fLower.includes("शारीरिक") || fLower.includes("pe") || fLower.includes("क्रीडा")) return "शारीरिक शिक्षण";
+        if (fLower.includes("मराठी")) return "मराठी";
+        if (fLower.includes("इंग्रजी") || fLower.includes("english")) return "इंग्रजी";
+        if (fLower.includes("गणित") || fLower.includes("math")) return "गणित";
+        if (fLower.includes("हिंदी") || fLower.includes("hindi")) return "हिंदी";
+        if (fLower.includes("परिसर") || fLower.includes("evs")) return "परिसर अभ्यास";
+        return "";
+      };
+
+      const activeSubjectName = getRealSubjectName();
       toast.info(
-        isSingleSubject
-          ? `⚡ विषय : ${selectedSubjectFilter} चे PDF तयार होत आहे...`
+        activeSubjectName
+          ? `⚡ विषय : ${activeSubjectName} चे PDF तयार होत आहे...`
           : "⚡ सर्व विषयांचे एकत्र (Combined) PDF तयार होत आहे..."
       );
 
@@ -2725,62 +2957,74 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         if (isMonthly) {
           const clonedCols = secClone.querySelectorAll("colgroup col");
           if (clonedCols.length >= 7) {
-            (clonedCols[0] as HTMLElement).style.width = "45px";
-            (clonedCols[1] as HTMLElement).style.width = "90px";
-            (clonedCols[2] as HTMLElement).style.width = "155px";
+            (clonedCols[0] as HTMLElement).style.width = "40px";
+            (clonedCols[1] as HTMLElement).style.width = "110px";
+            (clonedCols[2] as HTMLElement).style.width = "170px";
             (clonedCols[3] as HTMLElement).style.width = "120px";
-            (clonedCols[4] as HTMLElement).style.width = "270px";
+            (clonedCols[4] as HTMLElement).style.width = "245px";
             (clonedCols[5] as HTMLElement).style.width = "105px";
-            (clonedCols[6] as HTMLElement).style.width = "125px";
+            (clonedCols[6] as HTMLElement).style.width = "110px";
           }
           secClone.querySelectorAll("thead th").forEach((th: any, idx: number) => {
             if (idx === 0) {
-              th.style.width = "45px";
-              th.style.minWidth = "42px";
-              th.style.maxWidth = "48px";
+              th.style.width = "40px";
+              th.style.minWidth = "38px";
+              th.style.maxWidth = "44px";
               th.style.padding = "4px 2px";
               th.style.textAlign = "center";
-              th.style.wordBreak = "break-word";
+              th.style.wordBreak = "normal";
+            } else if (idx === 1) {
+              th.style.width = "110px";
+              th.style.wordBreak = "normal";
+            } else if (idx === 2) {
+              th.style.width = "170px";
+              th.style.wordBreak = "normal";
+            } else if (idx === 3) {
+              th.style.width = "120px";
+              th.style.wordBreak = "normal";
             } else if (idx === 4) {
-              th.style.width = "270px";
+              th.style.width = "245px";
+              th.style.wordBreak = "normal";
             } else if (idx === 5) {
               th.style.width = "105px";
               th.style.textAlign = "center";
-              th.style.whiteSpace = "nowrap";
+              th.style.whiteSpace = "normal";
+              th.style.wordBreak = "normal";
             } else if (idx === 6) {
-              th.style.width = "125px";
+              th.style.width = "110px";
               th.style.textAlign = "center";
-              th.style.whiteSpace = "nowrap";
+              th.style.whiteSpace = "normal";
+              th.style.wordBreak = "normal";
             }
           });
-          secClone.querySelectorAll("tbody tr").forEach((tr: any) => {
-            const tds = tr.querySelectorAll("td");
-            if (tds[0]) {
-              tds[0].style.width = "45px";
-              tds[0].style.minWidth = "42px";
-              tds[0].style.maxWidth = "48px";
-              tds[0].style.padding = "4px 2px";
-              tds[0].style.textAlign = "center";
-              tds[0].style.wordBreak = "break-word";
-              tds[0].style.whiteSpace = "normal";
-              tds[0].style.fontSize = "10.5px";
-              tds[0].style.lineHeight = "1.25";
+          secClone.querySelectorAll("tbody td").forEach((tdEl: any) => {
+            const cIdxAttr = tdEl.getAttribute("data-cidx");
+            const cIdx = cIdxAttr !== null ? parseInt(cIdxAttr, 10) : -1;
+            tdEl.style.wordBreak = "normal";
+            tdEl.style.overflowWrap = "break-word";
+            tdEl.style.fontSize = "10.5px";
+            tdEl.style.lineHeight = "1.3";
+            tdEl.style.width = "";
+            tdEl.style.minWidth = "";
+            tdEl.style.maxWidth = "";
+
+            if (cIdx === 0) {
+              tdEl.style.textAlign = "center";
+              tdEl.style.fontWeight = "bold";
+              tdEl.style.padding = "3px 2px";
+              tdEl.style.fontSize = "11px";
+            } else if (cIdx === 1 || cIdx === 2 || cIdx === 3 || cIdx === 5 || cIdx === 6) {
+              tdEl.style.textAlign = "center";
+              tdEl.style.padding = "3px 3px";
+            } else {
+              tdEl.style.textAlign = "left";
+              tdEl.style.padding = "3px 5px";
             }
-            if (tds[4]) {
-              tds[4].style.width = "270px";
-            }
-            if (tds[5]) {
-              tds[5].style.width = "105px";
-              tds[5].style.whiteSpace = "nowrap";
-              tds[5].style.textAlign = "center";
-              tds[5].style.fontSize = "10.5px";
-            }
-            if (tds[6]) {
-              tds[6].style.width = "125px";
-              tds[6].style.whiteSpace = "nowrap";
-              tds[6].style.textAlign = "center";
-              tds[6].style.fontSize = "10.5px";
-            }
+
+            tdEl.querySelectorAll("*").forEach((el: any) => {
+              el.style.wordBreak = "normal";
+              el.style.overflowWrap = "break-word";
+            });
           });
         }
 
@@ -3039,21 +3283,21 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
       const classNameMr = formatMarathiClassName(record?.classId || record?.fileName || "1st");
       const devYear = "२०२६-२७";
+      const realSubj = getRealSubjectName().replace(/\s+/g, "_");
 
       const filename = isMonthly
-        ? (isSingleSubject
-          ? `इयत्ता_${classNameMr}_मासिक_नियोजन_${selectedSubjectFilter}_${devYear}.pdf`
+        ? (realSubj
+          ? `इयत्ता_${classNameMr}_${realSubj}_मासिक_नियोजन_${devYear}.pdf`
           : `इयत्ता_${classNameMr}_संपूर्ण_मासिक_नियोजन_${devYear}.pdf`)
-        : (isSingleSubject
-          ? `इयत्ता_${classNameMr}_वार्षिक_नियोजन_${selectedSubjectFilter}_${devYear}.pdf`
+        : (realSubj
+          ? `इयत्ता_${classNameMr}_${realSubj}_वार्षिक_नियोजन_${devYear}.pdf`
           : `इयत्ता_${classNameMr}_संपूर्ण_वार्षिक_नियोजन_${devYear}.pdf`);
-
 
       pdf.save(filename);
 
       toast.success(
-        isSingleSubject
-          ? `🎉 विषय : ${selectedSubjectFilter} चे PDF यशस्वीरित्या डाऊनलोड झाले!`
+        realSubj
+          ? `🎉 विषय : ${realSubj} चे PDF यशस्वीरित्या डाऊनलोड झाले!`
           : "🎉 सर्व विषयांचे एकत्र (Combined) PDF यशस्वीरित्या डाऊनलोड झाले!"
       );
     } catch (err) {
@@ -4208,7 +4452,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           const thirdCell = String(row[2] || "").trim().toLowerCase();
                           const isHeaderLikeRow =
                             (firstCell.includes("दिनांक") || firstCell.includes("दिवस") || firstCell === "date" || firstCell === "day") &&
-                            (secondCell.includes("पाठ") || secondCell.includes("घटक") || secondCell.includes("topic") || secondCell.includes("unit") ||
+                            (secondCell.includes("पाठ") || secondCell.includes("घटक") || secondCell.includes("topic") || secondCell.includes("unit") || secondCell.includes("lesson") ||
                               thirdCell.includes("अध्ययन") || thirdCell.includes("निष्पत्ती") || thirdCell.includes("learning") || thirdCell.includes("outcome") ||
                               rowText.includes("साहित्य") || rowText.includes("साधन"));
                           if (isHeaderLikeRow) return false;
@@ -4730,17 +4974,17 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 cellClasses += " align-middle";
                                                 const engFont = mobileTableViewMode === 'fit' ? 'p-0.5 min-[360px]:p-1 text-[8.5px] min-[360px]:text-[9px] sm:p-1.5 sm:text-xs leading-tight sm:leading-snug' : 'p-1.5 sm:p-2 text-xs sm:text-[13px] leading-snug';
                                                 if (cIdx === 0) {
-                                                  cellClasses += ` text-center font-bold text-slate-900 ${engFont} whitespace-pre-line break-words [overflow-wrap:anywhere]`;
+                                                  cellClasses += ` text-center font-bold text-slate-900 ${engFont} whitespace-pre-line break-words`;
                                                 } else if (cIdx === 1) {
-                                                  cellClasses += ` text-center font-bold text-slate-950 ${engFont} whitespace-pre-line break-words [overflow-wrap:anywhere]`;
+                                                  cellClasses += ` text-center font-bold text-slate-950 ${engFont} whitespace-pre-line break-words`;
                                                 } else if (cIdx === 2) {
-                                                  cellClasses += ` text-center font-bold text-slate-900 ${engFont} whitespace-pre-line break-words [overflow-wrap:anywhere]`;
+                                                  cellClasses += ` text-center font-bold text-slate-900 ${engFont} whitespace-pre-line break-words`;
                                                 } else if (cIdx === 3) {
-                                                  cellClasses += ` text-center font-medium text-slate-900 ${engFont} whitespace-pre-line break-words [overflow-wrap:anywhere]`;
+                                                  cellClasses += ` text-center font-medium text-slate-900 ${engFont} whitespace-pre-line break-words`;
                                                 } else if (cIdx === 5 || cIdx === 6) {
-                                                  cellClasses += ` text-center font-medium text-slate-900 ${engFont} whitespace-normal break-words [overflow-wrap:anywhere]`;
+                                                  cellClasses += ` text-center font-medium text-slate-900 ${engFont} whitespace-normal break-words`;
                                                 } else {
-                                                  cellClasses += ` text-left text-slate-900 ${engFont} whitespace-pre-line break-words [overflow-wrap:anywhere]`;
+                                                  cellClasses += ` text-left text-slate-900 ${engFont} whitespace-pre-line break-words`;
                                                 }
                                               } else {
                                                 cellClasses += " align-middle";
@@ -4753,7 +4997,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 } else if (cIdx === 3) {
                                                   cellClasses += " text-center font-medium text-slate-900 text-xs sm:text-[13px] whitespace-pre-line break-words";
                                                 } else if (cIdx === 5 || cIdx === 6) {
-                                                  cellClasses += ` text-center font-medium text-slate-900 ${mobileTableViewMode === 'fit' ? 'text-[8.5px] min-[360px]:text-[9.5px] sm:text-xs' : 'text-xs sm:text-[13px]'} whitespace-nowrap leading-snug`;
+                                                  cellClasses += ` text-center font-medium text-slate-900 ${mobileTableViewMode === 'fit' ? 'text-[8.5px] min-[360px]:text-[9.5px] sm:text-xs' : 'text-xs sm:text-[13px]'} whitespace-normal break-words leading-snug`;
                                                 } else {
                                                   cellClasses += " text-left text-slate-900 text-xs sm:text-[13.5px] whitespace-pre-line break-words leading-relaxed sm:leading-6";
                                                 }
@@ -4772,6 +5016,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                             return (
                                               <td
                                                 key={cIdx}
+                                                data-cidx={cIdx}
                                                 rowSpan={!isInlineEditing && cellInfo?.rowSpan ? cellInfo.rowSpan : 1}
                                                 className={cellClasses}
                                                 style={{
@@ -4786,19 +5031,19 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                   ...(isMonthly
                                                     ? (isSecEng
                                                       ? (cIdx === 0
-                                                        ? { width: "5.5%", minWidth: "22px", maxWidth: "34px", padding: "3px 1px", wordBreak: "break-word" as const, overflowWrap: "anywhere" as const }
+                                                        ? { width: "5.5%", minWidth: "22px", maxWidth: "34px", padding: "3px 1px", wordBreak: "normal" as const, overflowWrap: "break-word" as const }
                                                         : cIdx === 4
-                                                          ? { width: "26%", padding: "3px 1.5px", wordBreak: "break-word" as const, overflowWrap: "anywhere" as const }
+                                                          ? { width: "26%", padding: "3px 1.5px", wordBreak: "normal" as const, overflowWrap: "break-word" as const }
                                                           : cIdx === 1
-                                                            ? { width: "16%", padding: "3px 1px", wordBreak: "break-word" as const, overflowWrap: "anywhere" as const }
+                                                            ? { width: "16%", padding: "3px 1px", wordBreak: "normal" as const, overflowWrap: "break-word" as const }
                                                             : cIdx === 2
-                                                              ? { width: "17%", padding: "3px 1px", wordBreak: "break-word" as const, overflowWrap: "anywhere" as const }
+                                                              ? { width: "17%", padding: "3px 1px", wordBreak: "normal" as const, overflowWrap: "break-word" as const }
                                                               : cIdx === 3
-                                                                ? { width: "13.5%", padding: "3px 1px", wordBreak: "break-word" as const, overflowWrap: "anywhere" as const }
+                                                                ? { width: "13.5%", padding: "3px 1px", wordBreak: "normal" as const, overflowWrap: "break-word" as const }
                                                                 : cIdx === 5
-                                                                  ? { width: "11%", minWidth: "35px", padding: "3px 1px", whiteSpace: "normal", wordBreak: "break-word" as const, overflowWrap: "anywhere" as const }
+                                                                  ? { width: "11%", minWidth: "35px", padding: "3px 1px", whiteSpace: "normal", wordBreak: "normal" as const, overflowWrap: "break-word" as const }
                                                                   : cIdx === 6
-                                                                    ? { width: "11%", minWidth: "35px", padding: "3px 1px", whiteSpace: "normal", wordBreak: "break-word" as const, overflowWrap: "anywhere" as const }
+                                                                    ? { width: "11%", minWidth: "35px", padding: "3px 1px", whiteSpace: "normal", wordBreak: "normal" as const, overflowWrap: "break-word" as const }
                                                                     : {})
                                                       : (cIdx === 0
                                                         ? { width: "3.5%", minWidth: "26px", maxWidth: "38px", padding: "4px 2px" }
@@ -4811,9 +5056,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                               : cIdx === 3
                                                                 ? { width: "13.5%" }
                                                                 : cIdx === 5
-                                                                  ? { width: "12.5%", minWidth: "55px", whiteSpace: "nowrap", textAlign: "center" }
+                                                                  ? { width: "12.5%", minWidth: "55px", whiteSpace: "normal", wordBreak: "normal" as const, overflowWrap: "break-word" as const, textAlign: "center" }
                                                                   : cIdx === 6
-                                                                    ? { width: "15.5%", minWidth: "75px", whiteSpace: "nowrap", textAlign: "center" }
+                                                                    ? { width: "15.5%", minWidth: "75px", whiteSpace: "normal", wordBreak: "normal" as const, overflowWrap: "break-word" as const, textAlign: "center" }
                                                                     : {}))
                                                     : (cIdx === 0
                                                       ? { width: "8.5%", minWidth: "48px", maxWidth: "65px", padding: "2px 2px" }
@@ -4854,9 +5099,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                       {cellText}
                                                     </span>
                                                   </div>
-                                                ) : isMonthly && (cIdx === 1 || cIdx === 2) ? (
+                                                ) : isMonthly && (cIdx === 1 || cIdx === 2 || cIdx === 5 || cIdx === 6) ? (
                                                   <div className={`flex flex-col justify-center items-center text-center w-full min-h-full ${isSecEng ? 'py-0.5 px-0.5 sm:py-1 sm:px-1' : 'py-1 px-1'}`}>
-                                                    <span className={`whitespace-pre-line break-words ${isSecEng ? '[overflow-wrap:anywhere]' : ''}`}>{cellText}</span>
+                                                    <span className={`whitespace-normal break-words leading-tight sm:leading-snug ${isSecEng ? '[overflow-wrap:anywhere]' : ''}`}>{cellText}</span>
                                                   </div>
                                                 ) : (
                                                   cellText

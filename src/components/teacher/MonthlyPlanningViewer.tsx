@@ -606,7 +606,27 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
       const devYear = toDevanagariDigits("2026-27");
       const classNameMr = formatMarathiClassName(title || fileName || "1st");
 
-      let exportFileName = `इयत्ता_${classNameMr}_संपूर्ण_मासिक_नियोजन_${devYear}.pdf`;
+      const getViewerSubjectName = (): string => {
+        const candidate = (subjectName || "").trim();
+        if (candidate && candidate !== "all" && candidate !== "सर्व विषय" && !candidate.includes("All Subjects") && !/^(जून|जुलै|ऑगस्ट|सप्टेंबर|ऑक्टोबर|नोव्हेंबर|डिसेंबर|जानेवारी|फेब्रुवारी|मार्च|एप्रिल|मे)$/i.test(candidate)) {
+          return candidate;
+        }
+        const fLower = String(fileName || title || "").toLowerCase();
+        if (fLower.includes("कला") || fLower.includes("art")) return "कलाशिक्षण";
+        if (fLower.includes("कार्य") || fLower.includes("work")) return "कार्यशिक्षण";
+        if (fLower.includes("शारीरिक") || fLower.includes("pe") || fLower.includes("क्रीडा")) return "शारीरिक शिक्षण";
+        if (fLower.includes("मराठी")) return "मराठी";
+        if (fLower.includes("इंग्रजी") || fLower.includes("english")) return "इंग्रजी";
+        if (fLower.includes("गणित") || fLower.includes("math")) return "गणित";
+        if (fLower.includes("हिंदी") || fLower.includes("hindi")) return "हिंदी";
+        if (fLower.includes("परिसर") || fLower.includes("evs")) return "परिसर अभ्यास";
+        return "";
+      };
+
+      const realSubj = getViewerSubjectName().replace(/\s+/g, "_");
+      let exportFileName = realSubj
+        ? `इयत्ता_${classNameMr}_${realSubj}_मासिक_नियोजन_${devYear}.pdf`
+        : `इयत्ता_${classNameMr}_संपूर्ण_मासिक_नियोजन_${devYear}.pdf`;
 
 
       pdf.save(exportFileName);

@@ -11,7 +11,8 @@ import {
   Loader2,
   ChevronRight,
   GraduationCap,
-  ArrowLeft
+  ArrowLeft,
+  AlertCircle
 } from "lucide-react";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { StudentHeader } from "@/components/student/StudentHeader";
@@ -312,6 +313,14 @@ function StudentTeachingRecordPage() {
             <span className="text-xs font-bold text-slate-500 hidden sm:inline">
               विद्यार्थी टाचणवही अहवाल (Student Teaching Record)
             </span>
+          </div>
+
+          {/* Under Development Tip Banner */}
+          <div className="w-full p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-center gap-3 shadow-sm">
+            <AlertCircle className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className="text-xs sm:text-sm font-bold leading-relaxed">
+              <span className="font-extrabold text-amber-700 dark:text-amber-300">टीप -</span> हा विभाग अजून पूर्ण झालेला नाही हा विभाग तुम्हाला लवकरात लवकर उपलब्ध करून देण्यात येईल
+            </p>
           </div>
 
           {/* Header */}

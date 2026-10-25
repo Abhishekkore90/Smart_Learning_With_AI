@@ -136,7 +136,13 @@ function AdminModulePaymentsPage() {
     const unsubPricing = onSnapshot(collection(db, "cce_module_pricing"), (snap) => {
       const map: Record<string, ModulePricing> = {};
       snap.docs.forEach((d) => {
-        map[d.id] = d.data() as ModulePricing;
+        const dData = d.data() as ModulePricing;
+        if (dData.features && Array.isArray(dData.features)) {
+          dData.features = dData.features.filter(
+            (f) => !f.toLowerCase().includes("cce") && !f.includes("CCE") && !f.includes("अन्लिमिटेड CCE")
+          );
+        }
+        map[d.id] = dData;
       });
 
       // Fill defaults if missing or update title
@@ -148,9 +154,9 @@ function AdminModulePaymentsPage() {
             price: mod.defaultPrice,
             enabled: mod.defaultPrice > 0,
             features: [
-              "अन्लिमिटेड CCE डेटा जनरेशन",
               "PDF & एक्सेल रिपोर्ट डाऊनलोड",
               "सुरक्षित क्लाऊड बॅकअप",
+              "24/7 व्हॉट्सॲप आणि फोन सपोर्ट सुविधा",
             ],
             validityDays: 365,
           };
@@ -228,10 +234,21 @@ function AdminModulePaymentsPage() {
   };
 
   const handleSavePricing = async (modId: string) => {
-    const item = pricings[modId];
-    if (!item) return;
+    const rawItem = pricings[modId];
+    if (!rawItem) return;
     setSaving(true);
     try {
+      const cleanFeatures = (rawItem.features || []).filter(
+        (f) => !f.toLowerCase().includes("cce") && !f.includes("CCE") && !f.includes("अन्लिमिटेड CCE")
+      );
+      const item = {
+        ...rawItem,
+        features: cleanFeatures.length > 0 ? cleanFeatures : [
+          "PDF & एक्सेल रिपोर्ट डाऊनलोड",
+          "सुरक्षित क्लाऊड बॅकअप",
+          "24/7 व्हॉट्सॲप आणि फोन सपोर्ट सुविधा",
+        ],
+      };
       await setDoc(doc(db, "cce_module_pricing", modId), item, { merge: true });
       if (modId === "special-day") {
         await setDoc(doc(db, "cce_module_pricing", "paripath"), { ...item, id: "paripath" }, { merge: true });
@@ -251,7 +268,18 @@ function AdminModulePaymentsPage() {
   const handleSaveAllPricing = async () => {
     setSaving(true);
     try {
-      for (const [modId, item] of Object.entries(pricings)) {
+      for (const [modId, rawItem] of Object.entries(pricings)) {
+        const cleanFeatures = (rawItem.features || []).filter(
+          (f) => !f.toLowerCase().includes("cce") && !f.includes("CCE") && !f.includes("अन्लिमिटेड CCE")
+        );
+        const item = {
+          ...rawItem,
+          features: cleanFeatures.length > 0 ? cleanFeatures : [
+            "PDF & एक्सेल रिपोर्ट डाऊनलोड",
+            "सुरक्षित क्लाऊड बॅकअप",
+            "24/7 व्हॉट्सॲप आणि फोन सपोर्ट सुविधा",
+          ],
+        };
         await setDoc(doc(db, "cce_module_pricing", modId), item, { merge: true });
         if (modId === "special-day") {
           await setDoc(doc(db, "cce_module_pricing", "paripath"), { ...item, id: "paripath" }, { merge: true });

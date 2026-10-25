@@ -501,13 +501,13 @@ const extractExcelData = async (
       const ct = String(cell ?? "").trim().toLowerCase();
       if (!ct) return;
       if ((ct.includes("अ.क्र") || ct.includes("क्र") || ct === "sr" || ct === "no") && colMap.srNo === -1) colMap.srNo = cIdx;
-      else if ((ct.includes("महिना") || ct.includes("month") || ct.includes("कालावधी") || ct.includes("मास")) && colMap.month === -1) colMap.month = cIdx;
+      else if ((ct.includes("महिना") || ct.includes("माह") || ct.includes("महीना") || ct.includes("month") || ct.includes("कालावधी") || ct.includes("मास")) && colMap.month === -1) colMap.month = cIdx;
       else if ((ct.includes("विषय") || ct.includes("subject")) && !ct.includes("घटक") && colMap.subject === -1) colMap.subject = cIdx;
-      else if ((ct.includes("आठवडा") || ct.includes("आठवडे") || ct.includes("week")) && colMap.weeks === -1) colMap.weeks = cIdx;
-      else if ((ct.includes("कामाचे") || ct.includes("दिवस") || ct.includes("working") || ct.includes("days")) && colMap.workingDays === -1) colMap.workingDays = cIdx;
-      else if ((ct.includes("तासिका") || ct.includes("तास") || ct.includes("period") || ct.includes("hour")) && colMap.periods === -1) colMap.periods = cIdx;
-      else if ((ct.includes("घटक") || ct.includes("पाठ") || ct.includes("topic") || ct.includes("unit") || ct.includes("विवरण") || ct.includes("content")) && colMap.topics === -1) colMap.topics = cIdx;
-      else if ((ct.includes("निष्पत्ती") || ct.includes("outcome") || ct.includes("साध्य") || ct.includes("skill")) && colMap.outcomes === -1) colMap.outcomes = cIdx;
+      else if ((ct.includes("आठवडा") || ct.includes("आठवडे") || ct.includes("सप्ताह") || ct.includes("week")) && colMap.weeks === -1) colMap.weeks = cIdx;
+      else if ((ct.includes("कामाचे") || ct.includes("कार्य दिवस") || ct.includes("दिवस") || ct.includes("working") || ct.includes("days")) && colMap.workingDays === -1) colMap.workingDays = cIdx;
+      else if ((ct.includes("तासिका") || ct.includes("तास") || ct.includes("कालांश") || ct.includes("period") || ct.includes("hour")) && colMap.periods === -1) colMap.periods = cIdx;
+      else if ((ct.includes("घटक") || ct.includes("पाठ") || ct.includes("इकाई") || ct.includes("topic") || ct.includes("unit") || ct.includes("विवरण") || ct.includes("content")) && colMap.topics === -1) colMap.topics = cIdx;
+      else if ((ct.includes("निष्पत्ती") || ct.includes("निष्पत्ति") || ct.includes("outcome") || ct.includes("साध्य") || ct.includes("skill")) && colMap.outcomes === -1) colMap.outcomes = cIdx;
     });
 
     // ── Step 8: Build schema-mapped PlanningTableRow[] with 1:1 positional fallbacks & month propagation ──
@@ -1459,14 +1459,44 @@ export function AcademicPlanningSystem({
       };
 
       const devYear = toDevanagariDigits("2026-27");
-      const planTypeStr =
-        selectedPlanningType === "question_bank"
-          ? "प्रश्नपेढी"
-          : selectedPlanningType === "monthly"
-            ? "संपूर्ण_मासिक_नियोजन"
-            : "संपूर्ण_वार्षिक_नियोजन";
       const classNameMr = formatMarathiClassName(selectedClass);
-      const fileNameStr = `इयत्ता_${classNameMr}_${planTypeStr}_${devYear}.pdf`;
+
+      const getEditSubjectName = (): string => {
+        const fromRecord = (editingFileRecord?.subjectId || (editingFileRecord as any)?.subject || "").trim();
+        if (fromRecord && fromRecord !== "all" && fromRecord !== "सर्व विषय" && !fromRecord.includes("All Subjects") && !isMarathiMonth(fromRecord)) {
+          return fromRecord;
+        }
+        const fromState = (selectedSubject || "").trim();
+        if (fromState && fromState !== "all" && fromState !== "सर्व विषय" && !fromState.includes("All Subjects") && !isMarathiMonth(fromState)) {
+          return fromState;
+        }
+        const fLower = String(editingFileRecord?.fileName || editingFileRecord?.title || "").toLowerCase();
+        if (fLower.includes("कला") || fLower.includes("art")) return "कलाशिक्षण";
+        if (fLower.includes("कार्य") || fLower.includes("work")) return "कार्यशिक्षण";
+        if (fLower.includes("शारीरिक") || fLower.includes("pe") || fLower.includes("क्रीडा")) return "शारीरिक शिक्षण";
+        if (fLower.includes("मराठी")) return "मराठी";
+        if (fLower.includes("इंग्रजी") || fLower.includes("english")) return "इंग्रजी";
+        if (fLower.includes("गणित") || fLower.includes("math")) return "गणित";
+        if (fLower.includes("हिंदी") || fLower.includes("hindi")) return "हिंदी";
+        if (fLower.includes("परिसर") || fLower.includes("evs")) return "परिसर अभ्यास";
+        return "";
+      };
+
+      const realSubj = getEditSubjectName().replace(/\s+/g, "_");
+      let fileNameStr = "";
+      if (selectedPlanningType === "question_bank") {
+        fileNameStr = realSubj
+          ? `इयत्ता_${classNameMr}_${realSubj}_प्रश्नपेढी_${devYear}.pdf`
+          : `इयत्ता_${classNameMr}_प्रश्नपेढी_${devYear}.pdf`;
+      } else if (selectedPlanningType === "monthly") {
+        fileNameStr = realSubj
+          ? `इयत्ता_${classNameMr}_${realSubj}_मासिक_नियोजन_${devYear}.pdf`
+          : `इयत्ता_${classNameMr}_संपूर्ण_मासिक_नियोजन_${devYear}.pdf`;
+      } else {
+        fileNameStr = realSubj
+          ? `इयत्ता_${classNameMr}_${realSubj}_वार्षिक_नियोजन_${devYear}.pdf`
+          : `इयत्ता_${classNameMr}_संपूर्ण_वार्षिक_नियोजन_${devYear}.pdf`;
+      }
 
 
       const opt = {
@@ -2649,9 +2679,37 @@ export function AcademicPlanningSystem({
 
     const devYear = toDevanagariDigits("2026-27");
     const isMonthly = rec.planningType === "monthly" || (rec.fileName || "").includes("मासिक") || (rec.id || "").includes("monthly");
-    const planTypeStr = isMonthly ? "संपूर्ण_मासिक_नियोजन" : "संपूर्ण_वार्षिक_नियोजन";
     const classNameMr = formatMarathiClassName(selectedClass || rec.classId);
-    const pdfName = `इयत्ता_${classNameMr}_${planTypeStr}_${devYear}.pdf`;
+
+    const getRecSubjectName = (): string => {
+      const fromRecord = (rec.subjectId || (rec as any).subject || "").trim();
+      if (fromRecord && fromRecord !== "all" && fromRecord !== "सर्व विषय" && !fromRecord.includes("All Subjects") && !isMarathiMonth(fromRecord)) {
+        return fromRecord;
+      }
+      const fromState = (selectedSubject || "").trim();
+      if (fromState && fromState !== "all" && fromState !== "सर्व विषय" && !fromState.includes("All Subjects") && !isMarathiMonth(fromState)) {
+        return fromState;
+      }
+      const fLower = String(rec.fileName || rec.title || "").toLowerCase();
+      if (fLower.includes("कला") || fLower.includes("art")) return "कलाशिक्षण";
+      if (fLower.includes("कार्य") || fLower.includes("work")) return "कार्यशिक्षण";
+      if (fLower.includes("शारीरिक") || fLower.includes("pe") || fLower.includes("क्रीडा")) return "शारीरिक शिक्षण";
+      if (fLower.includes("मराठी")) return "मराठी";
+      if (fLower.includes("इंग्रजी") || fLower.includes("english")) return "इंग्रजी";
+      if (fLower.includes("गणित") || fLower.includes("math")) return "गणित";
+      if (fLower.includes("हिंदी") || fLower.includes("hindi")) return "हिंदी";
+      if (fLower.includes("परिसर") || fLower.includes("evs")) return "परिसर अभ्यास";
+      return "";
+    };
+
+    const realSubj = getRecSubjectName().replace(/\s+/g, "_");
+    const pdfName = isMonthly
+      ? (realSubj
+        ? `इयत्ता_${classNameMr}_${realSubj}_मासिक_नियोजन_${devYear}.pdf`
+        : `इयत्ता_${classNameMr}_संपूर्ण_मासिक_नियोजन_${devYear}.pdf`)
+      : (realSubj
+        ? `इयत्ता_${classNameMr}_${realSubj}_वार्षिक_नियोजन_${devYear}.pdf`
+        : `इयत्ता_${classNameMr}_संपूर्ण_वार्षिक_नियोजन_${devYear}.pdf`);
 
 
 
@@ -2987,19 +3045,19 @@ export function AcademicPlanningSystem({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left max-w-lg mx-auto bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10 text-xs font-semibold text-slate-200">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-                    <span>१ ते १२ महिन्यांचे संपूर्ण मासिक नियोजन</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
                     <span>सर्व विषयांचे आदर्श वार्षिक नियोजन</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-                    <span>अद्ययावत प्रश्नपेढी व चाचणी संच</span>
+                    <span>सर्व विषयांचे संपूर्ण मासिक नियोजन</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
-                    <span>A4 HD PDF व ऑनलाईन व्ह्यू</span>
+                    <span>अध्ययन निष्पत्तीसह सर्व विषयांची प्रश्नपेढी</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>A4 HD PDF व ऑनलाइन व्ह्यू</span>
                   </div>
                 </div>
 
@@ -4625,7 +4683,7 @@ export function AcademicPlanningSystem({
             </div>
 
             <h2 className="text-base sm:text-lg font-black tracking-tight text-slate-950 uppercase border-t border-slate-300 pt-2">
-              इयत्ता : {selectedClass === "1st" ? "1ली" : selectedClass === "2nd" ? "2री" : selectedClass === "3rd" ? "3री" : selectedClass === "4th" ? "4थी" : selectedClass === "5th" ? "5वी" : selectedClass === "6th" ? "6वी" : selectedClass === "7th" ? "7वी" : selectedClass === "8th" ? "8वी" : selectedClass} {selectedPlanningType === "annual" ? "संपूर्ण वार्षिक नियोजन (सर्व विषय एकत्र)" : "वार्षिक नियोजन"} सन :- 2026-27
+              इयत्ता : {selectedClass === "1st" ? "1ली" : selectedClass === "2nd" ? "2री" : selectedClass === "3rd" ? "3री" : selectedClass === "4th" ? "4थी" : selectedClass === "5th" ? "5वी" : selectedClass === "6th" ? "6वी" : selectedClass === "7th" ? "7वी" : selectedClass === "8th" ? "8वी" : selectedClass} {selectedPlanningType === "annual" ? "संपूर्ण वार्षिक नियोजन (सर्व विषय एकत्र)" : selectedPlanningType === "monthly" ? "मासिक नियोजन" : "वार्षिक नियोजन"} सन :- 2026-27
             </h2>
             <div className="flex justify-between items-center text-xs font-bold text-slate-800 pt-1.5 border-t border-slate-300">
               <span>विषय : {selectedPlanningType === "annual" ? "सर्व विषय (All Subjects)" : (selectedSubject || "मराठी")}</span>

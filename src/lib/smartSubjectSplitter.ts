@@ -92,6 +92,34 @@ export function isExamOrAssessmentText(text: string): boolean {
   );
 }
 
+export function isVacationText(text: string): boolean {
+  if (!text) return false;
+  const s = String(text).trim().toLowerCase();
+  return (
+    s.includes("summer vacation") ||
+    s.includes("summer holiday") ||
+    s.includes("summer break") ||
+    s.includes("उन्हाळी सुट्टी") ||
+    s.includes("उन्हाळी सुट्ट्या") ||
+    s.includes("उन्हाळी") ||
+    s.includes("diwali vacation") ||
+    s.includes("diwali holiday") ||
+    s.includes("diwali break") ||
+    s.includes("दिवाळी सुट्टी") ||
+    s.includes("दिवाळी सुट्ट्या") ||
+    s.includes("दिवाळी") ||
+    s.includes("winter vacation") ||
+    s.includes("winter holiday") ||
+    s.includes("winter break") ||
+    s.includes("नाताळ सुट्टी") ||
+    s.includes("हिवाळी सुट्टी") ||
+    s.includes("vacation") ||
+    s.includes("सुट्ट्या") ||
+    s.includes("सुट्टी") ||
+    s.includes("सुट्या")
+  );
+}
+
 const MARATHI_MONTHS = [
   "जून",
   "जुन",
@@ -101,25 +129,44 @@ const MARATHI_MONTHS = [
   "ऑगष्ट",
   "ऑग",
   "आगस्ट",
+  "अगस्त",
+  "अगस्ट",
   "सप्टेंबर",
   "सप्टें",
   "सप्टे",
+  "सितंबर",
+  "सितम्बर",
+  "सित",
   "ऑक्टोबर",
   "ऑक्टोंबर",
   "ऑक्टो",
+  "अक्टूबर",
+  "अक्टोबर",
+  "अक्टू",
   "नोव्हेंबर",
   "नोव्हें",
   "नोव्हे",
+  "नवंबर",
+  "नवम्बर",
+  "नव",
   "डिसेंबर",
   "डिसें",
   "डिसं",
+  "दिसंबर",
+  "दिसम्बर",
+  "दिस",
   "जानेवारी",
   "जाने",
+  "जनवरी",
+  "जन",
   "फेब्रुवारी",
   "फेब्रु",
+  "फरवरी",
+  "फर",
   "मार्च",
   "एप्रिल",
   "एप्रि",
+  "अप्रैल",
   "मे",
   "June",
   "July",
@@ -162,7 +209,7 @@ export function canonicalizeMarathiMonth(raw: string): string {
 
   // Remove "माहे", "महिना", punctuation, colons, and years (Devanagari and Arabic digits)
   const clean = s
-    .replace(/^(माहे|महिना)\s*[-–:]?\s*/i, "")
+    .replace(/^(?:माहे|महिना|माह|महीना|month)\s*[-–:]?\s*/i, "")
     .replace(/\s*[\d\u0966-\u096F]{4}(?:[-–][\d\u0966-\u096F]{2,4})?/g, "")
     .replace(/\s*[\d\u0966-\u096F]{2,4}\s*$/g, "")
     .replace(/[.,:;()]/g, "")
@@ -172,15 +219,15 @@ export function canonicalizeMarathiMonth(raw: string): string {
   // Match Marathi months and abbreviations
   if (/^(?:ज[ूु]न|june?|jun)$/i.test(clean)) return "जून";
   if (/^(?:जुल[ैे]|जुलाई|july?|jul)$/i.test(clean)) return "जुलै";
-  if (/^(?:ऑग[सश]्ट|ऑग|आगस्ट|aug(?:ust)?)$/i.test(clean)) return "ऑगस्ट";
-  if (/^(?:सप्ट[ेेंं]+(?:बर)?|sep(?:t(?:ember)?)?)$/i.test(clean)) return "सप्टेंबर";
-  if (/^(?:ऑक्ट[ोों]+(?:बर)?|oct(?:ober)?)$/i.test(clean)) return "ऑक्टोबर";
-  if (/^(?:नोव्ह[ेेंं]+(?:बर)?|nov(?:ember)?)$/i.test(clean)) return "नोव्हेंबर";
-  if (/^(?:डिस[ेेंं]+(?:बर)?|dec(?:ember)?)$/i.test(clean)) return "डिसेंबर";
-  if (/^(?:जान[ेे](?:वारी)?|जाने|jan(?:uary)?)$/i.test(clean)) return "जानेवारी";
-  if (/^(?:फेब्र[ुू](?:वारी)?|फेब्रु|feb(?:ruary)?)$/i.test(clean)) return "फेब्रुवारी";
+  if (/^(?:ऑग[सश]्ट|ऑग|आगस्ट|अगस्त|अगस्ट|aug(?:ust)?)$/i.test(clean)) return "ऑगस्ट";
+  if (/^(?:सप्ट[ेेंं]+(?:बर)?|सित[ंम]+बर|सित\.?|sep(?:t(?:ember)?)?)$/i.test(clean)) return "सप्टेंबर";
+  if (/^(?:ऑक्ट[ोों]+(?:बर)?|अक्ट[ूोों]+बर|अक्टू\.?|oct(?:ober)?)$/i.test(clean)) return "ऑक्टोबर";
+  if (/^(?:नोव्ह[ेेंं]+(?:बर)?|नव[ंम]+बर|नव\.?|nov(?:ember)?)$/i.test(clean)) return "नोव्हेंबर";
+  if (/^(?:डिस[ेेंं]+(?:बर)?|दिस[ंम]+बर|दिस\.?|dec(?:ember)?)$/i.test(clean)) return "डिसेंबर";
+  if (/^(?:जान[ेे](?:वारी)?|जनवरी|जाने|जन\.?|jan(?:uary)?)$/i.test(clean)) return "जानेवारी";
+  if (/^(?:फेब्र[ुू](?:वारी)?|फरवरी|फेब्रु|फर\.?|feb(?:ruary)?)$/i.test(clean)) return "फेब्रुवारी";
   if (/^(?:मार्च|mar(?:ch)?)$/i.test(clean)) return "मार्च";
-  if (/^(?:एप्रि(?:ल)?|apr(?:il)?)$/i.test(clean)) return "एप्रिल";
+  if (/^(?:एप्रि(?:ल)?|अप्रैल|apr(?:il)?)$/i.test(clean)) return "एप्रिल";
   if (/^(?:मे|may)$/i.test(clean)) return "मे";
 
   return s;
@@ -216,7 +263,7 @@ export function isMarathiMonth(cellText: string): boolean {
   }
 
   const clean = s
-    .replace(/^(माहे|महिना)\s*[-–:]?\s*/i, "")
+    .replace(/^(?:माहे|महिना|माह|महीना|month)\s*[-–:]?\s*/i, "")
     .replace(/\s*[\d\u0966-\u096F]{4}(?:[-–][\d\u0966-\u096F]{2,4})?/g, "")
     .replace(/\s*[\d\u0966-\u096F]{2,4}\s*$/g, "")
     .replace(/[.,:;()]/g, "")
@@ -224,7 +271,7 @@ export function isMarathiMonth(cellText: string): boolean {
     .toLowerCase();
 
   const monthRegex =
-    /^(?:ज[ूु]न|june?|jun|जुल[ैे]|जुलाई|july?|jul|ऑग[सश]्ट|ऑग|आगस्ट|aug(?:ust)?|सप्ट[ेेंं]+(?:बर)?|sep(?:t(?:ember)?)?|ऑक्ट[ोों]+(?:बर)?|oct(?:ober)?|नोव्ह[ेेंं]+(?:बर)?|nov(?:ember)?|डिस[ेेंं]+(?:बर)?|dec(?:ember)?|जान[ेे](?:वारी)?|जाने|jan(?:uary)?|फेब्र[ुू](?:वारी)?|फेब्रु|feb(?:ruary)?|मार्च|mar(?:ch)?|एप्रि(?:ल)?|apr(?:il)?|मे|may)$/i;
+    /^(?:ज[ूु]न|june?|jun|जुल[ैे]|जुलाई|july?|jul|ऑग[सश]्ट|ऑग|आगस्ट|अगस्त|अगस्ट|aug(?:ust)?|सप्ट[ेेंं]+(?:बर)?|सित[ंम]+बर|सित\.?|sep(?:t(?:ember)?)?|ऑक्ट[ोों]+(?:बर)?|अक्ट[ूोों]+बर|अक्टू\.?|oct(?:ober)?|नोव्ह[ेेंं]+(?:बर)?|नव[ंम]+बर|नव\.?|nov(?:ember)?|डिस[ेेंं]+(?:बर)?|दिस[ंम]+बर|दिस\.?|dec(?:ember)?|जान[ेे](?:वारी)?|जनवरी|जाने|जन\.?|jan(?:uary)?|फेब्र[ुू](?:वारी)?|फरवरी|फेब्रु|फर\.?|feb(?:ruary)?|मार्च|mar(?:ch)?|एप्रि(?:ल)?|अप्रैल|apr(?:il)?|मे|may)$/i;
 
   if (monthRegex.test(clean)) return true;
 
@@ -388,8 +435,8 @@ export const isMonthBannerRow = (row: any[]): boolean => {
     line.includes("अभ्यासक्रमाचे मासिक") ||
     line.includes("monthly & unit planning") ||
     line.includes("monthly and unit planning") ||
-    (/महिना\s*[:-–]/i.test(line) && (/विषय/i.test(line) || /इयत्ता/i.test(line))) ||
-    (/महिना\s*[:-–]\s*(?:जून|जुलै|ऑगस्ट|सप्टेंबर|ऑक्टोबर|नोव्हेंबर|डिसेंबर|जानेवारी|फेब्रुवारी|मार्च|एप्रिल)/i.test(line))
+    (/^(?:महिना|माह|महीना|माहे|month)\s*[:-–]/i.test(line) && (/विषय|subject/i.test(line) || /इयत्ता|class/i.test(line))) ||
+    (/^(?:महिना|माह|महीना|माहे|month)\s*[:-–]\s*(?:जून|जुन|जुलै|जुलाई|ऑगस्ट|ऑगष्ट|आगस्ट|अगस्त|अगस्ट|सप्टेंबर|सितंबर|सितम्बर|ऑक्टोबर|अक्टूबर|अक्टोबर|नोव्हेंबर|नवंबर|नवम्बर|डिसेंबर|दिसंबर|दिसम्बर|जानेवारी|जनवरी|फेब्रुवारी|फरवरी|मार्च|एप्रिल|अप्रैल|मे|june|july|august|september|october|november|december|january|february|march|april|may)/i.test(line))
   ) {
     return true;
   }
@@ -493,7 +540,7 @@ export const isTableColumnHeaderRow = (row: any[]): boolean => {
   const hasDayOrDate =
     line.includes("दिनांक") ||
     line.includes("दिवस") ||
-    line.includes("महिना") ||
+    line.includes("महिना") || line.includes("माह") || line.includes("सप्ताह") || line.includes("कालांश") || line.includes("month") ||
     line.includes("आठवडा") ||
     line === "वार" ||
     line.includes("day") ||
@@ -677,6 +724,7 @@ export async function extractSubjectSectionsFromExcel(
   ];
 
   const sheetMonthlySectionsMap: Record<string, MonthlySection> = {};
+  const seenCombinedMonths = new Set<string>();
 
   // Iterate over all sheets in the workbook
   workbook.SheetNames.forEach((sheetName) => {
@@ -694,23 +742,48 @@ export async function extractSubjectSectionsFromExcel(
 
     if (rawGrid.length === 0) return;
 
-    // Check if sheetName is a month (e.g. "जून", "जुलै", "July", "माहे ऑगस्ट", etc.)
-    let sheetMonth =
-      extractCleanMonthNameFromLine(sheetName) ||
-      (isMarathiMonth(sheetName) ? canonicalizeMarathiMonth(sheetName) + " २०२६" : null);
+    // Count distinct months in this sheet (checking both English and Marathi month titles)
+    const distinctMonthsInSheet = new Set<string>();
+    for (const r of rawGrid) {
+      const line = r.join(" ").trim();
+      const m = extractCleanMonthNameFromLine(line);
+      if (m) {
+        distinctMonthsInSheet.add(normalizeForCompare(m));
+      }
+      for (const c of r) {
+        if (isMarathiMonth(c)) {
+          distinctMonthsInSheet.add(normalizeForCompare(canonicalizeMarathiMonth(c)));
+        }
+      }
+    }
 
-    // Check first 6 rows for month, subject, and class
+    // Only treat sheet as a single-month sheet if sheetName itself is a month OR the sheet only has 1 distinct month!
+    let sheetMonth: string | null = null;
+    if (distinctMonthsInSheet.size <= 1) {
+      sheetMonth =
+        extractCleanMonthNameFromLine(sheetName) ||
+        (isMarathiMonth(sheetName) ? canonicalizeMarathiMonth(sheetName) + " २०२६" : null);
+
+      if (!sheetMonth) {
+        for (let r = 0; r < Math.min(rawGrid.length, 6); r++) {
+          const line = rawGrid[r].join(" ").trim();
+          const m = extractCleanMonthNameFromLine(line);
+          if (m) {
+            sheetMonth = m;
+            break;
+          }
+        }
+      }
+    }
+
+    // Check first 6 rows for subject and class
     let sheetSubject = "";
     let sheetClass = "";
     for (let r = 0; r < Math.min(rawGrid.length, 6); r++) {
       const line = rawGrid[r].join(" ").trim();
-      if (!sheetMonth) {
-        const m = extractCleanMonthNameFromLine(line);
-        if (m) sheetMonth = m;
-      }
-      const subjMatch = line.match(/विषय\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+      const subjMatch = line.match(/(?:विषय|subject)\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
       if (subjMatch) sheetSubject = normalizeSubjectName(subjMatch[1]);
-      const classMatch = line.match(/इयत्ता\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+      const classMatch = line.match(/(?:इयत्ता|class)\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
       if (classMatch) sheetClass = classMatch[0].trim();
     }
 
@@ -742,6 +815,18 @@ export async function extractSubjectSectionsFromExcel(
       }
     }
 
+    // Prevent duplicate / alternate multi-month sheets from heavily overwriting already added sheets:
+    let monthOverlap = 0;
+    distinctMonthsInSheet.forEach((m) => {
+      if (seenCombinedMonths.has(m)) monthOverlap++;
+    });
+
+    const isDuplicateFullSheet = seenCombinedMonths.size >= 3 && monthOverlap >= 3;
+    if (isDuplicateFullSheet) {
+      return; // Skip duplicate / alternate sheet
+    }
+
+    distinctMonthsInSheet.forEach((m) => seenCombinedMonths.add(m));
     combinedRawGrid.push(...rawGrid);
 
     // Detect if column 0 in this sheet is a Serial Number column (अ.क्र., 1, 2, 3...)
@@ -1247,25 +1332,25 @@ export const ACADEMIC_MONTH_ORDER: Record<string, number> = {
   // July
   "july": 2, "jul": 2, "जुलै": 2, "जुलाई": 2,
   // August
-  "august": 3, "aug": 3, "ऑगस्ट": 3, "ऑगष्ट": 3, "ऑग": 3, "आगस्ट": 3,
+  "august": 3, "aug": 3, "ऑगस्ट": 3, "ऑगष्ट": 3, "ऑग": 3, "आगस्ट": 3, "अगस्त": 3, "अगस्ट": 3,
   // September
-  "september": 4, "semptember": 4, "sept": 4, "sep": 4, "सप्टेंबर": 4, "सप्टें": 4, "सप्टे": 4,
+  "september": 4, "semptember": 4, "sept": 4, "sep": 4, "सप्टेंबर": 4, "सप्टें": 4, "सप्टे": 4, "सितंबर": 4, "सितम्बर": 4, "सित": 4,
   // October
-  "october": 5, "oct": 5, "ऑक्टोबर": 5, "ऑक्टोंबर": 5, "ऑक्टो": 5,
+  "october": 5, "oct": 5, "ऑक्टोबर": 5, "ऑक्टोंबर": 5, "ऑक्टो": 5, "अक्टूबर": 5, "अक्टोबर": 5, "अक्टू": 5,
   // November
-  "november": 6, "novembar": 6, "nov": 6, "नोव्हेंबर": 6, "नोव्हें": 6, "नोव्हे": 6,
+  "november": 6, "novembar": 6, "nov": 6, "नोव्हेंबर": 6, "नोव्हें": 6, "नोव्हे": 6, "नवंबर": 6, "नवम्बर": 6, "नव": 6,
   // December
-  "december": 7, "decembar": 7, "dec": 7, "डिसेंबर": 7, "डिसें": 7, "डिसं": 7,
+  "december": 7, "decembar": 7, "dec": 7, "डिसेंबर": 7, "डिसें": 7, "डिसं": 7, "दिसंबर": 7, "दिसम्बर": 7, "दिस": 7,
   // January
-  "january": 8, "jan": 8, "जानेवारी": 8, "जाने": 8,
+  "january": 8, "jan": 8, "जानेवारी": 8, "जाने": 8, "जनवरी": 8, "जन": 8,
   // February
-  "february": 9, "feb": 9, "फेब्रुवारी": 9, "फेब्रु": 9,
+  "february": 9, "feb": 9, "फेब्रुवारी": 9, "फेब्रु": 9, "फरवरी": 9, "फर": 9,
   // March
   "march": 10, "mar": 10, "मार्च": 10,
   // March + April combined
   "march + april": 10.5, "march & april": 10.5, "मार्च + एप्रिल": 10.5, "मार्च - एप्रिल": 10.5,
   // April
-  "april": 11, "apr": 11, "एप्रिल": 11, "एप्रि": 11,
+  "april": 11, "apr": 11, "एप्रिल": 11, "एप्रि": 11, "अप्रैल": 11,
   // May
   "may": 12, "मे": 12,
 };
@@ -1292,6 +1377,8 @@ export function extractCleanMonthNameFromLine(line: string): string | null {
     /मासिक\s*(?:व|आणि)?\s*घटक\s*नियोजन/i.test(l) ||
     /\bmonth\s*[:\-–]?/i.test(l) ||
     /माहे\s*[:\-–]?/i.test(l) ||
+    /माह\s*[:\-–]?/i.test(l) ||
+    /महीना\s*[:\-–]?/i.test(l) ||
     /महिना\s*[:\-–]?/i.test(l) ||
     (/विषय\s*[:\-–]/i.test(l) && (/जुन|जून|जुलै|ऑगस्ट|सप्टेंबर|ऑक्टोबर|नोव्हेंबर|डिसेंबर|जानेवारी|फेब्रुवारी|मार्च|एप्रिल/i.test(l))) ||
     (l.length < 60 && (isMarathiMonth(l) || /\b(june|july|august|september|semptember|october|november|novembar|december|decembar|january|february|march|april)\b/i.test(l)));
@@ -1330,7 +1417,7 @@ export function extractCleanMonthNameFromLine(line: string): string | null {
   }
 
   // 3. Marathi Months
-  const marMatch = l.match(/(जुन|जून|जुलै|जुलाई|ऑगस्ट|ऑगष्ट|ऑग|आगस्ट|सप्टेंबर|सप्टें|सप्टे|ऑक्टोबर|ऑक्टोंबर|ऑक्टो|नोव्हेंबर|नोव्हें|नोव्हे|डिसेंबर|डिसें|डिसं|जानेवारी|जाने|फेब्रुवारी|फेब्रु|मार्च|एप्रिल|एप्रि|मे)(?:\s*([\d\u0966-\u096F]{4}))?/i);
+  const marMatch = l.match(/(जुन|जून|जुलै|जुलाई|ऑगस्ट|ऑगष्ट|ऑग|आगस्ट|अगस्त|अगस्ट|सप्टेंबर|सप्टें|सप्टे|सितंबर|सितम्बर|ऑक्टोबर|ऑक्टोंबर|ऑक्टो|अक्टूबर|अक्टोबर|नोव्हेंबर|नोव्हें|नोव्हे|नवंबर|नवम्बर|डिसेंबर|डिसें|डिसं|दिसंबर|दिसम्बर|जानेवारी|जाने|जनवरी|फेब्रुवारी|फेब्रु|फरवरी|मार्च|एप्रिल|एप्रि|अप्रैल|मे)(?:\s*([\d\u0966-\u096F]{4}))?/i);
   if (marMatch) {
     const rawM = marMatch[1];
     const stdMar = canonicalizeMarathiMonth(rawM);
@@ -1354,17 +1441,20 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
 
   const flushCurrentMonth = () => {
     if (currentMonthName && currentRows.length > 0) {
-      const normalizedMonthRows = normalizeMonthlyPlanningRows(currentRows, currentMonthName);
-      monthlyMap[currentMonthName] = {
-        monthName: currentMonthName,
-        displayMonthName: `अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - ${currentMonthName}`,
-        classTitle: currentClassTitle,
-        subjectTitle: currentSubjectTitle,
-        plannedPeriods: currentPlannedPeriods,
-        workingDays: currentWorkingDays,
-        headers: DEFAULT_MONTHLY_HEADERS,
-        rows: normalizedMonthRows,
-      };
+      // Do not overwrite an already populated month from the primary sheet
+      if (!monthlyMap[currentMonthName] || monthlyMap[currentMonthName].rows.length === 0) {
+        const normalizedMonthRows = normalizeMonthlyPlanningRows(currentRows, currentMonthName);
+        monthlyMap[currentMonthName] = {
+          monthName: currentMonthName,
+          displayMonthName: `अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - ${currentMonthName}`,
+          classTitle: currentClassTitle,
+          subjectTitle: currentSubjectTitle,
+          plannedPeriods: currentPlannedPeriods,
+          workingDays: currentWorkingDays,
+          headers: DEFAULT_MONTHLY_HEADERS,
+          rows: normalizedMonthRows,
+        };
+      }
     }
   };
 
@@ -1380,21 +1470,19 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
       /monthly\s*(?:&|and)?\s*unit\s*planning/i.test(line) ||
       /\bmonth\s*[:\-–]?/i.test(line) ||
       /माहे\s*[:\-–]?/i.test(line) ||
+      /माह\s*[:-–]?/i.test(line) ||
       /महिना\s*[:\-–]?/i.test(line);
 
     const isBanner = isMonthBannerRow(row);
-    const isMonthBannerCandidate =
-      isBanner ||
-      hasMonthKeyword ||
-      nonEmpties.length <= 4 ||
-      row.some((c) => isMarathiMonth(c) || /\b(june|july|august|september|october|november|december|january|february|march|april)\b/i.test(String(c)));
 
-    if (isMonthBannerCandidate && !isTableColumnHeaderRow(row)) {
+    // Pure month banner / header (short line or dedicated title, NOT a data row)
+    const isPureBanner = (isBanner || hasMonthKeyword || nonEmpties.length <= 2) && !isTableColumnHeaderRow(row);
+    if (isPureBanner) {
       let detectedMonth = extractCleanMonthNameFromLine(line);
       if (!detectedMonth) {
         for (let c = 0; c < Math.min(row.length, 3); c++) {
           const cVal = String(row[c] || "").trim();
-          if (cVal && (isMarathiMonth(cVal) || /\b(june|july|august|september|october|november|december|january|february|march|april)\b/i.test(cVal))) {
+          if (cVal && isMarathiMonth(cVal)) {
             detectedMonth = extractCleanMonthNameFromLine(cVal);
             if (detectedMonth) break;
           }
@@ -1407,18 +1495,18 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
           currentMonthName = detectedMonth;
           currentRows = [];
         }
-        const subjMatch = line.match(/विषय\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+        const subjMatch = line.match(/(?:विषय|subject)\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
         if (subjMatch) currentSubjectTitle = normalizeSubjectName(subjMatch[1]);
-        const classMatch = line.match(/इयत्ता\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+        const classMatch = line.match(/(?:इयत्ता|class)\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
         if (classMatch) currentClassTitle = classMatch[0].trim();
-        return;
+        return; // Consume banner
       }
     }
 
     if (isBanner) {
-      const subjMatch = line.match(/विषय\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+      const subjMatch = line.match(/(?:विषय|subject)\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
       if (subjMatch) currentSubjectTitle = normalizeSubjectName(subjMatch[1]);
-      const classMatch = line.match(/इयत्ता\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
+      const classMatch = line.match(/(?:इयत्ता|class)\s*[:-–]?\s*([^\s,;]+(?:\s+[^\s,;]+)?)/i);
       if (classMatch) currentClassTitle = classMatch[0].trim();
       return;
     }
@@ -1445,14 +1533,32 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
       return;
     }
 
-    // Regular Data Row: ensure all columns are preserved
+    // --- CURRICULUM DATA ROW ---
+    // Check if Col 0 or Col 1 has a month indicating a month transition in data rows!
+    const c0 = String(row[0] || "").trim();
+    const c1 = String(row[1] || "").trim();
+    let rowMonthCandidate = "";
+    if (isMarathiMonth(c0)) {
+      rowMonthCandidate = c0;
+    } else if (/^\d+$/.test(c0) && isMarathiMonth(c1)) {
+      rowMonthCandidate = c1;
+    }
+
+    if (rowMonthCandidate) {
+      const detected = extractCleanMonthNameFromLine(rowMonthCandidate);
+      if (detected && normalizeForCompare(detected) !== normalizeForCompare(currentMonthName)) {
+        flushCurrentMonth();
+        currentMonthName = detected;
+        currentRows = [];
+      }
+    }
+
     if (!currentMonthName) currentMonthName = "जून २०२६";
 
     // If row starts with April divider inside a March block (ONLY if not already March + April combined)
-    const cell0 = String(row[0] || "").trim();
     if (
       nonEmpties.length <= 2 &&
-      (cell0.includes("एप्रिल") || cell0.toLowerCase().includes("april")) &&
+      (c0.includes("एप्रिल") || c0.toLowerCase().includes("april")) &&
       (currentMonthName.includes("मार्च") || currentMonthName.toLowerCase().includes("march")) &&
       !currentMonthName.includes("एप्रिल") &&
       !currentMonthName.toLowerCase().includes("april") &&
@@ -1464,7 +1570,33 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
       return;
     }
 
-    const rowClean = normalizeMonthlyPlanningRow(row);
+    // For Monthly Planning data rows, directly preserve all 7 columns exactly as in the source file:
+    const isStrictAnnualRow =
+      row.length <= 6 &&
+      (isMarathiMonth(c0) || (c0 === "" && (/^\d+$/.test(c1) || /^[०-९]+$/.test(c1)))) &&
+      (/^\d+$/.test(String(row[2] || "").trim()) || /^[०-९]+$/.test(String(row[2] || "").trim())) &&
+      (/^\d+$/.test(String(row[3] || "").trim()) || /^[०-९]+$/.test(String(row[3] || "").trim())) &&
+      Boolean(row[4] && String(row[4]).trim().length > 0) &&
+      !Boolean(row[6] && String(row[6]).trim().length > 0);
+
+    let rowClean: string[];
+    if (isStrictAnnualRow) {
+      const wVal = c1 ? `आठवडा ${c1}` : "-";
+      const topicVal = String(row[4] || "").trim();
+      const outcomeVal = String(row[5] || "").trim();
+      rowClean = [
+        wVal,
+        topicVal || "-",
+        outcomeVal || "-",
+        topicVal ? `${topicVal} संकल्पना व उद्दिष्टे स्पष्ट करणे` : "-",
+        topicVal ? `${topicVal} चे स्पष्टीकरण, वाचन, लेखन व स्वाध्याय कृती` : "-",
+        "निरीक्षण, तोंडी काम, स्वाध्याय",
+        "पाठ्यपुस्तक, चित्र तक्ते, शैक्षणिक साहित्य",
+      ];
+    } else {
+      rowClean = normalizeMonthlyPlanningRow(row);
+    }
+
     currentRows.push(rowClean);
   });
 
@@ -1554,10 +1686,200 @@ export function normalizeMonthlyPlanningRow(row: string[]): string[] {
 
 /**
  * Normalizes an array of monthly planning rows:
- * Preserves 100% of rows and cells without deleting or erasing any word.
+ * 1. Preserves 100% of legitimate lesson and activity rows without deleting or erasing content.
+ * 2. Consolidates consecutive redundant vacation rows (e.g. 10-15 duplicate rows of "summer vacation"
+ *    or "Diwali vacation" generated by unrolled Excel merges) into a single clean vacation banner row.
+ * 3. Prevents long vacation text from being placed in the narrow (45px) Day/Date column.
  */
+/**
+ * Helper to calculate the next school teaching day in Maharashtra (skips Sundays).
+ */
+export function getNextSchoolDay(currentDay: number, monthName: string, year: number = 2026): number {
+  const monthMap: Record<string, number> = {
+    "जानेवारी": 0, "january": 0, "jan": 0, "जनवरी": 0,
+    "फेब्रुवारी": 1, "february": 1, "feb": 1, "फरवरी": 1,
+    "मार्च": 2, "march": 2, "mar": 2,
+    "एप्रिल": 3, "april": 3, "apr": 3, "अप्रैल": 3,
+    "मे": 4, "may": 4,
+    "जून": 5, "june": 5, "jun": 5, "जुन": 5,
+    "जुलै": 6, "july": 6, "jul": 6, "जुलाई": 6,
+    "ऑगस्ट": 7, "august": 7, "aug": 7, "अगस्त": 7,
+    "सप्टेंबर": 8, "september": 8, "sep": 8, "सितंबर": 8,
+    "ऑक्टोबर": 9, "october": 9, "oct": 9, "अक्टूबर": 9,
+    "नोव्हेंबर": 10, "november": 10, "nov": 10, "नवंबर": 10,
+    "डिसेंबर": 11, "december": 11, "dec": 11, "दिसंबर": 11,
+  };
+
+  let mIdx = -1;
+  const lower = (monthName || "").toLowerCase().trim();
+  for (const [k, v] of Object.entries(monthMap)) {
+    if (lower.includes(k)) {
+      mIdx = v;
+      break;
+    }
+  }
+  if (mIdx === -1) mIdx = 5; // Default June
+
+  const effectiveYear = (mIdx >= 0 && mIdx <= 4) ? (year + 1) : year;
+  const daysInMonth = new Date(effectiveYear, mIdx + 1, 0).getDate();
+
+  let next = currentDay + 1;
+  while (next <= daysInMonth) {
+    const dt = new Date(effectiveYear, mIdx, next);
+    if (dt.getDay() !== 0) { // Skip Sunday
+      return next;
+    }
+    next++;
+  }
+  return next <= daysInMonth ? next : currentDay + 1;
+}
+
 export function normalizeMonthlyPlanningRows(rows: string[][], monthName: string = "मार्च २०२६"): string[][] {
-  return rows.map((r) => normalizeMonthlyPlanningRow(r));
+  if (!rows || rows.length === 0) return [];
+
+  // Step 1: Normalize all rows to length 7
+  const normalized = rows.map((r) => normalizeMonthlyPlanningRow(r));
+
+  // Step 2: Consolidate consecutive duplicate vacation rows
+  const result: string[][] = [];
+  let i = 0;
+
+  while (i < normalized.length) {
+    const row = normalized[i];
+
+    // Check if this row is a vacation row
+    const vacationCell = row.find((c) => isVacationText(c));
+    const nonBlankCells = row.filter((c) => c && c !== "-" && c !== "null" && c !== "undefined");
+    const isPureVacationRow = Boolean(vacationCell) && nonBlankCells.every((c) => isVacationText(c));
+
+    if (isPureVacationRow && vacationCell) {
+      const vText = vacationCell.trim();
+      const firstDay = row[0] && !isVacationText(row[0]) && row[0] !== "-" ? row[0].trim() : "";
+      let lastDay = firstDay;
+
+      // Look ahead for consecutive rows with the same vacation
+      let nextIdx = i + 1;
+      while (nextIdx < normalized.length) {
+        const nextRow = normalized[nextIdx];
+        const nextVacationCell = nextRow.find((c) => isVacationText(c));
+        const nextNonBlanks = nextRow.filter((c) => c && c !== "-" && c !== "null" && c !== "undefined");
+        const nextIsVacation = Boolean(nextVacationCell) && nextNonBlanks.every((c) => isVacationText(c));
+
+        if (
+          nextIsVacation &&
+          nextVacationCell &&
+          (nextVacationCell.toLowerCase().includes(vText.toLowerCase()) ||
+            vText.toLowerCase().includes(nextVacationCell.toLowerCase()))
+        ) {
+          if (nextRow[0] && !isVacationText(nextRow[0]) && nextRow[0] !== "-") {
+            lastDay = nextRow[0].trim();
+          }
+          nextIdx++;
+        } else {
+          break;
+        }
+      }
+
+      // Format date in Col 0 (never put long text like "Diwali vacation" in 45px Col 0!)
+      let dateDisplay = "-";
+      if (firstDay && lastDay && firstDay !== lastDay) {
+        dateDisplay = `${firstDay} ते ${lastDay}`;
+      } else if (firstDay) {
+        dateDisplay = firstDay;
+      }
+
+      // Single clean consolidated vacation row:
+      // Col 0: Date range or "-"
+      // Col 1: Vacation Title
+      // Col 2: "-"
+      // Col 3: "-"
+      // Col 4: Vacation Title (Experience)
+      // Col 5: "-"
+      // Col 6: "-"
+      const consolidatedRow = [
+        dateDisplay,
+        vText,
+        "-",
+        "-",
+        vText,
+        "-",
+        "-",
+      ];
+
+      result.push(consolidatedRow);
+      i = nextIdx; // Skip past all duplicate consecutive vacation rows!
+    } else {
+      // Normal row: check if Col 0 mistakenly has exam/vacation text (like "Diwali vacation" in Col 0)
+      const cleanRow = [...row];
+      if (isExamOrAssessmentText(cleanRow[0])) {
+        const examVal = cleanRow[0];
+        cleanRow[0] = "-"; // Free Col 0 so it doesn't wrap into 3 lines in 45px box!
+        if (!cleanRow[1] || cleanRow[1] === "-") cleanRow[1] = examVal;
+        else if (!cleanRow[4] || cleanRow[4] === "-") cleanRow[4] = examVal;
+      }
+      result.push(cleanRow);
+      i++;
+    }
+  }
+
+  // Step 3: Populate sequential working days for teaching rows where Col 0 is empty or '-'
+  const devanagariDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+  const toDevDigits = (num: number) => String(num).replace(/\d/g, (d) => devanagariDigits[parseInt(d, 10)]);
+
+  // Detect whether to output Devanagari or English digits
+  const hasDevanagari = result.some((r) => /[०-९]/.test(String(r[0] || "")));
+  const isEng = /[a-zA-Z]/.test(monthName) || result.some((r) => /[a-zA-Z]/.test(String(r[1] || "")));
+  const useDevanagari = hasDevanagari || !isEng;
+
+  // Initial day for this month if starting without a number:
+  // June school opens on 15th, other months start on 1st
+  const isJune = /जून|जुन|june|jun/i.test(monthName);
+  let currentDay = isJune ? 14 : 0;
+
+  for (let idx = 0; idx < result.length; idx++) {
+    const r = result[idx];
+    const nonBlankCount = r.filter((c) => c && c !== "-" && c !== "null" && c !== "undefined").length;
+    const isVac = r.some((c) => isVacationText(c));
+
+    // Vacation banner row: skip day numbering
+    if (isVac) {
+      continue;
+    }
+
+    // Has teaching content
+    const hasLessonContent = Boolean(r[1] && r[1] !== "-" && !isVacationText(r[1]));
+    if (!hasLessonContent && nonBlankCount <= 1) {
+      continue;
+    }
+
+    const c0 = String(r[0] || "").trim();
+
+    // Check if c0 already has an explicit single day number
+    const engNumMatch = c0.match(/^(\d{1,2})$/);
+    const devNumMatch = c0.match(/^([०-९]{1,2})$/);
+
+    if (engNumMatch) {
+      currentDay = parseInt(engNumMatch[1], 10);
+      r[0] = useDevanagari ? toDevDigits(currentDay) : String(currentDay);
+    } else if (devNumMatch) {
+      const engVal = devNumMatch[1].replace(/[०-९]/g, (d) => String(devanagariDigits.indexOf(d)));
+      currentDay = parseInt(engVal, 10);
+      r[0] = useDevanagari ? toDevDigits(currentDay) : String(currentDay);
+    } else if (c0.includes("ते") || c0.includes("to") || (c0.includes("-") && c0.length > 2)) {
+      // Date range like '०१ ते ०८' or '15 to 20' - keep as is!
+      const endMatch = c0.match(/(\d{1,2}|[०-९]{1,2})\s*$/);
+      if (endMatch) {
+        const valStr = endMatch[1].replace(/[०-९]/g, (d) => String(devanagariDigits.indexOf(d)));
+        currentDay = parseInt(valStr, 10);
+      }
+    } else if (c0 === "" || c0 === "-" || c0 === "null" || c0 === "undefined") {
+      // Day is missing / hyphen: fill with next school working day!
+      currentDay = getNextSchoolDay(currentDay, monthName, 2026);
+      r[0] = useDevanagari ? toDevDigits(currentDay) : String(currentDay);
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -1574,17 +1896,27 @@ export function normalizeAnnualPlanningRows(rows: string[][]): string[][] {
   let runningDays = "";
   let runningPeriods = "";
 
-  return rows.map((row) => {
-    const r6 = [
-      String(row[0] || "").trim(),
-      String(row[1] || "").trim(),
-      String(row[2] || "").trim(),
-      String(row[3] || "").trim(),
-      String(row[4] || "").trim(),
-      String(row[5] || "").trim(),
-    ];
+  // Auto-detect if Col 1 contains months while Col 0 is Serial Number or blank
+  let colOffset = 0;
+  let col0MonthCount = 0;
+  let col1MonthCount = 0;
+  for (let idx = 0; idx < Math.min(rows.length, 25); idx++) {
+    const r = rows[idx];
+    if (!r) continue;
+    if (isMarathiMonth(r[0])) col0MonthCount++;
+    if (isMarathiMonth(r[1])) col1MonthCount++;
+  }
+  if (col0MonthCount === 0 && col1MonthCount > 0) {
+    colOffset = 1;
+  }
 
-    let [m, w, d, p, topic, outcome] = r6;
+  return rows.map((row) => {
+    let m = String(row[0 + colOffset] || "").trim();
+    let w = String(row[1 + colOffset] || "").trim();
+    let d = String(row[2 + colOffset] || "").trim();
+    let p = String(row[3 + colOffset] || "").trim();
+    let topic = String(row[4 + colOffset] !== undefined && row[4 + colOffset] !== null ? row[4 + colOffset] : "").trim();
+    let outcome = String(row[5 + colOffset] !== undefined && row[5 + colOffset] !== null ? row[5 + colOffset] : "").trim();
 
     // Check if col 0 has exam text mistakenly
     if (isExamOrAssessmentText(m)) {

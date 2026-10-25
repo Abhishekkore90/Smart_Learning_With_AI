@@ -21,6 +21,7 @@ import {
   Zap,
   Sparkles,
   ArrowRight,
+  AlertCircle,
 } from "lucide-react";
 import { DOMAINS } from "@/lib/constants";
 import { StudentHeader } from "@/components/student/StudentHeader";
@@ -444,6 +445,14 @@ function CategoryDetailPage() {
           >
             <ArrowLeft className="size-4" /> Back to Knowledge Hub
           </Link>
+
+          {/* Under Development Tip Banner */}
+          <div className="w-full p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 flex items-center gap-3 shadow-sm no-print">
+            <AlertCircle className="size-5 shrink-0 text-amber-600" />
+            <p className="text-xs sm:text-sm font-bold leading-relaxed">
+              <span className="font-extrabold text-amber-700">टीप -</span> हा विभाग अजून पूर्ण झालेला नाही हा विभाग तुम्हाला लवकरात लवकर उपलब्ध करून देण्यात येईल
+            </p>
+          </div>
 
           {/* HERO SECTION */}
           <div className="grid lg:grid-cols-2 gap-12 items-center bg-white rounded-[3.5rem] p-10 md:p-16 border border-slate-200 shadow-sm relative overflow-hidden">
