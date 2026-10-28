@@ -51,8 +51,8 @@ const DEFAULT_SUBJECTS = [
   "प्रथम भाषा : मराठी",
   "द्वितीय भाषा : इंग्रजी",
   "गणित",
-  "कला",
-  "कार्यानुभव",
+  "कलाशिक्षण",
+  "कार्यशिक्षण",
   "शारीरिक शिक्षण",
 ];
 
@@ -61,8 +61,9 @@ const getSubjectKeyFallback = (subjectName: string): string => {
   if (subjectName.includes("इंग्रजी")) return "english";
   if (subjectName.includes("गणित")) return "math";
   if (subjectName.includes("कला")) return "art";
-  if (subjectName.includes("कार्यानुभव")) return "work";
+  if (subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण") || subjectName.includes("कार्य")) return "work";
   if (subjectName.includes("शारीरिक")) return "pe";
+  if (subjectName.includes("परिसर") || subjectName.includes("संभोवतालचे")) return "evs";
   return "marathi";
 };
 
@@ -72,6 +73,8 @@ const ensureSubjectWeightages = (item: WeightageItem, dynamicSubjects: string[])
     const isPracticalSub =
       sub.includes("कला") ||
       sub.includes("कार्यानुभव") ||
+      sub.includes("कार्यशिक्षण") ||
+      sub.includes("कार्य") ||
       sub.includes("शारीरिक");
 
     if (!subjects[sub]) {
@@ -148,7 +151,7 @@ const getSankalitTotal = (w: SubjectWeightage) => {
 const getExpectedMarks = (selectedClass: string, subjectName?: string) => {
   if (subjectName) {
     const lower = subjectName.toLowerCase();
-    if (lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("शारीरिक")) {
+    if (lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("शारीरिक")) {
       return { akarik: 100, sankalit: 0 };
     }
   }
@@ -828,6 +831,8 @@ export function CCEWeightage({
                   const isPracticalSub =
                     sub.includes("कला") ||
                     sub.includes("कार्यानुभव") ||
+                    sub.includes("कार्यशिक्षण") ||
+                    sub.includes("कार्य") ||
                     sub.includes("शारीरिक");
 
                   return (

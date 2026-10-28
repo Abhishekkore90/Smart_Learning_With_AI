@@ -297,10 +297,9 @@ export const matchAndMergeMarks = (students = [], currentMarks = {}, firestoreMa
         else if (lower.includes("इंग्रजी") || lower === "english") subData = stdFsMarks["english"] || stdFsMarks["English"] || stdFsMarks["द्वितीय भाषा : इंग्रजी"];
         else if (lower.includes("गणित") || lower.includes("math")) subData = stdFsMarks["Mathematics"] || stdFsMarks["math"] || stdFsMarks["maths"] || stdFsMarks["गणित"];
         else if (lower.includes("विज्ञान") || lower.includes("science")) subData = stdFsMarks["General Science"] || stdFsMarks["science"] || stdFsMarks["सामान्य विज्ञान"];
-        else if (lower.includes("सामाजिक") || lower.includes("social")) subData = stdFsMarks["Social Sciences"] || stdFsMarks["social"] || stdFsMarks["सामाजिक शास्त्रे"];
-        else if (lower.includes("परिसर") || lower.includes("environment")) subData = stdFsMarks["Environmental Studies"] || stdFsMarks["परिसर अभ्यास"];
-        else if (lower.includes("कला")) subData = stdFsMarks["kala"] || stdFsMarks["कला"] || stdFsMarks["Art"];
-        else if (lower.includes("कार्यानुभव")) subData = stdFsMarks["karyanubhav"] || stdFsMarks["कार्यानुभव"] || stdFsMarks["Work Experience"];
+        else if (lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("environment")) subData = stdFsMarks["Environmental Studies"] || stdFsMarks["आपले संभोवतालचे जग"] || stdFsMarks["परिसर अभ्यास"];
+        else if (lower.includes("कला")) subData = stdFsMarks["kala"] || stdFsMarks["कलाशिक्षण"] || stdFsMarks["कला"] || stdFsMarks["Art"];
+        else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) subData = stdFsMarks["karyanubhav"] || stdFsMarks["कार्यशिक्षण"] || stdFsMarks["कार्यानुभव"] || stdFsMarks["Work Experience"];
         else if (lower.includes("शारीरिक")) subData = stdFsMarks["sharirik"] || stdFsMarks["शारीरिक शिक्षण"] || stdFsMarks["Physical Education"];
       }
 

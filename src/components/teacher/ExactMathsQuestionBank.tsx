@@ -334,6 +334,7 @@ export default function ExactMathsQuestionBank() {
       container.innerHTML = html;
       container.style.position = "absolute";
       container.style.left = "-9999px";
+      container.style.width = "1200px";
       document.body.appendChild(container);
 
       const html2pdfModule = await import("html2pdf.js");
@@ -343,7 +344,7 @@ export default function ExactMathsQuestionBank() {
         margin: [5, 5, 5, 5],
         filename: `प्रश्नपेढी_${metadata.subject}_${metadata.std}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, windowWidth: 1200 },
         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" as const },
       };
 

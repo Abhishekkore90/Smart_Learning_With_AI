@@ -373,6 +373,7 @@ export const QuestionBankUploadModule: React.FC<QuestionBankUploadModuleProps> =
       const pdfHtml = generatePdfHtml();
       const container = document.createElement("div");
       container.className = "qb-pdf-container";
+      container.style.width = "1200px";
       container.innerHTML = `
         <style>
           @media print {
@@ -393,7 +394,7 @@ export const QuestionBankUploadModule: React.FC<QuestionBankUploadModuleProps> =
         margin: [6, 6, 6, 6],
         filename: exportFileName,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 1200 },
         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
         pagebreak: { mode: ["css"], avoid: ["tr"] },
       };

@@ -38,8 +38,9 @@ const getSubjectKey = (subjectName: string): string => {
   if (subjectName.includes("इंग्रजी")) return "english";
   if (subjectName.includes("गणित")) return "math";
   if (subjectName.includes("कला")) return "art";
-  if (subjectName.includes("कार्यानुभव")) return "work";
+  if (subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण") || subjectName.includes("कार्य")) return "work";
   if (subjectName.includes("शारीरिक")) return "pe";
+  if (subjectName.includes("परिसर") || subjectName.includes("संभोवतालचे")) return "evs";
   return "marathi";
 };
 
@@ -153,9 +154,9 @@ export function CCEOverallResult({ selectedClass, academicYear, onBack }: { sele
         (lower.includes("हिंदी") && sLower.includes("हिंदी")) ||
         (lower.includes("गणित") && sLower.includes("गणित")) ||
         (lower.includes("कला") && sLower.includes("कला")) ||
-        (lower.includes("कार्यानुभव") && sLower.includes("कार्यानुभव")) ||
+        ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && (sLower.includes("कार्यानुभव") || sLower.includes("कार्यशिक्षण") || sLower.includes("कार्य"))) ||
         (lower.includes("शारीरिक") && sLower.includes("शारीरिक")) ||
-        (lower.includes("परिसर") && sLower.includes("परिसर"))
+        ((lower.includes("परिसर") || lower.includes("संभोवतालचे")) && (sLower.includes("परिसर") || sLower.includes("संभोवतालचे")))
       ) {
         return sVal;
       }

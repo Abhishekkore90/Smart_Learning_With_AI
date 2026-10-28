@@ -243,7 +243,8 @@ export function detectPageHeaderBox(
     combined.includes("शाळेचे नाव") ||
     (combined.includes("चाचणी") && (combined.includes("इयत्ता") || combined.includes("इयšता") || combined.includes("विषय") || combined.includes("िवषय"))) ||
     (combined.includes("विद्यार्थ्याचे नाव") || combined.includes("िवüा›या‚चे नाव")) ||
-    ((combined.includes("मूल्यमापन") || combined.includes("मू¨यमापन")) && (combined.includes("विषय") || combined.includes("िवषय")));
+    ((combined.includes("मूल्यमापन") || combined.includes("मू¨यमापन")) && (combined.includes("विषय") || combined.includes("िवषय"))) ||
+    ((combined.includes("परीक्षा") || combined.includes("सत्र")) && (combined.includes("इयत्ता") || combined.includes("विषय")));
 
   const isEnglishHeader =
     combinedUpper.includes("SCHOOL NAME") ||
@@ -291,7 +292,7 @@ export function detectPageHeaderBox(
       examTitle = "आकारिक मूल्यमापन चाचणी क्र. १";
     }
 
-    const classMatch = combined.match(/इय[त्श][त्श]ा\s*[–\-:]*\s*([०-९0-9]+\s*[लरीथवी]+|[०-९0-9]+)/);
+    const classMatch = combined.match(/इय[त्श][त्श]ा\s*[–\-:]*\s*([०-९0-9]+\s*[लरीथवी]+|[०-९0-9]+|पहिली|दुसरी|तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी)/);
     className = classMatch ? classMatch[1].trim() : "१ ली";
 
     if (combined.includes("गिणत") || combined.includes("गणित")) subjectName = "गणित";
@@ -1078,12 +1079,21 @@ export async function exportDocumentToPdf(
 
         const isEng = Boolean(headerBox.isEnglish);
 
-        // 3. Line 1: School Name (dedicated full width line)
+        // 3. Line 1: School Name (centered and dynamically fitted as per school name strength/length)
         ctx.fillStyle = "#0f172a";
-        ctx.font = 'bold 16px "Noto Sans Devanagari", sans-serif';
         ctx.textBaseline = "top";
         const schoolLabel = isEng ? "SCHOOL NAME : " : "शाळेचे नाव : ";
-        ctx.fillText(`${schoolLabel}${headerBox.schoolName || ""}`, bx + 16, by + 10);
+        const schoolFullText = `${schoolLabel}${headerBox.schoolName || ""}`.trim();
+        let schoolFontSize = 16;
+        ctx.font = `bold ${schoolFontSize}px "Noto Sans Devanagari", sans-serif`;
+        let schoolMetrics = ctx.measureText(schoolFullText);
+        const maxSchoolWidth = bw - 32;
+        while (schoolMetrics.width > maxSchoolWidth && schoolFontSize > 9.5) {
+          schoolFontSize -= 0.5;
+          ctx.font = `bold ${schoolFontSize}px "Noto Sans Devanagari", sans-serif`;
+          schoolMetrics = ctx.measureText(schoolFullText);
+        }
+        ctx.fillText(schoolFullText, bx + (bw - schoolMetrics.width) / 2, by + 10);
 
         // Kendra, Taluka, Jilha sub-details on dedicated second line
         const subParts = [
@@ -1339,8 +1349,8 @@ export function printDocument(model: DocumentModel): void {
             <div style="position: absolute; left: 2.0%; top: 0.5%; width: 96.0%; height: 25.5%; background: white; z-index: 45;"></div>
             <!-- 1. Clean rectangular header box -->
             <div style="position: absolute; left: 4.0%; top: 1.6%; width: 92.0%; min-height: 22.6%; background: white; border: 2px solid #0f172a; border-radius: 0px; padding: 10px 14px; box-sizing: border-box; font-family: 'Noto Sans Devanagari', sans-serif; z-index: 50; color: #0f172a;">
-              <div style="font-size: 15px; font-weight: 800; margin-bottom: 2px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                <span style="white-space: nowrap;">${isEng ? 'SCHOOL NAME :' : 'शाळेचे नाव :'}</span> ${escapeHtml(hb.schoolName || '')}
+              <div style="font-size: ${hb.schoolName && hb.schoolName.length > 50 ? '11px' : hb.schoolName && hb.schoolName.length > 35 ? '13px' : '15px'}; font-weight: 800; margin-bottom: 2px; width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <span style="white-space: nowrap;">${isEng ? 'SCHOOL NAME :' : 'शाळेचे नाव :'}</span> <span>${escapeHtml(hb.schoolName || '')}</span>
               </div>
               ${(hb.kendra || hb.taluka || hb.jilha) ? `
                 <div style="font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; gap: 8px; margin-bottom: 7px;">

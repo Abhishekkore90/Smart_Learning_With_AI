@@ -177,7 +177,7 @@ const SUBJECT_META: Record<
     activeBg: "bg-orange-50 border-orange-300 text-orange-950",
   },
   kala: {
-    label: "कला",
+    label: "कलाशिक्षण",
     icon: Palette,
     gradient: "from-pink-600 to-rose-700",
     text: "text-pink-600",
@@ -186,7 +186,7 @@ const SUBJECT_META: Record<
     activeBg: "bg-pink-50 border-pink-300 text-pink-950",
   },
   karyanubhav: {
-    label: "कार्यानुभव",
+    label: "कार्यशिक्षण",
     icon: Wrench,
     gradient: "from-amber-600 to-yellow-700",
     text: "text-amber-600",
@@ -329,13 +329,13 @@ function mapSubjectNameToKey(subName: string, customKeys: string[] = []): string
   }
   if (s.includes("परिसर अभ्यास १") || s.includes("परिसर १")) return "parisar1";
   if (s.includes("परिसर अभ्यास २") || s.includes("परिसर २")) return "parisar2";
-  if (s.includes("परिसर")) return "parisar";
+  if (s.includes("परिसर") || s.includes("संभोवतालचे")) return "parisar";
   if (s.includes("सामाजिक") || s.includes("इतिहास") || s.includes("भूगोल") || s.includes("social")) {
     if (customKeys.includes("samajshastra") && !customKeys.includes("samajik_shastra")) return "samajshastra";
     return "samajik_shastra";
   }
   if (s.includes("कला") || s.includes("art")) return "kala";
-  if (s.includes("कार्यानुभव") || s.includes("work")) return "karyanubhav";
+  if (s.includes("कार्यानुभव") || s.includes("कार्यशिक्षण") || s.includes("कार्य") || s.includes("work")) return "karyanubhav";
   if (s.includes("शारीरिक") || s.includes("आरोग्य") || s.includes("पी.ई") || s.includes("physical")) return "sharirik";
 
   if (SUBJECT_META[s] || SUBJECT_NAMES_MAP[s] || customKeys.includes(s)) return s;

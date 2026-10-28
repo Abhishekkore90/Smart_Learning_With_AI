@@ -44,8 +44,8 @@ const SUBJECTS_LIST = [
   { key: "science", label: "सामान्य विज्ञान" },
   { key: "history", label: "इतिहास व नागरिकशास्त्र" },
   { key: "geography", label: "भूगोल" },
-  { key: "kala", label: "कला" },
-  { key: "karyanubhav", label: "कार्यानुभव / कार्यशिक्षण" },
+  { key: "kala", label: "कलाशिक्षण" },
+  { key: "karyanubhav", label: "कार्यशिक्षण" },
   { key: "sharirik", label: "शारीरिक शिक्षण व आरोग्य" },
 ];
 
@@ -72,13 +72,13 @@ const mapSubjectNameToKey = (name: string): string | null => {
   if (n.includes("गणित") || n.includes("math")) return "math";
   if (n.includes("परिसर अभ्यास १") || n.includes("evs 1") || n.includes("evs1")) return "evs1";
   if (n.includes("परिसर अभ्यास २") || n.includes("evs 2") || n.includes("evs2")) return "evs2";
-  if (n.includes("परिसर अभ्यास") || n.includes("evs")) return "evs1";
+  if (n.includes("परिसर अभ्यास") || n.includes("संभोवतालचे") || n.includes("evs")) return "evs1";
   if (n.includes("विज्ञान") || n.includes("science")) return "science";
   if (n.includes("इतिहास") || n.includes("history")) return "history";
   if (n.includes("भूगोल") || n.includes("geography")) return "geography";
   if (n.includes("सामाजिक") || n.includes("social")) return "history";
   if (n.includes("कला") || n.includes("art")) return "kala";
-  if (n.includes("कार्यानुभव") || n.includes("work")) return "karyanubhav";
+  if (n.includes("कार्यानुभव") || n.includes("कार्यशिक्षण") || n.includes("कार्य") || n.includes("work")) return "karyanubhav";
   if (n.includes("शारीरिक") || n.includes("health") || n.includes("pe")) return "sharirik";
   return null;
 };

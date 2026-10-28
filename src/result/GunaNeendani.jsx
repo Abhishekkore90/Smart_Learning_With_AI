@@ -1089,8 +1089,8 @@ const ResultEntry = () => {
     { name: "चित्रकला", akarikMarks: 100 }, // New subject added
     { name: "शारीरिक शिक्षण", akarikMarks: 100 }, // New subject added
     { name: "संगणक", akarikMarks: 100 }, // New subject added
-    { name: "कला", akarikMarks: 100 },
-    { name: "कार्यानुभव", akarikMarks: 100 },
+    { name: "कलाशिक्षण", akarikMarks: 100 },
+    { name: "कार्यशिक्षण", akarikMarks: 100 },
     { name: "शा.शिक्षण", akarikMarks: 100 },
   ];
 
@@ -1490,8 +1490,8 @@ const ResultEntry = () => {
               <p class="separate-note">{language === "English" ? "  To register marks first select the type of examination then click on 'Enter Marks'. Then fill out special entries." : "मार्क नोंदणी करण्यासाठी प्रथम शैक्षणिक वर्ष निवडा,नंतर वर्ग निवडा, आणि विषय हे 'Add Subject' वर क्लिक करुन विषय भरून घ्या. त्यानंतर परीक्षा सत्र निवडुन गुण प्रविष्ट करा."}</p>
             </div>
             <div class="column">
-              <h5>{language === "English" ? "Assessment:" : "कला,कार्यानुभव आणि शा.शिक्षण विषय भारांश"}</h5>
-              <p class="separate-note">{language === "English" ? "For Arts, Work Experience and Physical Education subjects, out of 100 marks should be given for the assessment. There are no cumulative assessment points for these subjects." : "कला, कार्यानुभव आणि शारीरिक शिक्षण विषयांसाठी पहिली ते आठवी या वर्गासाठी संकलित मूल्यमापनचेच 100 पैकी गुण द्यावेत.या विषयांसाठी आकारिक मूल्यमापन गुण नाहीत. "}</p>
+              <h5>{language === "English" ? "Assessment:" : "कलाशिक्षण, कार्यशिक्षण आणि शा.शिक्षण विषय भारांश"}</h5>
+              <p class="separate-note">{language === "English" ? "For Arts, Work Experience and Physical Education subjects, out of 100 marks should be given for the assessment. There are no cumulative assessment points for these subjects." : "कलाशिक्षण, कार्यशिक्षण आणि शारीरिक शिक्षण विषयांसाठी पहिली ते आठवी या वर्गासाठी संकलित मूल्यमापनचेच 100 पैकी गुण द्यावेत.या विषयांसाठी आकारिक मूल्यमापन गुण नाहीत. "}</p>
             </div>
           </div>
         </div>
@@ -2108,7 +2108,7 @@ const ResultEntry = () => {
                           <option value={language === "English" ? "Translates Hindi words and sentences into mother tongue" : "हिंदी शब्द तथा वाक्यों का मातृभाषा में अनुवाद करता/ती है|"} />
 
                           <option value={language === "English" ? " " : " "} />
-                          <option value={language === "English" ? "Karyanubhav" : "कार्यानुभव"} />
+                          <option value={language === "English" ? "Karyanubhav" : "कार्यशिक्षण"} />
 
                           <option value={language === "English" ? "Acts with confidence" : "आत्मविश्वासाने कृती करतो/ते."} />
                           <option value={language === "English" ? "Uses modern tools" : "आधुनिक साधनाचा वापर करतो/ते."} />

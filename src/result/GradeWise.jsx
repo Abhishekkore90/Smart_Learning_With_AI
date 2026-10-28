@@ -278,12 +278,12 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                   subData = studentMarks["hindi"] || studentMarks["tritiyabhasha"] || studentMarks["हिंदी"] || {};
                 } else if (lower.includes("गणित")) {
                   subData = studentMarks["ganit"] || studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};
-                } else if (lower.includes("परिसर")) {
-                  subData = studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["परिसर अभ्यास"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
+                } else if (lower.includes("परिसर") || lower.includes("संभोवतालचे")) {
+                  subData = studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["परिसर अभ्यास"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
                 } else if (lower.includes("कला")) {
-                  subData = studentMarks["kala"] || studentMarks["कला"] || {};
-                } else if (lower.includes("कार्यानुभव")) {
-                  subData = studentMarks["karyanubhav"] || studentMarks["कार्यानुभव"] || {};
+                  subData = studentMarks["kala"] || studentMarks["कलाशिक्षण"] || studentMarks["कला"] || {};
+                } else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) {
+                  subData = studentMarks["karyanubhav"] || studentMarks["कार्यशिक्षण"] || studentMarks["कार्यानुभव"] || {};
                 } else if (lower.includes("शारीरिक")) {
                   subData = studentMarks["sharirik"] || studentMarks["शारीरिक शिक्षण"] || studentMarks["शारीरिक शिक्षण व आरोग्य"] || {};
                 }
@@ -297,9 +297,9 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                       (lower.includes("हिंदी") && kLower.includes("हिंदी")) ||
                       (lower.includes("गणित") && kLower.includes("गणित")) ||
                       (lower.includes("कला") && kLower.includes("कला")) ||
-                      (lower.includes("कार्यानुभव") && kLower.includes("कार्यानुभव")) ||
+                      ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("कार्य"))) ||
                       (lower.includes("शारीरिक") && kLower.includes("शारीरिक")) ||
-                      (lower.includes("परिसर") && kLower.includes("परिसर")) ||
+                      ((lower.includes("परिसर") || lower.includes("संभोवतालचे")) && (kLower.includes("परिसर") || kLower.includes("संभोवतालचे"))) ||
                       kLower === lower
                     ) {
                       subData = v;
@@ -308,7 +308,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                   }
                 }
 
-                const isPracticalSub = lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("शारीरिक");
+                const isPracticalSub = lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("शारीरिक");
 
                 const tondiKaamObt = Number(subData.tondiKaam ?? subData.tondi ?? subData.oral ?? 0);
                 const pratyakshikPrayogObt = Number(subData.pratyakshikPrayog ?? subData.practical ?? subData.activity ?? 0);

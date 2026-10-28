@@ -1778,17 +1778,24 @@ function TeacherMeetingPage() {
       tempContainer.style.top = "0";
       tempContainer.style.width = `${desktopWidth}px`;
       tempContainer.style.maxWidth = `${desktopWidth}px`;
+      tempContainer.style.minWidth = `${desktopWidth}px`;
+      tempContainer.style.boxSizing = "border-box";
+      tempContainer.style.overflow = "visible";
       tempContainer.style.zIndex = "-9999";
       tempContainer.style.background = "#fdfcf7";
       tempContainer.appendChild(clone);
       document.body.appendChild(tempContainer);
 
+      clone.style.width = `${desktopWidth}px`;
+      clone.style.maxWidth = `${desktopWidth}px`;
+      clone.style.minWidth = `${desktopWidth}px`;
+      clone.style.boxSizing = "border-box";
+
       // Give browser time to lay out clone and resolve web fonts
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      // 8. Identify ONLY atomic elements that must NEVER be sliced in half across pages
-      const cloneRect = clone.getBoundingClientRect();
+      // 8. Identify atomic elements that must NEVER be sliced in half across pages
       const atomicSelectors = [
         ".register-letterhead-block",
         ".register-header-text",
@@ -1803,7 +1810,7 @@ function TeacherMeetingPage() {
       ];
 
       interface ElementBound {
-        el: HTMLElement;
+        el?: HTMLElement;
         top: number;
         bottom: number;
         isOutro: boolean;
@@ -1811,24 +1818,8 @@ function TeacherMeetingPage() {
         isResItem: boolean;
       }
 
-      const rawBounds: ElementBound[] = [];
-      atomicSelectors.forEach((sel) => {
-        clone.querySelectorAll<HTMLElement>(sel).forEach((el) => {
-          const rect = el.getBoundingClientRect();
-          const top = rect.top - cloneRect.top;
-          const bottom = rect.bottom - cloneRect.top;
-          if (bottom > top + 4) {
-            rawBounds.push({
-              el,
-              top,
-              bottom,
-              isOutro: el.classList.contains("register-outro-block"),
-              isSignature: el.classList.contains("register-signature-area"),
-              isResItem: el.classList.contains("register-res-item"),
-            });
-          }
-        });
-      });
+      let capturedBounds: ElementBound[] = [];
+      let capturedRootHeight = 0;
 
       // 9. Capture high-resolution raster image of the desktop-rendered register
       const { default: html2canvas } = await import("html2canvas-pro");
@@ -1843,19 +1834,81 @@ function TeacherMeetingPage() {
         width: desktopWidth,
         scrollX: 0,
         scrollY: 0,
-        onclone: (clonedDoc) => {
+        onclone: async (clonedDoc, clonedEl) => {
           try {
             const styleTags = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"));
             styleTags.forEach((st) => {
               clonedDoc.head.appendChild(st.cloneNode(true));
             });
           } catch (e) { }
+
+          // Ensure web fonts are completely resolved inside cloned document
+          if (clonedDoc.fonts && clonedDoc.fonts.ready) {
+            try {
+              await clonedDoc.fonts.ready;
+            } catch (e) { }
+          }
+
+          // Measure atomic element bounds directly inside the rendering iframe
+          // This guarantees 100% exact coordinates identical to the generated canvas,
+          // avoiding any mobile vs desktop viewport divergence in WebViews!
+          try {
+            const targetRoot = clonedEl || clonedDoc.getElementById("meeting-pdf-content-clone") || clonedDoc.getElementById("meeting-pdf-content");
+            if (targetRoot) {
+              const rootRect = targetRoot.getBoundingClientRect();
+              capturedRootHeight = targetRoot.offsetHeight || targetRoot.scrollHeight || rootRect.height;
+              const found: ElementBound[] = [];
+              atomicSelectors.forEach((sel) => {
+                targetRoot.querySelectorAll<HTMLElement>(sel).forEach((el) => {
+                  const rect = el.getBoundingClientRect();
+                  const top = rect.top - rootRect.top;
+                  const bottom = rect.bottom - rootRect.top;
+                  if (bottom > top + 2) {
+                    found.push({
+                      top,
+                      bottom,
+                      isOutro: el.classList.contains("register-outro-block"),
+                      isSignature: el.classList.contains("register-signature-area"),
+                      isResItem: el.classList.contains("register-res-item"),
+                    });
+                  }
+                });
+              });
+              capturedBounds = found;
+            }
+          } catch (err) {
+            console.warn("Could not measure bounds in onclone:", err);
+          }
         }
       });
 
+      // Fallback measurement if onclone bounds were not populated
+      const cloneRect = clone.getBoundingClientRect();
+      const effectiveRootHeight = capturedRootHeight || cloneRect.height || 1;
+      const canvasRatioY = canvas.height / effectiveRootHeight;
+
+      let boundsSource = capturedBounds;
+      if (boundsSource.length === 0) {
+        atomicSelectors.forEach((sel) => {
+          clone.querySelectorAll<HTMLElement>(sel).forEach((el) => {
+            const rect = el.getBoundingClientRect();
+            const top = rect.top - cloneRect.top;
+            const bottom = rect.bottom - cloneRect.top;
+            if (bottom > top + 2) {
+              boundsSource.push({
+                top,
+                bottom,
+                isOutro: el.classList.contains("register-outro-block"),
+                isSignature: el.classList.contains("register-signature-area"),
+                isResItem: el.classList.contains("register-res-item"),
+              });
+            }
+          });
+        });
+      }
+
       // 10. Map element positions accurately to canvas pixel coordinates
-      const canvasRatioY = canvas.height / (cloneRect.height || 1);
-      const bounds: ElementBound[] = rawBounds.map((b) => ({
+      const bounds: ElementBound[] = boundsSource.map((b) => ({
         ...b,
         top: Math.floor(b.top * canvasRatioY),
         bottom: Math.ceil(b.bottom * canvasRatioY),
@@ -1886,7 +1939,7 @@ function TeacherMeetingPage() {
         } else {
           // Find any atomic element that crosses candidateBottom
           const straddling = bounds.filter(
-            (b) => b.top + 4 < candidateBottom && b.bottom - 4 > candidateBottom
+            (b) => b.top < candidateBottom && b.bottom > candidateBottom
           );
 
           if (straddling.length > 0) {
@@ -1904,10 +1957,19 @@ function TeacherMeetingPage() {
 
             // Ensure we make reasonable progress (at least 15% of page)
             if (bestCut > currentTop + Math.floor(maxPageCanvasHeight * 0.15)) {
-              candidateBottom = bestCut;
+              // Safe cut: 8px above the element so no text ascender or border is touched
+              candidateBottom = Math.max(currentTop + Math.floor(maxPageCanvasHeight * 0.15), bestCut - 8);
             } else {
-              // If an atomic item is extremely tall, try sub-element or cut at naturalBottom
-              candidateBottom = naturalBottom;
+              // If the main resolution element started near currentTop, try sub-elements
+              const validSubCuts = straddling
+                .filter((b) => !b.isResItem && b.top > currentTop + Math.floor(maxPageCanvasHeight * 0.15))
+                .map((b) => b.top);
+
+              if (validSubCuts.length > 0) {
+                candidateBottom = Math.max(currentTop + Math.floor(maxPageCanvasHeight * 0.15), Math.min(...validSubCuts) - 8);
+              } else {
+                candidateBottom = naturalBottom;
+              }
             }
           }
         }
@@ -1927,11 +1989,18 @@ function TeacherMeetingPage() {
         const pageCtx = pageCanvas.getContext("2d");
 
         if (pageCtx) {
-          // Uniform warm ledger background
+          // 1. Uniform warm ledger background
           pageCtx.fillStyle = "#fdfcf7";
           pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
 
-          // Draw double red margin line on the left (ledger style) across entire page
+          // 2. Draw content slice at natural 1:1 scale
+          pageCtx.drawImage(
+            canvas,
+            0, currentTop, canvas.width, sliceHeight,
+            0, 0, canvas.width, sliceHeight
+          );
+
+          // 3. Draw unbroken, continuous double red margin line on top across the entire A4 page height
           const marginLineX = Math.round(56 * (canvas.width / desktopWidth));
           pageCtx.strokeStyle = "#ef4444";
           pageCtx.lineWidth = 1.5;
@@ -1941,13 +2010,6 @@ function TeacherMeetingPage() {
           pageCtx.moveTo(marginLineX + 4, 0);
           pageCtx.lineTo(marginLineX + 4, pageCanvas.height);
           pageCtx.stroke();
-
-          // Draw content slice at natural 1:1 scale
-          pageCtx.drawImage(
-            canvas,
-            0, currentTop, canvas.width, sliceHeight,
-            0, 0, canvas.width, sliceHeight
-          );
         }
 
         const imgData = pageCanvas.toDataURL("image/jpeg", 0.98);
@@ -2527,8 +2589,13 @@ function TeacherMeetingPage() {
                             border: 1px solid #475569;
                             padding: 0.35rem 0.45rem;
                             text-align: left;
-                            white-space: nowrap !important;
-                            word-break: keep-all !important;
+                            white-space: normal;
+                            word-break: break-word;
+                            vertical-align: middle;
+                          }
+
+                          .register-table th {
+                            white-space: nowrap;
                           }
 
                           .register-table th:first-child, .register-table td:first-child {
@@ -2538,8 +2605,8 @@ function TeacherMeetingPage() {
                           }
 
                           .register-table th.role-cell, .register-table td.role-cell {
-                            white-space: nowrap !important;
-                            word-break: keep-all !important;
+                            white-space: normal;
+                            word-break: break-word;
                           }
 
                           .register-table th {
@@ -2603,13 +2670,7 @@ function TeacherMeetingPage() {
                           }
 
                           .pdf-desktop-render::before {
-                            left: 3.5rem !important;
-                            width: 3px !important;
-                            border-left: 1px solid #ef4444 !important;
-                            border-right: 1px solid #ef4444 !important;
-                            height: 100% !important;
-                            display: block !important;
-                            pointer-events: none !important;
+                            display: none !important;
                           }
 
                           .pdf-desktop-render.register-page-bg,
@@ -2645,9 +2706,15 @@ function TeacherMeetingPage() {
                           .pdf-desktop-render .register-table td {
                             padding: 0.35rem 0.45rem !important;
                             border: 1px solid #475569 !important;
-                            font-size: 0.9rem !important;
+                            font-size: 0.88rem !important;
+                            white-space: normal !important;
+                            word-break: break-word !important;
+                            vertical-align: middle !important;
+                            line-height: 1.25 !important;
+                          }
+
+                          .pdf-desktop-render .register-table th {
                             white-space: nowrap !important;
-                            word-break: keep-all !important;
                           }
 
                           .pdf-desktop-render .register-table th:first-child,
@@ -2673,9 +2740,28 @@ function TeacherMeetingPage() {
                             break-inside: avoid !important;
                           }
 
+
                           .pdf-desktop-render .register-res-subject-block,
-                          .pdf-desktop-render .register-res-body-block,
+                          .pdf-desktop-render .register-res-body-block {
+                            display: flex !important;
+                            flex-direction: row !important;
+                            flex-wrap: nowrap !important;
+                            gap: 1rem !important;
+                            align-items: flex-start !important;
+                            page-break-inside: avoid !important;
+                            break-inside: avoid !important;
+                          }
+
+                          .pdf-desktop-render .register-res-title {
+                            white-space: nowrap !important;
+                            flex-shrink: 0 !important;
+                            font-weight: 700 !important;
+                          }
+
                           .pdf-desktop-render .register-res-meta-block {
+                            padding-left: 6.5rem !important;
+                            font-size: 1rem !important;
+                            line-height: 2rem !important;
                             page-break-inside: avoid !important;
                             break-inside: avoid !important;
                           }
@@ -2755,9 +2841,35 @@ function TeacherMeetingPage() {
                               line-height: 2.1rem !important;
                             }
                             .register-signature-area {
-                              margin-top: 3rem !important;
-                              font-size: 0.95rem !important;
-                              gap: 1rem !important;
+                              margin-top: 2.5rem !important;
+                              font-size: 0.82rem !important;
+                              gap: 0.75rem !important;
+                              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                              width: 100% !important;
+                              max-width: 100% !important;
+                            }
+                            .register-signature-area > div {
+                              min-width: 0 !important;
+                              width: 100% !important;
+                            }
+                            .register-table {
+                              font-size: 0.72rem !important;
+                              width: 100% !important;
+                              min-width: 0 !important;
+                              table-layout: fixed !important;
+                            }
+                            .register-table th, 
+                            .register-table td {
+                              padding: 0.25rem 0.2rem !important;
+                              white-space: normal !important;
+                              word-break: break-word !important;
+                              overflow-wrap: break-word !important;
+                              line-height: 1.2 !important;
+                            }
+                            .register-table th.role-cell, 
+                            .register-table td.role-cell {
+                              white-space: normal !important;
+                              word-break: break-word !important;
                             }
                           }
 
@@ -3344,27 +3456,24 @@ function TeacherMeetingPage() {
                                   {selectedPastMeeting.members &&
                                     selectedPastMeeting.members.length > 0 && (
                                       <div className="space-y-4 register-table-wrapper">
-                                        <div className="text-[11px] text-slate-400 font-sans sm:hidden mb-1 flex items-center gap-1">
-                                          <span>👉</span> तक्ता पूर्ण पाहण्यासाठी डावीकडे सरकवा
-                                        </div>
-                                        <div className="w-full overflow-x-auto no-scrollbar pb-1">
-                                          <table className="register-table min-w-[500px] w-full" style={{ tableLayout: 'fixed' }}>
+                                        <div className="w-full overflow-hidden sm:overflow-x-auto pb-1">
+                                          <table className="register-table w-full sm:min-w-[500px]" style={{ tableLayout: 'fixed' }}>
                                             <colgroup>
-                                              <col style={{ width: '7%' }} />
-                                              <col style={{ width: '38%' }} />
-                                              <col style={{ width: '24%' }} />
+                                              <col style={{ width: '8%' }} />
+                                              <col style={{ width: '36%' }} />
+                                              <col style={{ width: '25%' }} />
                                               <col style={{ width: '16%' }} />
                                               <col style={{ width: '15%' }} />
                                             </colgroup>
                                             <thead>
                                               <tr className="bg-slate-100">
-                                                <th style={{ width: '7%', whiteSpace: 'nowrap' }} className="text-center px-0.5 py-2 whitespace-nowrap">
+                                                <th style={{ width: '8%' }} className="text-center px-0.5 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold sm:whitespace-nowrap">
                                                   अ.क्र.
                                                 </th>
-                                                <th style={{ width: '38%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap">सदस्याचे नाव</th>
-                                                <th style={{ width: '24%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap">पदनाम</th>
-                                                <th style={{ width: '16%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap role-cell">पद</th>
-                                                <th style={{ width: '15%', whiteSpace: 'nowrap' }} className="text-center px-2 py-2 whitespace-nowrap">
+                                                <th style={{ width: '36%' }} className="text-left px-1 py-1.5 sm:px-2 sm:py-2 text-[10px] sm:text-xs font-bold sm:whitespace-nowrap">सदस्याचे नाव</th>
+                                                <th style={{ width: '25%' }} className="text-left px-1 py-1.5 sm:px-2 sm:py-2 text-[10px] sm:text-xs font-bold sm:whitespace-nowrap">पदनाम</th>
+                                                <th style={{ width: '16%' }} className="text-left px-1 py-1.5 sm:px-2 sm:py-2 text-[10px] sm:text-xs font-bold role-cell sm:whitespace-nowrap">पद</th>
+                                                <th style={{ width: '15%' }} className="text-center px-0.5 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold sm:whitespace-nowrap">
                                                   स्वाक्षरी
                                                 </th>
                                               </tr>
@@ -3375,19 +3484,41 @@ function TeacherMeetingPage() {
                                                 .map((member: any, index: number) => (
                                                    <tr
                                                      key={index}
-                                                     className="hover:bg-slate-50/30 whitespace-nowrap"
+                                                     className="hover:bg-slate-50/30"
                                                    >
-                                                     <td style={{ width: '7%' }} className="text-center px-0.5 py-2 whitespace-nowrap font-bold">
+                                                     <td style={{ width: '8%' }} className="text-center px-0.5 py-1.5 sm:py-2 text-[10px] sm:text-sm font-bold align-middle">
                                                        {index + 1}
                                                      </td>
-                                                     <td style={{ width: '38%', whiteSpace: 'nowrap', wordBreak: 'keep-all', fontSize: member.name && member.name.length > 25 ? '0.78rem' : member.name && member.name.length > 18 ? '0.84rem' : '0.9rem' }} className="font-bold text-slate-900 px-2 py-2 whitespace-nowrap overflow-hidden text-ellipsis">
+                                                     <td 
+                                                       style={{ 
+                                                         width: '36%', 
+                                                         fontSize: member.name && member.name.length > 25 ? '0.76rem' : member.name && member.name.length > 18 ? '0.82rem' : '0.88rem' 
+                                                       }} 
+                                                       className="font-bold text-slate-900 px-1 py-1.5 sm:px-2 sm:py-2 leading-snug break-words align-middle"
+                                                     >
                                                        {member.name}
                                                      </td>
-                                                     <td style={{ width: '24%', whiteSpace: 'nowrap', wordBreak: 'keep-all', fontSize: member.post && member.post.length > 20 ? '0.78rem' : '0.85rem' }} className="px-2 py-2 whitespace-nowrap overflow-hidden text-ellipsis">{member.post}</td>
-                                                     <td style={{ width: '16%', whiteSpace: 'nowrap', wordBreak: 'keep-all', fontSize: (member.role || 'सदस्य').length > 12 ? '0.78rem' : '0.85rem' }} className="px-2 py-2 whitespace-nowrap role-cell font-bold overflow-hidden text-ellipsis">{member.role || "सदस्य"}</td>
-                                                     <td style={{ width: '15%', whiteSpace: 'nowrap' }} className="text-center px-2 py-2 whitespace-nowrap">
+                                                     <td 
+                                                       style={{ 
+                                                         width: '25%', 
+                                                         fontSize: member.post && member.post.length > 25 ? '0.72rem' : member.post && member.post.length > 16 ? '0.78rem' : '0.85rem' 
+                                                       }} 
+                                                       className="px-1 py-1.5 sm:px-2 sm:py-2 leading-snug text-slate-800 break-words align-middle"
+                                                     >
+                                                       {member.post}
+                                                     </td>
+                                                     <td 
+                                                       style={{ 
+                                                         width: '16%', 
+                                                         fontSize: (member.role || 'सदस्य').length > 10 ? '0.74rem' : '0.84rem' 
+                                                       }} 
+                                                       className="px-1 py-1.5 sm:px-2 sm:py-2 leading-snug role-cell font-bold text-slate-800 break-words align-middle"
+                                                     >
+                                                       {member.role || "सदस्य"}
+                                                     </td>
+                                                     <td style={{ width: '15%' }} className="text-center px-0.5 py-1.5 sm:py-2 align-middle">
                                                        {/* Left blank for physical signing as requested */}
-                                                       <div className="h-8 w-full" />
+                                                       <div className="h-6 sm:h-8 w-full" />
                                                      </td>
                                                    </tr>
                                                 ),
@@ -3460,18 +3591,18 @@ function TeacherMeetingPage() {
                                     )}
 
                                   {/* Bottom Signatures Block */}
-                                  <div className="register-signature-area pt-12">
-                                    <div className="space-y-4">
-                                      <div className="w-48 border-b-2 border-slate-800 mx-auto" />
-                                      <p className="font-black text-slate-900 text-sm sm:text-base">समिती अध्यक्ष स्वाक्षरी</p>
-                                      <p className="text-xs sm:text-sm font-bold text-slate-700">
+                                  <div className="register-signature-area pt-8 sm:pt-12 w-full max-w-full">
+                                    <div className="space-y-2 sm:space-y-4 min-w-0">
+                                      <div className="w-24 sm:w-48 max-w-[85%] border-b-2 border-slate-800 mx-auto" />
+                                      <p className="font-black text-slate-900 text-xs sm:text-base break-words leading-tight">समिती अध्यक्ष स्वाक्षरी</p>
+                                      <p className="text-[11px] sm:text-sm font-bold text-slate-700 break-words leading-tight">
                                         ({selectedPastMeeting.presidentName || editPresidentName || "अध्यक्ष"})
                                       </p>
                                     </div>
-                                    <div className="space-y-4">
-                                      <div className="w-48 border-b-2 border-slate-800 mx-auto" />
-                                      <p className="font-black text-slate-900 text-sm sm:text-base">सचिव / मुख्याध्यापक स्वाक्षरी</p>
-                                      <p className="text-xs sm:text-sm font-bold text-slate-700">
+                                    <div className="space-y-2 sm:space-y-4 min-w-0">
+                                      <div className="w-24 sm:w-48 max-w-[85%] border-b-2 border-slate-800 mx-auto" />
+                                      <p className="font-black text-slate-900 text-xs sm:text-base break-words leading-tight">सचिव / मुख्याध्यापक स्वाक्षरी</p>
+                                      <p className="text-[11px] sm:text-sm font-bold text-slate-700 break-words leading-tight">
                                         ({selectedPastMeeting.headmasterName || editHeadmasterName || "मुख्याध्यापक"})
                                       </p>
                                     </div>

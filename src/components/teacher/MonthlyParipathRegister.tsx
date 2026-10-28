@@ -1281,7 +1281,7 @@ export function MonthlyParipathRegister() {
       <div
         id="printable-paripath-register"
         ref={printRef}
-        className="bg-white p-2 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2rem] shadow-xl border border-slate-300 font-sans space-y-8 overflow-hidden w-full max-w-full"
+        className="bg-white p-2 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2rem] shadow-xl border border-slate-300 font-sans space-y-8 overflow-hidden w-full max-w-full flex flex-col items-center"
       >
         {/* ==================== COMBINED PAGE CHUNKS: 1-10, 11-20, 21-31 ==================== */}
         {[
@@ -1295,26 +1295,26 @@ export function MonthlyParipathRegister() {
           return (
             <React.Fragment key={`page-chunk-${chunkIdx}`}>
               {chunkIdx > 0 && (
-                <div className="relative my-8 border-t-4 border-dashed border-slate-300 non-printable flex items-center justify-center">
+                <div className="relative my-8 border-t-4 border-dashed border-slate-300 non-printable flex items-center justify-center w-full">
                   <span className="bg-slate-200 text-slate-700 px-6 py-1.5 rounded-full text-xs font-black uppercase tracking-widest -mt-4 shadow-sm border border-slate-300">
                     पानाचे विभाजन / Page {chunkIdx + 1} ({chunk.label})
                   </span>
                 </div>
               )}
 
-              <A4DocumentMobileScaleWrapper targetWidth={1050} className="w-full">
-                <div className={`page-chunk-box space-y-4 w-[1050px] min-w-[1050px] ${chunkIdx > 0 ? "page-break" : ""}`}>
+              <A4DocumentMobileScaleWrapper targetWidth={1050} className="w-full flex justify-center">
+                <div className={`page-chunk-box space-y-4 w-[1050px] min-w-[1050px] mx-auto ${chunkIdx > 0 ? "page-break" : ""}`}>
                 {/* ---------- SINGLE UNIFIED HEADER ---------- */}
                 <div className="flex flex-col gap-2 border-b-2 border-slate-900 pb-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-900">
-                    <div className="space-y-1 font-black text-xs sm:text-sm">
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex flex-row items-center justify-between gap-4 text-slate-900">
+                    <div className="space-y-1 font-black text-sm shrink-0">
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
                         <span>शाळेचे नाव :</span>
                         <span className="border-b border-dotted border-slate-700 px-1.5 py-0.5 text-indigo-950 font-extrabold">
                           {schoolName || schoolInfo.schoolName || "..................................................."}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
                         <span>शैक्षणिक वर्ष :</span>
                         <span className="border-b border-dotted border-slate-700 px-1.5 py-0.5 text-indigo-950 font-extrabold">
                           {academicYear || getCurrentAcademicYearStr()}
@@ -1322,23 +1322,23 @@ export function MonthlyParipathRegister() {
                       </div>
                     </div>
 
-                    <div className="text-left sm:text-right">
-                      <h2 className="text-base sm:text-lg md:text-2xl font-black text-slate-900 tracking-tight sm:tracking-wider leading-snug">
+                    <div className="text-right shrink-0">
+                      <h2 className="text-2xl font-black text-slate-900 tracking-wider leading-snug whitespace-nowrap">
                         दैनिक व परिपाठातील उपक्रम ({chunk.label})
                       </h2>
-                      <p className="text-[11px] sm:text-xs font-bold text-slate-700 uppercase mt-0.5">
+                      <p className="text-xs font-bold text-slate-700 uppercase mt-0.5 whitespace-nowrap">
                         मासिक परिपाठ नोंदवही • माहे: {MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}
                       </p>
                     </div>
                   </div>
 
                   {/* School Metadata Info Row */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[11px] sm:text-xs font-bold text-slate-900 pt-2 border-t border-slate-300">
-                    <div className="col-span-2 sm:col-span-1">शाळेचे नाव : <span className="font-extrabold text-indigo-950">{schoolName || schoolInfo.schoolName || "---"}</span></div>
+                  <div className="grid grid-cols-5 gap-2 text-xs font-bold text-slate-900 pt-2 border-t border-slate-300 whitespace-nowrap">
+                    <div>शाळेचे नाव : <span className="font-extrabold text-indigo-950">{schoolName || schoolInfo.schoolName || "---"}</span></div>
                     <div>तालुका : <span className="font-extrabold text-indigo-950">{schoolInfo.taluka || "---"}</span></div>
                     <div>जिल्हा : <span className="font-extrabold text-indigo-950">{schoolInfo.jilha || "---"}</span></div>
                     <div>केंद्र : <span className="font-extrabold text-indigo-950">{schoolInfo.kendra || "---"}</span></div>
-                    <div className="col-span-2 sm:col-span-1">UDISE नंबर : <span className="font-extrabold text-indigo-950">{schoolInfo.udise || "---"}</span></div>
+                    <div>UDISE नंबर : <span className="font-extrabold text-indigo-950">{schoolInfo.udise || "---"}</span></div>
                   </div>
                 </div>
 

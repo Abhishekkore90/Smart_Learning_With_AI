@@ -1005,12 +1005,12 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
               </tr>
               <tr>
                 <td style="padding: 5px;">४</td>
-                <td class="left-align" style="font-weight: bold; padding: 5px;">कला</td>
+                <td class="left-align" style="font-weight: bold; padding: 5px;">कलाशिक्षण</td>
                 <td class="left-align" style="padding: 5px; padding-left: 15px;">${studentRemarks.subjectRemarks?.art?.selected?.join(", ") || studentRemarks.subjectRemarks?.art?.custom || "-"}</td>
               </tr>
               <tr>
                 <td style="padding: 5px;">५</td>
-                <td class="left-align" style="font-weight: bold; padding: 5px;">कार्यानुभव</td>
+                <td class="left-align" style="font-weight: bold; padding: 5px;">कार्यशिक्षण</td>
                 <td class="left-align" style="padding: 5px; padding-left: 15px;">${studentRemarks.subjectRemarks?.workExperience?.selected?.join(", ") || studentRemarks.subjectRemarks?.workExperience?.custom || "-"}</td>
               </tr>
               <tr>

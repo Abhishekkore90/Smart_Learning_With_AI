@@ -12,8 +12,8 @@ const DEFAULT_SUBJECTS = [
   "प्रथम भाषा : मराठी",
   "द्वितीय भाषा : इंग्रजी",
   "गणित",
-  "कला",
-  "कार्यानुभव",
+  "कलाशिक्षण",
+  "कार्यशिक्षण",
   "शारीरिक शिक्षण",
 ];
 
@@ -1748,9 +1748,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             if (lower.includes("इंग्रजी")) return studentMarks["english"] || studentMarks["dvitiybhasha"] || studentMarks["द्वितीय भाषा : इंग्रजी"] || studentMarks["द्वितीय भाषा: इंग्रजी"] || studentMarks["तृतीय भाषा: इंग्रजी"] || studentMarks["तृतीय भाषा : इंग्रजी"] || studentMarks["तृतीय भाषा"] || studentMarks["इंग्रजी"] || {};
                             if (lower.includes("हिंदी")) return studentMarks["hindi"] || studentMarks["tritiyabhasha"] || studentMarks["हिंदी"] || {};
                             if (lower.includes("गणित")) return studentMarks["ganit"] || studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};
-                            if (lower.includes("परिसर")) return studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["परिसर अभ्यास"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
-                            if (lower.includes("कला")) return studentMarks["kala"] || studentMarks["art"] || studentMarks["कला"] || {};
-                            if (lower.includes("कार्यानुभव")) return studentMarks["karyanubhav"] || studentMarks["work"] || studentMarks["कार्यानुभव"] || {};
+                            if (lower.includes("परिसर") || lower.includes("संभोवतालचे")) return studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["परिसर अभ्यास"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
+                            if (lower.includes("कला")) return studentMarks["kala"] || studentMarks["art"] || studentMarks["कलाशिक्षण"] || studentMarks["कला"] || {};
+                            if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) return studentMarks["karyanubhav"] || studentMarks["work"] || studentMarks["कार्यशिक्षण"] || studentMarks["कार्यानुभव"] || {};
                             if (lower.includes("शारीरिक")) return studentMarks["sharirik"] || studentMarks["pe"] || studentMarks["शारीरिक शिक्षण"] || studentMarks["शारीरिक शिक्षण व आरोग्य"] || {};
 
                             for (const [k, v] of Object.entries(studentMarks)) {
@@ -1761,9 +1761,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                 (lower.includes("हिंदी") && kLower.includes("हिंदी")) ||
                                 (lower.includes("गणित") && kLower.includes("गणित")) ||
                                 (lower.includes("कला") && kLower.includes("कला")) ||
-                                (lower.includes("कार्यानुभव") && kLower.includes("कार्यानुभव")) ||
+                                ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("कार्य"))) ||
                                 (lower.includes("शारीरिक") && kLower.includes("शारीरिक")) ||
-                                (lower.includes("परिसर") && kLower.includes("परिसर")) ||
+                                ((lower.includes("परिसर") || lower.includes("संभोवतालचे")) && (kLower.includes("परिसर") || kLower.includes("संभोवतालचे"))) ||
                                 kLower === lower
                               ) {
                                 return v;
@@ -1857,7 +1857,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           const subData = getSubData(subjectName);
                           const sw = getSubjectWeightage(subjectName, student.id, student.rollNo);
                           const hasWeightage = !!(sw && typeof sw === "object" && Object.values(sw).some(v => v !== undefined && v !== null && String(v).trim() !== ""));
-                          const isPracticalSub = subjectName.includes("कला") || subjectName.includes("कार्यानुभव") || subjectName.includes("शारीरिक");
+                          const isPracticalSub = subjectName.includes("कला") || subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण") || subjectName.includes("कार्य") || subjectName.includes("शारीरिक");
 
                           const getWVal = (keys) => {
                             if (hasWeightage && sw && typeof sw === "object") {
@@ -1994,16 +1994,16 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                   val = remarksObj["tritiyabhasha"] || remarksObj["hindi"] || remarksObj["तृतीय भाषा (हिंदी)"] || remarksObj["तृतीय भाषा: हिंदी"] || remarksObj["हिंदी"];
                                 } else if (lower.includes("गणित") || lower.includes("ganit")) {
                                   val = remarksObj["ganit"] || remarksObj["math"] || remarksObj["maths"] || remarksObj["गणित"];
-                                } else if (lower.includes("परिसर") || lower.includes("parisar")) {
-                                  val = remarksObj["parisar"] || remarksObj["parisar1"] || remarksObj["parisar2"] || remarksObj["परिसर अभ्यास"] || remarksObj["परिसर अभ्यास १"] || remarksObj["परिसर अभ्यास २"];
+                                } else if (lower.includes("परिसर") || lower.includes("parisar") || lower.includes("संभोवतालचे")) {
+                                  val = remarksObj["parisar"] || remarksObj["parisar1"] || remarksObj["parisar2"] || remarksObj["आपले संभोवतालचे जग"] || remarksObj["परिसर अभ्यास"] || remarksObj["परिसर अभ्यास १"] || remarksObj["परिसर अभ्यास २"];
                                 } else if (lower.includes("विज्ञान") || lower.includes("vijnan") || lower.includes("vidnyan")) {
                                   val = remarksObj["vijnan"] || remarksObj["vidnyan"] || remarksObj["विज्ञान"] || remarksObj["विज्ञान व तंत्रज्ञान"];
                                 } else if (lower.includes("सामाजिक") || lower.includes("samajik_shastra") || lower.includes("samajshastra")) {
                                   val = remarksObj["samajik_shastra"] || remarksObj["samajshastra"] || remarksObj["सामाजिक शास्त्रे"];
                                 } else if (lower.includes("कला") || lower.includes("kala")) {
-                                  val = remarksObj["kala"] || remarksObj["art"] || remarksObj["कला"];
-                                } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav")) {
-                                  val = remarksObj["karyanubhav"] || remarksObj["work"] || remarksObj["कार्यानुभव"];
+                                  val = remarksObj["kala"] || remarksObj["art"] || remarksObj["कलाशिक्षण"] || remarksObj["कला"];
+                                } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) {
+                                  val = remarksObj["karyanubhav"] || remarksObj["work"] || remarksObj["कार्यशिक्षण"] || remarksObj["कार्यानुभव"];
                                 } else if (lower.includes("शारीरिक") || lower.includes("sharirik")) {
                                   val = remarksObj["sharirik"] || remarksObj["pe"] || remarksObj["शारीरिक शिक्षण"] || remarksObj["शारीरिक शिक्षण व आरोग्य"];
                                 } else if (lower.includes("विशेष") || lower.includes("visheshpragati")) {
@@ -2027,9 +2027,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                     (lLower.includes("हिंदी") && (kLower.includes("हिंदी") || kLower.includes("tritiyabhasha"))) ||
                                     (lLower.includes("गणित") && (kLower.includes("गणित") || kLower.includes("ganit"))) ||
                                     (lLower.includes("कला") && (kLower.includes("कला") || kLower.includes("kala"))) ||
-                                    (lLower.includes("कार्यानुभव") && (kLower.includes("कार्यानुभव") || kLower.includes("karyanubhav"))) ||
+                                    ((lLower.includes("कार्यानुभव") || lLower.includes("कार्यशिक्षण") || lLower.includes("कार्य")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("karyanubhav") || kLower.includes("कार्य"))) ||
                                     (lLower.includes("शारीरिक") && (kLower.includes("शारीरिक") || kLower.includes("sharirik"))) ||
-                                    (lLower.includes("परिसर") && (kLower.includes("परिसर") || kLower.includes("parisar"))) ||
+                                    ((lLower.includes("परिसर") || lLower.includes("संभोवतालचे")) && (kLower.includes("परिसर") || kLower.includes("parisar") || kLower.includes("संभोवतालचे"))) ||
                                     kLower === lLower
                                   ) {
                                     val = v;
@@ -2179,12 +2179,12 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                               val = remarksObj["dvitiybhasha"] || remarksObj["english"] || remarksObj["द्वितीय भाषा : इंग्रजी"] || remarksObj["तृतीय भाषा: इंग्रजी"] || remarksObj["तृतीय भाषा : इंग्रजी"];
                             } else if (lower.includes("गणित") || lower.includes("ganit")) {
                               val = remarksObj["ganit"] || remarksObj["math"] || remarksObj["गणित"];
-                            } else if (lower.includes("परिसर") || lower.includes("parisar")) {
-                              val = remarksObj["parisar"] || remarksObj["parisar1"] || remarksObj["parisar2"] || remarksObj["परिसर अभ्यास"];
+                            } else if (lower.includes("परिसर") || lower.includes("parisar") || lower.includes("संभोवतालचे")) {
+                              val = remarksObj["parisar"] || remarksObj["parisar1"] || remarksObj["parisar2"] || remarksObj["आपले संभोवतालचे जग"] || remarksObj["परिसर अभ्यास"];
                             } else if (lower.includes("कला") || lower.includes("kala")) {
-                              val = remarksObj["kala"] || remarksObj["कला"];
-                            } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav")) {
-                              val = remarksObj["karyanubhav"] || remarksObj["कार्यानुभव"];
+                              val = remarksObj["kala"] || remarksObj["कलाशिक्षण"] || remarksObj["कला"];
+                            } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) {
+                              val = remarksObj["karyanubhav"] || remarksObj["कार्यशिक्षण"] || remarksObj["कार्यानुभव"];
                             } else if (lower.includes("शारीरिक") || lower.includes("sharirik")) {
                               val = remarksObj["sharirik"] || remarksObj["शारीरिक शिक्षण"];
                             } else if (lower.includes("विशेष") || lower.includes("visheshpragati")) {
@@ -2308,12 +2308,12 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               subData = studentMarks["hindi"] || studentMarks["tritiyabhasha"] || studentMarks["हिंदी"] || {};
             } else if (lower.includes("गणित")) {
               subData = studentMarks["ganit"] || studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};
-            } else if (lower.includes("परिसर")) {
-              subData = studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["परिसर अभ्यास"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
+            } else if (lower.includes("परिसर") || lower.includes("संभोवतालचे")) {
+              subData = studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["परिसर अभ्यास"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
             } else if (lower.includes("कला")) {
-              subData = studentMarks["kala"] || studentMarks["कला"] || {};
-            } else if (lower.includes("कार्यानुभव")) {
-              subData = studentMarks["karyanubhav"] || studentMarks["कार्यानुभव"] || {};
+              subData = studentMarks["kala"] || studentMarks["कलाशिक्षण"] || studentMarks["कला"] || {};
+            } else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) {
+              subData = studentMarks["karyanubhav"] || studentMarks["कार्यशिक्षण"] || studentMarks["कार्यानुभव"] || {};
             } else if (lower.includes("शारीरिक")) {
               subData = studentMarks["sharirik"] || studentMarks["शारीरिक शिक्षण"] || studentMarks["शारीरिक शिक्षण व आरोग्य"] || {};
             }
@@ -2327,9 +2327,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   (lower.includes("हिंदी") && kLower.includes("हिंदी")) ||
                   (lower.includes("गणित") && kLower.includes("गणित")) ||
                   (lower.includes("कला") && kLower.includes("कला")) ||
-                  (lower.includes("कार्यानुभव") && kLower.includes("कार्यानुभव")) ||
+                  ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("कार्य"))) ||
                   (lower.includes("शारीरिक") && kLower.includes("शारीरिक")) ||
-                  (lower.includes("परिसर") && kLower.includes("परिसर")) ||
+                  ((lower.includes("परिसर") || lower.includes("संभोवतालचे")) && (kLower.includes("परिसर") || kLower.includes("संभोवतालचे"))) ||
                   kLower === lower
                 ) {
                   subData = v;
@@ -2338,7 +2338,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               }
             }
 
-            const isPracticalSub = lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("शारीरिक");
+            const isPracticalSub = lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("शारीरिक");
 
             const tondiKaamObt = Number(subData.tondiKaam ?? subData.tondi ?? subData.oral ?? 0);
             const pratyakshikPrayogObt = Number(subData.pratyakshikPrayog ?? subData.practical ?? subData.activity ?? 0);
@@ -2420,9 +2420,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             if (str.includes("द्वितीय") || str.includes("इंग्रजी")) return "द्वितीय भाषा : इंग्रजी";
             if (str.includes("तृतीय") || str.includes("हिंदी")) return "तृतीय भाषा : हिंदी";
             if (str.includes("गणित")) return "गणित";
-            if (str.includes("परिसर")) return "परिसर अभ्यास";
-            if (str.includes("कला")) return "कला";
-            if (str.includes("कार्यानुभव")) return "कार्यानुभव";
+            if (str.includes("परिसर") || str.includes("संभोवतालचे")) return "आपले संभोवतालचे जग";
+            if (str.includes("कला")) return "कलाशिक्षण";
+            if (str.includes("कार्यानुभव") || str.includes("कार्यशिक्षण") || str.includes("कार्य")) return "कार्यशिक्षण";
             if (str.includes("शारीरिक")) return "शारीरिक शिक्षण व आरोग्य";
             return str;
           };
@@ -2768,7 +2768,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                         </tr>
                         <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
                           {subjects.map((sub) => {
-                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("शारीरिक");
                             return isPractical ? (
                               <React.Fragment key={sub}>
                                 <th className="border border-lime-600 p-0.5 text-[9px] leading-tight font-bold" colSpan={2} rowSpan={2}>अ<br/><span className="text-[7px] font-normal">आकारिक</span></th>
@@ -2787,7 +2787,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                         </tr>
                         <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
                           {subjects.map((sub) => {
-                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("शारीरिक");
                             if (isPractical) return null;
                             return (
                               <React.Fragment key={sub}>
@@ -2802,7 +2802,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           <td className="border border-lime-600 p-0 w-5"></td>
                           <td className="border border-lime-600 p-0.5 text-left font-black">पैकी</td>
                           {subjects.map((sub) => {
-                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("शारीरिक");
                             const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
                             const semMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "30" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "40" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "60";
 

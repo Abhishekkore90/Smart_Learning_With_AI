@@ -93,6 +93,8 @@ export const A4DocumentMobileScaleWrapper: React.FC<A4DocumentMobileScaleWrapper
                 }
             : {
                 width: "100%",
+                display: "flex",
+                justifyContent: "center",
               }
         }
       >

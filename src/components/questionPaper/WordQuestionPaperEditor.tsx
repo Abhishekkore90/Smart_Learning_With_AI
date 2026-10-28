@@ -696,21 +696,37 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       ? `<div class="qp-sub-location" style="display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; gap: 8px; flex-shrink: 0; font-size: inherit; font-weight: 700; color: #0f172a; white-space: nowrap;">${subParts.join('<span style="color: #94a3b8; font-weight: normal; margin: 0 4px; font-size: inherit;">|</span>')}</div>`
       : "";
 
-    // Ensure header-dots-mask exists strictly inside the box (never touching the left or right column borders)
-    // 1. Unified Question Paper Header Box (Matching Image 2 for ALL classes)
+    // 1. Unified Question Paper Header Box — inject ONLY on genuine header pages
+    // Use data-is-header-page stamped at parse time (from raw XML, before any injection).
+    // This prevents headers from landing on continuation pages and prevents the
+    // subject-start detection from being poisoned by injected "विषय -" text.
     const vmlPages = containerRef.current.querySelectorAll<HTMLElement>(".vml-page-wrapper");
     vmlPages.forEach((page) => {
       const pageText = page.textContent || "";
       const isFirstPage = page.getAttribute("data-page-index") === "1" || page.getAttribute("data-page-index") === "0";
-      const hasHeaderBox =
-        isFirstPage ||
-        page.querySelector('.qp-unified-header-box') !== null ||
-        pageText.includes("शाळेचे नाव") ||
-        pageText.includes("विद्यार्थ्या") ||
-        pageText.includes("मूल्यमापन") ||
-        pageText.includes("चाचणी") ||
-        pageText.includes("इयत्ता") ||
-        /school\s*name|student\s*name|std|class|evaluation|test/i.test(pageText);
+
+      // Primary signal: data-is-header-page is set from raw XML during parsing — reliable.
+      // Fallback: if the attribute is missing (non-VML docx or older cached doc), fall back
+      // to the original text-content heuristics so those documents still work.
+      const hasDataAttr = page.hasAttribute("data-is-header-page");
+      const isHeaderPageByAttr = page.getAttribute("data-is-header-page") === "true";
+
+      // Check if this page has an already-injected header box (refresh scenario)
+      const hasExistingHeaderBox = page.querySelector('.qp-unified-header-box') !== null;
+
+      const hasHeaderBox = hasExistingHeaderBox || (hasDataAttr
+        ? isHeaderPageByAttr  // trust the parse-time attribute
+        : (
+            // Legacy fallback for non-VML or older cached documents
+            isFirstPage ||
+            pageText.includes("शाळेचे नाव") ||
+            pageText.includes("विद्यार्थ्या") ||
+            pageText.includes("मूल्यमापन") ||
+            pageText.includes("चाचणी") ||
+            pageText.includes("इयत्ता") ||
+            /school\s*name|student\s*name|std|class|evaluation|test/i.test(pageText)
+          )
+      );
 
       if (!hasHeaderBox) {
         page.querySelectorAll('.qp-unified-header-box').forEach((el) => el.remove());
@@ -939,69 +955,65 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       headerBox.className = "qp-unified-header-box";
       headerBox.setAttribute("data-field", "qp-unified-header-box");
 
+      const schoolLen = (displaySchool || "").length;
+      const schoolFontSize = schoolLen > 55
+        ? "clamp(7.5px, 1.7cqw, 10pt)"
+        : schoolLen > 40
+        ? "clamp(8.5px, 2.0cqw, 11.5pt)"
+        : schoolLen > 25
+        ? "clamp(9px, 2.2cqw, 12.5pt)"
+        : "clamp(9.5px, 2.4cqw, 13.5pt)";
+
       headerBox.innerHTML = `
-        <!-- Row 1: School Name (left) & Kendra / Taluka / Jilha (centered) -->
-        <div style="width: 100%; display: flex; flex-direction: column; align-items: stretch; position: relative; z-index: 1;">
-          <div data-field="school-name" style="font-size: clamp(9px, 2.3cqw, 13.5pt); font-weight: 700; white-space: nowrap; overflow: hidden; display: flex; align-items: center;">
-            <span style="color: #0f172a; flex-shrink: 0; font-size: inherit; font-weight: 700;">शाळेचे नाव : </span>
-            <span contenteditable="true" data-field="school-name-text" style="margin-left: 6px; font-weight: 700; color: #0f172a; outline: none; cursor: text; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: inherit;">${escapeHtmlStr(displaySchool)}</span>
-          </div>
-          ${subLocationHtml ? `
-            <div style="text-align: center; font-size: clamp(8px, 1.9cqw, 11.5pt); font-weight: 700; margin-top: 2px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-              ${subLocationHtml}
-            </div>
-          ` : ""}
+        <!-- Row 1: School Name centered as one line -->
+        <div style="width:100%;text-align:center;overflow:hidden;white-space:nowrap;font-size:${schoolFontSize};font-weight:700;color:#0f172a;line-height:1.3;">
+          <span style="font-size:inherit;font-weight:700;color:#0f172a;">शाळेचे नाव :&nbsp;</span><span contenteditable="true" data-field="school-name-text" style="font-weight:700;color:#0f172a;outline:none;cursor:text;font-size:inherit;">${escapeHtmlStr(displaySchool)}</span>
         </div>
 
-        <!-- Row 2: Exam Title (centered) -->
-        <div data-field="exam-title" style="width: 100%; text-align: center; margin: 0; position: relative; z-index: 1;">
-          <span
-            contenteditable="true"
-            data-field="exam-title-text"
-            style="font-size: clamp(11.5px, 2.7cqw, 16.5pt); font-weight: 800; color: #0f172a; letter-spacing: 0.3px; outline: none; cursor: text; white-space: nowrap;"
-          >${escapeHtmlStr(examTitle)}</span>
+        ${subLocationHtml ? `
+        <!-- Row 1b: Kendra / Taluka / Jilha centered -->
+        <div style="width:100%;text-align:center;overflow:hidden;white-space:nowrap;font-size:clamp(6.5px,1.55cqw,9.5pt);font-weight:700;color:#0f172a;line-height:1.25;">${subLocationHtml}</div>
+        ` : ""}
+
+        <!-- Row 2: Exam Title bold centered -->
+        <div data-field="exam-title" style="width:100%;text-align:center;overflow:hidden;white-space:nowrap;">
+          <span contenteditable="true" data-field="exam-title-text" style="font-size:clamp(8px,2.25cqw,13.5pt);font-weight:800;color:#0f172a;letter-spacing:0.2px;outline:none;cursor:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;width:100%;">${escapeHtmlStr(examTitle)}</span>
         </div>
 
-        <!-- Row 3: Class (left), Subject (center), Roll No Box (right) -->
-        <div style="width: 100%; display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1;">
-          <div style="flex: 0 0 auto; font-size: clamp(9px, 2.2cqw, 13pt); font-weight: 700; color: #0f172a; white-space: nowrap;">
-            <span contenteditable="true" data-field="class-text" style="outline: none; cursor: text;">${escapeHtmlStr(classStd)}</span>
+        <!-- Row 3: Class | Subject | Roll No -->
+        <div style="width:100%;display:flex;align-items:center;justify-content:space-between;overflow:hidden;gap:4px;">
+          <div style="flex:0 1 auto;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">
+            <span contenteditable="true" data-field="class-text" style="outline:none;cursor:text;">${escapeHtmlStr(classStd)}</span>
           </div>
-          <div style="flex: 1 1 auto; font-size: clamp(10.5px, 2.5cqw, 15pt); font-weight: 800; color: #0f172a; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px;">
-            <span contenteditable="true" data-field="subject-text" style="outline: none; cursor: text;">${escapeHtmlStr(displaySubject)}</span>
+          <div style="flex:1 1 auto;font-size:clamp(8.5px,2.0cqw,12.5pt);font-weight:800;color:#0f172a;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;min-width:0;">
+            <span contenteditable="true" data-field="subject-text" style="outline:none;cursor:text;">${escapeHtmlStr(displaySubject)}</span>
           </div>
-          <div style="flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; gap: clamp(4px, 0.9cqw, 7px); white-space: nowrap;">
-            <span style="font-size: clamp(8.5px, 2.0cqw, 12pt); font-weight: 700; color: #0f172a; white-space: nowrap;">हजेरी क्रमांक -</span>
-            <div style="width: clamp(24px, 5.0cqw, 36px); height: clamp(16px, 3.6cqw, 24px); border: clamp(1px, 0.22cqw, 1.5px) solid #0f172a; border-radius: clamp(2px, 0.5cqw, 4px); background: #ffffff; flex-shrink: 0; box-sizing: border-box;"></div>
+          <div style="flex:0 0 auto;display:flex;align-items:center;gap:clamp(2px,0.6cqw,5px);white-space:nowrap;">
+            <span style="font-size:clamp(7px,1.7cqw,10.5pt);font-weight:700;color:#0f172a;white-space:nowrap;">हजेरी क्रमांक -</span>
+            <div style="width:clamp(20px,4.4cqw,32px);height:clamp(13px,3.0cqw,20px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;flex-shrink:0;"></div>
           </div>
         </div>
 
-        <!-- Row 4: Student Name & Underline (left), Total Marks Box (right) -->
-        <div style="width: 100%; display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1;">
-          <div style="display: flex; align-items: center; flex: 1 1 auto; min-width: 0; margin-right: 12px; font-size: clamp(9px, 2.2cqw, 13pt); font-weight: 700; color: #0f172a; white-space: nowrap;">
-            <span style="flex-shrink: 0;">विद्यार्थ्याचे नाव :- </span>
-            <span style="display: inline-block; flex: 1; border-bottom: clamp(1.2px, 0.25cqw, 1.8px) solid #0f172a; margin-left: 6px; height: 1em; vertical-align: middle;"></span>
+        <!-- Row 4: Student Name | Total Marks -->
+        <div style="width:100%;display:flex;align-items:center;justify-content:space-between;overflow:hidden;gap:4px;">
+          <div style="display:flex;align-items:center;flex:1 1 auto;min-width:0;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;">
+            <span style="flex-shrink:0;">विद्यार्थ्याचे नाव :- </span>
+            <span style="display:inline-block;flex:1;border-bottom:1.5px solid #0f172a;margin-left:4px;height:1em;vertical-align:middle;min-width:16px;"></span>
           </div>
-          <div style="flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; gap: clamp(4px, 0.9cqw, 7px); white-space: nowrap;">
-            <span style="font-size: clamp(8.5px, 2.0cqw, 12pt); font-weight: 700; color: #0f172a; white-space: nowrap;">एकूण गुण -</span>
-            <div
-              contenteditable="true"
-              data-field="total-marks-box"
-              title="एकूण गुण संपादित करा"
-              style="width: clamp(26px, 5.2cqw, 38px); height: clamp(16px, 3.6cqw, 24px); border: clamp(1px, 0.22cqw, 1.5px) solid #0f172a; border-radius: clamp(2px, 0.5cqw, 4px); background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: clamp(9px, 2.2cqw, 13pt); font-weight: 800; color: #0f172a; flex-shrink: 0; box-sizing: border-box; cursor: text; outline: none;"
-            >${escapeHtmlStr(totalMarks)}</div>
+          <div style="flex:0 0 auto;display:flex;align-items:center;gap:clamp(2px,0.6cqw,5px);white-space:nowrap;">
+            <span style="font-size:clamp(7px,1.7cqw,10.5pt);font-weight:700;color:#0f172a;white-space:nowrap;">एकूण गुण -</span>
+            <div contenteditable="true" data-field="total-marks-box" title="एकूण गुण संपादित करा" style="width:clamp(22px,4.6cqw,34px);height:clamp(13px,3.0cqw,20px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,1.85cqw,11pt);font-weight:800;color:#0f172a;flex-shrink:0;cursor:text;outline:none;">${escapeHtmlStr(totalMarks)}</div>
           </div>
         </div>
 
-        <!-- Row 5: Date (left), Obtained Marks Box (right) -->
-        <div style="width: 100%; display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 1;">
-          <div data-field="exam-date" style="flex: 0 0 auto; font-size: clamp(9px, 2.2cqw, 13pt); font-weight: 700; color: #0f172a; white-space: nowrap;">
-            <span>दि. </span>
-            <span contenteditable="true" data-field="date-text" style="outline: none; cursor: text;">${escapeHtmlStr(displayDate)}</span>
+        <!-- Row 5: Date | Obtained Marks -->
+        <div style="width:100%;display:flex;align-items:center;justify-content:space-between;overflow:hidden;gap:4px;">
+          <div data-field="exam-date" style="flex:0 0 auto;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <span>दि. </span><span contenteditable="true" data-field="date-text" style="outline:none;cursor:text;">${escapeHtmlStr(displayDate)}</span>
           </div>
-          <div style="flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; gap: clamp(4px, 0.9cqw, 7px); white-space: nowrap;">
-            <span style="font-size: clamp(8.5px, 2.0cqw, 12pt); font-weight: 700; color: #0f172a; white-space: nowrap;">मिळालेले गुण -</span>
-            <div style="width: clamp(24px, 5.0cqw, 36px); height: clamp(16px, 3.6cqw, 24px); border: clamp(1px, 0.22cqw, 1.5px) solid #0f172a; border-radius: clamp(2px, 0.5cqw, 4px); background: #ffffff; flex-shrink: 0; box-sizing: border-box;"></div>
+          <div style="flex:0 0 auto;display:flex;align-items:center;gap:clamp(2px,0.6cqw,5px);white-space:nowrap;">
+            <span style="font-size:clamp(7px,1.7cqw,10.5pt);font-weight:700;color:#0f172a;white-space:nowrap;">मिळालेले गुण -</span>
+            <div style="width:clamp(20px,4.4cqw,32px);height:clamp(13px,3.0cqw,20px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;flex-shrink:0;"></div>
           </div>
         </div>
       `;
@@ -1022,7 +1034,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             const clean = cleanSchool.replace(/^(?:शाळेचे\s*नाव|school\s*name)\s*[:\-–—]?\s*/i, "").trim();
             el.innerHTML = `
               <div style="display: flex; flex-direction: column; width: 100%; max-width: 100%; overflow: visible; font-size: inherit; line-height: 1.3;">
-                <div class="qp-school-name-block" style="display: block; width: 100%; overflow: visible;">
+                <div class="qp-school-name-block" style="display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; overflow: visible;">
                   <strong style="white-space: nowrap; color: #0f172a; font-size: inherit; font-weight: 700;">${labelText} </strong>
                   <span class="qp-school-text" style="font-weight: 700; color: #0f172a; margin-left: 4px; font-size: inherit; white-space: normal; word-break: break-word;">${escapeHtmlStr(clean)}</span>
                 </div>
@@ -1032,7 +1044,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           } else {
             el.innerHTML = `
               <div style="display: flex; flex-direction: column; width: 100%; overflow: visible; font-size: inherit; line-height: 1.3;">
-                <div class="qp-school-name-block" style="display: block; width: 100%; overflow: visible;">
+                <div class="qp-school-name-block" style="display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; overflow: visible;">
                   <strong style="white-space: nowrap; color: #0f172a; font-size: inherit; font-weight: 700;">${labelText} </strong>....................................................
                 </div>
                 ${subInfoHtml ? `<div style="display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 2px; font-size: inherit; overflow: visible;">${subInfoHtml}</div>` : ""}
@@ -1045,118 +1057,155 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       }
     }
 
-    // 4. Update or Inject Bottom Signatures Block after completing each subject
-    // First, remove any existing signature blocks across ALL pages to avoid stale blocks
+    // 4. Inject signature block on the last page of each subject section.
+    // Use data-is-subject-end stamped at parse time from raw XML — never from textContent
+    // (which would be contaminated by injected "विषय -" text from the header box).
     containerRef.current.querySelectorAll('.qp-signatures-block').forEach(el => el.remove());
 
     if (vmlPages.length > 0) {
-      // Find pages that start a subject
-      const subjectStartIndices: number[] = [];
-      const subjectNames: string[] = [];
+      const hasDataAttrs = Array.from(vmlPages).some(p => p.hasAttribute("data-is-subject-end"));
 
-      vmlPages.forEach((page, pIdx) => {
-        const shapes = Array.from(page.querySelectorAll<HTMLElement>('.vml-shape-text'));
-        
-        let foundSubjectName = "";
-        let isStart = false;
+      if (hasDataAttrs) {
+        // ── Reliable path: use parse-time attributes ──
+        vmlPages.forEach((page) => {
+          if (page.getAttribute("data-is-subject-end") !== "true") return;
 
-        for (const s of shapes) {
-          const t = (s.textContent || '').trim();
-          // Look for "विषय - भाषा", "विषय - ENGLISH", "विषय - गणित", "SUB - ...", "SUBJECT - ..."
-          const match = t.match(/(?:विषय|subject|sub)\s*[-–:]\s*([^\n\r]+)/i);
-          if (match && match[1]) {
-            foundSubjectName = match[1].trim();
-            isStart = true;
-            break;
+          const pageText = page.textContent || "";
+          const isEnglishSubject = /english|oral\s*&amp;\s*practical|listen and act/i.test(pageText);
+          const teacherLabel = isEnglishSubject ? "Class Teacher :" : "वर्ग शिक्षक :";
+          const hmLabel = isEnglishSubject ? "Headmaster :" : "मुख्याध्यापक :";
+          const teacherDisplay = cleanTeacher || "_______________";
+          const hmDisplay = cleanHm || "_______________";
+
+          const sigBlock = document.createElement("div");
+          sigBlock.className = "qp-signatures-block";
+          sigBlock.setAttribute("data-field", "qp-signatures-block");
+          sigBlock.style.cssText = `
+            position: absolute;
+            left: 8.27%;
+            width: 83.46%;
+            bottom: 1.8%;
+            z-index: 15;
+            background: #ffffff;
+            padding: 8px 18px;
+            border-top: 1.5px dashed #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: clamp(8.5px, 2.0cqw, 11pt);
+            font-weight: 700;
+            color: #0f172a;
+            box-sizing: border-box;
+            pointer-events: auto;
+          `;
+          sigBlock.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: inherit;">
+              <span style="color: #475569; font-size: inherit;">${teacherLabel}</span>
+              <span style="font-weight: 700; color: #1e3a8a; border-bottom: 1px dotted #64748b; min-width: 90px; padding: 0 4px; display: inline-block; font-size: inherit;">${escapeHtmlStr(teacherDisplay)}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: inherit;">
+              <span style="color: #475569; font-size: inherit;">${hmLabel}</span>
+              <span style="font-weight: 700; color: #1e3a8a; border-bottom: 1px dotted #64748b; min-width: 90px; padding: 0 4px; display: inline-block; font-size: inherit;">${escapeHtmlStr(hmDisplay)}</span>
+            </div>
+          `;
+          page.appendChild(sigBlock);
+        });
+      } else {
+        // ── Legacy fallback: detect subject sections from raw .vml-shape-text content ──
+        // (Used for non-VML or older cached documents that lack data-is-subject-end)
+        const subjectStartIndices: number[] = [];
+        const subjectNames: string[] = [];
+
+        vmlPages.forEach((page, pIdx) => {
+          // ONLY look at actual vml-shape-text elements, NOT the injected header box
+          const rawShapes = Array.from(page.querySelectorAll<HTMLElement>('.vml-shape-text'));
+          let foundSubjectName = "";
+          let isStart = false;
+
+          for (const s of rawShapes) {
+            const t = (s.textContent || '').trim();
+            const match = t.match(/(?:विषय|subject|sub)\s*[-–:]\s*([^\n\r]+)/i);
+            if (match && match[1]) {
+              foundSubjectName = match[1].trim();
+              isStart = true;
+              break;
+            }
+          }
+
+          // Only check page.textContent if no shape matched — and exclude header box text
+          if (!isStart) {
+            // Get text from shapes only, not from injected boxes
+            const rawText = rawShapes.map(s => s.textContent || "").join(" ");
+            const rawMatch = rawText.match(/(?:विषय|subject)\s*[-–:]\s*(भाषा|मराठी|english|इंग्रजी|गणित|math|विज्ञान|परिसर)/i);
+            if (rawMatch && rawMatch[1]) {
+              foundSubjectName = rawMatch[1].trim();
+              isStart = true;
+            }
+          }
+
+          if (pIdx === 0) isStart = true;
+
+          if (isStart) {
+            subjectStartIndices.push(pIdx);
+            subjectNames.push(foundSubjectName || `Subject ${subjectStartIndices.length}`);
+          }
+        });
+
+        const subjectEndIndices: number[] = [];
+        for (let k = 0; k < subjectStartIndices.length; k++) {
+          if (k + 1 < subjectStartIndices.length) {
+            subjectEndIndices.push(Math.max(subjectStartIndices[k], subjectStartIndices[k + 1] - 1));
+          } else {
+            subjectEndIndices.push(vmlPages.length - 1);
           }
         }
+        const uniqueEndIndices = Array.from(new Set(subjectEndIndices));
 
-        if (!isStart) {
-          const raw = page.textContent || '';
-          const rawMatch = raw.match(/(?:विषय|subject)\s*[-–:]\s*(भाषा|मराठी|english|इंग्रजी|गणित|math|विज्ञान|परिसर)/i);
-          if (rawMatch && rawMatch[1]) {
-            foundSubjectName = rawMatch[1].trim();
-            isStart = true;
-          }
-        }
+        uniqueEndIndices.forEach((endIdx) => {
+          const targetPage = vmlPages[endIdx];
+          if (!targetPage) return;
 
-        // Page 0 (Page 1) is always the first subject start
-        if (pIdx === 0) {
-          isStart = true;
-        }
+          const pageText = targetPage.textContent || "";
+          const isEnglishSubject = /english|oral\s*&amp;\s*practical|listen and act/i.test(pageText);
+          const teacherLabel = isEnglishSubject ? "Class Teacher :" : "वर्ग शिक्षक :";
+          const hmLabel = isEnglishSubject ? "Headmaster :" : "मुख्याध्यापक :";
+          const teacherDisplay = cleanTeacher || "_______________";
+          const hmDisplay = cleanHm || "_______________";
 
-        if (isStart) {
-          subjectStartIndices.push(pIdx);
-          subjectNames.push(foundSubjectName || `Subject ${subjectStartIndices.length}`);
-        }
-      });
-
-      // Compute where each subject ends:
-      // If subject k has a following subject (k+1), it ends at (start[k+1] - 1)
-      // The last subject ends at the last page of the document (vmlPages.length - 1)
-      const subjectEndIndices: number[] = [];
-      for (let k = 0; k < subjectStartIndices.length; k++) {
-        if (k + 1 < subjectStartIndices.length) {
-          const nextStart = subjectStartIndices[k + 1];
-          subjectEndIndices.push(Math.max(subjectStartIndices[k], nextStart - 1));
-        } else {
-          subjectEndIndices.push(vmlPages.length - 1);
-        }
+          const sigBlock = document.createElement("div");
+          sigBlock.className = "qp-signatures-block";
+          sigBlock.setAttribute("data-field", "qp-signatures-block");
+          sigBlock.style.cssText = `
+            position: absolute;
+            left: 8.27%;
+            width: 83.46%;
+            bottom: 1.8%;
+            z-index: 15;
+            background: #ffffff;
+            padding: 8px 18px;
+            border-top: 1.5px dashed #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: clamp(8.5px, 2.0cqw, 11pt);
+            font-weight: 700;
+            color: #0f172a;
+            box-sizing: border-box;
+            pointer-events: auto;
+          `;
+          sigBlock.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: inherit;">
+              <span style="color: #475569; font-size: inherit;">${teacherLabel}</span>
+              <span style="font-weight: 700; color: #1e3a8a; border-bottom: 1px dotted #64748b; min-width: 90px; padding: 0 4px; display: inline-block; font-size: inherit;">${escapeHtmlStr(teacherDisplay)}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: inherit;">
+              <span style="color: #475569; font-size: inherit;">${hmLabel}</span>
+              <span style="font-weight: 700; color: #1e3a8a; border-bottom: 1px dotted #64748b; min-width: 90px; padding: 0 4px; display: inline-block; font-size: inherit;">${escapeHtmlStr(hmDisplay)}</span>
+            </div>
+          `;
+          targetPage.appendChild(sigBlock);
+        });
       }
-
-      // Deduplicate end indices just in case
-      const uniqueEndIndices = Array.from(new Set(subjectEndIndices));
-
-      uniqueEndIndices.forEach((endIdx) => {
-        const targetPage = vmlPages[endIdx];
-        if (!targetPage) return;
-
-        // Determine if English subject for proper labels
-        const pageText = targetPage.textContent || "";
-        const isEnglishSubject = /english|oral\s*&amp;\s*practical|listen and act/i.test(pageText);
-
-        const teacherLabel = isEnglishSubject ? "Class Teacher :" : "वर्ग शिक्षक :";
-        const hmLabel = isEnglishSubject ? "Headmaster :" : "मुख्याध्यापक :";
-
-        const teacherDisplay = cleanTeacher || "_______________";
-        const hmDisplay = cleanHm || "_______________";
-
-        const sigBlock = document.createElement("div");
-        sigBlock.className = "qp-signatures-block";
-        sigBlock.setAttribute("data-field", "qp-signatures-block");
-
-        sigBlock.style.cssText = `
-          position: absolute;
-          left: 8.27%;
-          width: 83.46%;
-          bottom: 1.8%;
-          z-index: 15;
-          background: #ffffff;
-          padding: 8px 18px;
-          border-top: 1.5px dashed #334155;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          font-size: clamp(8.5px, 2.0cqw, 11pt);
-          font-weight: 700;
-          color: #0f172a;
-          box-sizing: border-box;
-          pointer-events: auto;
-        `;
-
-        sigBlock.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: inherit;">
-            <span style="color: #475569; font-size: inherit;">${teacherLabel}</span>
-            <span style="font-weight: 700; color: #1e3a8a; border-bottom: 1px dotted #64748b; min-width: 90px; padding: 0 4px; display: inline-block; font-size: inherit;">${escapeHtmlStr(teacherDisplay)}</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: inherit;">
-            <span style="color: #475569; font-size: inherit;">${hmLabel}</span>
-            <span style="font-weight: 700; color: #1e3a8a; border-bottom: 1px dotted #64748b; min-width: 90px; padding: 0 4px; display: inline-block; font-size: inherit;">${escapeHtmlStr(hmDisplay)}</span>
-          </div>
-        `;
-
-        targetPage.appendChild(sigBlock);
-      });
     } else {
       let sigBlock = containerRef.current.querySelector<HTMLElement>('[data-field="qp-signatures-block"]');
       if (!sigBlock) {
@@ -2305,76 +2354,103 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         }
 
 
-        /* Unified Question Paper Header Box (Fitted seamlessly inside the template's existing old border across all classes) */
+        /* Unified Question Paper Header Box — strictly inside the Word template's border */
         .qp-unified-header-box {
           position: absolute !important;
           left: 9.8% !important;
-          top: 1.9% !important;
+          top: 2.0% !important;
           width: 82.6% !important;
-          height: 19.8% !important;
+          /* Use max-height so content fills naturally but can never exceed the border.
+             Different Word template files have borders of slightly different heights,
+             so auto height + max-height is safer than a single fixed percentage. */
+          height: auto !important;
+          min-height: 18% !important;
+          max-height: 24.5% !important;
           background: #ffffff !important;
           border: none !important;
           outline: none !important;
           box-shadow: none !important;
           z-index: 10 !important;
           box-sizing: border-box !important;
-          padding: clamp(4px, 0.9cqw, 8px) clamp(8px, 1.8cqw, 14px) !important;
+          padding: clamp(3px, 0.6cqw, 6px) clamp(6px, 1.3cqw, 12px) !important;
           display: flex !important;
           flex-direction: column !important;
-          justify-content: space-between !important;
+          justify-content: space-evenly !important;
+          align-items: stretch !important;
+          overflow: hidden !important;
           font-family: 'Noto Sans Devanagari', 'Tiro Devanagari Marathi', 'Nirmala UI', sans-serif !important;
           color: #0f172a !important;
           pointer-events: auto !important;
-          line-height: 1.2 !important;
+          line-height: 1.25 !important;
+          gap: clamp(1px, 0.35cqw, 3px) !important;
+        }
+
+        /* Every direct child row stays inside, no overflow, no extra growth */
+        .qp-unified-header-box > div {
+          overflow: hidden !important;
+          max-width: 100% !important;
+          width: 100% !important;
+          flex-shrink: 1 !important;
+          flex-grow: 0 !important;
+          min-height: 0 !important;
+          white-space: nowrap !important;
         }
 
         .qp-unified-header-box * {
           box-sizing: border-box !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
         }
 
+        /* School name row: plain text-align:center block, label+name inline */
         .qp-unified-header-box [data-field="school-name"] {
+          display: block !important;
           position: static !important;
-          top: auto !important;
-          left: auto !important;
           width: 100% !important;
-          max-width: 100% !important;
+          text-align: center !important;
           white-space: nowrap !important;
-          overflow: visible !important;
-          display: flex !important;
-          flex-direction: row !important;
-          align-items: center !important;
-          justify-content: flex-start !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
           font-weight: 700 !important;
-          font-size: clamp(9px, 2.3cqw, 13.5pt) !important;
-          line-height: 1.25 !important;
           padding: 0 !important;
         }
 
+        /* School name editable span — inline so it flows with the label */
         .qp-unified-header-box [data-field="school-name-text"] {
+          display: inline !important;
           outline: none !important;
           cursor: text !important;
+          font-weight: 700 !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
         }
 
+        /* Exam title row */
         .qp-unified-header-box [data-field="exam-title"] {
           position: static !important;
-          top: auto !important;
-          left: auto !important;
+          display: block !important;
           width: 100% !important;
           text-align: center !important;
-          display: block !important;
-          z-index: 1 !important;
-          overflow: visible !important;
+          overflow: hidden !important;
           padding: 0 !important;
           margin: 0 !important;
         }
 
+        .qp-unified-header-box [data-field="exam-title-text"] {
+          display: block !important;
+          width: 100% !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+          text-align: center !important;
+          font-size: clamp(8px, 2.2cqw, 13.5pt) !important;
+        }
+
+        /* Date field */
         .qp-unified-header-box [data-field="exam-date"] {
-          position: static !important;
-          top: auto !important;
-          left: auto !important;
-          width: auto !important;
           display: inline !important;
           white-space: nowrap !important;
+          overflow: hidden !important;
         }
 
         [data-hidden-by-unified-header="true"] {
@@ -2383,18 +2459,20 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           opacity: 0 !important;
         }
 
+        /* Kendra/Taluka/Jilha row */
         .qp-sub-location {
-          display: flex !important;
+          display: inline-flex !important;
           align-items: center !important;
           justify-content: center !important;
           text-align: center !important;
           width: 100% !important;
-          gap: 6px !important;
-          flex-shrink: 0 !important;
-          white-space: nowrap !important;
-          font-size: clamp(6.8px, 1.8cqw, 11pt) !important;
+          max-width: 100% !important;
+          gap: 4px !important;
+          flex-shrink: 1 !important;
+          flex-wrap: nowrap !important;
+          overflow: hidden !important;
+          font-size: clamp(6.5px, 1.55cqw, 9.5pt) !important;
           font-weight: 700 !important;
-          margin-top: 2px !important;
           line-height: 1.2 !important;
         }
         .qp-sub-location strong,
@@ -2402,6 +2480,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           white-space: nowrap !important;
           font-size: inherit !important;
           font-weight: inherit !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
         }
         .qp-signatures-block {
           box-sizing: border-box !important;
@@ -2456,11 +2536,23 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           /* Unified Question Paper Header Box on Mobile */
           .qp-unified-header-box {
             left: 9.8% !important;
-            top: 1.9% !important;
+            top: 2.0% !important;
             width: 82.6% !important;
-            height: 19.8% !important;
+            height: auto !important;
+            min-height: 18% !important;
+            max-height: 24.5% !important;
             border: none !important;
-            padding: clamp(2px, 0.6cqw, 6px) clamp(4px, 1.2cqw, 10px) !important;
+            padding: clamp(2px, 0.5cqw, 5px) clamp(4px, 1.0cqw, 9px) !important;
+            overflow: hidden !important;
+            justify-content: space-evenly !important;
+          }
+
+          .qp-unified-header-box [data-field="exam-title-text"] {
+            font-size: clamp(7px, 2.0cqw, 12pt) !important;
+          }
+
+          .qp-sub-location {
+            font-size: clamp(5.5px, 1.4cqw, 8.5pt) !important;
           }
 
           .qp-signatures-block {

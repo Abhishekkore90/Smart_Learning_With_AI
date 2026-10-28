@@ -3,34 +3,34 @@ export const DEFAULT_MARATHI_SUBJECTS_MAP: Record<string, string[]> = {
     "प्रथम भाषा : मराठी",
     "द्वितीय भाषा : इंग्रजी",
     "गणित",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "2nd": [
     "प्रथम भाषा : मराठी",
     "द्वितीय भाषा : इंग्रजी",
     "गणित",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "3rd": [
     "प्रथम भाषा : मराठी",
     "द्वितीय भाषा : इंग्रजी",
     "गणित",
-    "परिसर अभ्यास",
-    "कला",
-    "कार्यानुभव",
+    "आपले संभोवतालचे जग",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "4th": [
     "प्रथम भाषा : मराठी",
     "द्वितीय भाषा : इंग्रजी",
     "गणित",
-    "परिसर अभ्यास",
-    "कला",
-    "कार्यानुभव",
+    "आपले संभोवतालचे जग",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "5th": [
@@ -40,8 +40,8 @@ export const DEFAULT_MARATHI_SUBJECTS_MAP: Record<string, string[]> = {
     "गणित",
     "परिसर अभ्यास भाग १",
     "परिसर अभ्यास भाग २",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "6th": [
@@ -53,8 +53,8 @@ export const DEFAULT_MARATHI_SUBJECTS_MAP: Record<string, string[]> = {
     "परिसर अभ्यास भाग २",
     "सामान्य विज्ञान",
     "सामाजिक शास्त्रे",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "7th": [
@@ -64,8 +64,8 @@ export const DEFAULT_MARATHI_SUBJECTS_MAP: Record<string, string[]> = {
     "गणित",
     "सामान्य विज्ञान",
     "सामाजिक शास्त्रे",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "8th": [
@@ -75,8 +75,8 @@ export const DEFAULT_MARATHI_SUBJECTS_MAP: Record<string, string[]> = {
     "गणित",
     "सामान्य विज्ञान",
     "सामाजिक शास्त्रे",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
 };
@@ -86,34 +86,34 @@ export const DEFAULT_SEMI_SUBJECTS_MAP: Record<string, string[]> = {
     "प्रथम भाषा : मराठी",
     "English",
     "Mathematics",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "2nd": [
     "प्रथम भाषा : मराठी",
     "English",
     "Mathematics",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "3rd": [
     "प्रथम भाषा : मराठी",
     "English",
     "Mathematics",
-    "परिसर अभ्यास",
-    "कला",
-    "कार्यानुभव",
+    "आपले संभोवतालचे जग",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "4th": [
     "प्रथम भाषा : मराठी",
     "English",
     "Mathematics",
-    "परिसर अभ्यास",
-    "कला",
-    "कार्यानुभव",
+    "आपले संभोवतालचे जग",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "5th": [
@@ -123,8 +123,8 @@ export const DEFAULT_SEMI_SUBJECTS_MAP: Record<string, string[]> = {
     "Mathematics",
     "परिसर अभ्यास भाग १",
     "परिसर अभ्यास भाग २",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "6th": [
@@ -136,8 +136,8 @@ export const DEFAULT_SEMI_SUBJECTS_MAP: Record<string, string[]> = {
     "परिसर अभ्यास भाग २",
     "General Science",
     "Social Sciences",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "7th": [
@@ -147,8 +147,8 @@ export const DEFAULT_SEMI_SUBJECTS_MAP: Record<string, string[]> = {
     "Mathematics",
     "General Science",
     "Social Sciences",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
   "8th": [
@@ -158,8 +158,8 @@ export const DEFAULT_SEMI_SUBJECTS_MAP: Record<string, string[]> = {
     "Mathematics",
     "General Science",
     "Social Sciences",
-    "कला",
-    "कार्यानुभव",
+    "कलाशिक्षण",
+    "कार्यशिक्षण",
     "शारीरिक शिक्षण",
   ],
 };
@@ -218,12 +218,12 @@ export function areSubjectsEquivalent(sub1: string, sub2: string): boolean {
   const isSS2 = s2.includes("सामाजिक") || s2.includes("इतिहास") || s2.includes("भूगोल") || s2.includes("social");
   if (isSS1 && isSS2) return true;
 
-  // Art aliases
+  // Art aliases (कला, कलाशिक्षण, art)
   const isArt1 = s1.includes("कला") || s1.includes("art");
   const isArt2 = s2.includes("कला") || s2.includes("art");
   if (isArt1 && isArt2) return true;
 
-  // Work Exp aliases
+  // Work Exp aliases (कार्यानुभव, कार्यशिक्षण, कार्य, work)
   const isWork1 = s1.includes("कार्य") || s1.includes("work");
   const isWork2 = s2.includes("कार्य") || s2.includes("work");
   if (isWork1 && isWork2) return true;
@@ -232,6 +232,20 @@ export function areSubjectsEquivalent(sub1: string, sub2: string): boolean {
   const isPE1 = s1.includes("शारीरिक") || s1.includes("क्रीडा") || s1.includes("pe") || s1.includes("physical");
   const isPE2 = s2.includes("शारीरिक") || s2.includes("क्रीडा") || s2.includes("pe") || s2.includes("physical");
   if (isPE1 && isPE2) return true;
+
+  // EVS aliases (परिसर अभ्यास, आपले संभोवतालचे जग, evs)
+  const isEvs1 = s1.includes("परिसर") || s1.includes("संभोवतालचे") || s1.includes("evs") || s1.includes("environmental");
+  const isEvs2 = s2.includes("परिसर") || s2.includes("संभोवतालचे") || s2.includes("evs") || s2.includes("environmental");
+  if (isEvs1 && isEvs2) {
+    const isP1_1 = s1.includes("१") || s1.includes("1") || s1.includes("भाग 1") || s1.includes("भाग १");
+    const isP1_2 = s2.includes("१") || s2.includes("1") || s2.includes("भाग 1") || s2.includes("भाग १");
+    const isP2_1 = s1.includes("२") || s1.includes("2") || s1.includes("भाग 2") || s1.includes("भाग २");
+    const isP2_2 = s2.includes("२") || s2.includes("2") || s2.includes("भाग 2") || s2.includes("भाग २");
+    if (isP1_1 || isP1_2 || isP2_1 || isP2_2) {
+      return (isP1_1 && isP1_2) || (isP2_1 && isP2_2);
+    }
+    return true;
+  }
 
   return false;
 }

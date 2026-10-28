@@ -451,16 +451,16 @@ export function QuestionPaperTemplate({
           {/* Header Box */}
           <div className="border-2 border-slate-900 rounded-none p-2.5 sm:p-4 mb-4 sm:mb-6 w-full box-border overflow-hidden bg-white">
             {/* School Name, Kendra, Taluka, Jilla Row */}
-            <div className="mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-slate-300">
+            <div className="mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-slate-300 overflow-hidden">
               {isEditing ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-center w-full">
                     <span className="text-xs sm:text-base font-black text-slate-900 whitespace-nowrap shrink-0">शाळेचे नाव :</span>
                     <input
                       type="text"
                       value={data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "")}
                       onChange={(e) => setData({ ...data, schoolName: e.target.value })}
-                      className="flex-1 min-w-0 text-xs sm:text-base font-black text-slate-900 border-b-2 border-indigo-500 outline-none pb-0.5 bg-amber-50/50"
+                      className="flex-1 max-w-[500px] text-center text-xs sm:text-base font-black text-slate-900 border-b-2 border-indigo-500 outline-none pb-0.5 bg-amber-50/50"
                       placeholder="येथे शाळेचे नाव भरा"
                     />
                   </div>
@@ -499,39 +499,54 @@ export function QuestionPaperTemplate({
                 </div>
               ) : (
                 <div className="space-y-1 text-xs sm:text-base font-black text-slate-900 tracking-tight">
-                  {/* Line 1: Dedicated School Name across full line */}
-                  <div className="flex items-baseline gap-1.5 w-full">
-                    <span className="shrink-0 text-slate-900 font-black whitespace-nowrap">शाळेचे नाव :</span>
-                    <span className="font-black text-slate-950 border-b border-dotted border-slate-500 pb-0.5 px-1 flex-1 min-w-0">
-                      {data.schoolName
-                        ? data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "")
-                        : ""}
-                    </span>
+                  {/* Line 1: School Name + Kendra/Taluka/Jilha all centered, no overflow */}
+                  <div className="w-full text-center overflow-hidden">
+                    {/* School name — label and name inline, one line, ellipsis if too long */}
+                    <div
+                      className="w-full text-center font-black text-slate-900 overflow-hidden text-ellipsis whitespace-nowrap"
+                      style={{
+                        fontSize:
+                          data.schoolName && data.schoolName.length > 50
+                            ? "11px"
+                            : data.schoolName && data.schoolName.length > 35
+                            ? "13px"
+                            : data.schoolName && data.schoolName.length > 22
+                            ? "14px"
+                            : undefined,
+                      }}
+                    >
+                      <span className="shrink-0 text-slate-900 font-black whitespace-nowrap">शाळेचे नाव :&nbsp;</span>
+                      <span className="font-black text-slate-950">
+                        {data.schoolName
+                          ? data.schoolName.replace(/^शाळेचे नाव\s*[:-]?\s*/i, "")
+                          : ""}
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Line 2: Remaining Location Fields (Kendra | Taluka | Jilha) */}
+                  {/* Line 2: Kendra | Taluka | Jilha — single line, no wrap */}
                   {(data.kendra || data.taluka || data.jilha) && (
-                    <div className="flex flex-wrap items-center justify-center text-center w-full gap-x-2.5 sm:gap-x-4 gap-y-1 text-[11px] sm:text-xs font-bold text-slate-800 pt-0.5 mb-1 sm:mb-2">
+                    <div className="flex items-center justify-center text-center w-full overflow-hidden text-[10px] sm:text-xs font-bold text-slate-800 pt-0.5 mb-1 sm:mb-2 whitespace-nowrap gap-x-2">
                       {data.kendra && (
-                        <span className="whitespace-nowrap">
+                        <span className="whitespace-nowrap overflow-hidden text-ellipsis">
                           <span className="text-slate-700 font-bold">केंद्र : </span>
                           <span className="font-bold text-slate-950">{data.kendra}</span>
                         </span>
                       )}
                       {data.kendra && (data.taluka || data.jilha) && (
-                        <span className="text-slate-400 font-normal select-none">|</span>
+                        <span className="text-slate-400 font-normal select-none shrink-0">|</span>
                       )}
                       {data.taluka && (
-                        <span className="whitespace-nowrap">
+                        <span className="whitespace-nowrap overflow-hidden text-ellipsis">
                           <span className="text-slate-700 font-bold">तालुका : </span>
                           <span className="font-bold text-slate-950">{data.taluka}</span>
                         </span>
                       )}
                       {(data.kendra || data.taluka) && data.jilha && (
-                        <span className="text-slate-400 font-normal select-none">|</span>
+                        <span className="text-slate-400 font-normal select-none shrink-0">|</span>
                       )}
                       {data.jilha && (
-                        <span className="whitespace-nowrap">
+                        <span className="whitespace-nowrap overflow-hidden text-ellipsis">
                           <span className="text-slate-700 font-bold">जिल्हा : </span>
                           <span className="font-bold text-slate-950">{data.jilha}</span>
                         </span>
@@ -552,7 +567,7 @@ export function QuestionPaperTemplate({
                   className="w-full text-center text-xs sm:text-base font-black text-indigo-900 border-b border-indigo-400 outline-none bg-amber-50/50"
                 />
               ) : (
-                <h1 className="text-xs sm:text-lg font-black text-slate-900 underline decoration-2 underline-offset-4 truncate">
+                <h1 className="text-xs sm:text-lg font-black text-slate-900 underline decoration-2 underline-offset-4 truncate w-full overflow-hidden text-ellipsis whitespace-nowrap">
                   {data.examTitle}
                 </h1>
               )}
@@ -1083,9 +1098,20 @@ export function QuestionPaperTemplate({
                   <span>👁️ थेट पूर्वावलोकन (Live Preview - प्रश्नपत्रिकेवर कसे दिसेल):</span>
                 </div>
                 <div className="bg-white border-2 border-slate-900 rounded-none p-3 text-slate-900 shadow-sm select-none font-sans space-y-2">
-                  {/* Line 1: School Name */}
-                  <div className="text-xs font-black tracking-tight text-slate-900">
-                    शाळेचे नाव : <span className="text-slate-950 font-black">{headerForm.schoolName || "__________________________"}</span>
+                  {/* Line 1: School Name (Centered & scaled to fit) */}
+                  <div
+                    className="font-black tracking-tight text-slate-900 text-center flex items-center justify-center gap-1.5 w-full"
+                    style={{
+                      fontSize:
+                        headerForm.schoolName && headerForm.schoolName.length > 45
+                          ? "11px"
+                          : headerForm.schoolName && headerForm.schoolName.length > 30
+                          ? "12.5px"
+                          : "13px",
+                    }}
+                  >
+                    <span>शाळेचे नाव :</span>
+                    <span className="text-slate-950 font-black truncate px-1">{headerForm.schoolName || "__________________________"}</span>
                   </div>
                   {/* Line 2: Kendra, Taluka, Jilla */}
                   {(headerForm.kendra || headerForm.taluka || headerForm.jilha) && (

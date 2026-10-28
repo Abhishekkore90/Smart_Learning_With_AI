@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   PlanningDocumentRecord,
   PlanningCategory,
@@ -286,6 +287,12 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>("all");
   const [loadingWorkbook, setLoadingWorkbook] = useState<boolean>(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
+  const [pdfProgress, setPdfProgress] = useState<{
+    current: number;
+    total: number;
+    percent: number;
+    status: string;
+  } | null>(null);
   const [questionBankSheets, setQuestionBankSheets] = useState<ParsedSheet[]>([]);
   const [selectedQuestionBankLesson, setSelectedQuestionBankLesson] = useState<string>("all");
   // Mobile table view mode: "fit" fits all columns to screen in A4 proportions; "scroll" allows 100% horizontal scroll
@@ -571,7 +578,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           return;
         }
 
-        const wb = await extractSubjectSectionsFromExcel(buffer);
+        const wb = await extractSubjectSectionsFromExcel(
+          buffer,
+          isMonthly,
+          resolvedSubjectName || record?.subjectId
+        );
         if (isMounted) {
           setParsedWorkbook(wb);
           setLoadingWorkbook(false);
@@ -674,39 +685,57 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     // 2. Check if Monthly Planning is requested
     const isMonthlyPlan = isMonthly;
     if (isMonthlyPlan) {
-      let sectionsMap: Record<string, any> = (parsedWorkbook && parsedWorkbook.monthlySections) || {};
+      let sectionsMap: Record<string, any> = {};
+      const currentRec = savedUserEditRecord || record;
 
-      // If parsedWorkbook.monthlySections has only 1 month (or none), try splitting from subject rows, rawGrid, or record
-      if (Object.keys(sectionsMap).length <= 1) {
-        const currentRec = savedUserEditRecord || record;
-        let rowsToUse: string[][] = [];
+      // Priority 1: Use parsedWorkbook.monthlySections if it already has all distinct months split
+      if (parsedWorkbook && parsedWorkbook.monthlySections && Object.keys(parsedWorkbook.monthlySections).length > 0) {
+        sectionsMap = parsedWorkbook.monthlySections;
+      }
 
-        // Priority 1: Match requested subject rows from parsedWorkbook.subjects
-        if (parsedWorkbook && Object.keys(parsedWorkbook.subjects).length > 0) {
-          const matchedSubjKey = Object.keys(parsedWorkbook.subjects).find((k) =>
-            areSubjectsEquivalent(k, resolvedSubjectName) ||
-            k.toLowerCase() === resolvedSubjectName.toLowerCase()
-          ) || Object.keys(parsedWorkbook.subjects)[0];
+      // Priority 2: Split directly from parsedWorkbook.rawGrid (preserves 100% of original month banners from Excel!)
+      if (Object.keys(sectionsMap).length <= 1 && parsedWorkbook?.rawGrid && parsedWorkbook.rawGrid.length > 0) {
+        const splitFromRaw = splitRowsIntoMonthlySections(
+          parsedWorkbook.rawGrid,
+          resolvedSubjectName || record?.subjectId,
+          record?.classId
+        );
+        if (Object.keys(splitFromRaw).length > Object.keys(sectionsMap).length) {
+          sectionsMap = splitFromRaw;
+        }
+      }
 
-          if (matchedSubjKey && parsedWorkbook.subjects[matchedSubjKey]?.rows?.length > 0) {
-            rowsToUse = parsedWorkbook.subjects[matchedSubjKey].rows;
+      // Priority 3: Match requested subject rows from parsedWorkbook.subjects (for multi-subject workbooks)
+      if (Object.keys(sectionsMap).length <= 1 && parsedWorkbook && parsedWorkbook.subjects && Object.keys(parsedWorkbook.subjects).length > 0) {
+        const matchedSubjKey = Object.keys(parsedWorkbook.subjects).find((k) =>
+          areSubjectsEquivalent(k, resolvedSubjectName) ||
+          k.toLowerCase() === resolvedSubjectName.toLowerCase() ||
+          normalizeSubjectName(k) === normalizeSubjectName(resolvedSubjectName)
+        );
+
+        if (matchedSubjKey && parsedWorkbook.subjects[matchedSubjKey]?.rows?.length > 0) {
+          const splitFromSubj = splitRowsIntoMonthlySections(
+            parsedWorkbook.subjects[matchedSubjKey].rows,
+            resolvedSubjectName || record?.subjectId,
+            record?.classId
+          );
+          if (Object.keys(splitFromSubj).length > Object.keys(sectionsMap).length) {
+            sectionsMap = splitFromSubj;
           }
         }
+      }
 
-        // Priority 2: rawGrid
-        if (rowsToUse.length === 0 && parsedWorkbook?.rawGrid && parsedWorkbook.rawGrid.length > 0) {
-          rowsToUse = parsedWorkbook.rawGrid;
-        }
-
-        // Priority 3: extractRowsFromRecord
-        if (rowsToUse.length === 0) {
-          rowsToUse = extractRowsFromRecord(currentRec);
-        }
-
-        if (rowsToUse.length > 0) {
-          const fallbackSplit = splitRowsIntoMonthlySections(rowsToUse);
-          if (Object.keys(fallbackSplit).length > Object.keys(sectionsMap).length) {
-            sectionsMap = fallbackSplit;
+      // Priority 4: extractRowsFromRecord
+      if (Object.keys(sectionsMap).length <= 1) {
+        const recRows = extractRowsFromRecord(currentRec);
+        if (recRows.length > 0) {
+          const splitFromRec = splitRowsIntoMonthlySections(
+            recRows,
+            resolvedSubjectName || record?.subjectId,
+            record?.classId
+          );
+          if (Object.keys(splitFromRec).length > Object.keys(sectionsMap).length) {
+            sectionsMap = splitFromRec;
           }
         }
       }
@@ -715,7 +744,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         const sections = Object.values(sectionsMap).map((mSec: any) => ({
           subjectName: mSec.monthName,
           displaySubjectName: mSec.displayMonthName,
-          subjectTitle: mSec.subjectTitle,
+          subjectTitle: mSec.subjectTitle || resolvedSubjectName || record?.subjectId || "",
           classTitle: mSec.classTitle,
           headers: mSec.headers || DEFAULT_HEADERS.masik_niyojan,
           rows: mSec.rows,
@@ -951,7 +980,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   const normalizeForCompare = (val: any) => {
     if (val === null || val === undefined) return "";
     return String(val)
-      .replace(/[\u00a0\r\n\t]+/g, " ")
+      .replace(/[\u00a0\n\t]+/g, " ")
       .replace(/\s+/g, " ")
       .trim()
       .toLowerCase();
@@ -1840,7 +1869,42 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   // Helper to filter sections strictly by selected subject
   const filterSectionsBySubject = (sections: SubjectSection[], filter: string): SubjectSection[] => {
     if (!sections || sections.length === 0) return [];
-    if (filter === "all") return sections;
+    if (!filter || filter === "all") return sections;
+
+    // For Monthly Planning: 1 file is for 1 subject; sections are its month-wise charts.
+    if (isMonthly) {
+      const fNorm = normalizeSubjectName(filter);
+      const rNorm = normalizeSubjectName(resolvedSubjectName || record?.subjectId || "");
+      if (
+        filter === "all" ||
+        filter === "सर्व विषय" ||
+        filter === "सर्व महिने" ||
+        filter.includes("All") ||
+        fNorm === rNorm ||
+        areSubjectsEquivalent(filter, resolvedSubjectName || "") ||
+        areSubjectsEquivalent(filter, record?.subjectId || "")
+      ) {
+        return sections;
+      }
+
+      // Check if filtering by a specific month (e.g. "जून", "जून २०२६")
+      const matchedMonth = sections.filter((sec) => {
+        const sName = (sec.subjectName || "").trim().toLowerCase();
+        const dName = (sec.displaySubjectName || "").trim().toLowerCase();
+        const fLower = filter.trim().toLowerCase();
+        return (
+          sName === fLower ||
+          dName.includes(fLower) ||
+          sName.includes(fLower) ||
+          fLower.includes(sName) ||
+          (getAcademicMonthRank(sName) === getAcademicMonthRank(fLower) && getAcademicMonthRank(sName) < 900)
+        );
+      });
+      if (matchedMonth.length > 0) return matchedMonth;
+
+      // Fallback: never return empty rows in monthly planning
+      return sections;
+    }
 
     const fLower = filter.trim().toLowerCase();
     const isFilterPart1 = fLower.includes("भाग १") || fLower.includes("भाग 1") || fLower.includes("part 1");
@@ -1868,8 +1932,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         sName.includes(fLower) ||
         fLower.includes(sName) ||
         areSubjectsEquivalent(sName, fLower) ||
-        areSubjectsEquivalent(dName, fLower) ||
-        (isMonthly && getAcademicMonthRank(sName) === getAcademicMonthRank(fLower) && getAcademicMonthRank(sName) < 900)
+        areSubjectsEquivalent(dName, fLower)
       );
     });
 
@@ -2146,10 +2209,54 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     toast.info("🔄 मूळ एडमिन फाईल यशस्वीरित्या रिस्टोअर झाली.");
   };
 
+  // Helper to trigger direct download across Desktop, Mobile browsers, and Android WebViews into storage
+  const triggerPlanningPdfDownload = async (pdfObj: any, filenameStr: string) => {
+    const win = typeof window !== "undefined" ? (window as any) : {};
+    const isNativeApp =
+      typeof win.Android?.downloadFile === "function" ||
+      typeof win.AndroidBridge?.downloadFile === "function" ||
+      typeof win.flutter_inappwebview?.callHandler === "function" ||
+      typeof win.webkit?.messageHandlers?.downloadFile?.postMessage === "function";
+
+    if (isNativeApp) {
+      try {
+        const { uploadBlobToBunny } = await import("@/lib/bunnyStorage");
+        const pdfBlob = pdfObj.output("blob") as Blob;
+        const cdnUrl = await uploadBlobToBunny(`plannings/${Date.now()}_${filenameStr}`, pdfBlob);
+        if (typeof win.Android?.downloadFile === "function") {
+          win.Android.downloadFile(cdnUrl, filenameStr);
+          return;
+        }
+        if (typeof win.AndroidBridge?.downloadFile === "function") {
+          win.AndroidBridge.downloadFile(cdnUrl, filenameStr);
+          return;
+        }
+        if (typeof win.flutter_inappwebview?.callHandler === "function") {
+          win.flutter_inappwebview.callHandler("downloadFile", cdnUrl, filenameStr);
+          return;
+        }
+        if (typeof win.webkit?.messageHandlers?.downloadFile?.postMessage === "function") {
+          win.webkit.messageHandlers.downloadFile.postMessage({ url: cdnUrl, filename: filenameStr });
+          return;
+        }
+      } catch (bridgeErr) {
+        console.warn("Native app bridge download notice, falling back to pdf.save():", bridgeErr);
+      }
+    }
+
+    pdfObj.save(filenameStr);
+  };
+
   // Dedicated Question Bank PDF Generator (Landscape A4, Zero Text Cutting, Strict Pagination)
   const handleDownloadQuestionBankPdf = async () => {
     try {
       setIsGeneratingPdf(true);
+      setPdfProgress({
+        current: 0,
+        total: 100,
+        percent: 5,
+        status: "प्रश्नपेढी पानांची मांडणी केली जात आहे...",
+      });
       toast.info("⚡ प्रश्नपेढी PDF तयार होत आहे... (Generating Question Bank PDF)");
 
       const { jsPDF } = await import("jspdf");
@@ -2785,16 +2892,30 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         tempContainer.innerHTML = "";
         tempContainer.appendChild(pageDiv);
 
+        const currentStep = p + 1;
+        const totalSteps = generatedPages.length;
+        const pct = Math.min(95, Math.round((currentStep / totalSteps) * 90) + 5);
+
+        setPdfProgress({
+          current: currentStep,
+          total: totalSteps,
+          percent: pct,
+          status: `प्रश्नपेढी पान ${currentStep} / ${totalSteps} रेंडर होत आहे... (HD क्वालिटी)`,
+        });
+
         // Allow layout to settle
         await new Promise((resolve) => setTimeout(resolve, 30));
 
         const pageCanvas = await html2canvas(pageDiv, {
-          scale: 1.75,
+          scale: 1.3,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
           scrollX: 0,
           scrollY: 0,
+          windowWidth: 1200,
+          imageTimeout: 0,
+          removeContainer: true,
         });
 
         if (p > 0) {
@@ -2821,6 +2942,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         const offsetY = 7 + (maxAvailableHeightMm - renderHeightMm) / 2;
 
         pdf.addImage(pageImgData, "JPEG", offsetX, offsetY, renderWidthMm, renderHeightMm, undefined, "FAST");
+
+        // Immediately release canvas bitmap memory
+        pageCanvas.width = 0;
+        pageCanvas.height = 0;
+        await new Promise((resolve) => setTimeout(resolve, 30));
       }
 
       if (tempContainer.parentNode) {
@@ -2835,13 +2961,21 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       const subjectPart = resolvedSubjectName || "मराठी";
       const filename = `इयत्ता_${classNameMr}_प्रश्नपेढी_${subjectPart}${lessonPart}_${devYear}.pdf`;
 
-      pdf.save(filename);
+      setPdfProgress({
+        current: generatedPages.length,
+        total: generatedPages.length,
+        percent: 98,
+        status: "PDF फाईल जतन (Save) केली जात आहे...",
+      });
+
+      await triggerPlanningPdfDownload(pdf, filename);
       toast.success("🎉 प्रश्नपेढी PDF यशस्वीरित्या डाऊनलोड झाली!");
     } catch (err) {
       console.error("Question Bank PDF download error:", err);
       toast.error("प्रश्नपेढी PDF डाऊनलोड करताना अडचण आली.");
     } finally {
       setIsGeneratingPdf(false);
+      setPdfProgress(null);
     }
   };
 
@@ -2860,6 +2994,12 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
     try {
       setIsGeneratingPdf(true);
+      setPdfProgress({
+        current: 0,
+        total: 100,
+        percent: 5,
+        status: isMonthly ? "मासिक नियोजन पानांची मांडणी केली जात आहे..." : "नियोजन पानांची मांडणी केली जात आहे...",
+      });
 
       const getRealSubjectName = (): string => {
         const fromProp = (selectedSubject || "").trim();
@@ -2893,8 +3033,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       );
 
       const { jsPDF } = await import("jspdf");
-      const html2canvasModule = await import("html2canvas");
-      const html2canvas = html2canvasModule.default || html2canvasModule;
+      let html2canvas: any;
+      try {
+        const hModule = await import("html2canvas-pro");
+        html2canvas = hModule.default || hModule;
+      } catch {
+        const hModule = await import("html2canvas");
+        html2canvas = hModule.default || hModule;
+      }
 
       const orientation = "portrait";
       const pdfWidth = 190;
@@ -2917,7 +3063,22 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         return;
       }
 
-      let totalPdfPages = 0;
+      // Hidden container to construct and measure DOM pages
+      const tempContainer = document.createElement("div");
+      tempContainer.className = "pdf-export-active";
+      tempContainer.style.position = "fixed";
+      tempContainer.style.left = "0px";
+      tempContainer.style.top = "0px";
+      tempContainer.style.zIndex = "-9999";
+      tempContainer.style.width = exportWidth; // "950px"
+      tempContainer.style.backgroundColor = "#ffffff";
+      tempContainer.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
+      document.body.appendChild(tempContainer);
+
+      const PAGE_MAX_HEIGHT_FIRST = 1120;
+      const PAGE_MAX_HEIGHT_SUBSEQUENT = 1220;
+
+      const allPagesToRender: HTMLElement[] = [];
 
       for (let i = 0; i < subjectSections.length; i++) {
         const sec = subjectSections[i];
@@ -2930,6 +3091,16 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           span.textContent = input.value || " ";
           span.className = "inline-block font-black text-slate-900";
           input.parentNode?.replaceChild(span, input);
+        });
+
+        // Strip heavy styles (shadows, transitions, animations) to drastically speed up html2canvas rendering without reducing text sharpness
+        secClone.querySelectorAll("*").forEach((el: any) => {
+          if (el.style) {
+            el.style.boxShadow = "none";
+            el.style.textShadow = "none";
+            el.style.transition = "none";
+            el.style.animation = "none";
+          }
         });
 
         // Explicitly center exam, assessment, and vacation cells in cloned element for PDF export
@@ -2957,44 +3128,71 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         if (isMonthly) {
           const clonedCols = secClone.querySelectorAll("colgroup col");
           if (clonedCols.length >= 7) {
-            (clonedCols[0] as HTMLElement).style.width = "40px";
+            (clonedCols[0] as HTMLElement).style.width = "50px";
             (clonedCols[1] as HTMLElement).style.width = "110px";
             (clonedCols[2] as HTMLElement).style.width = "170px";
-            (clonedCols[3] as HTMLElement).style.width = "120px";
-            (clonedCols[4] as HTMLElement).style.width = "245px";
+            (clonedCols[3] as HTMLElement).style.width = "115px";
+            (clonedCols[4] as HTMLElement).style.width = "240px";
             (clonedCols[5] as HTMLElement).style.width = "105px";
             (clonedCols[6] as HTMLElement).style.width = "110px";
           }
           secClone.querySelectorAll("thead th").forEach((th: any, idx: number) => {
+            th.style.wordBreak = "keep-all";
+            th.style.overflowWrap = "normal";
+            th.style.hyphens = "none";
+            th.style.fontWeight = "900";
+            th.style.color = "#000000";
             if (idx === 0) {
-              th.style.width = "40px";
-              th.style.minWidth = "38px";
-              th.style.maxWidth = "44px";
+              th.style.width = "50px";
+              th.style.minWidth = "46px";
+              th.style.maxWidth = "54px";
               th.style.padding = "4px 2px";
               th.style.textAlign = "center";
-              th.style.wordBreak = "normal";
+              th.style.whiteSpace = "nowrap";
+              th.style.fontSize = "11.5px";
             } else if (idx === 1) {
               th.style.width = "110px";
-              th.style.wordBreak = "normal";
+              th.style.padding = "4px 2px";
+              th.style.textAlign = "center";
+              th.style.fontSize = "11.5px";
+              th.style.lineHeight = "1.25";
             } else if (idx === 2) {
               th.style.width = "170px";
-              th.style.wordBreak = "normal";
+              th.style.padding = "4px 2px";
+              th.style.textAlign = "center";
+              th.style.fontSize = "11.5px";
+              th.style.lineHeight = "1.25";
             } else if (idx === 3) {
-              th.style.width = "120px";
-              th.style.wordBreak = "normal";
+              th.style.width = "115px";
+              th.style.padding = "4px 2px";
+              th.style.textAlign = "center";
+              th.style.fontSize = "11.5px";
+              th.style.lineHeight = "1.25";
             } else if (idx === 4) {
-              th.style.width = "245px";
-              th.style.wordBreak = "normal";
+              th.style.width = "240px";
+              th.style.padding = "4px 3px";
+              th.style.textAlign = "center";
+              th.style.fontSize = "11.5px";
+              th.style.lineHeight = "1.25";
             } else if (idx === 5) {
               th.style.width = "105px";
               th.style.textAlign = "center";
-              th.style.whiteSpace = "normal";
-              th.style.wordBreak = "normal";
+              th.style.padding = "4px 1px";
+              th.style.fontSize = "9.5px";
+              th.style.lineHeight = "1.25";
+              if (th.textContent.includes("Tool") || th.textContent.includes("Technique")) {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:11px;font-weight:900;">Tool &</span><span style="display:block;white-space:nowrap;word-break:keep-all;font-size:11px;font-weight:900;">Technique</span>';
+              }
             } else if (idx === 6) {
               th.style.width = "110px";
               th.style.textAlign = "center";
-              th.style.whiteSpace = "normal";
-              th.style.wordBreak = "normal";
+              th.style.padding = "4px 1px";
+              th.style.fontSize = "11px";
+              th.style.fontWeight = "900";
+              th.style.lineHeight = "1.25";
+              if (th.textContent.includes("Educational") || th.textContent.includes("Instrument")) {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:11px;font-weight:900;letter-spacing:-0.2px;">Educational</span><span style="display:block;white-space:nowrap;word-break:keep-all;font-size:11px;font-weight:900;letter-spacing:-0.2px;">Instrument</span>';
+              }
             }
           });
           secClone.querySelectorAll("tbody td").forEach((tdEl: any) => {
@@ -3025,6 +3223,34 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               el.style.wordBreak = "normal";
               el.style.overflowWrap = "break-word";
             });
+          });
+        } else {
+          // Annual Planning: Enforce consistent desktop columns and font sizes in PDF across Web and WebView
+          const clonedCols = secClone.querySelectorAll("colgroup col");
+          if (clonedCols.length >= 6) {
+            (clonedCols[0] as HTMLElement).style.width = "76px";
+            (clonedCols[1] as HTMLElement).style.width = "72px";
+            (clonedCols[2] as HTMLElement).style.width = "58px";
+            (clonedCols[3] as HTMLElement).style.width = "58px";
+            (clonedCols[4] as HTMLElement).style.width = "536px";
+            (clonedCols[5] as HTMLElement).style.width = "100px";
+          }
+          secClone.querySelectorAll("thead th").forEach((th: any, idx: number) => {
+            th.style.fontSize = "11px";
+            th.style.padding = "5px 4px";
+            th.style.textAlign = "center";
+            th.style.fontWeight = "900";
+            if (idx === 0) th.style.width = "76px";
+            else if (idx === 1) th.style.width = "72px";
+            else if (idx === 2) th.style.width = "58px";
+            else if (idx === 3) th.style.width = "58px";
+            else if (idx === 4) th.style.width = "536px";
+            else if (idx === 5) th.style.width = "100px";
+          });
+          secClone.querySelectorAll("tbody td").forEach((tdEl: any) => {
+            tdEl.style.fontSize = "11.5px";
+            tdEl.style.lineHeight = "1.35";
+            tdEl.style.padding = "4px 6px";
           });
         }
 
@@ -3147,7 +3373,16 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           const firstTdText = firstTd?.textContent?.trim() || "";
           const isMonthByText = !isMonthly && isMarathiMonth(firstTdText);
 
-          if ((isMonthStart || isMonthByText) && currentGroup.length > 0) {
+          // In monthly planning, chunk rows so no single group exceeds 6 rows
+          const hasLessonStart = isMonthly && tr.querySelector('td[data-cidx="1"]') !== null;
+          const isExam = isMonthly && (tr.querySelector(".exam-assessment-cell") !== null || isExamOrAssessmentText(tr.textContent || ""));
+          const isChunkMax = isMonthly && currentGroup.length >= 6;
+
+          const shouldBreak = isMonthly
+            ? (isMonthStart || hasLessonStart || isExam || isChunkMax)
+            : (isMonthStart || isMonthByText);
+
+          if (shouldBreak && currentGroup.length > 0) {
             trGroups.push(currentGroup);
             currentGroup = [];
           }
@@ -3157,23 +3392,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           trGroups.push(currentGroup);
         }
 
-        // Hidden container to construct and measure DOM pages
-        const tempContainer = document.createElement("div");
-        tempContainer.className = "pdf-export-active";
-        tempContainer.style.position = "fixed";
-        tempContainer.style.left = "0px";
-        tempContainer.style.top = "0px";
-        tempContainer.style.zIndex = "-9999";
-        tempContainer.style.width = exportWidth; // "950px"
-        tempContainer.style.backgroundColor = "#ffffff";
-        tempContainer.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
-        document.body.appendChild(tempContainer);
-
-        // A4 page height budget in DOM pixels at 950px width:
-        // Total A4 is 950 * (297 / 210) = 1343px. 1340px utilizes the full A4 height with ~19mm safe margin!
-        const PAGE_MAX_HEIGHT = 1340;
-
-        const pageList: HTMLElement[] = [];
+        const pageList: { pageDiv: HTMLElement; tbody: HTMLElement; isFirstPage: boolean }[] = [];
 
         const createNewPage = (isFirstPage: boolean) => {
           const pageDiv = document.createElement("div");
@@ -3205,8 +3424,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           pageDiv.appendChild(pageTable);
 
           tempContainer.appendChild(pageDiv);
-          pageList.push(pageDiv);
-          return { pageDiv, tbody: pageTbody };
+          const pageObj = { pageDiv, tbody: pageTbody, isFirstPage };
+          pageList.push(pageObj);
+          return pageObj;
         };
 
         let currentPage = createNewPage(true);
@@ -3216,9 +3436,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           const clonedRows = group.map((tr) => tr.cloneNode(true) as HTMLElement);
           clonedRows.forEach((tr) => currentPage.tbody.appendChild(tr));
 
-          // If adding this entire month overflows the page, and the page already has at least one month:
-          // Move this month to a fresh page!
-          if (currentPage.pageDiv.offsetHeight > PAGE_MAX_HEIGHT && currentPage.tbody.children.length > group.length) {
+          const maxAllowed = currentPage.isFirstPage ? PAGE_MAX_HEIGHT_FIRST : PAGE_MAX_HEIGHT_SUBSEQUENT;
+
+          // If adding this group overflows the page, and the page already has previous rows:
+          if (currentPage.pageDiv.offsetHeight > maxAllowed && currentPage.tbody.children.length > group.length) {
             clonedRows.forEach((tr) => tr.remove());
             currentPage = createNewPage(false);
             const freshClonedRows = group.map((tr) => tr.cloneNode(true) as HTMLElement);
@@ -3231,53 +3452,106 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           const clonedSig = sigBar.cloneNode(true) as HTMLElement;
           currentPage.pageDiv.appendChild(clonedSig);
 
-          // If signature bar causes overflow and page has multiple months,
-          // move the last month and signature to a new page
-          if (currentPage.pageDiv.offsetHeight > PAGE_MAX_HEIGHT && trGroups.length > 1) {
-            const lastGroup = trGroups[trGroups.length - 1];
-            if (currentPage.tbody.children.length > lastGroup.length) {
-              clonedSig.remove();
-              for (let k = 0; k < lastGroup.length; k++) {
-                currentPage.tbody.lastElementChild?.remove();
-              }
+          const maxAllowed = currentPage.isFirstPage ? PAGE_MAX_HEIGHT_FIRST : PAGE_MAX_HEIGHT_SUBSEQUENT;
+          // If signature bar causes overflow, place it on a clean new page WITH the last 2 rows
+          if (currentPage.pageDiv.offsetHeight > maxAllowed) {
+            clonedSig.remove();
+
+            const currentTrs = Array.from(currentPage.tbody.children) as HTMLElement[];
+            if (currentTrs.length > 2) {
               currentPage = createNewPage(false);
-              lastGroup.forEach((tr) => currentPage.tbody.appendChild(tr.cloneNode(true)));
+              const rowsToMove = currentTrs.slice(-2);
+              rowsToMove.forEach((r) => {
+                r.remove();
+                currentPage.tbody.appendChild(r);
+              });
+              currentPage.pageDiv.appendChild(clonedSig);
+            } else {
               currentPage.pageDiv.appendChild(clonedSig);
             }
           }
         }
 
-        // Yield main thread before rendering
+        // Collect all pages generated for this section
+        pageList.forEach((pObj) => allPagesToRender.push(pObj.pageDiv));
+      }
+
+      if (allPagesToRender.length === 0) {
+        toast.error("प्रिंट करण्यासाठी कोणतीही पाने तयार झाली नाहीत.");
+        setIsGeneratingPdf(false);
+        setPdfProgress(null);
+        if (tempContainer.parentNode) document.body.removeChild(tempContainer);
+        return;
+      }
+
+      const grandTotalPages = allPagesToRender.length;
+
+      // Yield main thread before canvas rendering
+      await new Promise((resolve) => setTimeout(resolve, 40));
+
+      let totalPdfPages = 0;
+
+      // Render each generated page directly with html2canvas (NO SLICING = ZERO WORD CUTTING!)
+      for (let p = 0; p < allPagesToRender.length; p++) {
+        const pageDiv = allPagesToRender[p];
+        tempContainer.innerHTML = "";
+        tempContainer.appendChild(pageDiv);
+
+        const currentStep = p + 1;
+        const pct = Math.min(96, Math.max(5, Math.round((currentStep / grandTotalPages) * 92)));
+
+        setPdfProgress({
+          current: currentStep,
+          total: grandTotalPages,
+          percent: pct,
+          status: isMonthly
+            ? `मासिक नियोजन : एकूण पान ${currentStep} / ${grandTotalPages} तयार होत आहे... (HD क्वालिटी)`
+            : `नियोजन : एकूण पान ${currentStep} / ${grandTotalPages} तयार होत आहे... (HD क्वालिटी)`,
+        });
+
+        // Allow DOM to settle and yield main thread so UI stays 100% responsive
         await new Promise((resolve) => setTimeout(resolve, 30));
 
-        // Render each generated page directly with html2canvas (NO SLICING = ZERO WORD CUTTING!)
-        for (let p = 0; p < pageList.length; p++) {
-          const pageDiv = pageList[p];
-          tempContainer.innerHTML = "";
-          tempContainer.appendChild(pageDiv);
+        toast.info(`⚡ PDF तयार होत आहे... (एकूण पान ${p + 1}/${grandTotalPages})`, {
+          id: "planning-pdf-progress",
+        });
 
-          // Allow DOM to settle
-          await new Promise((resolve) => setTimeout(resolve, 30));
+        const pageCanvas = await html2canvas(pageDiv, {
+          scale: 1.25,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 1200,
+          imageTimeout: 0,
+          removeContainer: true,
+        });
 
-          const pageCanvas = await html2canvas(pageDiv, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: "#ffffff",
-            scrollX: 0,
-            scrollY: 0,
-          });
-
-          if (totalPdfPages > 0) {
-            pdf.addPage();
-          }
-          totalPdfPages++;
-
-          const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.98);
-          const pageHeightMm = (pageCanvas.height * pdfWidth) / pageCanvas.width;
-          pdf.addImage(pageImgData, "JPEG", 10, 10, pdfWidth, pageHeightMm);
+        if (totalPdfPages > 0) {
+          pdf.addPage();
         }
+        totalPdfPages++;
 
+        const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.80);
+
+        // ALL pages have the EXACT SAME 100% uniform table width (190mm) and left margin (10mm) - ZERO ZOOM OUT!
+        const renderWidthMm = 190;
+        const renderHeightMm = (pageCanvas.height * renderWidthMm) / pageCanvas.width;
+        const offsetX = 10;
+        const offsetY = 10;
+
+        pdf.addImage(pageImgData, "JPEG", offsetX, offsetY, renderWidthMm, renderHeightMm, undefined, "FAST");
+
+        // Immediately release canvas bitmap memory from RAM & GPU to prevent mobile WebView lag/crash
+        pageCanvas.width = 0;
+        pageCanvas.height = 0;
+
+        // Brief yield for browser garbage collection and UI updates
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+
+      if (tempContainer.parentNode) {
         document.body.removeChild(tempContainer);
       }
 
@@ -3293,7 +3567,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           ? `इयत्ता_${classNameMr}_${realSubj}_वार्षिक_नियोजन_${devYear}.pdf`
           : `इयत्ता_${classNameMr}_संपूर्ण_वार्षिक_नियोजन_${devYear}.pdf`);
 
-      pdf.save(filename);
+      setPdfProgress({
+        current: 100,
+        total: 100,
+        percent: 98,
+        status: "PDF फाईल जतन (Save) केली जात आहे...",
+      });
+
+      await triggerPlanningPdfDownload(pdf, filename);
 
       toast.success(
         realSubj
@@ -3305,6 +3586,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       toast.error("PDF डाऊनलोड करताना अडचण आली.");
     } finally {
       setIsGeneratingPdf(false);
+      setPdfProgress(null);
     }
   };
 
@@ -3326,6 +3608,52 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
   return (
     <div className="w-full space-y-5 print:p-0">
+      {/* High-Visibility PDF Download Progress Modal (Mounted via Portal directly into document.body so it is perfectly centered in the screen viewport and never shifted down) */}
+      {pdfProgress && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999999] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/90 p-6 sm:p-8 max-w-md w-full mx-auto text-center space-y-5 animate-in zoom-in-95 duration-200 my-auto">
+            {/* Animated Icon */}
+            <div className="relative mx-auto size-16 flex items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/30">
+              <Download className="size-8 animate-bounce" />
+              <div className="absolute -top-1 -right-1 size-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black border-2 border-white shadow-xs">
+                ✓
+              </div>
+            </div>
+
+            {/* Title & Status */}
+            <div className="space-y-1.5">
+              <h3 className="text-base sm:text-lg font-black text-slate-900">
+                {isMonthly ? "मासिक नियोजन PDF तयार होत आहे..." : "नियोजन PDF तयार होत आहे..."}
+              </h3>
+              <p className="text-xs sm:text-sm font-bold text-indigo-600">
+                {pdfProgress.status}
+              </p>
+            </div>
+
+            {/* Progress Bar & Percentage */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-xs font-black text-slate-600 px-0.5">
+                <span>प्रगती (Overall Progress)</span>
+                <span className="text-indigo-600 font-extrabold text-sm">{pdfProgress.percent}%</span>
+              </div>
+              <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/80 shadow-inner">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-emerald-500 rounded-full transition-all duration-300 ease-out shadow-xs"
+                  style={{ width: `${pdfProgress.percent}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Reassurance text */}
+            <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-3 text-[11px] font-semibold text-slate-500 flex items-center justify-center gap-2">
+              <Loader2 className="size-3.5 animate-spin text-indigo-500 shrink-0" />
+              <span>कृपया थांबा, मजकुराची HD स्पष्टता राखली जात आहे...</span>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Top Controls & Subject Filter Selector */}
       <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4 print:hidden">
         {/* Subject Filter Bar */}
@@ -3896,8 +4224,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               type="button"
                               onClick={() => setMobileTableViewMode("fit")}
                               className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer ${mobileTableViewMode === "fit"
-                                  ? "bg-indigo-600 text-white shadow-xs"
-                                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                                ? "bg-indigo-600 text-white shadow-xs"
+                                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                                 }`}
                             >
                               <Smartphone className="size-3" />
@@ -3907,8 +4235,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               type="button"
                               onClick={() => setMobileTableViewMode("scroll")}
                               className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer ${mobileTableViewMode === "scroll"
-                                  ? "bg-indigo-600 text-white shadow-xs"
-                                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                                ? "bg-indigo-600 text-white shadow-xs"
+                                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                                 }`}
                             >
                               <Maximize2 className="size-3" />
@@ -4140,6 +4468,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     td, th {
                       page-break-inside: avoid !important;
                       break-inside: avoid !important;
+                    }
+                    th {
+                      word-break: keep-all !important;
+                      overflow-wrap: normal !important;
+                      hyphens: none !important;
                     }
                     .pdf-school-header {
                       padding: 8px 14px !important;
@@ -4422,12 +4755,28 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                       return hasData;
                     })
                     .map((sec, secIdx) => {
+                      const bannerInfo = isMonthly ? getSectionBannerParts(sec) : null;
+                      const secSubject = bannerInfo?.isEnglish
+                        ? (sec.subjectTitle || sec.subjectName || resolvedSubjectName || record?.subjectId || "English")
+                        : (sec.subjectTitle || sec.subjectName || resolvedSubjectName || record?.subjectId || "मराठी");
+                      const secClass = record?.classId || (record as any)?.class || sec.classTitle || "1st";
+                      const secMedium = detectRecordMedium(record);
+
                       const normalizedRows = isMonthly
-                        ? normalizeMonthlyPlanningRows(sec.rows, sec.subjectName).map((r) => r.slice(0, 7))
+                        ? normalizeMonthlyPlanningRows(sec.rows, sec.subjectName, secSubject, secClass, secMedium).map((r) => r.slice(0, 7))
                         : normalizeAnnualPlanningRows(sec.rows);
                       const filteredRows = normalizedRows.filter((row) => {
                         // CRITICAL: Exam / Assessment / Test / Vacation rows must ALWAYS be preserved and shown!
-                        if (isExamOrAssessmentRow(row) || isExamOrAssessmentText(row.join(" "))) {
+                        if (isExamOrAssessmentRow(row) || isExamOrAssessmentText(row.join(" ")) || isVacationText(row.join(" "))) {
+                          return true;
+                        }
+                        // CRITICAL DATA SAFEGUARD: If Col 0 is a Day number, it is 100% a teaching data row! Never drop it!
+                        const c0 = String(row[0] || "").trim();
+                        if (/^\d{1,2}$/.test(c0) || /^[०-९]{1,2}$/.test(c0) || c0.includes("ते") || c0.includes("to")) {
+                          return true;
+                        }
+                        // If row contains bullet point or long activity sentence, it is 100% teaching data!
+                        if (row.some((c) => String(c || "").includes("•") || String(c || "").trim().length > 30)) {
                           return true;
                         }
                         if (isSignatureRow(row)) return false;
@@ -4583,8 +4932,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                 type="button"
                                 onClick={() => setMobileTableViewMode("fit")}
                                 className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer ${mobileTableViewMode === "fit"
-                                    ? "bg-indigo-600 text-white shadow-xs"
-                                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                                  ? "bg-indigo-600 text-white shadow-xs"
+                                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                                   }`}
                               >
                                 <Smartphone className="size-3" />
@@ -4594,8 +4943,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                 type="button"
                                 onClick={() => setMobileTableViewMode("scroll")}
                                 className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 cursor-pointer ${mobileTableViewMode === "scroll"
-                                    ? "bg-indigo-600 text-white shadow-xs"
-                                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                                  ? "bg-indigo-600 text-white shadow-xs"
+                                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                                   }`}
                               >
                                 <Maximize2 className="size-3" />
@@ -4683,19 +5032,19 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                     const thStyle: React.CSSProperties | undefined = isMonthly
                                       ? (isSecEng
                                         ? (i === 0
-                                          ? { width: "5.5%", minWidth: "22px", maxWidth: "34px", padding: "3px 1px", wordBreak: "break-word" }
+                                          ? { width: "5.5%", minWidth: "22px", maxWidth: "34px", padding: "4px 1px", wordBreak: "break-word", fontSize: "12px", fontWeight: 900, color: "#000000" }
                                           : i === 4
-                                            ? { width: "26%", padding: "3px 1.5px", wordBreak: "break-word" }
+                                            ? { width: "26%", padding: "4px 1.5px", wordBreak: "break-word", fontSize: "12px", fontWeight: 900, color: "#000000" }
                                             : i === 1
-                                              ? { width: "16%", padding: "3px 1px", wordBreak: "break-word" }
+                                              ? { width: "16%", padding: "4px 1px", wordBreak: "break-word", fontSize: "12px", fontWeight: 900, color: "#000000" }
                                               : i === 2
-                                                ? { width: "17%", padding: "3px 1px", wordBreak: "break-word" }
+                                                ? { width: "17%", padding: "4px 1px", wordBreak: "break-word", fontSize: "12px", fontWeight: 900, color: "#000000" }
                                                 : i === 3
-                                                  ? { width: "13.5%", padding: "3px 1px", wordBreak: "break-word" }
+                                                  ? { width: "13.5%", padding: "4px 1px", wordBreak: "break-word", fontSize: "12px", fontWeight: 900, color: "#000000" }
                                                   : i === 5
-                                                    ? { width: "11%", minWidth: "35px", padding: "3px 1px", wordBreak: "break-word" }
+                                                    ? { width: "11%", minWidth: "35px", padding: "4px 1px", wordBreak: "keep-all", fontSize: "12px", fontWeight: 900, color: "#000000" }
                                                     : i === 6
-                                                      ? { width: "11%", minWidth: "35px", padding: "3px 1px", wordBreak: "break-word" }
+                                                      ? { width: "11%", minWidth: "35px", padding: "4px 1px", wordBreak: "keep-all", fontSize: "12px", fontWeight: 900, color: "#000000" }
                                                       : undefined)
                                         : (i === 0
                                           ? { width: "3.5%", minWidth: "26px", maxWidth: "38px", padding: "4px 2px" }
@@ -4728,11 +5077,16 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                     return (
                                       <th
                                         key={i}
-                                        style={thStyle}
+                                        style={{
+                                          ...thStyle,
+                                          fontSize: isMonthly && isSecEng ? (i === 5 || i === 6 ? "11.5px" : "12px") : "12px",
+                                          fontWeight: 900,
+                                          color: "#000000",
+                                        }}
                                         className={`border border-slate-400 ${isMonthly && isSecEng
-                                            ? (mobileTableViewMode === 'fit' ? 'p-0.5 min-[360px]:p-1 text-[8px] min-[360px]:text-[8.5px] sm:p-2 sm:text-[11px]' : 'p-1.5 sm:p-2 text-[10.5px] sm:text-[11px]')
-                                            : (mobileTableViewMode === 'fit' ? 'p-1 text-[9px] sm:p-2 sm:text-[11px]' : 'p-2 text-[11px]')
-                                          } text-center font-black tracking-tight sm:tracking-wide bg-slate-100 text-slate-900 leading-tight sm:leading-snug ${!isMonthly && i === 1 ? 'whitespace-nowrap' : 'whitespace-pre-line break-words'}`}
+                                          ? (mobileTableViewMode === 'fit' ? 'p-0.5 min-[360px]:p-1 text-[8px] min-[360px]:text-[8.5px] sm:p-2 sm:text-[11px]' : 'p-1.5 sm:p-2 text-[10.5px] sm:text-[11px]')
+                                          : (mobileTableViewMode === 'fit' ? 'p-1 text-[9px] sm:p-2 sm:text-[11px]' : 'p-2 text-[11px]')
+                                          } text-center font-black tracking-tight sm:tracking-wide bg-slate-100 text-slate-900 leading-tight sm:leading-snug ${isMonthly && isSecEng ? 'whitespace-normal' : (!isMonthly && i === 1 ? 'whitespace-nowrap' : 'whitespace-pre-line break-words')}`}
                                       >
                                         {!isMonthly && i === 4
                                           ? "पाठ / घटक"
@@ -4747,24 +5101,34 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                   : isMonthly
                                                     ? isSecEng
                                                       ? i === 0
-                                                        ? "Day"
+                                                        ? <span className="font-black text-black inline-block" style={{ fontWeight: 900, color: "#000000", fontSize: "12px" }}>Day</span>
                                                         : i === 1
-                                                          ? <>Lesson/<br />Point</>
+                                                          ? <span className="font-black text-black inline-block leading-tight" style={{ fontWeight: 900, color: "#000000", fontSize: "12px" }}>Lesson/<br />Point</span>
                                                           : i === 2
-                                                            ? <>Learning<br />Outcomes</>
+                                                            ? <span className="font-black text-black inline-block leading-tight" style={{ fontWeight: 900, color: "#000000", fontSize: "12px" }}>Learning<br />Outcomes</span>
                                                             : i === 3
-                                                              ? <>Teaching<br />Point/ Aim</>
+                                                              ? <span className="font-black text-black inline-block leading-tight" style={{ fontWeight: 900, color: "#000000", fontSize: "12px" }}>Teaching<br />Point/ Aim</span>
                                                               : i === 4
                                                                 ? (
-                                                                  <>
+                                                                  <span className="font-black text-black inline-block leading-tight" style={{ fontWeight: 900, color: "#000000", fontSize: "12px" }}>
                                                                     <span className="sm:hidden">Teaching<br />Experience</span>
                                                                     <span className="hidden sm:inline">Structure of Teaching Experience</span>
-                                                                  </>
+                                                                  </span>
                                                                 )
                                                                 : i === 5
-                                                                  ? <>Tool &<br />Technique</>
+                                                                  ? (
+                                                                    <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontSize: "12px", fontWeight: 900, color: "#000000" }}>
+                                                                      <span style={{ display: "block", whiteSpace: "nowrap", wordBreak: "keep-all", fontWeight: 900 }}>Tool &</span>
+                                                                      <span style={{ display: "block", whiteSpace: "nowrap", wordBreak: "keep-all", fontWeight: 900 }}>Technique</span>
+                                                                    </span>
+                                                                  )
                                                                   : i === 6
-                                                                    ? <>Educational<br />Instrument</>
+                                                                    ? (
+                                                                      <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontSize: "12px", fontWeight: 900, color: "#000000" }}>
+                                                                        <span style={{ display: "block", whiteSpace: "nowrap", wordBreak: "keep-all", letterSpacing: "-0.2px", fontWeight: 900 }}>Educational</span>
+                                                                        <span style={{ display: "block", whiteSpace: "nowrap", wordBreak: "keep-all", letterSpacing: "-0.2px", fontWeight: 900 }}>Instrument</span>
+                                                                      </span>
+                                                                    )
                                                                     : hText
                                                       : i === 0
                                                         ? "दिवस"

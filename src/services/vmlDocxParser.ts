@@ -78,9 +78,100 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
     const pagesHtml: string[] = [];
 
+    // ── PASS 0: Pre-scan all pages to determine subject structure from raw XML ──
+    // This must happen before any injection so subject boundaries are based on the
+    // original document content, not on content we add later.
+    interface PageMeta {
+      subjectKey: "marathi" | "english" | "math" | "semi" | "other";
+      subjectLabel: string;
+      isHeaderPage: boolean;   // page has the school-info header box
+      isSubjectStart: boolean; // first page of a subject section
+      isSubjectEnd: boolean;   // last page of a subject section (set in second pass)
+    }
+    const pageMetas: PageMeta[] = [];
+
+    for (let pIdx = 1; pIdx < drawingParts.length; pIdx++) {
+      const part = drawingParts[pIdx];
+      const shapes = part.match(/<v:shape[\s\S]*?<\/v:shape>/g) || [];
+      const partPgSzMatch = part.match(/<w:pgSz[^>]*w:w="([0-9]+)"[^>]*w:h="([0-9]+)"/);
+      const pageHeightPtPre = partPgSzMatch ? parseInt(partPgSzMatch[2], 10) / 20 : docPageHeightPt;
+
+      const allPageRawTextPre = shapes.map((s) => {
+        const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+        return tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+      }).join(" ");
+
+      // Subject key from raw text
+      let sk: PageMeta["subjectKey"] = "other";
+      let sl = "सामान्य विभाग";
+      if (/भाषा|मराठी|जोड्या जुळव|अक्षराला गोल कर|शब्द वाच|गिरव/i.test(allPageRawTextPre)) {
+        sk = "marathi"; sl = "मराठी विभाग (प्रथम भाषा)";
+      } else if (/english|oral\s*&amp;\s*practical|listen and act/i.test(allPageRawTextPre)) {
+        sk = "english"; sl = "इंग्रजी विभाग (English)";
+      } else if (/गणित|संख्या|चित्रे मोज|मोठ्या गाडीखालील/i.test(allPageRawTextPre)) {
+        sk = "math"; sl = "गणित विभाग (Mathematics)";
+      } else if (/FORMATIVE EVALUATION|SUB\s*[-–]\s*MATH|Qu\.|Write numbers/i.test(allPageRawTextPre)) {
+        sk = "semi"; sl = "Semi-English विभाग (Semi Math)";
+      }
+
+      // A page is a genuine header page ONLY if it has the school name AND student/class
+      // info in its raw XML shapes. This avoids tagging continuation pages.
+      const hasSchoolNamePre = shapes.some((s) => {
+        const txt = (s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [])
+          .map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+        return txt.includes("शाळेचे नाव") || /school\s*name/i.test(txt) ||
+          /name\s*of\s*school/i.test(txt) || (sTop < 45 && /\bschool\b/i.test(txt));
+      });
+      const hasStudentInfoPre = shapes.some((s) => {
+        const txt = (s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [])
+          .map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+        return txt.includes("विद्यार्थ्याचे नाव") || txt.includes("विद्यार्थी") ||
+          txt.includes("इयत्ता") || txt.includes("दि.") || /student|std|class|date/i.test(txt);
+      });
+      // Also detect exam header by presence of मूल्यमापन/चाचणी/परीक्षा in top region
+      const hasExamTitlePre = shapes.some((s) => {
+        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+        const topRatio = sTop / pageHeightPtPre;
+        if (topRatio >= 0.255) return false;
+        const txt = (s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [])
+          .map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+        return txt.includes("मूल्यमापन") || txt.includes("चाचणी") || txt.includes("परीक्षा") ||
+          /test|exam|evaluation/i.test(txt);
+      });
+
+      // isHeaderPage: first page always, or page with school name + (student info OR exam title)
+      const isHeaderPage = pIdx === 1 || (hasSchoolNamePre && (hasStudentInfoPre || hasExamTitlePre));
+
+      // isSubjectStart: first page OR page with explicit subject marker in header region
+      // Detect "विषय - भाषा" / "SUB - MATH" etc. ONLY in the header area shapes (top 25.5%)
+      const hasSubjectMarkerInHeader = shapes.some((s) => {
+        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+        const topRatio = sTop / pageHeightPtPre;
+        if (topRatio >= 0.255) return false;
+        const txt = (s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [])
+          .map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
+        return /(?:विषय|subject|sub)\s*[-–:]\s*\S/i.test(txt);
+      });
+      const isSubjectStart = pIdx === 1 || (isHeaderPage && hasSubjectMarkerInHeader);
+
+      pageMetas.push({ subjectKey: sk, subjectLabel: sl, isHeaderPage, isSubjectStart, isSubjectEnd: false });
+    }
+
+    // Second pass: mark isSubjectEnd — last page before next subject start, and very last page
+    const totalPages = pageMetas.length;
+    for (let i = 0; i < totalPages; i++) {
+      const isLastPage = i === totalPages - 1;
+      const nextIsSubjectStart = !isLastPage && pageMetas[i + 1].isSubjectStart;
+      if (isLastPage || nextIsSubjectStart) {
+        pageMetas[i].isSubjectEnd = true;
+      }
+    }
+
     // Process each page
     for (let pIdx = 1; pIdx < drawingParts.length; pIdx++) {
       const part = drawingParts[pIdx];
+      const meta = pageMetas[pIdx - 1]; // pIdx starts at 1, meta array at 0
 
       // Check if page part has specific page size
       const partPgSzMatch = part.match(/<w:pgSz[^>]*w:w="([0-9]+)"[^>]*w:h="([0-9]+)"/);
@@ -104,29 +195,15 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
       const shapes = part.match(/<v:shape[\s\S]*?<\/v:shape>/g) || [];
       const shapesHtml: string[] = [];
 
-      // Detect subject from all text on this page
+      // Use pre-scanned subject info from Pass 0
       const allPageTextParts = shapes.map((s) => {
         const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
         return tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join("");
       });
       const allPageRawText = allPageTextParts.join(" ");
 
-      let subjectKey: "marathi" | "english" | "math" | "semi" | "other" = "other";
-      let subjectLabel = "सामान्य विभाग";
-
-      if (/भाषा|मराठी|जोड्या जुळव|अक्षराला गोल कर|शब्द वाच|गिरव/i.test(allPageRawText)) {
-        subjectKey = "marathi";
-        subjectLabel = "मराठी विभाग (प्रथम भाषा)";
-      } else if (/english|oral\s*&amp;\s*practical|listen and act/i.test(allPageRawText)) {
-        subjectKey = "english";
-        subjectLabel = "इंग्रजी विभाग (English)";
-      } else if (/गणित|संख्या|चित्रे मोज|मोठ्या गाडीखालील/i.test(allPageRawText)) {
-        subjectKey = "math";
-        subjectLabel = "गणित विभाग (Mathematics)";
-      } else if (/FORMATIVE EVALUATION|SUB\s*[-–]\s*MATH|Qu\.|Write numbers/i.test(allPageRawText)) {
-        subjectKey = "semi";
-        subjectLabel = "Semi-English विभाग (Semi Math)";
-      }
+      const subjectKey = meta.subjectKey;
+      const subjectLabel = meta.subjectLabel;
 
       // Detect total marks from all text/shapes on this page
       let pageTotalMarks = "२०";
@@ -140,7 +217,8 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         }
       }
 
-      // Check if this page has the full school header box (shown in third image)
+      // Use pre-computed isHeaderPage from Pass 0 — do NOT re-detect from raw shapes
+      // to avoid tagging continuation pages that happen to have top-region shapes.
       const hasSchoolNameOnPage = shapes.some((s) => {
         const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
         const txt = tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
@@ -165,7 +243,10 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         );
       });
 
-      const hasSchoolHeader = pIdx === 1 || (hasSchoolNameOnPage && hasStudentOrStdOnPage);
+      // hasSchoolHeader: use the pre-computed isHeaderPage flag.
+      // Strip the old header shapes ONLY on genuine header pages — not on continuation pages
+      // that happen to have shapes near the top (e.g., Q1 positioned high on the page).
+      const hasSchoolHeader = meta.isHeaderPage;
 
       // Extract all header metadata from Word document's shapes before skipping them
       let headerSchoolName = "";
@@ -264,6 +345,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
       const isInlineSchoolHeader =
         hasSchoolHeader &&
+        hasSchoolNameOnPage &&
         ((schoolNameShapeTop > 65 && (studentNameShapeTop < 0 || schoolNameShapeTop > studentNameShapeTop)) ||
           allPageText.includes("इयत्ता- तिसरी") ||
           allPageText.includes("इयत्ता- चौथी") ||
@@ -333,7 +415,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
             // Span box comfortably up to ~81.2% inside the border (497pt / 612pt)
             widthPt = Math.max(widthPt, 497);
             heightPt = 28;
-            extraBoxStyle = "z-index: 10; white-space: normal !important; overflow: visible !important; display: flex; align-items: flex-start; max-width: 81.2% !important;";
+            extraBoxStyle = "z-index: 10; white-space: normal !important; overflow: visible !important; display: flex; align-items: center; justify-content: center; text-align: center; max-width: 81.2% !important;";
           }
 
           const isEng = /school/i.test(trimmedText) || !trimmedText.includes("शाळेचे");
@@ -353,9 +435,9 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
             }
           } else {
             if (cleanName) {
-              shapeInnerHtml = `<div class="qp-school-name-block" style="background: #ffffff; padding: 0 2px; display: block; flex: 1; min-width: 0; margin-right: 14px; overflow: visible;"><strong style="white-space: nowrap; color: #0f172a;">${label} </strong><span class="qp-school-text" style="font-weight: 700; color: #0f172a; margin-left: 6px; white-space: normal; word-break: break-word;" title="${escapeHtml(cleanName)}">${escapeHtml(cleanName)}</span></div>`;
+              shapeInnerHtml = `<div class="qp-school-name-block" style="background: #ffffff; padding: 0 2px; display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; overflow: visible;"><strong style="white-space: nowrap; color: #0f172a;">${label} </strong><span class="qp-school-text" style="font-weight: 700; color: #0f172a; margin-left: 6px; white-space: normal; word-break: break-word;" title="${escapeHtml(cleanName)}">${escapeHtml(cleanName)}</span></div>`;
             } else {
-              shapeInnerHtml = `<div class="qp-school-name-block" style="background: #ffffff; padding: 0 2px; display: block; flex: 1; min-width: 0; margin-right: 14px; overflow: visible;"><strong style="white-space: nowrap; color: #0f172a;">${label} </strong><span style="display: inline-block; width: 140px; border-bottom: 1.5px dotted #94a3b8; margin-left: 6px; height: 1em; vertical-align: middle;"></span></div>`;
+              shapeInnerHtml = `<div class="qp-school-name-block" style="background: #ffffff; padding: 0 2px; display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; overflow: visible;"><strong style="white-space: nowrap; color: #0f172a;">${label} </strong><span style="display: inline-block; width: 140px; border-bottom: 1.5px dotted #94a3b8; margin-left: 6px; height: 1em; vertical-align: middle;"></span></div>`;
             }
           }
         } else if (
@@ -467,9 +549,10 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
         if (isSchoolNameField) {
           whiteSpaceRule = "white-space: normal !important; overflow: visible !important;";
-          shapeAlignItems = "flex-start";
+          shapeAlignItems = "center";
           shapeLineHeight = "1.35";
           shapePadding = "2px 4px";
+          extraBoxStyle += " justify-content: center !important; text-align: center !important;";
         } else if (isMarksShape) {
           whiteSpaceRule = "white-space: nowrap !important; word-break: normal !important; overflow: visible !important;";
           shapeAlignItems = "center";
@@ -522,6 +605,9 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           data-subject-key="${subjectKey}"
           data-subject-label="${subjectLabel}"
           data-is-inline-header="${isInlineSchoolHeader ? "true" : "false"}"
+          data-is-header-page="${meta.isHeaderPage ? "true" : "false"}"
+          data-is-subject-start="${meta.isSubjectStart ? "true" : "false"}"
+          data-is-subject-end="${meta.isSubjectEnd ? "true" : "false"}"
           data-extracted-school="${escapeHtml(headerSchoolName)}"
           data-extracted-kendra="${escapeHtml(headerKendra)}"
           data-extracted-taluka="${escapeHtml(headerTaluka)}"

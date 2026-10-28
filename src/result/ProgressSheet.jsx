@@ -13,8 +13,8 @@ const DEFAULT_SUBJECTS = [
   "प्रथम भाषा : मराठी",
   "द्वितीय भाषा : इंग्रजी",
   "गणित",
-  "कला",
-  "कार्यानुभव",
+  "कलाशिक्षण",
+  "कार्यशिक्षण",
   "शारीरिक शिक्षण"
 ];
 
@@ -82,24 +82,24 @@ function A4PageWrapper({ children, isLandscape = false }) {
           scale < 1
             ? supportsZoom
               ? {
-                  zoom: scale,
-                  width: `${targetWidth}px`,
-                  minWidth: `${targetWidth}px`,
-                  maxWidth: `${targetWidth}px`,
-                }
-              : {
-                  transform: `scale(${scale})`,
-                  transformOrigin: "top center",
-                  width: `${targetWidth}px`,
-                  minWidth: `${targetWidth}px`,
-                  maxWidth: `${targetWidth}px`,
-                  marginBottom: `-${Math.round((1 - scale) * (isLandscape ? 794 : 1123))}px`,
-                }
-            : {
+                zoom: scale,
                 width: `${targetWidth}px`,
                 minWidth: `${targetWidth}px`,
                 maxWidth: `${targetWidth}px`,
               }
+              : {
+                transform: `scale(${scale})`,
+                transformOrigin: "top center",
+                width: `${targetWidth}px`,
+                minWidth: `${targetWidth}px`,
+                maxWidth: `${targetWidth}px`,
+                marginBottom: `-${Math.round((1 - scale) * (isLandscape ? 794 : 1123))}px`,
+              }
+            : {
+              width: `${targetWidth}px`,
+              minWidth: `${targetWidth}px`,
+              maxWidth: `${targetWidth}px`,
+            }
         }
       >
         {children}
@@ -329,7 +329,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
               if (!udise && uni.udise) udise = uni.udise;
               if (!address && uni.address) address = uni.address;
             }
-          } catch (e) {}
+          } catch (e) { }
 
           // 3. Check LocalStorage (cce_general_school_settings & CCESettings caches)
           const cacheKeys = [
@@ -494,7 +494,8 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           try {
             const cacheKey = `cce_marks_cache_${selectedClass}_${academicYear}`;
             const cached = localStorage.getItem(cacheKey);
-            if (cached) mergedMarks = JSON.parse(cached) || {};
+            if (cached)
+              mergedMarks = JSON.parse(cached) || {};
           } catch (e) { }
 
           const docIds = [
@@ -672,7 +673,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
       if (document.fonts && document.fonts.ready) {
         try {
           await document.fonts.ready;
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const images = Array.from(container.querySelectorAll("img"));
@@ -738,7 +739,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                   rules.forEach((rule) => {
                     cssText += rule.cssText + "\n";
                   });
-                } catch (e) {}
+                } catch (e) { }
               });
 
               if (cssText) {
@@ -760,9 +761,9 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                       img.src = c.toDataURL("image/png");
                     }
                   }
-                } catch (e) {}
+                } catch (e) { }
               });
-            } catch (e) {}
+            } catch (e) { }
 
             clonedElement.style.margin = "0";
             clonedElement.style.padding = "4px";
@@ -885,8 +886,9 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
       if (lower.includes("इंग्रजी") && g.secondLanguage) return g.secondLanguage;
       if (lower.includes("गणित") && (g.maths || g.math)) return g.maths || g.math;
       if (lower.includes("कला") && g.art) return g.art;
-      if (lower.includes("कार्यानुभव") && g.workExperience) return g.workExperience;
+      if ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && g.workExperience) return g.workExperience;
       if (lower.includes("शारीरिक") && g.physicalEdu) return g.physicalEdu;
+      if ((lower.includes("परिसर") || lower.includes("संभोवतालचे")) && g.evs) return g.evs;
     }
 
     if (marksData) {
@@ -911,9 +913,10 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           if (lower.includes("मराठी")) subData = termMap["marathi"] || termMap["firstLanguage"] || termMap["प्रथम भाषा : मराठी"] || termMap["मराठी"];
           else if (lower.includes("इंग्रजी")) subData = termMap["english"] || termMap["secondLanguage"] || termMap["द्वितीय भाषा : इंग्रजी"] || termMap["इंग्रजी"];
           else if (lower.includes("गणित")) subData = termMap["math"] || termMap["maths"] || termMap["गणित"];
-          else if (lower.includes("कला")) subData = termMap["kala"] || termMap["art"] || termMap["कला"];
-          else if (lower.includes("कार्यानुभव")) subData = termMap["karyanubhav"] || termMap["workExperience"] || termMap["कार्यानुभव"];
+          else if (lower.includes("कला")) subData = termMap["kala"] || termMap["art"] || termMap["कलाशिक्षण"] || termMap["कला"];
+          else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) subData = termMap["karyanubhav"] || termMap["workExperience"] || termMap["कार्यशिक्षण"] || termMap["कार्यानुभव"];
           else if (lower.includes("शारीरिक")) subData = termMap["sharirik"] || termMap["physicalEdu"] || termMap["शारीरिक शिक्षण"];
+          else if (lower.includes("परिसर") || lower.includes("संभोवतालचे")) subData = termMap["parisar"] || termMap["evs"] || termMap["आपले संभोवतालचे जग"] || termMap["परिसर अभ्यास"];
         }
 
         if (subData) {
@@ -1056,11 +1059,10 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                   setPageMode("1page");
                   setShowLayoutModal(false);
                 }}
-                className={`p-4 rounded-2xl border-2 transition-all text-left flex items-center gap-3.5 cursor-pointer group active:scale-[0.98] ${
-                  pageMode === "1page"
+                className={`p-4 rounded-2xl border-2 transition-all text-left flex items-center gap-3.5 cursor-pointer group active:scale-[0.98] ${pageMode === "1page"
                     ? "border-orange-500 bg-orange-50/50"
                     : "border-slate-200 bg-slate-50/50 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <div className="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
                   1
@@ -1080,11 +1082,10 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                   setPageMode("2pages");
                   setShowLayoutModal(false);
                 }}
-                className={`p-4 rounded-2xl border-2 transition-all text-left flex items-center gap-3.5 cursor-pointer group active:scale-[0.98] ${
-                  pageMode === "2pages"
+                className={`p-4 rounded-2xl border-2 transition-all text-left flex items-center gap-3.5 cursor-pointer group active:scale-[0.98] ${pageMode === "2pages"
                     ? "border-orange-500 bg-orange-50/50"
                     : "border-slate-200 bg-slate-50/50 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 <div className="w-10 h-10 rounded-xl bg-slate-700 text-white flex items-center justify-center font-bold text-base shadow-sm">
                   2
@@ -1125,22 +1126,20 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
         <div className="flex flex-col gap-1.5">
           <button
             onClick={() => setPageMode("2pages")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 border-2 text-xs font-black rounded-xl transition-all cursor-pointer shadow-xs ${
-              pageMode === "2pages"
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 border-2 text-xs font-black rounded-xl transition-all cursor-pointer shadow-xs ${pageMode === "2pages"
                 ? "bg-amber-100 border-amber-500 text-amber-950 shadow-sm"
                 : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
-            }`}
+              }`}
           >
             <FileText className="size-3.5 text-orange-600" />
             <span>स्वरूप: २ पाने (Two Pages)</span>
           </button>
           <button
             onClick={() => setPageMode("1page")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 border-2 text-xs font-black rounded-xl transition-all cursor-pointer shadow-xs ${
-              pageMode === "1page"
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 border-2 text-xs font-black rounded-xl transition-all cursor-pointer shadow-xs ${pageMode === "1page"
                 ? "bg-amber-100 border-amber-500 text-amber-950 shadow-sm"
                 : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
-            }`}
+              }`}
           >
             <FileText className="size-3.5 text-orange-600" />
             <span>स्वरूप: १ पान (One Page)</span>
@@ -1151,22 +1150,20 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
         <div className="flex items-center bg-orange-50/80 p-1 rounded-xl border border-orange-200 gap-1 shadow-xs">
           <button
             onClick={() => setLayoutMode("portrait")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-              layoutMode === "portrait"
+            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${layoutMode === "portrait"
                 ? "bg-orange-600 text-white shadow-sm"
                 : "text-slate-700 hover:text-orange-950 hover:bg-orange-100/60"
-            }`}
+              }`}
           >
             <span>📄</span>
             <span>उभा लेआउट (Portrait)</span>
           </button>
           <button
             onClick={() => setLayoutMode("landscape")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-              layoutMode === "landscape"
+            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${layoutMode === "landscape"
                 ? "bg-orange-600 text-white shadow-sm"
                 : "text-slate-700 hover:text-orange-950 hover:bg-orange-100/60"
-            }`}
+              }`}
           >
             <span>📖</span>
             <span>फोल्डिंग लेआउट (Landscape)</span>
@@ -1865,10 +1862,10 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
               const studentFullName = (student.fullName || student.name || "").trim();
               const nameCharLength = studentFullName.length;
               // Dynamic font size scaling based on length (strength) of student name:
-              const dynamicNameSizeClass = nameCharLength > 36 
-                ? "text-[12px] sm:text-[12.5px]" 
-                : nameCharLength > 24 
-                  ? "text-[13.5px] sm:text-[14px]" 
+              const dynamicNameSizeClass = nameCharLength > 36
+                ? "text-[12px] sm:text-[12.5px]"
+                : nameCharLength > 24
+                  ? "text-[13.5px] sm:text-[14px]"
                   : "text-[15px] sm:text-[16px]";
 
               const page2Inner = (

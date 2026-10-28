@@ -30,9 +30,10 @@ const getSubjectDisplayLabel = (subName) => {
   if (s.toLowerCase().includes("इंग्रजी") && !s.includes("तृतीय") && !s.includes("द्वितीय")) return "तृतीय भाषा: इंग्रजी";
   if (s.toLowerCase().includes("हिंदी") && !s.includes("तृतीय") && !s.includes("द्वितीय")) return "द्वितीय भाषा: हिंदी";
   if (s.toLowerCase().includes("गणित")) return "गणित";
-  if (s.toLowerCase().includes("कला")) return "कला";
-  if (s.toLowerCase().includes("कार्यानुभव")) return "कार्यानुभव";
+  if (s.toLowerCase().includes("कला")) return "कलाशिक्षण";
+  if (s.toLowerCase().includes("कार्यानुभव") || s.toLowerCase().includes("कार्यशिक्षण") || s.toLowerCase().includes("कार्य")) return "कार्यशिक्षण";
   if (s.toLowerCase().includes("शारीरिक")) return "शारीरिक शिक्षण";
+  if (s.toLowerCase().includes("परिसर") || s.toLowerCase().includes("संभोवतालचे")) return "आपले संभोवतालचे जग";
   return s;
 };
 
@@ -56,8 +57,8 @@ const SAMPLE_STUDENTS = [
       "मराठी": { sem1: 74, sem2: 97 },
       "इंग्रजी": { sem1: 70, sem2: 91 },
       "गणित": { sem1: 82, sem2: 100 },
-      "कला": { sem1: 78, sem2: 89 },
-      "कार्यानुभव": { sem1: 72, sem2: 89 },
+      "कलाशिक्षण": { sem1: 78, sem2: 89 },
+      "कार्यशिक्षण": { sem1: 72, sem2: 89 },
       "शारीरिक शिक्षण": { sem1: 78, sem2: 97 },
     }
   },
@@ -71,8 +72,8 @@ const SAMPLE_STUDENTS = [
       "मराठी": { sem1: 73, sem2: 94 },
       "इंग्रजी": { sem1: 71, sem2: 89 },
       "गणित": { sem1: 79, sem2: 92 },
-      "कला": { sem1: 78, sem2: 92 },
-      "कार्यानुभव": { sem1: 78, sem2: 85 },
+      "कलाशिक्षण": { sem1: 78, sem2: 92 },
+      "कार्यशिक्षण": { sem1: 78, sem2: 85 },
       "शारीरिक शिक्षण": { sem1: 78, sem2: 97 },
     }
   },
@@ -86,8 +87,8 @@ const SAMPLE_STUDENTS = [
       "मराठी": { sem1: 66, sem2: 93 },
       "इंग्रजी": { sem1: 67, sem2: 86 },
       "गणित": { sem1: 76, sem2: 85 },
-      "कला": { sem1: 78, sem2: 83 },
-      "कार्यानुभव": { sem1: 74, sem2: 85 },
+      "कलाशिक्षण": { sem1: 78, sem2: 83 },
+      "कार्यशिक्षण": { sem1: 74, sem2: 85 },
       "शारीरिक शिक्षण": { sem1: 70, sem2: 96 },
     }
   }
@@ -213,8 +214,8 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
             "मराठी",
             "इंग्रजी",
             "गणित",
-            "कला",
-            "कार्यानुभव",
+            "कलाशिक्षण",
+            "कार्यशिक्षण",
             "शारीरिक शिक्षण",
           ];
 

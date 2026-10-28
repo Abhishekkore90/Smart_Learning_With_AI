@@ -1499,14 +1499,27 @@ export function DocumentEditorViewer({
 
                           {/* Line 1: School Name & Kendra / Taluka / Jilha */}
                           <div
-                            className="font-black text-slate-900 tracking-tight flex items-baseline justify-between gap-2 mb-1 min-w-0 flex-wrap"
-                            style={{ fontSize: `${Math.max(12, Math.round(18 * pageScale))}px` }}
+                            className="font-black text-slate-900 tracking-tight flex flex-col items-center justify-center text-center gap-1 mb-1 min-w-0 w-full"
                           >
-                            <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
+                            <div
+                              className="flex items-baseline justify-center text-center gap-1.5 min-w-0 max-w-full w-full"
+                              style={{
+                                fontSize: `${Math.max(
+                                  10,
+                                  Math.round(
+                                    (hb.schoolName && hb.schoolName.length > 45
+                                      ? 13
+                                      : hb.schoolName && hb.schoolName.length > 30
+                                      ? 15.5
+                                      : 18) * pageScale
+                                  )
+                                )}px`,
+                              }}
+                            >
                               <span className="shrink-0 font-black whitespace-nowrap">
-                                {isEng ? "SCHOOL NAME -" : "शाळेचे नाव :"}
+                                {isEng ? "SCHOOL NAME :" : "शाळेचे नाव :"}
                               </span>
-                              <span className="flex-1 min-w-0 text-slate-950 font-black border-b border-dotted border-slate-500 pb-0.5 truncate px-1">
+                              <span className="font-black text-slate-950 truncate px-1">
                                 {hb.schoolName || ""}
                               </span>
                             </div>
@@ -2117,10 +2130,22 @@ export function DocumentEditorViewer({
                 </div>
                 <div className="bg-white border-2 border-slate-900 rounded-none p-3 text-slate-900 shadow-sm select-none font-sans">
                   {/* Line 1: School Name & Kendra, Taluka, Jilla */}
-                  <div className="flex items-baseline justify-between gap-2 mb-1 flex-wrap text-slate-900">
-                    <div className="font-black text-sm tracking-tight flex items-baseline gap-1.5 flex-1 min-w-[200px]">
-                      <span>शाळेचे नाव :</span>
-                      <span className="text-slate-950 font-black border-b border-dotted border-slate-400 flex-1 px-1">{headerForm.schoolName || "____________________"}</span>
+                  <div className="flex flex-col items-center justify-center text-center gap-1 mb-1 w-full text-slate-900">
+                    <div
+                      className="font-black tracking-tight flex items-baseline justify-center text-center gap-1.5 max-w-full w-full"
+                      style={{
+                        fontSize:
+                          headerForm.schoolName && headerForm.schoolName.length > 45
+                            ? "11px"
+                            : headerForm.schoolName && headerForm.schoolName.length > 30
+                            ? "12.5px"
+                            : "14px",
+                      }}
+                    >
+                      <span className="shrink-0">शाळेचे नाव :</span>
+                      <span className="text-slate-950 font-black truncate px-1">
+                        {headerForm.schoolName || "____________________"}
+                      </span>
                     </div>
                     {(headerForm.kendra || headerForm.taluka || headerForm.jilha) && (
                       <div className="text-[11px] font-bold text-slate-900 flex items-center justify-center text-center w-full gap-2 shrink-0 mb-1">

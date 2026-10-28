@@ -1003,8 +1003,8 @@ const saveGrades = async () => {
   ];
 
   const marathiSubjects = [
-    { name: "कला", sanklikMarks: 100 },
-    { name: "कार्यानुभव", sanklikMarks: 100 },
+    { name: "कलाशिक्षण", sanklikMarks: 100 },
+    { name: "कार्यशिक्षण", sanklikMarks: 100 },
     { name: "शा.शिक्षण", sanklikMarks: 100 },
   ];
 

@@ -1059,8 +1059,8 @@ const Result5th8th = () => {
     { name: "चित्रकला", akarikMarks: 100 }, // New subject added
     { name: "शारीरिक शिक्षण", akarikMarks: 100 }, // New subject added
     { name: "संगणक", akarikMarks: 100 }, // New subject added
-    { name: "कला", akarikMarks: 100 },
-    { name: "कार्यानुभव", akarikMarks: 100 },
+    { name: "कलाशिक्षण", akarikMarks: 100 },
+    { name: "कार्यशिक्षण", akarikMarks: 100 },
   ];
   try {
     return (
@@ -1308,7 +1308,7 @@ const Result5th8th = () => {
                   <tfoot>
                     {(() => {
                       const academicResults = Object.keys(selectedStudentResults.results).filter(subj =>
-                        !['Art', 'Work Experience', 'Physical Education', 'कला', 'कार्यानुभव', 'शारीरिक शिक्षण'].includes(subj)
+                        !['Art', 'Work Experience', 'Physical Education', 'कला', 'कलाशिक्षण', 'कार्यानुभव', 'कार्यशिक्षण', 'शारीरिक शिक्षण'].includes(subj)
                       );
                       const totalM = academicResults.reduce((sum, s) => sum + (selectedStudentResults.results[s]?.total || 0), 0);
                       const totalS = academicResults.length;

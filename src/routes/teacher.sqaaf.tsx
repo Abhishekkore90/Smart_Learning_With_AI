@@ -8906,36 +8906,51 @@ function TeacherSqaafPage() {
                   className="bg-white/80 backdrop-blur-md rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col min-h-[82vh] w-full"
                 >
                   {/* Header Banner */}
-                  <div className="bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500 px-8 py-8 flex items-center justify-between text-white border-b border-black/5 relative overflow-hidden">
+                  <div className="bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500 p-3.5 sm:p-6 md:p-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 text-white border-b border-black/5 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-full bg-white/10 rounded-full blur-3xl pointer-events-none" />
-                    <div className="flex items-center gap-4">
-                      <Link
-                        to="/teacher"
-                        className="p-2.5 rounded-2xl bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer border border-white/20 active:scale-95 shrink-0"
-                        title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
+                    
+                    {/* Title Row */}
+                    <div className="flex items-center justify-between gap-2.5 sm:gap-4 w-full sm:w-auto relative z-10">
+                      <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
+                        <Link
+                          to="/teacher"
+                          className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer border border-white/20 active:scale-95 shrink-0"
+                          title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
+                        >
+                          <ArrowLeft className="size-4 sm:size-5" />
+                        </Link>
+                        <div className="size-9 sm:size-12 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner shrink-0">
+                          <School className="size-5 sm:size-6 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <h1 className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight font-sans truncate">{t.title}</h1>
+                          <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest text-orange-50 truncate">{t.subtitle}</p>
+                        </div>
+                      </div>
+
+                      {/* Language Selector Button on Mobile (< sm) */}
+                      <button
+                        onClick={toggleLanguage}
+                        className="sm:hidden p-2 bg-white/15 hover:bg-white/25 backdrop-blur-md rounded-xl transition-all shadow-sm flex items-center gap-1.5 text-white border border-white/20 cursor-pointer shrink-0"
                       >
-                        <ArrowLeft className="size-5" />
-                      </Link>
-                      <div className="size-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
-                        <School className="size-6 text-white" />
-                      </div>
-                      <div>
-                        <h1 className="text-2xl md:text-3xl font-black tracking-tight font-sans">{t.title}</h1>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-50">{t.subtitle}</p>
-                      </div>
+                        <Languages className="size-4" />
+                        <span className="text-[10px] font-black uppercase">
+                          {selectedLang === "mr" ? "ENG" : "मराठी"}
+                        </span>
+                      </button>
                     </div>
 
                     {/* Academic Year & Language Controls */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-end sm:justify-start gap-2 sm:gap-3 w-full sm:w-auto relative z-10">
                       {/* Academic Year Selector */}
-                      <div className="flex items-center gap-2 bg-slate-900/30 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 text-white shadow-sm">
-                        <span className="text-xs font-black uppercase tracking-wider hidden sm:inline text-amber-200">
+                      <div className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 bg-slate-900/30 backdrop-blur-md px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl border border-white/20 text-white shadow-sm w-full sm:w-auto">
+                        <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-amber-200 shrink-0">
                           {selectedLang === "mr" ? "शैक्षणिक वर्ष:" : "Academic Year:"}
                         </span>
                         <select
                           value={academicYear}
                           onChange={(e) => handleAcademicYearChange(e.target.value)}
-                          className="bg-slate-900 text-amber-300 border border-amber-400/40 rounded-xl px-3 py-1 text-xs font-extrabold outline-none cursor-pointer hover:bg-slate-950 transition-colors"
+                          className="bg-slate-900 text-amber-300 border border-amber-400/40 rounded-lg sm:rounded-xl px-2 sm:px-3 py-1 text-xs font-extrabold outline-none cursor-pointer hover:bg-slate-950 transition-colors shrink-0 max-w-[150px] sm:max-w-none truncate"
                         >
                           {academicYearsList.map((item) => (
                             <option key={item.value} value={item.value}>
@@ -8945,13 +8960,13 @@ function TeacherSqaafPage() {
                         </select>
                       </div>
 
-                      {/* Language Selector Button */}
+                      {/* Language Selector Button for Desktop (hidden on mobile, visible on sm+) */}
                       <button
                         onClick={toggleLanguage}
-                        className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all shadow-sm flex items-center gap-2 text-white border border-white/20 cursor-pointer"
+                        className="hidden sm:flex p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all shadow-sm items-center gap-2 text-white border border-white/20 cursor-pointer shrink-0"
                       >
                         <Languages className="size-5" />
-                        <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
+                        <span className="text-xs font-black uppercase tracking-wider">
                           {selectedLang === "mr" ? "English" : "मराठी"}
                         </span>
                       </button>
@@ -10077,42 +10092,42 @@ function TeacherSqaafPage() {
                     </div>
                   </div>
 
-                  <div className="p-6 md:p-8 flex flex-col gap-10 flex-1 w-full">
+                  <div className="p-3 sm:p-6 md:p-8 flex flex-col gap-4 sm:gap-6 md:gap-10 flex-1 w-full">
                     {/* Top Section: Premium Summary Analytics Card */}
                     <div className="w-full flex justify-center">
-                      <div className="w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-[2.5rem] p-8 md:p-10 shadow-xl relative overflow-hidden border border-orange-400/20">
+                      <div className="w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-2xl sm:rounded-3xl md:rounded-[2.5rem] p-3.5 sm:p-6 md:p-10 shadow-xl relative overflow-hidden border border-orange-400/20">
                         <div className="absolute top-0 right-0 size-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
                         <div className="absolute -bottom-10 -left-10 size-64 bg-black/10 rounded-full blur-3xl pointer-events-none" />
 
-                        <div className="space-y-2 text-center border-b border-white/20 pb-6 relative z-10 mb-8">
-                          <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] text-orange-100">Audit Status</span>
-                          <h2 className="text-2xl md:text-4xl font-black tracking-tight">{t.summaryTitle}</h2>
+                        <div className="space-y-0.5 sm:space-y-2 text-center border-b border-white/20 pb-2.5 sm:pb-6 relative z-10 mb-3 sm:mb-8">
+                          <span className="text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-[0.25em] text-orange-100">Audit Status</span>
+                          <h2 className="text-xl sm:text-2xl md:text-4xl font-black tracking-tight">{t.summaryTitle}</h2>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 font-bold text-[15px] relative z-10">
-                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                            <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.totalStands}</span>
-                            <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{totalStandards}</span>
+                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 md:gap-6 font-bold text-xs sm:text-[15px] relative z-10">
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-orange-50 font-medium text-center sm:text-left mb-1 sm:mb-0 text-[11px] sm:text-[15px] leading-tight line-clamp-2">{t.totalStands}</span>
+                            <span className="bg-white/20 text-white px-3 py-1 sm:px-5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[50px] sm:min-w-[70px] text-center shadow-inner border border-white/30 shrink-0">{totalStandards}</span>
                           </div>
-                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                            <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.completedStands}</span>
-                            <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{completedCount}</span>
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-orange-50 font-medium text-center sm:text-left mb-1 sm:mb-0 text-[11px] sm:text-[15px] leading-tight line-clamp-2">{t.completedStands}</span>
+                            <span className="bg-white/20 text-white px-3 py-1 sm:px-5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[50px] sm:min-w-[70px] text-center shadow-inner border border-white/30 shrink-0">{completedCount}</span>
                           </div>
-                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                            <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.uncompletedStands}</span>
-                            <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{uncompletedCount}</span>
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-orange-50 font-medium text-center sm:text-left mb-1 sm:mb-0 text-[11px] sm:text-[15px] leading-tight line-clamp-2">{t.uncompletedStands}</span>
+                            <span className="bg-white/20 text-white px-3 py-1 sm:px-5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[50px] sm:min-w-[70px] text-center shadow-inner border border-white/30 shrink-0">{uncompletedCount}</span>
                           </div>
-                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                            <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.applicableStands}</span>
-                            <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{applicableCount}</span>
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-orange-50 font-medium text-center sm:text-left mb-1 sm:mb-0 text-[11px] sm:text-[15px] leading-tight line-clamp-2">{t.applicableStands}</span>
+                            <span className="bg-white/20 text-white px-3 py-1 sm:px-5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[50px] sm:min-w-[70px] text-center shadow-inner border border-white/30 shrink-0">{applicableCount}</span>
                           </div>
-                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                            <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.notApplicableStands}</span>
-                            <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{notApplicableCount}</span>
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-orange-50 font-medium text-center sm:text-left mb-1 sm:mb-0 text-[11px] sm:text-[15px] leading-tight line-clamp-2">{t.notApplicableStands}</span>
+                            <span className="bg-white/20 text-white px-3 py-1 sm:px-5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[50px] sm:min-w-[70px] text-center shadow-inner border border-white/30 shrink-0">{notApplicableCount}</span>
                           </div>
-                          <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-amber-400/20 rounded-2xl border border-amber-300/40 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
-                            <span className="text-white font-bold text-center sm:text-left mb-2 sm:mb-0">{t.marksRatio}</span>
-                            <span className="bg-amber-300 text-slate-900 px-5 py-2 rounded-xl text-sm font-black min-w-[90px] text-center shadow-md">{obtainedMarks} / {totalMarks}</span>
+                          <div className="flex flex-col sm:flex-row justify-between items-center p-2.5 sm:p-5 bg-amber-400/20 rounded-xl sm:rounded-2xl border border-amber-300/40 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                            <span className="text-white font-bold text-center sm:text-left mb-1 sm:mb-0 text-[11px] sm:text-[15px] leading-tight line-clamp-2">{t.marksRatio}</span>
+                            <span className="bg-amber-300 text-slate-900 px-3 py-1 sm:px-5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-black min-w-[70px] sm:min-w-[90px] text-center shadow-md shrink-0">{obtainedMarks} / {totalMarks}</span>
                           </div>
                         </div>
                       </div>
