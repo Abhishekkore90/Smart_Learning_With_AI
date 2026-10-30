@@ -77,14 +77,23 @@ export const normalizeSubjectName = (raw?: string | null): string => {
   if (lower === "सर्व विषय" || lower === "सर्वविषय" || lower === "all" || lower === "all subjects" || lower === "सर्व") {
     return "";
   }
+  if (lower.includes("math") || lower.includes("गणित")) {
+    return "गणित";
+  }
+  if (lower.includes("marathi") || lower.includes("मराठी") || lower.includes("प्रथम भाषा") || lower.includes("भाषा") || lower.includes("balbharati") || lower.includes("बालभारती")) {
+    return "भाषा";
+  }
   if (lower.includes("english") || lower.includes("इंग्रजी") || lower.includes("oral") || lower.includes("written")) {
     return "इंग्रजी";
   }
-  if (lower.includes("marathi") || lower.includes("भाषा") || lower.includes("मराठी") || lower.includes("balbharati") || lower.includes("बालभारती")) {
-    return "भाषा";
+  if (lower.includes("कला") || lower.includes("art") || lower.includes("drawing")) {
+    return "कला";
   }
-  if (lower.includes("math") || lower.includes("गणित")) {
-    return "गणित";
+  if (lower.includes("कार्यानुभव") || lower.includes("work experience")) {
+    return "कार्यानुभव";
+  }
+  if (lower.includes("शा.शिक्षण") || lower.includes("शारीरिक") || lower.includes("physical education")) {
+    return "शा.शिक्षण";
   }
   if (lower.includes("evs") || lower.includes("परिसर") || lower.includes("परिसर अभ्यास")) {
     return "परिसर अभ्यास";
@@ -748,11 +757,37 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       // to the original text-content heuristics so those documents still work.
       const hasDataAttr = page.hasAttribute("data-is-header-page");
       const isHeaderPageByAttr = page.getAttribute("data-is-header-page") === "true";
+      let isCompactHeader = page.getAttribute("data-is-compact-header") === "true";
+      let compactSubjectName = page.getAttribute("data-compact-subject") || "";
+
+      // Runtime DOM fallback detection for compact headers:
+      if (!isCompactHeader) {
+        const hasCompactEvalInDom =
+          pageText.includes("तोंडी") ||
+          pageText.includes("प्रात्यक्षिक") ||
+          pageText.includes("उपक्रम") ||
+          (pageText.includes("मूल्यमापन") && pageText.includes("गुण"));
+        if (hasCompactEvalInDom) {
+          if (pageText.includes("कार्यानुभव")) {
+            isCompactHeader = true;
+            compactSubjectName = "कार्यानुभव";
+          } else if (/शा\s*[\.]?\s*शिक्षण|शारीरिक\s*शिक्षण|शारीरिक/i.test(pageText)) {
+            isCompactHeader = true;
+            compactSubjectName = "शा.शिक्षण";
+          } else if (
+            /(?:^|[^\u0900-\u097F\w])कला(?:$|[^\u0900-\u097F\w])/.test(pageText) ||
+            (pageText.includes("कला") && !pageText.includes("कलाम") && !pageText.includes("संकलित"))
+          ) {
+            isCompactHeader = true;
+            compactSubjectName = "कला";
+          }
+        }
+      }
 
       // Check if this page has an already-injected header box (refresh scenario)
       const hasExistingHeaderBox = page.querySelector('.qp-unified-header-box') !== null;
 
-      const hasHeaderBox = hasExistingHeaderBox || (hasDataAttr
+      const hasHeaderBox = hasExistingHeaderBox || isCompactHeader || (hasDataAttr
         ? isHeaderPageByAttr  // trust the parse-time attribute
         : (
             // Legacy fallback for non-VML or older cached documents
@@ -866,40 +901,31 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       let subjectName = "";
       const pageSubKey = page.getAttribute("data-subject-key") || "";
 
-      // 1. First priority: subject prop passed explicitly from DB / card (e.g. "english" -> "इंग्रजी")
-      // provided it is not "सर्व विषय"
-      if (subject) {
-        const normProp = normalizeSubjectName(subject);
-        if (normProp && !/सर्व\s*विषय|all/i.test(normProp)) {
-          subjectName = normProp;
-        }
+      // 1. If this is a compact subject page (कला, कार्यानुभव, शा.शिक्षण), use its specific subject name first!
+      if (isCompactHeader && compactSubjectName) {
+        subjectName = compactSubjectName;
       }
 
-      // 2. Second priority: page's data-subject-key (detected from raw text or section headers)
+      // 2. Extracted subject from Word document attributes (data-extracted-subject="गणित")
+      if (!subjectName && extSubject && !/सर्व\s*विषय|all/i.test(extSubject)) {
+        subjectName = normalizeSubjectName(extSubject) || extSubject;
+      }
+
+      // 3. Subject from data-subject-key (detected from Word shapes in Pass 0)
       if (!subjectName && pageSubKey) {
-        if (pageSubKey === "english") subjectName = "इंग्रजी";
+        if (pageSubKey === "math") subjectName = "गणित";
+        else if (pageSubKey === "english") subjectName = "इंग्रजी";
         else if (pageSubKey === "marathi") subjectName = "भाषा";
-        else if (pageSubKey === "math") subjectName = "गणित";
+        else if (pageSubKey === "semi") subjectName = "Semi Math";
+        else if (pageSubKey === "kala") subjectName = "कला";
+        else if (pageSubKey === "karyanu") subjectName = "कार्यानुभव";
+        else if (pageSubKey === "sharirik") subjectName = "शा.शिक्षण";
         else if (pageSubKey === "evs") subjectName = "परिसर अभ्यास";
         else if (pageSubKey === "science") subjectName = "सामान्य विज्ञान";
         else if (pageSubKey === "hindi") subjectName = "हिंदी";
       }
 
-      // 3. Third priority: existing header text in DOM, BUT ONLY IF it's not dummy "सर्व विषय"
-      if (!subjectName) {
-        const existingSubjectEl = page.querySelector<HTMLElement>('[data-field="subject-text"]');
-        const exVal = existingSubjectEl?.textContent?.replace(/^विषय\s*[-:–—]?\s*/i, "").trim() || "";
-        if (exVal && !/सर्व\s*विषय|all/i.test(exVal) && !exVal.includes("undefined")) {
-          subjectName = normalizeSubjectName(exVal) || exVal;
-        }
-      }
-
-      // 4. Fourth priority: extSubject extracted from docx attributes (if not "सर्व विषय")
-      if (!subjectName && extSubject && !/सर्व\s*विषय|all/i.test(extSubject)) {
-        subjectName = normalizeSubjectName(extSubject) || extSubject;
-      }
-
-      // 5. Fifth priority: look for shapes with "विषय" or "subject"
+      // 4. Look for shapes in header with "विषय" or "subject"
       if (!subjectName) {
         const shapes = Array.from(page.querySelectorAll<HTMLElement>('.vml-shape-text'));
         for (const s of shapes) {
@@ -919,17 +945,24 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         }
       }
 
-      // 6. Sixth priority: Content context detection from page text & paper title
+      // 5. Subject prop passed explicitly from DB / card (e.g. "english" -> "इंग्रजी")
+      // provided it is not "सर्व विषय"
+      if (!subjectName && subject) {
+        const normProp = normalizeSubjectName(subject);
+        if (normProp && !/सर्व\s*विषय|all/i.test(normProp)) {
+          subjectName = normProp;
+        }
+      }
+
+      // 6. Content context detection from page text & paper title
       if (!subjectName) {
         const fullContext = (pageText + " " + paperTitle + " " + (subject || "")).toLowerCase();
         if (/sing any poem|beginning letter|uppercase|lowercase|alphabet|match the picture|what is your name|favourite fruit|circle the correct|english|oral/i.test(fullContext)) {
           subjectName = "इंग्रजी";
+        } else if (fullContext.includes("गणित") || /संख्या|चित्रे मोज|मोठ्या गाडीखालील|बेरीज|वजाबाकी|दशक|एकक|संख्याकार्ड/i.test(fullContext)) {
+          subjectName = "गणित";
         } else if (fullContext.includes("परिसर अभ्यास")) {
           subjectName = "परिसर अभ्यास";
-        } else if (fullContext.includes("गणित") || /संख्या|चित्रे मोज|मोठ्या गाडीखालील|बेरीज|वजाबाकी/i.test(fullContext)) {
-          subjectName = "गणित";
-        } else if (fullContext.includes("इंग्रजी") || /english/i.test(fullContext)) {
-          subjectName = "इंग्रजी";
         } else if (fullContext.includes("विज्ञान")) {
           subjectName = "सामान्य विज्ञान";
         } else if (fullContext.includes("हिंदी")) {
@@ -948,34 +981,47 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
       // Step D: Extract or Retain Total Marks
       let totalMarks = "";
-      const existingMarksEl = page.querySelector<HTMLElement>('[data-field="total-marks-box"]');
-      if (existingMarksEl && existingMarksEl.textContent?.trim() && !existingMarksEl.textContent.includes("undefined")) {
-        totalMarks = existingMarksEl.textContent.trim();
-      } else if (extMarks) {
+      // 1. Highest priority: Total marks extracted directly from Word document XML
+      if (extMarks) {
         totalMarks = extMarks;
       } else {
-        const shapes = Array.from(page.querySelectorAll<HTMLElement>('.vml-shape-text'));
-        for (const s of shapes) {
-          if (s.closest('.qp-unified-header-box')) continue;
-          const t = (s.textContent || "").trim();
-          const m = t.match(/(?:एकूण\s*गुण|total\s*marks)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
-          if (m && m[1]) {
-            totalMarks = m[1].trim();
-            break;
+        const existingMarksEl = page.querySelector<HTMLElement>('[data-field="total-marks-box"]');
+        if (existingMarksEl && existingMarksEl.textContent?.trim() && !existingMarksEl.textContent.includes("undefined")) {
+          totalMarks = existingMarksEl.textContent.trim();
+        } else {
+          const shapes = Array.from(page.querySelectorAll<HTMLElement>('.vml-shape-text'));
+          for (const s of shapes) {
+            if (s.closest('.qp-unified-header-box')) continue;
+            const t = (s.textContent || "").trim();
+            const m = t.match(/(?:एकूण\s*गुण|total\s*marks?|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
+            if (m && m[1]) {
+              const val = m[1].trim();
+              const numVal = parseInt(val.replace(/[०-९]/g, (d) => String("०१२३४५६७८९".indexOf(d))), 10);
+              if (numVal >= 10 && numVal <= 100) {
+                totalMarks = val;
+                break;
+              }
+            }
           }
-        }
-        if (!totalMarks) {
-          const m = (pageText + " " + paperTitle).match(/(?:एकूण\s*गुण|total\s*marks)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
-          if (m && m[1]) totalMarks = m[1].trim();
-        }
-        if (!totalMarks) {
-          const combined = (classStd + " " + paperTitle).toLowerCase();
-          if (/पाचवी|सहावी|सातवी|आठवी|५|६|७|८|5th|6th|7th|8th/i.test(combined)) {
-            totalMarks = "५०";
-          } else if (/तिसरी|चौथी|३|४|3rd|4th/i.test(combined)) {
-            totalMarks = "४०";
-          } else {
-            totalMarks = "२०";
+          if (!totalMarks) {
+            const m = (pageText + " " + paperTitle).match(/(?:एकूण\s*गुण|total\s*marks?|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
+            if (m && m[1]) {
+              const val = m[1].trim();
+              const numVal = parseInt(val.replace(/[०-९]/g, (d) => String("०१२३४५६७८९".indexOf(d))), 10);
+              if (numVal >= 10 && numVal <= 100) {
+                totalMarks = val;
+              }
+            }
+          }
+          if (!totalMarks) {
+            const combined = (classStd + " " + paperTitle).toLowerCase();
+            if (/पाचवी|सहावी|सातवी|आठवी|५|६|७|८|5th|6th|7th|8th/i.test(combined)) {
+              totalMarks = "५०";
+            } else if (/तिसरी|चौथी|३|४|3rd|4th/i.test(combined)) {
+              totalMarks = "४०";
+            } else {
+              totalMarks = "२०";
+            }
           }
         }
       }
@@ -1034,7 +1080,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
       // Step G: Remove all stray raw shapes inside header box region
       const allShapes = Array.from(page.querySelectorAll<HTMLElement>('.vml-shape-text'));
-      const headerThreshold = 26.2;
+      const headerThreshold = isCompactHeader ? 10.5 : 26.2;
       allShapes.forEach((s) => {
         if (s.closest('.qp-unified-header-box')) return;
         const sTop = parseFloat(s.style.top || "100");
@@ -1043,7 +1089,18 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           /^(?:प्रश्न|प्र\.|q(?:ue)?\.?)\s*[०-९0-9]+/i.test(t) ||
           /^[०-९0-9]+\s*[\)\.]\s*\S+/.test(t) ||
           (t.length > 20 && (t.includes("प्रश्न") || t.includes("प्र.")));
-        if (sTop < headerThreshold && !isQ) {
+        const isCompactCell =
+          isCompactHeader &&
+          (t.includes("विषय") ||
+            t.includes("तोंडी") ||
+            t.includes("प्रात्यक्षिक") ||
+            t.includes("उपक्रम") ||
+            t.includes("एकूण गुण") ||
+            t.includes("कला") ||
+            t.includes("कार्यानुभव") ||
+            t.includes("शिक्षण") ||
+            /^[०-९0-9]+$/.test(t));
+        if (sTop < headerThreshold && !isQ && !isCompactCell) {
           s.style.display = "none";
           s.style.visibility = "hidden";
           s.style.opacity = "0";
@@ -1064,7 +1121,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         bgMask.className = "qp-header-bg-mask";
         page.insertBefore(bgMask, page.querySelector('.vml-shapes-layer') || page.firstChild);
       }
-      bgMask.style.cssText = "position: absolute; left: 0; top: 0; width: 100%; height: 26.2%; background: #ffffff !important; z-index: 2; pointer-events: none;";
+      bgMask.style.cssText = `position: absolute; left: 0; top: 0; width: 100%; height: ${isCompactHeader ? "10.5%" : "26.2%"}; background: #ffffff !important; z-index: 2; pointer-events: none;`;
 
       // Read dynamic header geometry detected from the document
       const docHeaderTop = page.getAttribute("data-header-top-pct");
@@ -1081,10 +1138,15 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       }
       headerBox.className = "qp-unified-header-box";
       headerBox.setAttribute("data-field", "qp-unified-header-box");
-      headerBox.setAttribute("data-header-variant", isEvalGrid ? "eval-grid" : "standard");
+      headerBox.setAttribute("data-header-variant", isCompactHeader ? "compact" : isEvalGrid ? "eval-grid" : "standard");
 
       // Apply dynamic header box coordinates detected from template geometry
-      if (docHeaderTop && docHeaderHeight && docHeaderLeft && docHeaderWidth) {
+      if (isCompactHeader) {
+        headerBox.style.setProperty("--header-top", "1.2%");
+        headerBox.style.setProperty("--header-height", "8.8%");
+        headerBox.style.setProperty("--header-left", "6.8%");
+        headerBox.style.setProperty("--header-width", "86.4%");
+      } else if (docHeaderTop && docHeaderHeight && docHeaderLeft && docHeaderWidth) {
         headerBox.style.setProperty("--header-top", `${docHeaderTop}%`);
         headerBox.style.setProperty("--header-height", `${docHeaderHeight}%`);
         headerBox.style.setProperty("--header-left", `${docHeaderLeft}%`);
@@ -1100,7 +1162,47 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         ? "clamp(9px, 2.2cqw, 12.5pt)"
         : "clamp(9.5px, 2.4cqw, 13.5pt)";
 
-      headerBox.innerHTML = `
+      if (isCompactHeader) {
+        const displayExamTitle = examTitle
+          ? examTitle.replace(/^इयत्ता\s*[-_]?\s*(?:पहिली|दुसरी|तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी|[०-९0-9]+(?:\s*(?:ली|री|थी|वी))?)\s*/i, "").trim() || examTitle
+          : examTitle;
+
+        headerBox.innerHTML = `
+        <!-- Row 1: School Name centered as one line -->
+        <div style="width:100%;text-align:center;overflow:hidden;white-space:nowrap;font-size:${schoolFontSize};font-weight:700;color:#0f172a;line-height:1.2;">
+          <span style="font-size:inherit;font-weight:700;color:#0f172a;">शाळेचे नाव :&nbsp;</span><span contenteditable="true" data-field="school-name-text" style="font-weight:700;color:#0f172a;outline:none;cursor:text;font-size:inherit;">${escapeHtmlStr(displaySchool)}</span>
+        </div>
+
+        ${subLocationHtml ? `
+        <!-- Row 1b: Kendra / Taluka / Jilha centered -->
+        <div style="width:100%;text-align:center;overflow:hidden;white-space:nowrap;font-size:clamp(5.5px,1.3cqw,8pt);font-weight:700;color:#0f172a;line-height:1.1;">${subLocationHtml}</div>
+        ` : ""}
+
+        <!-- Row 2: Exam Title centered -->
+        <div data-field="exam-title" style="width:100%;text-align:center;overflow:hidden;white-space:nowrap;">
+          <span contenteditable="true" data-field="exam-title-text" style="font-size:clamp(7.5px,1.8cqw,11pt);font-weight:800;color:#0f172a;letter-spacing:0.2px;outline:none;cursor:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;width:100%;">${escapeHtmlStr(displayExamTitle)}</span>
+        </div>
+
+        <!-- Row 3: Class | Subject | Student Name | Roll No (Compact Header) -->
+        <div style="width:100%;display:flex;align-items:center;justify-content:space-between;overflow:hidden;gap:4px;">
+          <div style="flex:0 0 auto;font-size:clamp(7.5px,1.6cqw,10pt);font-weight:700;color:#0f172a;white-space:nowrap;min-width:0;">
+            <span contenteditable="true" data-field="class-text" style="outline:none;cursor:text;">${escapeHtmlStr(classStd)}</span>
+          </div>
+          <div style="flex:0 0 auto;font-size:clamp(8px,1.9cqw,11.5pt);font-weight:800;color:#1e3a8a;text-align:center;white-space:nowrap;padding:0 4px;min-width:0;">
+            <span contenteditable="true" data-field="subject-text" style="outline:none;cursor:text;">${escapeHtmlStr(displaySubject)}</span>
+          </div>
+          <div style="display:flex;align-items:center;flex:1 1 auto;min-width:0;font-size:clamp(7.5px,1.6cqw,10pt);font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;">
+            <span style="flex-shrink:0;">विद्यार्थ्याचे नाव :- </span>
+            <span style="display:inline-block;flex:1;border-bottom:1.5px solid #0f172a;margin-left:4px;height:1em;vertical-align:middle;min-width:16px;"></span>
+          </div>
+          <div style="flex:0 0 auto;display:flex;align-items:center;gap:clamp(2px,0.5cqw,4px);white-space:nowrap;">
+            <span style="font-size:clamp(7px,1.5cqw,9.5pt);font-weight:700;color:#0f172a;white-space:nowrap;">हजेरी क्रमांक -</span>
+            <div contenteditable="true" data-field="roll-no-box" style="width:clamp(18px,3.8cqw,26px);height:clamp(12px,2.5cqw,18px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:clamp(7.5px,1.6cqw,10pt);font-weight:700;color:#0f172a;flex-shrink:0;cursor:text;outline:none;"></div>
+          </div>
+        </div>
+        `;
+      } else {
+        headerBox.innerHTML = `
         <!-- Row 1: School Name centered as one line -->
         <div style="width:100%;text-align:center;overflow:hidden;white-space:nowrap;font-size:${schoolFontSize};font-weight:700;color:#0f172a;line-height:1.3;">
           <span style="font-size:inherit;font-weight:700;color:#0f172a;">शाळेचे नाव :&nbsp;</span><span contenteditable="true" data-field="school-name-text" style="font-weight:700;color:#0f172a;outline:none;cursor:text;font-size:inherit;">${escapeHtmlStr(displaySchool)}</span>
@@ -1209,6 +1311,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         </div>
         `}
       `;
+      }
 
       updatedSchool = true;
       updatedDate = true;
@@ -2657,6 +2760,26 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           pointer-events: none !important;
         }
 
+        .vml-page-wrapper[data-is-compact-header="true"] .qp-header-bg-mask {
+          height: 10.5% !important;
+        }
+
+        /* Unified Question Paper Header Box — COMPACT ONLY (for secondary subjects like कला, कार्यानुभव, शा.शिक्षण) */
+        .qp-unified-header-box[data-header-variant="compact"],
+        .vml-page-wrapper[data-is-compact-header="true"] .qp-unified-header-box {
+          left: 6.8% !important;
+          top: 1.2% !important;
+          width: 86.4% !important;
+          height: 8.8% !important;
+          min-height: 8.8% !important;
+          max-height: 9.8% !important;
+          border: 1.5px solid #0f172a !important;
+          border-radius: clamp(6px, 1.5cqw, 12px) !important;
+          padding: clamp(2px, 0.4cqw, 5px) clamp(6px, 1.2cqw, 12px) !important;
+          justify-content: space-evenly !important;
+          gap: clamp(1px, 0.2cqw, 2px) !important;
+        }
+
         /* Unified Question Paper Header Box — STANDARD (for Class 3, 4, 5, 6, 7, 8, etc.) */
         .qp-unified-header-box {
           position: absolute !important;
@@ -2902,6 +3025,20 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             border: 1.5px solid #0f172a !important;
             border-radius: clamp(10px, 2.8cqw, 20px) !important;
             padding: clamp(3px, 0.7cqw, 6px) clamp(6px, 1.4cqw, 12px) !important;
+          }
+
+          /* Unified Question Paper Header Box on Mobile — COMPACT */
+          .qp-unified-header-box[data-header-variant="compact"],
+          .vml-page-wrapper[data-is-compact-header="true"] .qp-unified-header-box {
+            left: 6.8% !important;
+            top: 1.2% !important;
+            width: 86.4% !important;
+            height: 8.8% !important;
+            min-height: 8.8% !important;
+            max-height: 9.8% !important;
+            border: 1.5px solid #0f172a !important;
+            border-radius: clamp(6px, 1.5cqw, 12px) !important;
+            padding: clamp(2px, 0.4cqw, 4px) clamp(4px, 1.0cqw, 8px) !important;
           }
 
           .qp-unified-header-box [data-field="exam-title-text"] {

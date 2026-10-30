@@ -501,6 +501,11 @@ export const isMonthBannerRow = (row: any[]): boolean => {
     line.includes("monthly and unit planning") ||
     line.includes("monthly planning") ||
     line.includes("मासिक नियोजन") ||
+    // Hindi monthly planning banners (e.g. "पाठ्यक्रम की मासिक और घटक योजना (भाग - सितंबर २०२६)")
+    line.includes("मासिक और घटक योजना") ||
+    line.includes("पाठ्यक्रम की मासिक") ||
+    line.includes("माहवार योजना") ||
+    line.includes("मासिक योजना") ||
     (/(?:^|\s)(?:महिना|माहे|महीना|month|(?<![\u0900-\u097F])माह(?![\u0900-\u097F]))\s*[:-–]?/i.test(line) &&
       (/(?:^|\s)(?:विषय(?!ी|क|वर|चे|तील)|subject)\s*[:-–]/i.test(line) || /(?:^|\s)(?:इयत्ता|class)\s*[:-–]/i.test(line))) ||
     (/(?:^|\s)(?:महिना|माहे|महीना|month|(?<![\u0900-\u097F])माह(?![\u0900-\u097F]))\s*[:-–]?\s*(?:जून|जुन|जुलै|जुलाई|ऑगस्ट|ऑगष्ट|आगस्ट|अगस्त|अगस्ट|सप्टेंबर|सितंबर|सितम्बर|ऑक्टोबर|अक्टूबर|अक्टोबर|नोव्हेंबर|नवंबर|नवम्बर|डिसेंबर|दिसंबर|दिसम्बर|जानेवारी|जनवरी|फेब्रुवारी|फरवरी|मार्च|एप्रिल|अप्रैल|मे|june|july|august|september|october|november|december|january|february|march|april|may)/i.test(line));

@@ -1141,6 +1141,11 @@ export function AcademicPlanningSystem({
 
   // View Preview Modal State
   const [viewModalFile, setViewModalFile] = useState<PlanningFileRecord | null>(null);
+  // Ref to access current viewModalFile inside Firestore snapshot callback
+  // without making it a useEffect dependency (which would cause the listener to
+  // re-subscribe on every modal open/close and rebuild planningFiles repeatedly).
+  const viewModalFileRef = React.useRef<PlanningFileRecord | null>(null);
+  React.useEffect(() => { viewModalFileRef.current = viewModalFile; }, [viewModalFile]);
   const [isPdfFullscreen, setIsPdfFullscreen] = useState<boolean>(true);
 
   // Admin All Files Management Modal State
@@ -1676,13 +1681,16 @@ export function AcademicPlanningSystem({
             return;
           }
 
-          filesMap[docSnap.id] = record;
-          if (id && id !== docSnap.id) {
-            filesMap[id] = record;
-          }
+          filesMap[id] = record;
+          // Do NOT also store under docSnap.id when it differs from id —
+          // that would create two entries for the same logical record in planningFiles,
+          // causing Object.values(planningFiles) to yield the same record twice and
+          // showing data doubled in the monthly subject grid fallback scan.
+          // The semantic id (normalized record key) is the canonical key.
 
           // If current modal file was replaced in Firestore, update active modal view
-          if (viewModalFile && (viewModalFile.id === docSnap.id || viewModalFile.id === id) && data.uploadedAt !== viewModalFile.uploadedAt) {
+          const currentModal = viewModalFileRef.current;
+          if (currentModal && (currentModal.id === docSnap.id || currentModal.id === id) && data.uploadedAt !== currentModal.uploadedAt) {
             setViewModalFile(record);
           }
         });
@@ -1700,12 +1708,17 @@ export function AcademicPlanningSystem({
           const cached = localStorage.getItem("cce_academic_plannings_cache");
           if (cached) {
             const parsed = JSON.parse(cached);
+            // Deduplicate by canonical id — old cache may have double-keyed entries
+            // (docSnap.id AND data.id as separate keys). Only keep one entry per id.
             const sanitizedMap: Record<string, PlanningFileRecord> = {};
+            const seenIds = new Set<string>();
             Object.entries(parsed).forEach(([k, v]) => {
               const rec = v as PlanningFileRecord;
-              if (isValidPlanningRecord(rec)) {
-                sanitizedMap[k] = rec;
-              }
+              if (!isValidPlanningRecord(rec)) return;
+              const recId = rec.id || k;
+              if (seenIds.has(recId)) return; // skip duplicate
+              seenIds.add(recId);
+              sanitizedMap[recId] = { ...rec, id: recId };
             });
             setPlanningFiles(sanitizedMap);
           }
@@ -1715,7 +1728,7 @@ export function AcademicPlanningSystem({
     );
 
     return () => unsub();
-  }, [viewModalFile]);
+  }, []); // Run once on mount — viewModalFile updates go through viewModalFileRef
 
   const customKey = `${selectedClass}_${selectedMedium}`;
 

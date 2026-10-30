@@ -82,9 +82,13 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
     // This must happen before any injection so subject boundaries are based on the
     // original document content, not on content we add later.
     interface PageMeta {
-      subjectKey: "marathi" | "english" | "math" | "semi" | "other";
+      subjectKey: "marathi" | "english" | "math" | "semi" | "kala" | "karyanu" | "sharirik" | "other";
       subjectLabel: string;
       isHeaderPage: boolean;   // page has the school-info header box
+      isCompactHeader: boolean; // page has compact evaluation table structure (कला, कार्यानुभव, शा.शिक्षण)
+      compactSubjectName?: string;
+      extractedSubject?: string;
+      extractedTotalMarks?: string;
       isSubjectStart: boolean; // first page of a subject section
       isSubjectEnd: boolean;   // last page of a subject section (set in second pass)
     }
@@ -94,28 +98,173 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
       const part = drawingParts[pIdx];
       const shapes = part.match(/<v:shape[\s\S]*?<\/v:shape>/g) || [];
       const partPgSzMatch = part.match(/<w:pgSz[^>]*w:w="([0-9]+)"[^>]*w:h="([0-9]+)"/);
-      const pageHeightPtPre = partPgSzMatch ? parseInt(partPgSzMatch[2], 10) / 20 : docPageHeightPt;
+      const partWpExtentPre = part.match(/<wp:extent[^>]*cx="([0-9]+)"[^>]*cy="([0-9]+)"/);
+      const pageWidthPtPre = partWpExtentPre
+        ? parseInt(partWpExtentPre[1], 10) / 12700
+        : (partPgSzMatch ? parseInt(partPgSzMatch[1], 10) / 20 : docPageWidthPt);
+      const pageHeightPtPre = partWpExtentPre
+        ? parseInt(partWpExtentPre[2], 10) / 12700
+        : (partPgSzMatch ? parseInt(partPgSzMatch[2], 10) / 20 : docPageHeightPt);
 
       const allPageRawTextPre = shapes.map((s) => {
         const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
         return tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
       }).join(" ");
 
-      // Subject key from raw text
+      // 1. Check for explicit subject marker in header shapes (top 25.5%)
+      let explicitSubPre = "";
+      for (const s of shapes) {
+        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+        if (sTop / pageHeightPtPre >= 0.255) continue;
+        const txt = (s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [])
+          .map((t) => t.replace(/<[^>]+>/g, ""))
+          .join(" ")
+          .trim();
+        const m = txt.match(/(?:विषय|subject|sub)\s*[-:–—]?\s*([^\n\r,•()]+)/i);
+        if (m && m[1]?.trim()) {
+          const cand = m[1].trim();
+          if (!/सर्व\s*विषय|all/i.test(cand)) {
+            explicitSubPre = cand;
+            break;
+          }
+        }
+      }
+
+      // 2. Detect compact subject header table (e.g. कला, कार्यानुभव, शा.शिक्षण / शारीरिक शिक्षण)
+      // These pages start with a compact table: विषय | तोंडी | प्रात्यक्षिक | उपक्रम | एकूण गुण
+      let compactSubName = "";
+      let hasCompactTable = false;
+
+      const hasCompactEvaluationKeywords =
+        allPageRawTextPre.includes("तोंडी") ||
+        allPageRawTextPre.includes("प्रात्यक्षिक") ||
+        allPageRawTextPre.includes("उपक्रम") ||
+        (allPageRawTextPre.includes("मूल्यमापन") && allPageRawTextPre.includes("गुण"));
+
+      for (const s of shapes) {
+        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+        if (sTop > 200) continue;
+        const txt = (s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [])
+          .map((t) => t.replace(/<[^>]+>/g, "")).join(" ").trim();
+        if (txt.includes("कार्यानुभव")) {
+          compactSubName = "कार्यानुभव";
+          hasCompactTable = true;
+          break;
+        } else if (/शा\s*[\.]?\s*शिक्षण|शारीरिक\s*शिक्षण|शारीरिक/i.test(txt)) {
+          compactSubName = "शा.शिक्षण";
+          hasCompactTable = true;
+          break;
+        } else if (
+          /(?:^|[^\u0900-\u097F\w])कला(?:$|[^\u0900-\u097F\w])/.test(txt) ||
+          txt === "कला" ||
+          (txt.includes("कला") && !txt.includes("कलाम") && !txt.includes("कलाकार") && !txt.includes("संकलित"))
+        ) {
+          compactSubName = "कला";
+          hasCompactTable = true;
+          break;
+        }
+      }
+
+      // Fallback check on full page text if individual shapes split text
+      if (!hasCompactTable && hasCompactEvaluationKeywords) {
+        if (allPageRawTextPre.includes("कार्यानुभव")) {
+          compactSubName = "कार्यानुभव";
+          hasCompactTable = true;
+        } else if (/शा\s*[\.]?\s*शिक्षण|शारीरिक\s*शिक्षण/i.test(allPageRawTextPre)) {
+          compactSubName = "शा.शिक्षण";
+          hasCompactTable = true;
+        } else if (
+          /(?:^|[^\u0900-\u097F\w])कला(?:$|[^\u0900-\u097F\w])/.test(allPageRawTextPre) ||
+          (allPageRawTextPre.includes("कला") && !allPageRawTextPre.includes("कलाम") && !allPageRawTextPre.includes("संकलित"))
+        ) {
+          compactSubName = "कला";
+          hasCompactTable = true;
+        }
+      }
+
+      const isCompactHeader = hasCompactTable && hasCompactEvaluationKeywords;
+
+      // Subject key from explicit header marker, compact header, or raw text content
       let sk: PageMeta["subjectKey"] = "other";
       let sl = "सामान्य विभाग";
-      if (/sing any poem|beginning letter|uppercase|lowercase|alphabet|listen and act|match the picture|what is your name|favourite fruit|circle the correct|english|oral\s*&amp;\s*practical/i.test(allPageRawTextPre)) {
-        sk = "english"; sl = "इंग्रजी विभाग (English)";
-      } else if (/भाषा|मराठी|जोड्या जुळव|अक्षराला गोल कर|शब्द वाच|गिरव/i.test(allPageRawTextPre)) {
-        sk = "marathi"; sl = "मराठी विभाग (प्रथम भाषा)";
-      } else if (/गणित|संख्या|चित्रे मोज|मोठ्या गाडीखालील/i.test(allPageRawTextPre)) {
-        sk = "math"; sl = "गणित विभाग (Mathematics)";
-      } else if (/FORMATIVE EVALUATION|SUB\s*[-–]\s*MATH|Qu\.|Write numbers/i.test(allPageRawTextPre)) {
-        sk = "semi"; sl = "Semi-English विभाग (Semi Math)";
+
+      if (explicitSubPre) {
+        if (/गणित|math/i.test(explicitSubPre)) {
+          sk = "math"; sl = "गणित विभाग (Mathematics)";
+        } else if (/english|इंग्रजी/i.test(explicitSubPre)) {
+          sk = "english"; sl = "इंग्रजी विभाग (English)";
+        } else if (/मराठी|भाषा|प्रथम\s*भाषा/i.test(explicitSubPre)) {
+          sk = "marathi"; sl = "मराठी विभाग (प्रथम भाषा)";
+        } else if (/semi/i.test(explicitSubPre)) {
+          sk = "semi"; sl = "Semi-English विभाग (Semi Math)";
+        } else if (/कला/i.test(explicitSubPre)) {
+          sk = "kala"; sl = "कला विभाग (Art)";
+        } else if (/कार्यानुभव/i.test(explicitSubPre)) {
+          sk = "karyanu"; sl = "कार्यानुभव विभाग (Work Experience)";
+        } else if (/शिक्षण|शारीरिक/i.test(explicitSubPre)) {
+          sk = "sharirik"; sl = "शारीरिक शिक्षण विभाग (Physical Education)";
+        }
+      } else if (isCompactHeader && compactSubName) {
+        if (compactSubName === "कला") {
+          sk = "kala"; sl = "कला विभाग (Art)";
+        } else if (compactSubName === "कार्यानुभव") {
+          sk = "karyanu"; sl = "कार्यानुभव विभाग (Work Experience)";
+        } else if (compactSubName.includes("शिक्षण")) {
+          sk = "sharirik"; sl = "शारीरिक शिक्षण विभाग (Physical Education)";
+        }
+      } else {
+        // Content fallback when no explicit subject shape in header area
+        if (/sing any poem|beginning letter|uppercase|lowercase|alphabet|listen and act|match the picture|what is your name|favourite fruit|circle the correct|english|oral\s*&amp;\s*practical/i.test(allPageRawTextPre)) {
+          sk = "english"; sl = "इंग्रजी विभाग (English)";
+        } else if (/गणित|संख्या|चित्रे मोज|मोठ्या गाडीखालील|बेरीज|वजाबाकी|दशक|एकक|संख्याकार्ड/i.test(allPageRawTextPre)) {
+          sk = "math"; sl = "गणित विभाग (Mathematics)";
+        } else if (/भाषा|मराठी|अक्षराला गोल कर|शब्द वाच|अक्षर गिरव|कविता|वाक्य तयार कर/i.test(allPageRawTextPre)) {
+          sk = "marathi"; sl = "मराठी विभाग (प्रथम भाषा)";
+        } else if (/FORMATIVE EVALUATION|SUB\s*[-–]\s*MATH|Qu\.|Write numbers/i.test(allPageRawTextPre)) {
+          sk = "semi"; sl = "Semi-English विभाग (Semi Math)";
+        } else if (pageMetas.length > 0) {
+          // Continuation page inherits subject from previous page
+          sk = pageMetas[pageMetas.length - 1].subjectKey;
+          sl = pageMetas[pageMetas.length - 1].subjectLabel;
+        }
+      }
+
+      // Extract total marks in Pass 0
+      let pageMarksPre = "";
+      for (const s of shapes) {
+        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+        if (sTop / pageHeightPtPre >= 0.255) continue;
+        const txt = (s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [])
+          .map((t) => t.replace(/<[^>]+>/g, ""))
+          .join(" ")
+          .trim();
+        const m = txt.match(/(?:एकूण\s*गुण|total\s*marks?|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
+        if (m && m[1]) {
+          const val = m[1].trim();
+          const numVal = parseInt(val.replace(/[०-९]/g, (d) => String("०१२३४५६७८९".indexOf(d))), 10);
+          if (numVal >= 10 && numVal <= 100) {
+            pageMarksPre = val;
+            break;
+          }
+        }
+      }
+      if (!pageMarksPre && isCompactHeader) {
+        for (const s of shapes) {
+          const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+          if (sTop > 200) continue;
+          const txt = (s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [])
+            .map((t) => t.replace(/<[^>]+>/g, ""))
+            .join(" ")
+            .trim();
+          if (txt === "१००" || txt === "100") {
+            pageMarksPre = txt;
+            break;
+          }
+        }
       }
 
       // A page is a genuine header page ONLY if it has the school name AND student/class
-      // info in its raw XML shapes. This avoids tagging continuation pages.
+      // info in its raw XML shapes, OR if it is a compact subject header page (कला, कार्यानुभव, शा.शिक्षण)
       const hasSchoolNamePre = shapes.some((s) => {
         const txt = (s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [])
           .map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
@@ -140,10 +289,11 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           /test|exam|evaluation/i.test(txt);
       });
 
-      // isHeaderPage: first page always, or page with school name + (student info OR exam title)
-      const isHeaderPage = pIdx === 1 || (hasSchoolNamePre && (hasStudentInfoPre || hasExamTitlePre));
+      // isHeaderPage: first page always, or page with school name + (student info OR exam title),
+      // OR a compact subject start page (कला, कार्यानुभव, शा.शिक्षण)
+      const isHeaderPage = pIdx === 1 || (hasSchoolNamePre && (hasStudentInfoPre || hasExamTitlePre)) || isCompactHeader;
 
-      // isSubjectStart: first page OR page with explicit subject marker in header region
+      // isSubjectStart: first page OR page with explicit subject marker in header region OR compact header page
       // Detect "विषय - भाषा" / "SUB - MATH" etc. ONLY in the header area shapes (top 25.5%)
       const hasSubjectMarkerInHeader = shapes.some((s) => {
         const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
@@ -153,9 +303,23 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           .map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
         return /(?:विषय|subject|sub)\s*[-–:]\s*\S/i.test(txt);
       });
-      const isSubjectStart = pIdx === 1 || (isHeaderPage && hasSubjectMarkerInHeader);
+      const isSubjectStart = pIdx === 1 || (isHeaderPage && hasSubjectMarkerInHeader) || isCompactHeader;
 
-      pageMetas.push({ subjectKey: sk, subjectLabel: sl, isHeaderPage, isSubjectStart, isSubjectEnd: false });
+      if (!pageMarksPre && pageMetas.length > 0 && !isHeaderPage) {
+        pageMarksPre = pageMetas[pageMetas.length - 1].extractedTotalMarks || "";
+      }
+
+      pageMetas.push({
+        subjectKey: sk,
+        subjectLabel: sl,
+        isHeaderPage,
+        isCompactHeader: Boolean(isCompactHeader),
+        compactSubjectName: compactSubName,
+        extractedSubject: explicitSubPre,
+        extractedTotalMarks: pageMarksPre,
+        isSubjectStart,
+        isSubjectEnd: false,
+      });
     }
 
     // Second pass: mark isSubjectEnd — last page before next subject start, and very last page
@@ -173,10 +337,15 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
       const part = drawingParts[pIdx];
       const meta = pageMetas[pIdx - 1]; // pIdx starts at 1, meta array at 0
 
-      // Check if page part has specific page size
+      // Check if page part has specific page size or drawing extent (EMU: 1 pt = 12700 EMU)
       const partPgSzMatch = part.match(/<w:pgSz[^>]*w:w="([0-9]+)"[^>]*w:h="([0-9]+)"/);
-      const pageWidthPt = partPgSzMatch ? parseInt(partPgSzMatch[1], 10) / 20 : docPageWidthPt;
-      const pageHeightPt = partPgSzMatch ? parseInt(partPgSzMatch[2], 10) / 20 : docPageHeightPt;
+      const partWpExtent = part.match(/<wp:extent[^>]*cx="([0-9]+)"[^>]*cy="([0-9]+)"/);
+      const pageWidthPt = partWpExtent
+        ? parseInt(partWpExtent[1], 10) / 12700
+        : (partPgSzMatch ? parseInt(partPgSzMatch[1], 10) / 20 : docPageWidthPt);
+      const pageHeightPt = partWpExtent
+        ? parseInt(partWpExtent[2], 10) / 12700
+        : (partPgSzMatch ? parseInt(partPgSzMatch[2], 10) / 20 : docPageHeightPt);
 
       // 1. Extract background image
       const rId = part.match(/r:embed="([^"]+)"/)?.[1];
@@ -206,14 +375,18 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
       const subjectLabel = meta.subjectLabel;
 
       // Detect total marks from all text/shapes on this page
-      let pageTotalMarks = "२०";
+      let pageTotalMarks = meta.extractedTotalMarks || "२०";
       for (const s of shapes) {
         const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
         const txt = tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ");
-        const marksMatch = txt.match(/(?:एकूण\s*गुण|total\s*marks)\s*[:\-–—]?\s*([०-९0-9]+)/i);
+        const marksMatch = txt.match(/(?:एकूण\s*गुण|total\s*marks?|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
         if (marksMatch && marksMatch[1]) {
-          pageTotalMarks = marksMatch[1].trim();
-          break;
+          const val = marksMatch[1].trim();
+          const numVal = parseInt(val.replace(/[०-९]/g, (d) => String("०१२३४५६७८९".indexOf(d))), 10);
+          if (numVal >= 10 && numVal <= 100) {
+            pageTotalMarks = val;
+            break;
+          }
         }
       }
 
@@ -316,8 +489,14 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
           // Total Marks
           if (!headerTotalMarks) {
-            const m = txt.match(/(?:एकूण\s*गुण|total\s*marks)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
-            if (m && m[1]) headerTotalMarks = m[1].trim();
+            const m = txt.match(/(?:एकूण\s*गुण|total\s*marks?|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
+            if (m && m[1]) {
+              const val = m[1].trim();
+              const numVal = parseInt(val.replace(/[०-९]/g, (d) => String("०१२३४५६७८९".indexOf(d))), 10);
+              if (numVal >= 10 && numVal <= 100) {
+                headerTotalMarks = val;
+              }
+            }
           }
 
           // Date
@@ -329,13 +508,33 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
       }
 
       if (!headerSubject || headerSubject === "सर्व विषय" || headerSubject === "all") {
-        if (/sing any poem|beginning letter|uppercase|lowercase|alphabet|listen and act|match the picture|what is your name|favourite fruit|circle the correct|english|oral/i.test(allPageRawText)) {
+        if (meta.compactSubjectName) {
+          headerSubject = meta.compactSubjectName;
+        } else if (meta.extractedSubject) {
+          headerSubject = meta.extractedSubject;
+        } else if (meta.subjectKey === "english") {
+          headerSubject = "इंग्रजी";
+        } else if (meta.subjectKey === "math") {
+          headerSubject = "गणित";
+        } else if (meta.subjectKey === "marathi") {
+          headerSubject = "भाषा";
+        } else if (meta.subjectKey === "kala") {
+          headerSubject = "कला";
+        } else if (meta.subjectKey === "karyanu") {
+          headerSubject = "कार्यानुभव";
+        } else if (meta.subjectKey === "sharirik") {
+          headerSubject = "शा.शिक्षण";
+        } else if (/sing any poem|beginning letter|uppercase|lowercase|alphabet|listen and act|match the picture|what is your name|favourite fruit|circle the correct|english|oral/i.test(allPageRawText)) {
           headerSubject = "इंग्रजी";
         } else if (/गणित|संख्या|चित्रे मोज|मोठ्या गाडीखालील|बेरीज|वजाबाकी/i.test(allPageRawText)) {
           headerSubject = "गणित";
         } else if (/भाषा|मराठी/i.test(allPageRawText)) {
           headerSubject = "भाषा";
         }
+      }
+
+      if (!headerTotalMarks) {
+        headerTotalMarks = meta.extractedTotalMarks || pageTotalMarks || "२०";
       }
 
       let schoolNameShapeTop = 999;
@@ -436,7 +635,11 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
       const detectedHeaderWidthPct = maxHeaderRightPt > 0 ? Math.min(88.0, ((maxHeaderRightPt / pageWidthPt) * 100) - detectedHeaderLeftPct) : (hasEvalGridInHeader ? 86.4 : 84.8);
 
       // Dynamic header threshold: everything inside the detected header height (plus 1% buffer, up to 26.2%) is cleanly stripped
-      const headerThreshold = Math.min(0.262, Math.max(0.245, (maxHeaderBottomPt / pageHeightPt) + 0.01));
+      // For compact header pages, the evaluation table starts at ~89pt (~11.2%).
+      // We only strip Shape 0 (top < 85pt / ~10.5%), keeping the summary table (top >= 89pt) and questions intact!
+      const headerThreshold = meta.isCompactHeader
+        ? 0.105
+        : Math.min(0.262, Math.max(0.245, (maxHeaderBottomPt / pageHeightPt) + 0.01));
 
       for (const s of shapes) {
         const styleStr = s.match(/style="([^"]+)"/)?.[1] || "";
@@ -470,7 +673,19 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           /^[०-९0-9]+\s*[\)\.]\s*(?:कंसातील|योग्य|रिकाम्या|खालील|जोड्या|एका|[^\s]+)/.test(trimmedText) ||
           (trimmedText.length > 20 && (trimmedText.includes("प्रश्न") || trimmedText.includes("प्र.")));
 
-        if (hasSchoolHeader && topRatio < headerThreshold && !isQ) {
+        const isCompactTableCell =
+          meta.isCompactHeader &&
+          (trimmedText.includes("विषय") ||
+            trimmedText.includes("तोंडी") ||
+            trimmedText.includes("प्रात्यक्षिक") ||
+            trimmedText.includes("उपक्रम") ||
+            trimmedText.includes("एकूण गुण") ||
+            trimmedText.includes("कला") ||
+            trimmedText.includes("कार्यानुभव") ||
+            trimmedText.includes("शिक्षण") ||
+            /^[०-९0-9]+$/.test(trimmedText));
+
+        if (hasSchoolHeader && topRatio < headerThreshold && !isQ && !isCompactTableCell) {
           continue;
         }
 
@@ -585,8 +800,8 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         const align = isCenter ? "center" : isRight ? "right" : "left";
         const justifyCss = isCenter ? "center" : isRight ? "flex-end" : "flex-start";
 
-        const szMatch = s.match(/<w:sz w:val="([0-9]+)"/);
-        const fontSizePt = szMatch ? parseInt(szMatch[1], 10) / 2 : 14;
+        const szMatch = s.match(/<w:szCs[^>]*w:val="([0-9]+)"/) || s.match(/<w:sz[^>]*w:val="([0-9]+)"/);
+        const fontSizePt = szMatch ? parseInt(szMatch[1], 10) / 2 : 12;
         const fontSizeCqw = ((fontSizePt / pageWidthPt) * 100).toFixed(3);
 
         const colorMatch = s.match(/<w:color w:val="([0-9A-Fa-f]{6})"/);
@@ -596,8 +811,8 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         const fontMatch = s.match(/<w:rFonts[^>]*w:cs="([^"]+)"/) || s.match(/<w:rFonts[^>]*w:ascii="([^"]+)"/);
         const docFont = fontMatch ? fontMatch[1] : "";
         const fontFamily = docFont
-          ? `'${docFont}', 'Noto Sans Devanagari', 'Tiro Devanagari Marathi', 'Nirmala UI', 'Mangal', sans-serif`
-          : `'Noto Sans Devanagari', 'Tiro Devanagari Marathi', 'Nirmala UI', 'Mangal', sans-serif`;
+          ? `'${docFont}', 'Nirmala UI', 'Mangal', 'Noto Sans Devanagari', sans-serif`
+          : `'Nirmala UI', 'Mangal', 'Noto Sans Devanagari', sans-serif`;
 
         const isSchoolNameField = fieldAttr.includes('data-field="school-name"');
 
@@ -624,7 +839,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
         let whiteSpaceRule = "white-space: pre-wrap; word-break: break-word;";
         let shapeAlignItems = "center";
-        let shapeLineHeight = "1.35";
+        let shapeLineHeight = "1.25";
         let shapePadding = "0px 2px";
 
         if (isSchoolNameField) {
@@ -686,6 +901,8 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           data-subject-label="${subjectLabel}"
           data-is-inline-header="${isInlineSchoolHeader ? "true" : "false"}"
           data-is-header-page="${meta.isHeaderPage ? "true" : "false"}"
+          data-is-compact-header="${meta.isCompactHeader ? "true" : "false"}"
+          data-compact-subject="${escapeHtml(meta.compactSubjectName || "")}"
           data-is-subject-start="${meta.isSubjectStart ? "true" : "false"}"
           data-is-subject-end="${meta.isSubjectEnd ? "true" : "false"}"
           data-has-eval-grid="${hasEvalGridInHeader ? "true" : "false"}"
@@ -712,7 +929,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
           ${
             hasSchoolHeader
-              ? `<div class="qp-header-bg-mask" style="position: absolute; left: 0; top: 0; width: 100%; height: 26.2%; background: #ffffff; z-index: 2; pointer-events: none;"></div>`
+              ? `<div class="qp-header-bg-mask" style="position: absolute; left: 0; top: 0; width: 100%; height: ${meta.isCompactHeader ? "10.5%" : "26.2%"}; background: #ffffff; z-index: 2; pointer-events: none;"></div>`
               : ""
           }
 
