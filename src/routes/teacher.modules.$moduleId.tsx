@@ -2667,7 +2667,7 @@ function DailyAssemblyContent() {
                 ) : (
                   <MessageCircle className="size-4" />
                 )}
-                <span>WhatsApp PDF</span>
+                <span>WhatsApp वर पाठवा</span>
               </button>
               <a
                 href="https://chat.whatsapp.com/IUcC4XskSSQF8dFpQWUMb4?s=sh&p=a&mlu=4&ilr=4"

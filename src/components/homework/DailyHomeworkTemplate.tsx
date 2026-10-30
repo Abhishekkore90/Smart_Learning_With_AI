@@ -126,19 +126,72 @@ export function DailyHomeworkTemplate({
     window.print();
   };
 
+  const renderWorksheetToCanvas = async (element: HTMLElement): Promise<HTMLCanvasElement> => {
+    const targetWidthPx = 794;
+    const clone = element.cloneNode(true) as HTMLElement;
+    clone.style.width = `${targetWidthPx}px`;
+    clone.style.minWidth = `${targetWidthPx}px`;
+    clone.style.maxWidth = `${targetWidthPx}px`;
+    clone.style.margin = "0";
+    clone.style.boxShadow = "none";
+    clone.style.borderRadius = "0px";
+    clone.style.transform = "none";
+    clone.style.boxSizing = "border-box";
+    clone.style.position = "relative";
+
+    // Place at (0, 0) with zIndex -99999 so WebView renders layout inside viewport (fixes blank PDF)
+    const captureContainer = document.createElement("div");
+    captureContainer.style.position = "fixed";
+    captureContainer.style.left = "0px";
+    captureContainer.style.top = "0px";
+    captureContainer.style.width = `${targetWidthPx}px`;
+    captureContainer.style.zIndex = "-99999";
+    captureContainer.style.pointerEvents = "none";
+    captureContainer.style.background = "#ffffff";
+    captureContainer.style.overflow = "hidden";
+    captureContainer.appendChild(clone);
+    document.body.appendChild(captureContainer);
+
+    try {
+      const cloneImages = Array.from(clone.querySelectorAll<HTMLImageElement>("img"));
+      await Promise.all(
+        cloneImages.map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((res) => {
+            img.onload = res;
+            img.onerror = res;
+          });
+        })
+      );
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      return await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: targetWidthPx,
+        width: targetWidthPx,
+        scrollX: 0,
+        scrollY: 0,
+        x: 0,
+        y: 0,
+      });
+    } finally {
+      if (captureContainer.parentNode) {
+        captureContainer.parentNode.removeChild(captureContainer);
+      }
+    }
+  };
+
   // Download PDF
   const handleDownloadPdf = async () => {
     if (!worksheetRef.current) return;
     try {
       setIsExporting(true);
       toast.info("वर्कशीट PDF तयार होत आहे...");
-      const element = worksheetRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-      });
+      const canvas = await renderWorksheetToCanvas(worksheetRef.current);
 
       const imgData = canvas.toDataURL("image/jpeg", 0.95);
       const pdf = new jsPDF({
@@ -167,13 +220,7 @@ export function DailyHomeworkTemplate({
     try {
       setIsSharingWhatsApp(true);
       toast.info("WhatsApp साठी PDF तयार होत आहे...");
-      const element = worksheetRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-      });
+      const canvas = await renderWorksheetToCanvas(worksheetRef.current);
 
       const imgData = canvas.toDataURL("image/jpeg", 0.95);
       const pdf = new jsPDF({
@@ -370,7 +417,7 @@ export function DailyHomeworkTemplate({
             ) : (
               <MessageCircle className="size-3.5" />
             )}
-            <span>WhatsApp PDF</span>
+            <span>WhatsApp वर पाठवा</span>
           </button>
 
           <button

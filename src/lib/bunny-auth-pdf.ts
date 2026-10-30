@@ -93,15 +93,18 @@ export function isBufferValidBinary(ab: ArrayBuffer | null, isDocx: boolean = fa
   return true;
 }
 
+// In-memory binary cache to ensure zero-latency reuse across user actions
+const binaryMemoryCache = new Map<string, ArrayBuffer>();
+
+// Pending fetch promises map for automatic deduplication of concurrent requests
+const activeFetchPromises = new Map<string, Promise<ArrayBuffer | null>>();
+
 /**
- * Universal binary file fetcher:
- * 1. Tries /api/pdf-proxy?url=... (Works on Vercel and Hostinger via .htaccess rewrite to pdf-proxy.php)
- * 2. Tries /pdf-proxy.php?url=... (Direct PHP proxy on Hostinger)
- * 3. Tries https://sgkbrainova.com/pdf-proxy.php?url=... (External fallback to hosted PHP proxy)
- * 4. Tries Vite dev proxy /api/bunny-storage/... when in DEV
- * 5. Tries Direct Bunny Storage with AccessKey
- * 6. Tries public URL directly (Firebase Storage, open CDNs)
- * Strictly verifies ArrayBuffer is valid binary and not an HTML SPA fallback.
+ * Universal binary file fetcher with:
+ * 1. In-memory fast cache (0ms return)
+ * 2. Persistent IndexedDB cache (<15ms return)
+ * 3. Smart candidate ranking & progressive parallel fetching (no 15s dead serial timeouts!)
+ * 4. Automatic saving to IndexedDB on first download
  */
 export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> {
   if (!url) return null;
@@ -116,71 +119,171 @@ export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> 
     return null;
   }
 
-  const lowerUrl = url.toLowerCase();
-  const isDocx = lowerUrl.includes(".docx");
-  const isPdf = lowerUrl.includes(".pdf");
-  const isBunny = lowerUrl.includes("b-cdn.net") || lowerUrl.includes("bunnycdn.com");
+  // 1. Check in-memory cache
+  if (binaryMemoryCache.has(url)) {
+    return binaryMemoryCache.get(url)!;
+  }
 
-  const candidates: Array<{ url: string; headers?: Record<string, string> }> = [];
-
-  if (isBunny) {
-    // 1. Primary: Unified /api/pdf-proxy
-    candidates.push({ url: `/api/pdf-proxy?url=${encodeURIComponent(url)}` });
-
-    // 2. Direct Hostinger PHP proxy script
-    candidates.push({ url: `/pdf-proxy.php?url=${encodeURIComponent(url)}` });
-
-    // 3. Absolute hosted proxy URL (if accessing from localhost or another origin)
-    if (typeof window !== "undefined" && window.location.hostname !== "sgkbrainova.com") {
-      candidates.push({ url: `https://sgkbrainova.com/pdf-proxy.php?url=${encodeURIComponent(url)}` });
+  // 2. Check IndexedDB persistent cache
+  try {
+    const { getFileFromIndexedDB } = await import("@/lib/indexedDbStorage");
+    const cachedBlob = await getFileFromIndexedDB(`doc_binary_${url}`);
+    if (cachedBlob && cachedBlob.size > 100) {
+      const cachedAb = await cachedBlob.arrayBuffer();
+      if (isBufferValidBinary(cachedAb, url.toLowerCase().includes(".docx"), url.toLowerCase().includes(".pdf"))) {
+        binaryMemoryCache.set(url, cachedAb);
+        return cachedAb;
+      }
     }
+  } catch (idbErr) {
+    // Ignore IndexedDB read error and proceed to network
+  }
 
-    // 4. Vite proxy during DEV
-    if (import.meta.env.DEV) {
-      const direct = getDirectBunnyStorageUrl(url);
-      if (direct) {
+  // 3. Deduplicate active in-flight requests for the same URL
+  if (activeFetchPromises.has(url)) {
+    return activeFetchPromises.get(url)!;
+  }
+
+  const fetchPromise = (async () => {
+    const lowerUrl = url.toLowerCase();
+    const isDocx = lowerUrl.includes(".docx");
+    const isPdf = lowerUrl.includes(".pdf");
+    const isBunny = lowerUrl.includes("b-cdn.net") || lowerUrl.includes("bunnycdn.com");
+
+    const candidates: Array<{ name: string; url: string; headers?: Record<string, string> }> = [];
+
+    if (isBunny) {
+      // 1. Direct Bunny Storage with AccessKey - CORS-enabled directly from storage edge, fastest download
+      const directStorage = getDirectBunnyStorageUrl(url);
+      if (directStorage) {
+        candidates.push({ name: "Direct Bunny Storage", url: directStorage.url, headers: directStorage.headers });
+      }
+
+      // 2. Local Vite proxy (DEV)
+      if (import.meta.env.DEV && directStorage) {
         const zone = BUNNY_STORAGE_ZONE;
         const rawPath = decodeURIComponent(new URL(url).pathname).replace(/^\//, "");
         const cleanPath = rawPath.startsWith(zone + "/") ? rawPath.slice(zone.length + 1) : rawPath;
-        candidates.push({ url: `/api/bunny-storage/${zone}/${cleanPath}` });
+        candidates.push({ name: "Vite dev proxy", url: `/api/bunny-storage/${zone}/${cleanPath}` });
+      }
+
+      // 3. Unified /api/pdf-proxy (Works on Vercel & serverless)
+      candidates.push({ name: "api/pdf-proxy", url: `/api/pdf-proxy?url=${encodeURIComponent(url)}` });
+
+      // 4. PHP proxy on Hostinger / production
+      candidates.push({ name: "pdf-proxy.php", url: `/pdf-proxy.php?url=${encodeURIComponent(url)}` });
+      if (typeof window !== "undefined" && window.location.hostname !== "sgkbrainova.com") {
+        candidates.push({ name: "Hosted PHP proxy", url: `https://sgkbrainova.com/pdf-proxy.php?url=${encodeURIComponent(url)}` });
       }
     }
 
-    // 5. Direct Bunny Storage URL with AccessKey
-    const directStorage = getDirectBunnyStorageUrl(url);
-    if (directStorage) {
-      candidates.push({ url: directStorage.url, headers: directStorage.headers });
-    }
-  }
+    // Always include direct URL as an attempt (e.g. Firebase Storage, open CDN)
+    candidates.push({ name: "Direct URL", url });
 
-  // Always include direct URL as an attempt (e.g. Firebase Storage, or if CDN has CORS)
-  candidates.push({ url });
+    // Staggered parallel race: Start primary immediately (t=0ms).
+    // If not completed within 600ms, start secondary concurrently.
+    // The moment ANY candidate returns a valid binary buffer, it wins immediately
+    // and aborts all pending/active candidates!
+    const abortControllers: Array<{ abort: () => void }> = [];
 
-  // Iterate candidates and return the first valid binary response
-  for (const candidate of candidates) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const successfulAb = await new Promise<ArrayBuffer | null>((resolve) => {
+      let isDone = false;
+      let activeOrPendingCount = candidates.length;
 
-      const res = await fetch(candidate.url, {
-        headers: candidate.headers || {},
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      const cType = res.headers.get("content-type") || "";
-      if (res.ok && !cType.includes("text/html")) {
-        const ab = await res.arrayBuffer();
-        if (isBufferValidBinary(ab, isDocx, isPdf)) {
-          return ab;
+      const onWinner = (ab: ArrayBuffer) => {
+        if (isDone) return;
+        isDone = true;
+        // Abort remaining running requests / cancel timers
+        for (const ctrl of abortControllers) {
+          try {
+            ctrl.abort();
+          } catch (_) {}
         }
-      }
-    } catch (err) {
-      // Continue to next candidate
-    }
-  }
+        resolve(ab);
+      };
 
-  return null;
+      const onCandidateFail = () => {
+        activeOrPendingCount--;
+        if (activeOrPendingCount <= 0 && !isDone) {
+          isDone = true;
+          resolve(null);
+        }
+      };
+
+      candidates.forEach((cand, index) => {
+        // Stagger launching candidates: 0ms for primary, 600ms for secondary, 1200ms for 3rd...
+        const delayMs = index === 0 ? 0 : index * 600;
+        const startTimer = setTimeout(async () => {
+          if (isDone) {
+            onCandidateFail();
+            return;
+          }
+
+          const controller = new AbortController();
+          abortControllers.push(controller);
+          // 25s max stream timeout per candidate
+          const timeoutId = setTimeout(() => {
+            try {
+              controller.abort();
+            } catch (_) {}
+          }, 25000);
+
+          try {
+            const res = await fetch(cand.url, {
+              headers: cand.headers || {},
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
+            const cType = res.headers.get("content-type") || "";
+            if (res.ok && !cType.includes("text/html")) {
+              const ab = await res.arrayBuffer();
+              if (isBufferValidBinary(ab, isDocx, isPdf)) {
+                onWinner(ab);
+                return;
+              }
+            }
+          } catch (err) {
+            clearTimeout(timeoutId);
+          }
+
+          onCandidateFail();
+        }, delayMs);
+
+        // Register timer cancellation
+        abortControllers.push({ abort: () => clearTimeout(startTimer) });
+      });
+    });
+
+    if (successfulAb) {
+      // Store in memory cache
+      binaryMemoryCache.set(url, successfulAb);
+
+      // Store in persistent IndexedDB asynchronously (won't block UI)
+      try {
+        const { saveFileToIndexedDB } = await import("@/lib/indexedDbStorage");
+        const blob = new Blob([successfulAb], {
+          type: isDocx
+            ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            : isPdf
+            ? "application/pdf"
+            : "application/octet-stream"
+        });
+        saveFileToIndexedDB(`doc_binary_${url}`, blob).catch(() => {});
+      } catch (saveErr) {
+        // Ignore cache save error
+      }
+    }
+
+    return successfulAb;
+  })();
+
+  activeFetchPromises.set(url, fetchPromise);
+  try {
+    return await fetchPromise;
+  } finally {
+    activeFetchPromises.delete(url);
+  }
 }
 
 /**

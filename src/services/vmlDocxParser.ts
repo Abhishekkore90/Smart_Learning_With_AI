@@ -354,6 +354,75 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           allPageText.includes("३री") ||
           allPageText.includes("४थी"));
 
+      // Detect if this page specifically has the evaluation grid table in the header (Class 1 & 2 primary papers)
+      const isClass1or2Pre =
+        /इयत्ता\s*[-_]?\s*(?:१|२|1|2|पहिली|दुसरी)\b/i.test(allPageText) ||
+        /\b(?:std|class)\s*[-_]?\s*[12]\b/i.test(allPageText) ||
+        /\b(?:1st|2nd)\b/i.test(allPageText) ||
+        /पहिली|दुसरी|१ली|२री|१ ली|२ री/i.test(allPageText);
+      const isExplicitHigherClassPre =
+        /इयत्ता\s*[-_]?\s*(?:३|४|५|६|७|८|3|4|5|6|7|8|तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी)\b/i.test(allPageText) ||
+        /\b(?:std|class)\s*[-_]?\s*[3-8]\b/i.test(allPageText) ||
+        /\b(?:3rd|4th|5th|6th|7th|8th)\b/i.test(allPageText) ||
+        /तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी|३री|४थी|५वी|६वी|७वी|८वी/i.test(allPageText);
+      const hasEvalGridInHeader =
+        !isExplicitHigherClassPre &&
+        (isClass1or2Pre ||
+          shapes.some((s) => {
+            const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+            const topRatio = sTop / pageHeightPt;
+            if (topRatio >= 0.16 && topRatio < 0.255) {
+              const tRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+              const txt = tRuns.map((t) => t.replace(/<[^>]+>/g, "")).join(" ").trim();
+              return txt === "प्रश्न" || txt === "प्र." || txt.includes("गुण") || /^[०-९0-9]+$/.test(txt);
+            }
+            return false;
+          }));
+
+      // 2b. Automatically detect the exact header boundary and geometry from header shapes (page-level)
+      let minHeaderTopPt = 999;
+      let maxHeaderBottomPt = 0;
+      let minHeaderLeftPt = 999;
+      let maxHeaderRightPt = 0;
+
+      shapes.forEach((s) => {
+        const styleStr = s.match(/style="([^"]+)"/)?.[1] || "";
+        const leftMatch = styleStr.match(/margin-left:([0-9.]+)pt/);
+        const topMatch = styleStr.match(/margin-top:([0-9.]+)pt/);
+        const widthMatch = styleStr.match(/width:([0-9.]+)pt/);
+        const heightMatch = styleStr.match(/height:([0-9.]+)pt/);
+        const sTop = topMatch ? parseFloat(topMatch[1]) : 999;
+        const sLeft = leftMatch ? parseFloat(leftMatch[1]) : 999;
+        const sWidth = widthMatch ? parseFloat(widthMatch[1]) : 0;
+        const sHeight = heightMatch ? parseFloat(heightMatch[1]) : 0;
+
+        const textRuns = s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+        const rawText = textRuns.map((t) => t.replace(/<[^>]+>/g, "")).join("").trim();
+        const isQ =
+          /^(?:प्रश्न|प्र\.|q(?:ue)?\.?)\s*[०-९0-9]+/i.test(rawText) ||
+          /^[०-९0-9]+\s*[\)\.]/.test(rawText) ||
+          (rawText.length > 20 && (rawText.includes("प्रश्न") || rawText.includes("प्र.")));
+
+        // If shape is inside header zone (< 26% of page) and NOT a real question
+        if (sTop < pageHeightPt * 0.26 && !isQ) {
+          minHeaderTopPt = Math.min(minHeaderTopPt, sTop);
+          maxHeaderBottomPt = Math.max(maxHeaderBottomPt, sTop + sHeight);
+          if (sLeft < 900) {
+            minHeaderLeftPt = Math.min(minHeaderLeftPt, sLeft);
+            maxHeaderRightPt = Math.max(maxHeaderRightPt, sLeft + sWidth);
+          }
+        }
+      });
+
+      // Compute dynamic percentages with fallback bounds
+      const detectedHeaderTopPct = minHeaderTopPt < 900 ? (minHeaderTopPt / pageHeightPt) * 100 : (hasEvalGridInHeader ? 1.8 : 2.2);
+      const detectedHeaderHeightPct = maxHeaderBottomPt > 0 ? (maxHeaderBottomPt / pageHeightPt) * 100 - detectedHeaderTopPct : (hasEvalGridInHeader ? 23.4 : 22.2);
+      const detectedHeaderLeftPct = minHeaderLeftPt < 900 ? Math.max(6.5, (minHeaderLeftPt / pageWidthPt) * 100) : (hasEvalGridInHeader ? 6.8 : 7.6);
+      const detectedHeaderWidthPct = maxHeaderRightPt > 0 ? Math.min(88.0, ((maxHeaderRightPt / pageWidthPt) * 100) - detectedHeaderLeftPct) : (hasEvalGridInHeader ? 86.4 : 84.8);
+
+      // Dynamic header threshold: everything inside the detected header height (plus 1% buffer, up to 26.2%) is cleanly stripped
+      const headerThreshold = Math.min(0.262, Math.max(0.245, (maxHeaderBottomPt / pageHeightPt) + 0.01));
+
       for (const s of shapes) {
         const styleStr = s.match(/style="([^"]+)"/)?.[1] || "";
         const leftMatch = styleStr.match(/margin-left:([0-9.]+)pt/);
@@ -382,15 +451,11 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         const leftRatio = leftPt / pageWidthPt;
 
         const isQ =
-          trimmedText.includes("प्रश्न") ||
-          trimmedText.includes("प्र.") ||
-          /q(?:ue)?\.?\s*[0-9]/i.test(trimmedText) ||
-          /^[०-९0-9]+\s*[\)\.]\s*(?:कंसातील|योग्य|रिकाम्या|खालील|जोड्या|एका)/.test(trimmedText);
+          /^(?:प्रश्न|प्र\.|q(?:ue)?\.?)\s*[०-९0-9]+/i.test(trimmedText) ||
+          /^[०-९0-9]+\s*[\)\.]\s*(?:कंसातील|योग्य|रिकाम्या|खालील|जोड्या|एका|[^\s]+)/.test(trimmedText) ||
+          (trimmedText.length > 20 && (trimmedText.includes("प्रश्न") || trimmedText.includes("प्र.")));
 
-        // USER INSTRUCTION: Keep the Word document's header box completely blank/empty!
-        // Do not add any of the Word file's old shapes, dots, lines or boxes in the header area (< 0.255).
-        // Our unified structure will be placed in that blank box with the fetched info.
-        if (hasSchoolHeader && topRatio < 0.255 && !isQ) {
+        if (hasSchoolHeader && topRatio < headerThreshold && !isQ) {
           continue;
         }
 
@@ -608,6 +673,11 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           data-is-header-page="${meta.isHeaderPage ? "true" : "false"}"
           data-is-subject-start="${meta.isSubjectStart ? "true" : "false"}"
           data-is-subject-end="${meta.isSubjectEnd ? "true" : "false"}"
+          data-has-eval-grid="${hasEvalGridInHeader ? "true" : "false"}"
+          data-header-top-pct="${detectedHeaderTopPct.toFixed(2)}"
+          data-header-height-pct="${detectedHeaderHeightPct.toFixed(2)}"
+          data-header-left-pct="${detectedHeaderLeftPct.toFixed(2)}"
+          data-header-width-pct="${detectedHeaderWidthPct.toFixed(2)}"
           data-extracted-school="${escapeHtml(headerSchoolName)}"
           data-extracted-kendra="${escapeHtml(headerKendra)}"
           data-extracted-taluka="${escapeHtml(headerTaluka)}"
@@ -622,6 +692,12 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           ${
             bgDataUrl
               ? `<img src="${bgDataUrl}" alt="पृष्ठ ${pIdx} डिझाईन बॉर्डर्स" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; z-index: 1;" />`
+              : ""
+          }
+
+          ${
+            hasSchoolHeader
+              ? `<div class="qp-header-bg-mask" style="position: absolute; left: 0; top: 0; width: 100%; height: 26.2%; background: #ffffff; z-index: 2; pointer-events: none;"></div>`
               : ""
           }
 

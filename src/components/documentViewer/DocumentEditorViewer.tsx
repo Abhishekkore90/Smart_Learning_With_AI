@@ -1098,7 +1098,7 @@ export function DocumentEditorViewer({
   // Loading State
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[500px] p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col items-center justify-start pt-16 sm:pt-20 min-h-[350px] p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm">
         <div className="size-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4" />
         <h3 className="text-lg font-bold text-slate-800">
           {documentType === "question_paper"

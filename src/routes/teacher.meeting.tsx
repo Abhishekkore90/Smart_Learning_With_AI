@@ -5208,19 +5208,39 @@ function TeacherMeetingPage() {
                           <div className="space-y-2">
                             <label className="text-sm font-black text-slate-700 block">निमंत्रण मजकूर (परिच्छेद १)</label>
                             <textarea
-                              rows={3}
                               value={invitationBodyParagraph1}
+                              ref={(el) => {
+                                if (el) {
+                                  el.style.height = "auto";
+                                  el.style.height = `${el.scrollHeight}px`;
+                                }
+                              }}
+                              onInput={(e) => {
+                                const target = e.currentTarget;
+                                target.style.height = "auto";
+                                target.style.height = `${target.scrollHeight}px`;
+                              }}
                               onChange={(e) => setInvitationBodyParagraph1(e.target.value)}
-                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl font-bold text-slate-900 bg-white text-base outline-none focus:border-blue-600 leading-relaxed"
+                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl font-bold text-slate-900 bg-white text-base outline-none focus:border-blue-600 leading-relaxed resize-none overflow-hidden transition-all"
                             />
                           </div>
                           <div className="space-y-2">
                             <label className="text-sm font-black text-slate-700 block">निमंत्रण मजकूर (परिच्छेद २)</label>
                             <textarea
-                              rows={3}
                               value={invitationBodyParagraph2}
+                              ref={(el) => {
+                                if (el) {
+                                  el.style.height = "auto";
+                                  el.style.height = `${el.scrollHeight}px`;
+                                }
+                              }}
+                              onInput={(e) => {
+                                const target = e.currentTarget;
+                                target.style.height = "auto";
+                                target.style.height = `${target.scrollHeight}px`;
+                              }}
                               onChange={(e) => setInvitationBodyParagraph2(e.target.value)}
-                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl font-bold text-slate-900 bg-white text-base outline-none focus:border-blue-600 leading-relaxed"
+                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl font-bold text-slate-900 bg-white text-base outline-none focus:border-blue-600 leading-relaxed resize-none overflow-hidden transition-all"
                             />
                           </div>
                         </div>
@@ -5321,18 +5341,28 @@ function TeacherMeetingPage() {
                           {invitationAgendaItems.length > 0 ? (
                             <div className="space-y-3">
                               {invitationAgendaItems.map((item, i) => (
-                                <div key={i} className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
-                                  <span className="text-base font-black text-amber-600 shrink-0">{i + 1}.</span>
-                                  <input
-                                    type="text"
+                                <div key={i} className="flex items-start gap-2.5 sm:gap-3 bg-slate-50 border border-slate-200 rounded-xl p-2 sm:px-4 sm:py-2.5 transition-all">
+                                  <span className="text-base font-black text-amber-600 shrink-0 pt-2.5 select-none">{i + 1}.</span>
+                                  <textarea
                                     value={item}
+                                    ref={(el) => {
+                                      if (el) {
+                                        el.style.height = "auto";
+                                        el.style.height = `${Math.max(el.scrollHeight, 46)}px`;
+                                      }
+                                    }}
+                                    onInput={(e) => {
+                                      const target = e.currentTarget;
+                                      target.style.height = "auto";
+                                      target.style.height = `${Math.max(target.scrollHeight, 46)}px`;
+                                    }}
                                     onChange={(e) => {
                                       const updated = [...invitationAgendaItems];
                                       updated[i] = e.target.value;
                                       setInvitationAgendaItems(updated);
                                     }}
                                     placeholder={`विषय ${i + 1} प्रविष्ट करा...`}
-                                    className="w-full bg-white px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold text-slate-950 outline-none focus:border-blue-600"
+                                    className="w-full bg-white px-3 sm:px-4 py-2.5 border-2 border-slate-300 rounded-xl text-sm sm:text-base font-bold text-slate-950 outline-none focus:border-blue-600 resize-none overflow-hidden leading-relaxed transition-all"
                                   />
                                   <button
                                     type="button"
@@ -5340,7 +5370,7 @@ function TeacherMeetingPage() {
                                       const updated = invitationAgendaItems.filter((_, idx) => idx !== i);
                                       setInvitationAgendaItems(updated);
                                     }}
-                                    className="p-2 text-slate-400 hover:text-red-600 transition-colors shrink-0 cursor-pointer"
+                                    className="p-2 text-slate-400 hover:text-red-600 transition-colors shrink-0 cursor-pointer pt-2.5"
                                     title="विषय हटवा"
                                   >
                                     <Trash2 size={18} />
@@ -5372,10 +5402,20 @@ function TeacherMeetingPage() {
                         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-2">
                           <label className="text-sm font-black text-amber-900 block">तळटीप / विनंती मजकूर</label>
                           <textarea
-                            rows={2}
                             value={invitationFooterNote}
+                            ref={(el) => {
+                              if (el) {
+                                el.style.height = "auto";
+                                el.style.height = `${el.scrollHeight}px`;
+                              }
+                            }}
+                            onInput={(e) => {
+                              const target = e.currentTarget;
+                              target.style.height = "auto";
+                              target.style.height = `${target.scrollHeight}px`;
+                            }}
                             onChange={(e) => setInvitationFooterNote(e.target.value)}
-                            className="w-full px-4 py-3 border border-amber-300 rounded-xl font-bold text-slate-900 bg-white text-base outline-none focus:border-amber-500 leading-relaxed"
+                            className="w-full px-4 py-3 border border-amber-300 rounded-xl font-bold text-slate-900 bg-white text-base outline-none focus:border-amber-500 leading-relaxed resize-none overflow-hidden transition-all"
                           />
                         </div>
 

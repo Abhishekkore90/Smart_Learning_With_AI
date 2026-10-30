@@ -831,7 +831,7 @@ function HomeworkPage() {
                               ) : (
                                 <MessageCircle className="size-3.5" />
                               )}
-                              <span>WhatsApp PDF</span>
+                              <span>WhatsApp वर पाठवा</span>
                             </button>
 
                             <button

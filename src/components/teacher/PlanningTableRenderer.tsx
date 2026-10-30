@@ -1527,25 +1527,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           dVal = "-";
         }
 
-        const engNumMatch = dVal.match(/^(\d{1,2})$/);
-        const devNumMatch = dVal.match(/^([०-९]{1,2})$/);
-        if (engNumMatch) {
-          monthlyActiveDay = parseInt(engNumMatch[1], 10);
-        } else if (devNumMatch) {
-          monthlyActiveDay = parseInt(devNumMatch[1].replace(/[०-९]/g, (d) => String(devanagariDigits.indexOf(d))), 10);
-        } else if ((dVal === "" || dVal === "-" || dVal === "null" || dVal === "undefined") && !isVacationText(currentRow.join(" "))) {
-          const hasLesson = Boolean(currentRow[1] && currentRow[1] !== "-" && !isVacationText(currentRow[1]));
-          if (hasLesson) {
-            if (monthlyActiveDay === 0) {
-              monthlyActiveDay = isJuneMonth ? 15 : 1;
-            } else {
-              monthlyActiveDay++;
-            }
-            dVal = hasDevanagariDigits ? toDevDigits(monthlyActiveDay) : String(monthlyActiveDay);
-          }
+        if (dVal === "-" || dVal === "null" || dVal === "undefined") {
+          dVal = "";
         }
 
-        matrix[r][0] = { rowSpan: 1, skip: false, displayValue: dVal || "-" };
+        matrix[r][0] = { rowSpan: 1, skip: false, displayValue: dVal };
 
         // Columns 1 to numCols - 1: preserve every cell
         for (let cIdx = 1; cIdx < numCols; cIdx++) {
@@ -1554,7 +1540,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             const val = (rawVal === "null" || rawVal === "undefined") ? "" : rawVal;
 
             if (isEmptyValue(val)) {
-              matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: "-" };
+              matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: "" };
             } else {
               let span = 1;
               const getEffectiveLesson = (rowIndex: number): string => {
@@ -1574,6 +1560,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
               while (r + span < numRows) {
                 const nextRow = rows[r + span] || [];
+                // If the next row is completely empty, stop spanning
+                if (nextRow.length === 0 || nextRow.every((c: string) => isEmptyValue(c))) {
+                  break;
+                }
+
                 // NEVER span into an exam, assessment, or vacation row!
                 if (isExamOrAssessmentRow(nextRow) || isExamOrAssessmentText(nextRow.join(" ")) || isVacationText(nextRow.join(" "))) {
                   break;
@@ -1583,7 +1574,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                 const isNextEmpty = isEmptyValue(nextVal);
                 const isNextIdentical = normalizeForCompare(nextVal) === normalizeForCompare(val);
 
-                // Col 1 (Lesson / Point): merge consecutive identical lessons or continuation rows
+                // Col 1 (पाठ / घटक - Lesson / Unit):
+                // Span over continuation empty cells (from Excel merged cells) or identical lesson names until a new lesson begins
                 if (cIdx === 1) {
                   if (isNextEmpty || isNextIdentical) {
                     span++;
@@ -1591,7 +1583,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     break;
                   }
                 }
-                // Col 2 (Learning Outcomes): merge if under the same lesson AND outcome is identical or continuation
+                // Col 2 (अध्ययन निष्पत्ती - Learning Outcomes):
+                // Span under the same lesson if cell is empty (Excel merged continuation) or identical
                 else if (cIdx === 2) {
                   const currLesson = getEffectiveLesson(r);
                   const nextLesson = normalizeForCompare(nextRow[1]);
@@ -1603,41 +1596,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     break;
                   }
                 }
-                // Col 3 (Teaching Point / Aim): merge under same lesson if next is empty or identical
-                else if (cIdx === 3) {
-                  const currLesson = getEffectiveLesson(r);
-                  const nextLesson = normalizeForCompare(nextRow[1]);
-                  const sameLesson = isEmptyValue(nextLesson) || nextLesson === currLesson;
-
-                  if (sameLesson && (isNextEmpty || isNextIdentical)) {
-                    span++;
-                  } else {
-                    break;
-                  }
-                }
-                // Col 5 (Tool & Technique) & Col 6 (Educational Instrument): merge under same Aim if next is empty or identical
-                else if (cIdx === 5 || cIdx === 6) {
-                  const currAim = getEffectiveAim(r);
-                  const nextAim = normalizeForCompare(nextRow[3]);
-                  const sameAim = isEmptyValue(nextAim) || nextAim === currAim;
-
-                  if (sameAim && (isNextEmpty || isNextIdentical) && val !== "-") {
-                    span++;
-                  } else {
-                    break;
-                  }
-                }
-                // Col 4 (Structure of Teaching Experience) & other columns: merge only if under same lesson and values are identical and non-empty
+                // Cols 3, 4, 5, 6 (मुद्दे, अध्ययन अनुभव, साधन तंत्रे, शैक्षणिक साहित्य):
+                // Strictly 1 cell per row, exactly matching Excel layout (never span across rows)
                 else {
-                  const currLesson = getEffectiveLesson(r);
-                  const nextLesson = normalizeForCompare(nextRow[1]);
-                  const sameLesson = isEmptyValue(nextLesson) || nextLesson === currLesson;
-
-                  if (sameLesson && isNextIdentical && !isNextEmpty && val !== "-") {
-                    span++;
-                  } else {
-                    break;
-                  }
+                  break;
                 }
               }
 
@@ -4775,10 +4737,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         if (/^\d{1,2}$/.test(c0) || /^[०-९]{1,2}$/.test(c0) || c0.includes("ते") || c0.includes("to")) {
                           return true;
                         }
-                        // If row contains bullet point or long activity sentence, it is 100% teaching data!
-                        if (row.some((c) => String(c || "").includes("•") || String(c || "").trim().length > 30)) {
-                          return true;
-                        }
+                        // STRICT FILTER: Column headers, signatures, metadata, and banners must NEVER be shown as data rows!
                         if (isSignatureRow(row)) return false;
                         if (isTableColumnHeaderRow(row)) return false;
                         if (isMetadataRow(row)) return false;
@@ -4800,16 +4759,21 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           const secondCell = String(row[1] || "").trim().toLowerCase();
                           const thirdCell = String(row[2] || "").trim().toLowerCase();
                           const isHeaderLikeRow =
-                            (firstCell.includes("दिनांक") || firstCell.includes("दिवस") || firstCell === "date" || firstCell === "day") &&
-                            (secondCell.includes("पाठ") || secondCell.includes("घटक") || secondCell.includes("topic") || secondCell.includes("unit") || secondCell.includes("lesson") ||
+                            (firstCell.includes("दिनांक") || firstCell.includes("दिवस") || firstCell.includes("दि.") || firstCell === "दि" || firstCell === "date" || firstCell === "day") &&
+                            (secondCell.includes("पाठ") || secondCell.includes("घटक") || secondCell.includes("उपघटक") || secondCell.includes("topic") || secondCell.includes("unit") || secondCell.includes("lesson") ||
                               thirdCell.includes("अध्ययन") || thirdCell.includes("निष्पत्ती") || thirdCell.includes("learning") || thirdCell.includes("outcome") ||
                               rowText.includes("साहित्य") || rowText.includes("साधन"));
                           if (isHeaderLikeRow) return false;
 
-                          const kwMatches = ["दिवस", "दिनांक", "पाठ", "घटक", "उपघटक", "अध्ययन", "निष्पत्ती", "मुद्दे", "उद्देश", "साधन", "साहित्य"].filter(
+                          const kwMatches = ["दिवस", "दिनांक", "दि.", "पाठ", "घटक", "उपघटक", "पाठ्यांश", "अध्ययन", "निष्पत्ती", "मुद्दे", "मुद्दा", "उद्देश", "साधन", "साहित्य"].filter(
                             (kw) => rowText.includes(kw)
                           );
                           if (kwMatches.length >= 3) return false;
+                        }
+
+                        // If row contains bullet point or long activity sentence, it is 100% teaching data!
+                        if (row.some((c) => String(c || "").includes("•") || String(c || "").trim().length > 30)) {
+                          return true;
                         }
                         const hasMeaningfulContent = row.some((c) => {
                           const s = String(c || "").trim();
@@ -4987,13 +4951,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                     ]
                                   ) : (
                                     mobileTableViewMode === "fit" ? [
-                                      <col key="m0" style={{ width: "3.5%", minWidth: "26px", maxWidth: "38px" }} />,
-                                      <col key="m1" style={{ width: "10.5%" }} />,
-                                      <col key="m2" style={{ width: "17.5%" }} />,
-                                      <col key="m3" style={{ width: "13.5%" }} />,
-                                      <col key="m4" style={{ width: "27%" }} />,
-                                      <col key="m5" style={{ width: "12.5%", minWidth: "55px" }} />,
-                                      <col key="m6" style={{ width: "15.5%", minWidth: "75px" }} />,
+                                      <col key="m0" style={{ width: "5.5%", minWidth: "24px", maxWidth: "34px" }} />,
+                                      <col key="m1" style={{ width: "15.5%" }} />,
+                                      <col key="m2" style={{ width: "17%" }} />,
+                                      <col key="m3" style={{ width: "14%" }} />,
+                                      <col key="m4" style={{ width: "26%" }} />,
+                                      <col key="m5" style={{ width: "11%", minWidth: "35px" }} />,
+                                      <col key="m6" style={{ width: "11%", minWidth: "35px" }} />,
                                       ...(isInlineEditing ? [<col key="mEdit" style={{ width: "8%" }} />] : [])
                                     ] : [
                                       <col key="m0" style={{ width: "3.5%", minWidth: "26px", maxWidth: "38px" }} />,
@@ -5047,19 +5011,33 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                       ? { width: "11%", minWidth: "35px", padding: "4px 1px", wordBreak: "keep-all", fontSize: "12px", fontWeight: 900, color: "#000000" }
                                                       : undefined)
                                         : (i === 0
-                                          ? { width: "3.5%", minWidth: "26px", maxWidth: "38px", padding: "4px 2px" }
+                                          ? (mobileTableViewMode === "fit"
+                                            ? { width: "5.5%", minWidth: "24px", maxWidth: "34px", padding: "3px 1px", wordBreak: "keep-all" }
+                                            : { width: "3.5%", minWidth: "26px", maxWidth: "38px", padding: "4px 2px" })
                                           : i === 4
-                                            ? { width: "27%" }
+                                            ? (mobileTableViewMode === "fit"
+                                              ? { width: "26%", padding: "3px 1px", wordBreak: "keep-all" }
+                                              : { width: "27%" })
                                             : i === 1
-                                              ? { width: "10.5%" }
+                                              ? (mobileTableViewMode === "fit"
+                                                ? { width: "15.5%", padding: "3px 1px", wordBreak: "keep-all" }
+                                                : { width: "10.5%" })
                                               : i === 2
-                                                ? { width: "17.5%" }
+                                                ? (mobileTableViewMode === "fit"
+                                                  ? { width: "17%", padding: "3px 1px", wordBreak: "keep-all" }
+                                                  : { width: "17.5%" })
                                                 : i === 3
-                                                  ? { width: "13.5%" }
+                                                  ? (mobileTableViewMode === "fit"
+                                                    ? { width: "14%", padding: "3px 1px", wordBreak: "keep-all" }
+                                                    : { width: "13.5%" })
                                                   : i === 5
-                                                    ? { width: "12.5%", minWidth: "55px" }
+                                                    ? (mobileTableViewMode === "fit"
+                                                      ? { width: "11%", minWidth: "35px", padding: "3px 1px", wordBreak: "keep-all" }
+                                                      : { width: "12.5%", minWidth: "55px" })
                                                     : i === 6
-                                                      ? { width: "15.5%", minWidth: "75px" }
+                                                      ? (mobileTableViewMode === "fit"
+                                                        ? { width: "11%", minWidth: "35px", padding: "3px 1px", wordBreak: "keep-all" }
+                                                        : { width: "15.5%", minWidth: "75px" })
                                                       : undefined))
                                       : i === 0
                                         ? { width: "8.5%", minWidth: "48px", maxWidth: "65px", padding: "3px 1.5px" }
@@ -5079,14 +5057,16 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                         key={i}
                                         style={{
                                           ...thStyle,
-                                          fontSize: isMonthly && isSecEng ? (i === 5 || i === 6 ? "11.5px" : "12px") : "12px",
+                                          fontSize: mobileTableViewMode === "fit"
+                                            ? undefined
+                                            : (isMonthly && isSecEng ? (i === 5 || i === 6 ? "11.5px" : "12px") : "12px"),
                                           fontWeight: 900,
                                           color: "#000000",
                                         }}
                                         className={`border border-slate-400 ${isMonthly && isSecEng
                                           ? (mobileTableViewMode === 'fit' ? 'p-0.5 min-[360px]:p-1 text-[8px] min-[360px]:text-[8.5px] sm:p-2 sm:text-[11px]' : 'p-1.5 sm:p-2 text-[10.5px] sm:text-[11px]')
-                                          : (mobileTableViewMode === 'fit' ? 'p-1 text-[9px] sm:p-2 sm:text-[11px]' : 'p-2 text-[11px]')
-                                          } text-center font-black tracking-tight sm:tracking-wide bg-slate-100 text-slate-900 leading-tight sm:leading-snug ${isMonthly && isSecEng ? 'whitespace-normal' : (!isMonthly && i === 1 ? 'whitespace-nowrap' : 'whitespace-pre-line break-words')}`}
+                                          : (mobileTableViewMode === 'fit' ? 'p-0.5 min-[360px]:p-1 text-[8px] min-[360px]:text-[8.5px] sm:p-2 sm:text-[11px]' : 'p-2 text-[11px]')
+                                          } text-center font-black tracking-tight sm:tracking-wide bg-slate-100 text-slate-900 leading-tight sm:leading-snug ${isMonthly ? 'whitespace-normal' : (!isMonthly && i === 1 ? 'whitespace-nowrap' : 'whitespace-pre-line break-words')}`}
                                       >
                                         {!isMonthly && i === 4
                                           ? "पाठ / घटक"
@@ -5101,13 +5081,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                   : isMonthly
                                                     ? isSecEng
                                                       ? i === 0
-                                                        ? <span className="font-black text-black inline-block" style={{ fontWeight: 900, color: "#000000", fontSize: "12px" }}>Day</span>
+                                                        ? <span className="font-black text-black inline-block" style={{ fontWeight: 900, color: "#000000", fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>Day</span>
                                                         : i === 1
-                                                          ? <span className="font-black text-black inline-block leading-tight" style={{ fontWeight: 900, color: "#000000", fontSize: "12px" }}>Lesson/<br />Point</span>
+                                                          ? <span className="font-black text-black inline-block leading-tight" style={{ fontWeight: 900, color: "#000000", fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>Lesson/<br />Point</span>
                                                           : i === 2
-                                                            ? <span className="font-black text-black inline-block leading-tight" style={{ fontWeight: 900, color: "#000000", fontSize: "12px" }}>Learning<br />Outcomes</span>
+                                                            ? <span className="font-black text-black inline-block leading-tight" style={{ fontWeight: 900, color: "#000000", fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>Learning<br />Outcomes</span>
                                                             : i === 3
-                                                              ? <span className="font-black text-black inline-block leading-tight" style={{ fontWeight: 900, color: "#000000", fontSize: "12px" }}>Teaching<br />Point/ Aim</span>
+                                                              ? <span className="font-black text-black inline-block leading-tight" style={{ fontWeight: 900, color: "#000000", fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>Teaching<br />Point/ Aim</span>
                                                               : i === 4
                                                                 ? (
                                                                   <span className="font-black text-black inline-block leading-tight" style={{ fontWeight: 900, color: "#000000", fontSize: "12px" }}>
@@ -5131,19 +5111,69 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                                     )
                                                                     : hText
                                                       : i === 0
-                                                        ? "दिवस"
+                                                        ? (
+                                                          <span className="font-black text-black inline-block whitespace-nowrap" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
+                                                            दिवस
+                                                          </span>
+                                                        )
                                                         : i === 1
-                                                          ? (hText.replace(/\/?\s*उपघटक/g, "").replace(/\/\s*$/, "").trim() || "पाठ / घटक")
-                                                          : i === 5
-                                                            ? "साधन\nतंत्रे"
-                                                            : i === 6
-                                                              ? "शैक्षणिक\nसाहित्य"
-                                                              : isMonthly
-                                                                ? hText
-                                                                  .replace(/\/?\s*उपघटक/g, "").replace(/\/\s*$/, "").trim()
-                                                                  .replace(/उपयोगात\s*आणावयाची\s*/g, "").trim()
-                                                                  .replace(/आवश्यक\s*साहित्य/g, "शैक्षणिक साहित्य")
-                                                                : hText
+                                                          ? (
+                                                            <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
+                                                              <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>पाठ /</span>
+                                                              <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>घटक</span>
+                                                            </span>
+                                                          )
+                                                          : i === 2
+                                                            ? (
+                                                              <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
+                                                                <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>अध्ययन</span>
+                                                                <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>निष्पत्ती</span>
+                                                              </span>
+                                                            )
+                                                            : i === 3
+                                                              ? (
+                                                                <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
+                                                                  <span className="sm:hidden block">
+                                                                    <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>मुद्दे /</span>
+                                                                    <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>उद्देश</span>
+                                                                  </span>
+                                                                  <span className="hidden sm:inline">
+                                                                    {hText.replace(/\/?\s*उपघटक/g, "").replace(/\/\s*$/, "").trim() || "अध्ययन मुद्दे / पाठ्यांश उद्देश"}
+                                                                  </span>
+                                                                </span>
+                                                              )
+                                                              : i === 4
+                                                                ? (
+                                                                  <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
+                                                                    <span className="sm:hidden block">
+                                                                      <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>अध्ययन अनुभव</span>
+                                                                      <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>स्वरूप</span>
+                                                                    </span>
+                                                                    <span className="hidden sm:inline">
+                                                                      {hText || "अध्ययन अनुभवाचे स्वरूप"}
+                                                                    </span>
+                                                                  </span>
+                                                                )
+                                                                : i === 5
+                                                                  ? (
+                                                                    <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
+                                                                      <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>साधन</span>
+                                                                      <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>तंत्रे</span>
+                                                                    </span>
+                                                                  )
+                                                                  : i === 6
+                                                                    ? (
+                                                                      <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
+                                                                        <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>शैक्षणिक</span>
+                                                                        <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>साहित्य</span>
+                                                                      </span>
+                                                                    )
+                                                                    : isMonthly
+                                                                      ? hText
+                                                                        .replace(/\/?\s*उपघटक/g, "").replace(/\/\s*$/, "").trim()
+                                                                        .replace(/उपयोगात\s*आणावयाची\s*/g, "").trim()
+                                                                        .replace(/आवश्यक\s*साहित्य/g, "शैक्षणिक साहित्य")
+                                                                      : hText
                                                     : hText}
                                       </th>
                                     );
@@ -5324,8 +5354,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                             }
 
                                             let cellVal = cellInfo?.displayValue;
-                                            if (!cellVal || cellVal === "-" || cellVal === "null" || cellVal === "undefined") {
-                                              cellVal = hasRawContent ? rawCellText : "-";
+                                            if (!cellVal || cellVal === "null" || cellVal === "undefined") {
+                                              cellVal = hasRawContent ? rawCellText : "";
+                                            } else if (cellVal === "-" && !hasRawContent) {
+                                              cellVal = "";
+                                              2
                                             }
                                             const isExam = cellInfo?.isExam || isExamOrAssessmentText(cellInfo?.displayValue) || isExamOrAssessmentText(r[cIdx]) || isExamOrAssessmentText(cellVal);
                                             const cellText = cellVal;

@@ -595,24 +595,72 @@ export const isTableColumnHeaderRow = (row: any[]): boolean => {
   const nonEmpties = row.map((c) => String(c || "").trim()).filter(Boolean);
   if (nonEmpties.length === 0) return false;
 
-  // 1. DATA ROW SAFEGUARD: If Col 0 is a Day number, it is 100% a DATA row, NEVER a column header!
+  // 1. DATA ROW SAFEGUARD: If Col 0 is a Day number or range, it is 100% a DATA row, NEVER a column header!
   const c0 = String(row[0] || "").trim();
-  if (/^\d{1,2}$/.test(c0) || /^[०-९]{1,2}$/.test(c0)) {
+  if (/^\d{1,2}$/.test(c0) || /^[०-९]{1,2}$/.test(c0) || c0.includes("ते") || c0.includes("to")) {
     return false;
   }
-  // 2. DATA ROW SAFEGUARD: If any cell has bullet point '•' or long sentence (> 30 chars), NEVER a column header!
-  if (row.some((c) => String(c || "").includes("•") || String(c || "").trim().length > 30)) {
-    return false;
-  }
-  // 3. Exam or vacation rows are NEVER column header rows!
+  // 2. Exam or vacation rows are NEVER column header rows!
   if (isExamOrAssessmentText(nonEmpties.join(" ")) || row.some((c) => isExamOrAssessmentText(String(c || ""))) || isVacationText(nonEmpties.join(" "))) {
+    return false;
+  }
+  // 3. Bullet points in teaching activities
+  if (row.some((c) => String(c || "").includes("•"))) {
     return false;
   }
 
   const line = nonEmpties.join(" ").trim().toLowerCase();
   if (!line) return false;
 
-  // English Header Row matching
+  const firstCell = String(row[0] || "").trim().toLowerCase();
+
+  // Primary Check 1: Day/Date header in col 0 + Topic/Outcome keywords in row
+  const isCol0Header =
+    firstCell.includes("दिनांक") ||
+    firstCell.includes("दिवस") ||
+    firstCell.includes("दि.") ||
+    firstCell === "दि" ||
+    firstCell.includes("वार") ||
+    firstCell.includes("कालांश") ||
+    firstCell.includes("तासिका") ||
+    firstCell.includes("सप्ताह") ||
+    firstCell.includes("आठवडा") ||
+    firstCell.includes("अ.क्र") ||
+    firstCell.includes("क्र.") ||
+    firstCell.includes("sr") ||
+    firstCell.includes("महिना") ||
+    firstCell.includes("month") ||
+    firstCell === "day" ||
+    firstCell === "date";
+
+  const hasTopicOutcomeHeader =
+    line.includes("पाठ") ||
+    line.includes("घटक") ||
+    line.includes("उपघटक") ||
+    line.includes("पाठ्यांश") ||
+    line.includes("अध्ययन") ||
+    line.includes("निष्पत्ती") ||
+    line.includes("मुद्दे") ||
+    line.includes("मुद्दा") ||
+    line.includes("उद्देश") ||
+    line.includes("साधन") ||
+    line.includes("साहित्य") ||
+    line.includes("स्वरूप") ||
+    line.includes("lesson") ||
+    line.includes("topic") ||
+    line.includes("unit") ||
+    line.includes("point") ||
+    line.includes("outcome") ||
+    line.includes("objective") ||
+    line.includes("experience") ||
+    line.includes("tool") ||
+    line.includes("material");
+
+  if (isCol0Header && hasTopicOutcomeHeader) {
+    return true;
+  }
+
+  // Primary Check 2: English Header Row matching
   if (
     (line.includes("day") || line.includes("date")) &&
     (line.includes("lesson") || line.includes("point") || line.includes("topic") || line.includes("unit"))
@@ -628,46 +676,22 @@ export const isTableColumnHeaderRow = (row: any[]): boolean => {
     line.includes("tool & technique") ||
     line.includes("essential instrument") ||
     line.includes("essencial instrument") ||
-    line.includes("learning outcomes")
+    line.includes("learning outcomes") ||
+    line.includes("learning outcome")
   ) {
     return true;
   }
 
-  // Marathi Header Row matching:
-  // Standalone day/date indicator:
-  const hasDayOrDate =
-    line.includes("दिनांक") ||
-    line.includes("दिवस") ||
-    line.includes("आठवडा") ||
-    line.includes("कालांश") ||
-    line.includes("सप्ताह") ||
-    /(?:^|\s)(?:महिना|माहे|month|(?<![\u0900-\u097F])माह(?![\u0900-\u097F]))/i.test(line) ||
-    /\bday\b/i.test(line) ||
-    /\bdate\b/i.test(line);
-
-  const hasTopicOrContent =
-    /(?:^|\s)(?:पाठ|घटक|उपघटक|पाठ्यांश)(?!्य)/i.test(line) ||
-    line.includes("अध्ययन निष्पत्ती") ||
-    line.includes("अध्ययन मुद्दा") ||
-    line.includes("पाठ / घटक") ||
-    line.includes("घटक / उपघटक") ||
-    line.includes("साधन / तंत्रे") ||
-    line.includes("शैक्षणिक साहित्य") ||
-    line.includes("पूर्वतयारी व शै");
-
-  if (hasDayOrDate && hasTopicOrContent) {
-    return true;
-  }
-
+  // Primary Check 3: Multi-keyword density across cells
   const headerKeywords = [
-    "दिवस", "दिनांक", "पाठ", "घटक", "उपघटक", "अध्ययन", "निष्पत्ती",
-    "मुद्दे", "उद्देश", "स्वरूप", "साधन", "तंत्रे", "साहित्य", "तपशील",
+    "दिवस", "दिनांक", "दि.", "पाठ", "घटक", "उपघटक", "पाठ्यांश", "अध्ययन", "निष्पत्ती",
+    "मुद्दे", "मुद्दा", "उद्देश", "स्वरूप", "साधन", "तंत्रे", "साहित्य", "तपशील",
     "day", "topic", "unit", "outcome", "objective", "experience", "tool", "material"
   ];
   let kwCount = 0;
   for (const cell of row) {
     const c = String(cell || "").trim().toLowerCase();
-    if (c.length < 25 && headerKeywords.some((kw) => c === kw || c.startsWith(kw + " ") || c.includes("/ " + kw) || c.includes(kw + " /"))) {
+    if (headerKeywords.some((kw) => c.includes(kw))) {
       kwCount++;
     }
   }
@@ -1757,45 +1781,14 @@ export function detectSubjectFromRow(row: string[], knownSubjects: string[]): st
           return;
         }
 
-        // For Monthly Planning data rows, directly preserve all 7 columns exactly as in the source file:
-        const isStrictAnnualRow =
-          row.length <= 6 &&
-          (isMarathiMonth(c0) || isEnglishMonth(c0) || (c0 === "" && (/^\d+/.test(c1) || /^[०-९]+/.test(c1) || c1.includes("Week") || c1.includes("आठवडा")))) &&
-          Boolean(row[4] && String(row[4]).trim().length > 0) &&
-          !Boolean(row[6] && String(row[6]).trim().length > 0);
-
-        let rowClean: string[];
-        if (isStrictAnnualRow) {
-          const wVal = c1 ? (c1.includes("आठवडा") || c1.toLowerCase().includes("week") ? c1 : `आठवडा ${c1}`) : "-";
-          const topicVal = String(row[4] || "").trim();
-          let outcomeVal = String(row[5] || "").trim();
-          if (!outcomeVal || outcomeVal === "-" || outcomeVal === "null" || outcomeVal === "undefined") {
-            outcomeVal = getLearningOutcomeForMonthlyPlanning(
-              currentClassTitle || fallbackClass,
-              currentSubjectTitle || fallbackSubject,
-              topicVal,
-              currentRows.length,
-              /[a-zA-Z]/.test(currentMonthName)
-            );
-          }
-          rowClean = [
-            wVal,
-            topicVal || "-",
-            outcomeVal || "-",
-            topicVal ? `${topicVal} संकल्पना व उद्दिष्टे स्पष्ट करणे` : "-",
-            topicVal ? `${topicVal} चे स्पष्टीकरण, वाचन, लेखन व स्वाध्याय कृती` : "-",
-            "निरीक्षण, तोंडी काम, स्वाध्याय",
-            "पाठ्यपुस्तक, चित्र तक्ते, शैक्षणिक साहित्य",
-          ];
-        } else {
-          rowClean = normalizeMonthlyPlanningRow(
-            row,
-            currentSubjectTitle || fallbackSubject,
-            currentClassTitle || fallbackClass,
-            currentRows.length,
-            /[a-zA-Z]/.test(currentMonthName)
-          );
-        }
+        // For Monthly Planning data rows, directly preserve all columns exactly as in the source Excel file without generating synthetic data:
+        const rowClean = normalizeMonthlyPlanningRow(
+          row,
+          currentSubjectTitle || fallbackSubject,
+          currentClassTitle || fallbackClass,
+          currentRows.length,
+          /[a-zA-Z]/.test(currentMonthName)
+        );
 
         currentRows.push(rowClean);
       });
@@ -1998,78 +1991,12 @@ export function detectSubjectFromRow(row: string[], knownSubjects: string[]): st
     ): string[] {
       if (!row || !Array.isArray(row)) return [];
 
-      const c0 = String(row[0] || "").trim();
-      const c1 = String(row[1] || "").trim();
-
-      // Detect if 6-column annual-to-monthly row
-      const isAnnual6Col =
-        row.length <= 6 &&
-        (isMarathiMonth(c0) || isEnglishMonth(c0) || c0 === "") &&
-        Boolean(row[4] && String(row[4]).trim().length > 0) &&
-        !Boolean(row[6] && String(row[6]).trim().length > 0);
-
-      let result: string[];
-
-      if (isAnnual6Col) {
-        const wVal = c1 ? (c1.includes("आठवडा") || c1.toLowerCase().includes("week") ? c1 : `आठवडा ${c1}`) : "-";
-        const topicVal = String(row[4] || "").trim();
-        const outcomeVal = String(row[5] || "").trim();
-        result = [
-          wVal,
-          topicVal || "-",
-          outcomeVal || "-",
-          topicVal ? `${topicVal} संकल्पना व उद्दिष्टे स्पष्ट करणे` : "-",
-          topicVal ? `${topicVal} चे स्पष्टीकरण, वाचन, लेखन व स्वाध्याय कृती` : "-",
-          "निरीक्षण, तोंडी काम, स्वाध्याय",
-          "पाठ्यपुस्तक, चित्र तक्ते, शैक्षणिक साहित्य",
-        ];
-      } else {
-        // Strictly preserve columns 0 to 6 exactly as defined in Excel/data:
-        // Col 0: Day, Col 1: Lesson, Col 2: Learning Outcomes, Col 3: Aim, Col 4: Experience, Col 5: Tool, Col 6: Instrument
-        result = [];
-        for (let i = 0; i < 7; i++) {
-          const val = row[i];
-          result.push(val !== undefined && val !== null ? String(val).trim() : "");
-        }
-      }
-
-      // Preserve vacation and exam rows untouched
-      const isVac = isVacationText(result.join(" "));
-      const isExam = isExamOrAssessmentRow(result) || isExamOrAssessmentText(result.join(" "));
-      if (isVac || isExam) {
-        return result;
-      }
-
-      // Check if Col 2 (Learning Outcome) is missing, empty, hyphens, or misplaced
-      const lessonText = String(result[1] || "").trim();
-      const hasLesson = Boolean(lessonText && lessonText !== "-");
-
-      if (hasLesson) {
-        const currentOutcome = String(result[2] || "").trim();
-        const isMissingOutcome =
-          !currentOutcome ||
-          currentOutcome === "-" ||
-          currentOutcome === "--" ||
-          currentOutcome === "null" ||
-          currentOutcome === "undefined" ||
-          currentOutcome.toLowerCase() === "na" ||
-          currentOutcome.toLowerCase() === "n/a" ||
-          (/^\d+$/.test(currentOutcome) && parseInt(currentOutcome, 10) < 50) ||
-          /^[०-९]+$/.test(currentOutcome) ||
-          currentOutcome.toLowerCase() === lessonText.toLowerCase();
-
-        if (isMissingOutcome) {
-          const resolved = getLearningOutcomeForMonthlyPlanning(
-            classId,
-            subjectName,
-            lessonText,
-            rowIndex,
-            isEnglish
-          );
-          if (resolved) {
-            result[2] = resolved;
-          }
-        }
+      // Strictly preserve columns 0 to 6 exactly as defined in the source Excel file:
+      // If a column is missing, removed, or empty in Excel, it remains empty ("") without adding synthetic data.
+      const result: string[] = [];
+      for (let i = 0; i < 7; i++) {
+        const val = row[i];
+        result.push(val !== undefined && val !== null && val !== "null" && val !== "undefined" ? String(val).trim() : "");
       }
 
       return result;
@@ -2140,8 +2067,11 @@ export function detectSubjectFromRow(row: string[], knownSubjects: string[]): st
         (subjectName && /[a-zA-Z]/.test(subjectName)) ||
         rows.some((r) => /[a-zA-Z]/.test(String(r[1] || "")));
 
+      // Step 0: Filter out any Excel column header rows so they are NEVER included as data rows
+      const cleanRows = rows.filter((r) => !isTableColumnHeaderRow(r));
+
       // Step 1: Normalize all rows to length 7 with Learning Outcomes resolution
-      const normalized = rows.map((r, rIdx) =>
+      const normalized = cleanRows.map((r, rIdx) =>
         normalizeMonthlyPlanningRow(r, subjectName, classId, rIdx, Boolean(isEng))
       );
 

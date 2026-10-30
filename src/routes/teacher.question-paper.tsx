@@ -53,6 +53,7 @@ import { QuestionPaperTemplate } from "@/components/questionPaper/QuestionPaperT
 import { QuestionPaperManualEditor } from "@/components/questionPaper/QuestionPaperManualEditor";
 import { fetchUnifiedSchoolProfile, getUnifiedSchoolProfile, saveUnifiedSchoolProfile, saveUnifiedSchoolProfileToFirestore } from "@/utils/schoolProfileHelper";
 import { WordQuestionPaperEditor } from "@/components/questionPaper/WordQuestionPaperEditor";
+import { fetchBinaryFile } from "@/lib/bunny-auth-pdf";
 import {
   Dialog,
   DialogContent,
@@ -194,6 +195,13 @@ function QuestionPaperPage() {
   // Active opened paper for View & Edit
   const [activePaper, setActivePaper] = useState<QuestionPaperItem | null>(null);
 
+  // Auto-scroll window to top when a question paper is opened
+  useEffect(() => {
+    if (activePaper && typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+    }
+  }, [activePaper]);
+
   // School and Teacher details management
   const [schoolInfo, setSchoolInfo] = useState({
     schoolName: "",
@@ -240,14 +248,14 @@ function QuestionPaperPage() {
       localStorage.removeItem("qp_school_info");
       localStorage.removeItem("qp_school_name");
       localStorage.removeItem("teacher_school_name");
-    } catch (e) {}
+    } catch (e) { }
 
     // Strictly check ONLY this specific user's saved data
     let userDedicated: any = null;
     try {
       const raw = localStorage.getItem(qpUserKey);
       if (raw) userDedicated = JSON.parse(raw);
-    } catch (e) {}
+    } catch (e) { }
 
     const cleanSchool = (userDedicated?.schoolName && !userDedicated.schoolName.toLowerCase().includes("willingdon") && !userDedicated.schoolName.includes("___"))
       ? userDedicated.schoolName.trim()
@@ -442,6 +450,25 @@ function QuestionPaperPage() {
     });
   }, [paperList, selectedMedium, selectedClass, filterExamType, searchTerm]);
 
+  // Intelligent Background Pre-fetching:
+  // When a teacher views the question paper list for the selected class/medium,
+  // prefetch the files in the background into IndexedDB / memory so when they click,
+  // it opens IMMEDIATELY with zero wait time!
+  useEffect(() => {
+    if (!currentSubjectPapers || currentSubjectPapers.length === 0) return;
+    const idleTimer = setTimeout(() => {
+      // Prefetch up to 4 papers visible in the current tab
+      currentSubjectPapers.slice(0, 4).forEach((paper) => {
+        const url = paper.wordFileUrl || paper.fileUrl;
+        if (url && (url.includes(".docx") || url.includes(".pdf"))) {
+          fetchBinaryFile(url).catch(() => { });
+        }
+      });
+    }, 600); // 600ms grace period after filtering
+
+    return () => clearTimeout(idleTimer);
+  }, [currentSubjectPapers]);
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       <div className="no-print">
@@ -451,625 +478,625 @@ function QuestionPaperPage() {
 
       <main className="pt-20 pb-16 px-3 sm:px-6 max-w-7xl mx-auto space-y-6">
         <ModulePaywall moduleId="question-paper" defaultTitle="प्रश्नपत्रिका (Question Paper)">
-        {/* Back to Dashboard Button */}
-        {!activePaper && (
-          <div className="no-print">
-            <Link
-              to="/teacher"
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
-            >
-              <ArrowLeft className="size-4 text-indigo-600" />
-              <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
-            </Link>
-          </div>
-        )}
-
-        {/* Banner */}
-        <div className="no-print bg-gradient-to-r from-blue-700 via-indigo-800 to-purple-900 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 size-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-blue-200 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-                <FileText className="size-3.5" /> प्रश्नपत्रिका पोर्टल व संपादन
-              </div>
-              <h1 className="text-xl sm:text-3xl font-black tracking-tight">
-                प्रश्नपत्रिका व्यवस्थापक (Question Paper Viewer & Editor)
-              </h1>
-              <p className="text-xs sm:text-sm text-blue-100 max-w-2xl font-medium">
-                इयत्ता १ ली ते ८ वी घटक चाचणी व सत्र परीक्षा प्रश्नपत्रिका मूळ स्वरूपात (Original Document Layout) पहा, मजकूर संपादित करा व प्रिंट काढा.
-              </p>
-            </div>
-
-            {/* Stepper indicator if not viewing document */}
-            {!activePaper && (
-              <div className="flex items-center gap-1 sm:gap-2 bg-white/10 backdrop-blur-md p-1.5 sm:p-2 rounded-2xl border border-white/15 text-[11px] sm:text-xs font-bold overflow-x-auto touch-pan-x max-w-full shrink-0">
-                <button
-                  onClick={() => setStep("medium")}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${
-                    step === "medium"
-                      ? "bg-white text-blue-900 shadow-md font-black"
-                      : "text-white/80 hover:text-white"
-                  }`}
-                >
-                  १. माध्यम
-                </button>
-                <ChevronRight className="size-3.5 text-white/40 shrink-0" />
-                <button
-                  onClick={() => setStep("class")}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${
-                    step === "class"
-                      ? "bg-white text-blue-900 shadow-md font-black"
-                      : "text-white/80 hover:text-white"
-                  }`}
-                >
-                  २. इयत्ता
-                </button>
-                <ChevronRight className="size-3.5 text-white/40 shrink-0" />
-                <button
-                  onClick={() => setStep("list")}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${
-                    step === "list"
-                      ? "bg-white text-blue-900 shadow-md font-black"
-                      : "text-white/80 hover:text-white"
-                  }`}
-                >
-                  ३. प्रश्नपत्रिका यादी
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* School Name Quick Edit Strip */}
-          <div className="relative z-10 mt-4 pt-3.5 border-t border-white/20 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <div className="size-8 rounded-xl bg-white/15 text-amber-300 flex items-center justify-center shrink-0 border border-white/20 shadow-xs">
-                <School className="size-4" />
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <span className="text-blue-200 text-[11px] font-bold uppercase tracking-wider">
-                  शाळा माहिती :
-                </span>
-                {schoolInfo.schoolName ? (
-                  <span className="font-extrabold text-white bg-white/20 px-2.5 py-0.5 rounded-lg border border-white/25 text-xs sm:text-sm">
-                    {schoolInfo.schoolName}
-                    {schoolInfo.kendra ? ` • केंद्र: ${schoolInfo.kendra}` : ""}
-                    {schoolInfo.taluka ? ` • तालुका: ${schoolInfo.taluka}` : ""}
-                    {schoolInfo.jilha ? ` • जिल्हा: ${schoolInfo.jilha}` : ""}
-                  </span>
-                ) : (
-                  <span className="text-amber-300 italic font-medium">
-                    (शाळा माहिती भरलेली नाही)
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setTempSchoolInfo(schoolInfo);
-                setShowSchoolModal(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/20 hover:bg-white/30 active:scale-95 text-white font-bold rounded-xl transition-all cursor-pointer border border-white/30 shadow-xs"
-            >
-              <Edit3 className="size-3.5 text-amber-300" />
-              <span>{schoolInfo.schoolName ? "शाळा व शिक्षक माहिती बदला (Edit)" : "+ शाळा माहिती भरा (Fill Details)"}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Dialog for School and Teacher Details */}
-        <Dialog open={showSchoolModal} onOpenChange={setShowSchoolModal}>
-          <DialogContent className="sm:max-w-xl bg-white rounded-3xl p-6 sm:p-8 border-0 shadow-2xl">
-            <DialogHeader>
-              <div className="size-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2">
-                <School className="size-6" />
-              </div>
-              <DialogTitle className="text-xl sm:text-2xl font-black text-slate-800">
-                शाळा व शिक्षक माहिती प्रविष्ट करा
-              </DialogTitle>
-              <DialogDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
-                सर्व प्रश्नपत्रिकांच्या हेडर बॉक्समध्ये शाळेचे नाव, केंद्र, तालुका, जिल्हा व खाली शिक्षकांची स्वाक्षरी आपोआप दिसेल.
-              </DialogDescription>
-            </DialogHeader>
-
-            <form onSubmit={handleSaveSchoolInfo} className="space-y-4 mt-2">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  शाळेचे नाव (School Name) <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={tempSchoolInfo.schoolName}
-                  onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, schoolName: e.target.value })}
-                  placeholder="उदा. जि. प. प्राथमिक शाळा धोंडेवाडी"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
-                  autoFocus
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    केंद्र (Kendra)
-                  </label>
-                  <input
-                    type="text"
-                    value={tempSchoolInfo.kendra}
-                    onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, kendra: e.target.value })}
-                    placeholder="उदा. पेड"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    तालुका (Taluka)
-                  </label>
-                  <input
-                    type="text"
-                    value={tempSchoolInfo.taluka}
-                    onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, taluka: e.target.value })}
-                    placeholder="उदा. तासगाव"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    जिल्हा (Jilla)
-                  </label>
-                  <input
-                    type="text"
-                    value={tempSchoolInfo.jilha}
-                    onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, jilha: e.target.value })}
-                    placeholder="उदा. सांगली"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    वर्ग शिक्षकाचे नाव (Class Teacher Name)
-                  </label>
-                  <input
-                    type="text"
-                    value={tempSchoolInfo.teacherName}
-                    onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, teacherName: e.target.value })}
-                    placeholder="उदा. श्री. आर. के. पाटील"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    मुख्याध्यापकाचे नाव (Headmaster)
-                  </label>
-                  <input
-                    type="text"
-                    value={tempSchoolInfo.headmasterName}
-                    onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, headmasterName: e.target.value })}
-                    placeholder="उदा. श्री. एस. व्ही. जाधव"
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const targetId = user?.uid || profile?.id || "guest";
-                    localStorage.setItem(`qp_school_prompted_${targetId}`, "true");
-                    setShowSchoolModal(false);
-                  }}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-xs sm:text-sm transition-all cursor-pointer"
-                >
-                  रद्द करा / नंतर भरा
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingSchool}
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-md flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isSavingSchool ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      <span>जतन होत आहे...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="size-4" />
-                      <span>जतन करा (Save)</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* ACTIVE QUESTION PAPER DOCUMENT VIEWER & EDITOR */}
-        {activePaper ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-              <button
-                onClick={() => setActivePaper(null)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+          {/* Back to Dashboard Button */}
+          {!activePaper && (
+            <div className="no-print">
+              <Link
+                to="/teacher"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
               >
-                <ChevronLeft className="size-4" />
-                <span>सर्व प्रश्नपत्रिका यादी (Back)</span>
-              </button>
+                <ArrowLeft className="size-4 text-indigo-600" />
+                <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+              </Link>
+            </div>
+          )}
 
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
-                <span className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl border border-blue-200">
-                  {activePaper.title}
-                </span>
+          {/* Banner */}
+          <div className="no-print bg-gradient-to-r from-blue-700 via-indigo-800 to-purple-900 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 size-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-blue-200 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                  <FileText className="size-3.5" /> प्रश्नपत्रिका पोर्टल व संपादन
+                </div>
+                <h1 className="text-xl sm:text-3xl font-black tracking-tight">
+                  प्रश्नपत्रिका व्यवस्थापक (Question Paper Viewer & Editor)
+                </h1>
+                <p className="text-xs sm:text-sm text-blue-100 max-w-2xl font-medium">
+                  इयत्ता १ ली ते ८ वी घटक चाचणी व सत्र परीक्षा प्रश्नपत्रिका मूळ स्वरूपात (Original Document Layout) पहा, मजकूर संपादित करा व प्रिंट काढा.
+                </p>
               </div>
+
+              {/* Stepper indicator if not viewing document */}
+              {!activePaper && (
+                <div className="flex items-center gap-1 sm:gap-2 bg-white/10 backdrop-blur-md p-1.5 sm:p-2 rounded-2xl border border-white/15 text-[11px] sm:text-xs font-bold overflow-x-auto touch-pan-x max-w-full shrink-0">
+                  <button
+                    onClick={() => setStep("medium")}
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${step === "medium"
+                        ? "bg-white text-blue-900 shadow-md font-black"
+                        : "text-white/80 hover:text-white"
+                      }`}
+                  >
+                    १. माध्यम
+                  </button>
+                  <ChevronRight className="size-3.5 text-white/40 shrink-0" />
+                  <button
+                    onClick={() => setStep("class")}
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${step === "class"
+                        ? "bg-white text-blue-900 shadow-md font-black"
+                        : "text-white/80 hover:text-white"
+                      }`}
+                  >
+                    २. इयत्ता
+                  </button>
+                  <ChevronRight className="size-3.5 text-white/40 shrink-0" />
+                  <button
+                    onClick={() => setStep("list")}
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${step === "list"
+                        ? "bg-white text-blue-900 shadow-md font-black"
+                        : "text-white/80 hover:text-white"
+                      }`}
+                  >
+                    ३. प्रश्नपत्रिका यादी
+                  </button>
+                </div>
+              )}
             </div>
 
-            {isWordPaper(activePaper) ? (
-              <div className="bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
-                <WordQuestionPaperEditor
-                  fileUrl={activePaper.wordFileUrl || activePaper.fileUrl}
-                  paperTitle={`${activePaper.title} — ${activePaper.class} (${activePaper.examTypeLabel || activePaper.examType})`}
-                  paperId={activePaper.id}
-                  subject={activePaper.subject || selectedSubject}
+            {/* School Name Quick Edit Strip */}
+            <div className="relative z-10 mt-4 pt-3.5 border-t border-white/20 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="size-8 rounded-xl bg-white/15 text-amber-300 flex items-center justify-center shrink-0 border border-white/20 shadow-xs">
+                  <School className="size-4" />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <span className="text-blue-200 text-[11px] font-bold uppercase tracking-wider">
+                    शाळा माहिती :
+                  </span>
+                  {schoolInfo.schoolName ? (
+                    <span className="font-extrabold text-white bg-white/20 px-2.5 py-0.5 rounded-lg border border-white/25 text-xs sm:text-sm">
+                      {schoolInfo.schoolName}
+                      {schoolInfo.kendra ? ` • केंद्र: ${schoolInfo.kendra}` : ""}
+                      {schoolInfo.taluka ? ` • तालुका: ${schoolInfo.taluka}` : ""}
+                      {schoolInfo.jilha ? ` • जिल्हा: ${schoolInfo.jilha}` : ""}
+                    </span>
+                  ) : (
+                    <span className="text-amber-300 italic font-medium">
+                      (शाळा माहिती भरलेली नाही)
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTempSchoolInfo(schoolInfo);
+                  setShowSchoolModal(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/20 hover:bg-white/30 active:scale-95 text-white font-bold rounded-xl transition-all cursor-pointer border border-white/30 shadow-xs"
+              >
+                <Edit3 className="size-3.5 text-amber-300" />
+                <span>{schoolInfo.schoolName ? "शाळा व शिक्षक माहिती बदला (Edit)" : "+ शाळा माहिती भरा (Fill Details)"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Dialog for School and Teacher Details */}
+          <Dialog open={showSchoolModal} onOpenChange={setShowSchoolModal}>
+            <DialogContent className="sm:max-w-xl bg-white rounded-3xl p-6 sm:p-8 border-0 shadow-2xl">
+              <DialogHeader>
+                <div className="size-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2">
+                  <School className="size-6" />
+                </div>
+                <DialogTitle className="text-xl sm:text-2xl font-black text-slate-800">
+                  शाळा व शिक्षक माहिती प्रविष्ट करा
+                </DialogTitle>
+                <DialogDescription className="text-slate-500 text-xs sm:text-sm font-medium mt-1">
+                  सर्व प्रश्नपत्रिकांच्या हेडर बॉक्समध्ये शाळेचे नाव, केंद्र, तालुका, जिल्हा व खाली शिक्षकांची स्वाक्षरी आपोआप दिसेल.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form onSubmit={handleSaveSchoolInfo} className="space-y-4 mt-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    शाळेचे नाव (School Name) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={tempSchoolInfo.schoolName}
+                    onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, schoolName: e.target.value })}
+                    placeholder="उदा. जि. प. प्राथमिक शाळा धोंडेवाडी"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      केंद्र (Kendra)
+                    </label>
+                    <input
+                      type="text"
+                      value={tempSchoolInfo.kendra}
+                      onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, kendra: e.target.value })}
+                      placeholder="उदा. पेड"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      तालुका (Taluka)
+                    </label>
+                    <input
+                      type="text"
+                      value={tempSchoolInfo.taluka}
+                      onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, taluka: e.target.value })}
+                      placeholder="उदा. तासगाव"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      जिल्हा (Jilla)
+                    </label>
+                    <input
+                      type="text"
+                      value={tempSchoolInfo.jilha}
+                      onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, jilha: e.target.value })}
+                      placeholder="उदा. सांगली"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      वर्ग शिक्षकाचे नाव (Class Teacher Name)
+                    </label>
+                    <input
+                      type="text"
+                      value={tempSchoolInfo.teacherName}
+                      onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, teacherName: e.target.value })}
+                      placeholder="उदा. श्री. आर. के. पाटील"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      मुख्याध्यापकाचे नाव (Headmaster)
+                    </label>
+                    <input
+                      type="text"
+                      value={tempSchoolInfo.headmasterName}
+                      onChange={(e) => setTempSchoolInfo({ ...tempSchoolInfo, headmasterName: e.target.value })}
+                      placeholder="उदा. श्री. एस. व्ही. जाधव"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-800 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const targetId = user?.uid || profile?.id || "guest";
+                      localStorage.setItem(`qp_school_prompted_${targetId}`, "true");
+                      setShowSchoolModal(false);
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-xs sm:text-sm transition-all cursor-pointer"
+                  >
+                    रद्द करा / नंतर भरा
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingSchool}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-md flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isSavingSchool ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        <span>जतन होत आहे...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="size-4" />
+                        <span>जतन करा (Save)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* ACTIVE QUESTION PAPER DOCUMENT VIEWER & EDITOR */}
+          {activePaper ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
+                <button
+                  onClick={() => setActivePaper(null)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  <ChevronLeft className="size-4" />
+                  <span>सर्व प्रश्नपत्रिका यादी (Back)</span>
+                </button>
+
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                  <span className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl border border-blue-200">
+                    {activePaper.title}
+                  </span>
+                </div>
+              </div>
+
+              {isWordPaper(activePaper) ? (
+                <div className="bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
+                  <WordQuestionPaperEditor
+                    fileUrl={activePaper.wordFileUrl || activePaper.fileUrl}
+                    paperTitle={`${activePaper.title} — ${activePaper.class} (${activePaper.examTypeLabel || activePaper.examType})`}
+                    paperId={activePaper.id}
+                    subject={activePaper.subject || selectedSubject}
+                    userId={user?.uid || "guest_teacher"}
+                    userRole={profile?.role || "teacher"}
+                    schoolName={schoolInfo.schoolName}
+                    kendra={schoolInfo.kendra}
+                    taluka={schoolInfo.taluka}
+                    jilha={schoolInfo.jilha}
+                    teacherName={schoolInfo.teacherName}
+                    headmasterName={schoolInfo.headmasterName}
+                    onClose={() => setActivePaper(null)}
+                  />
+                </div>
+              ) : activePaper.fileUrl ? (
+                <DocumentEditorViewer
+                  documentId={activePaper.id}
+                  fileUrl={activePaper.fileUrl}
+                  fileName={activePaper.fileName}
+                  wordFileUrl={activePaper.wordFileUrl}
+                  wordFileName={activePaper.wordFileName}
+                  documentType="question_paper"
+                  title={`${activePaper.title} — ${activePaper.class} (${activePaper.examTypeLabel || activePaper.examType})`}
                   userId={user?.uid || "guest_teacher"}
                   userRole={profile?.role || "teacher"}
+                  userName={profile?.fullName || "शिक्षक"}
                   schoolName={schoolInfo.schoolName}
                   kendra={schoolInfo.kendra}
                   taluka={schoolInfo.taluka}
                   jilha={schoolInfo.jilha}
                   teacherName={schoolInfo.teacherName}
                   headmasterName={schoolInfo.headmasterName}
-                  onClose={() => setActivePaper(null)}
+                  canEdit={true}
+                  onBack={() => setActivePaper(null)}
+                  metadataBadge={
+                    <div className="flex items-center gap-2 text-xs font-bold text-indigo-300">
+                      <span>{activePaper.examTypeLabel || activePaper.examType}</span>
+                      <span>•</span>
+                      <span>इयत्ता: {activePaper.class}</span>
+                      <span>•</span>
+                      <span>विषय: {activePaper.subject}</span>
+                      <span>•</span>
+                      <span>गुण: {activePaper.totalMarks}</span>
+                    </div>
+                  }
                 />
-              </div>
-            ) : activePaper.fileUrl ? (
-              <DocumentEditorViewer
-                documentId={activePaper.id}
-                fileUrl={activePaper.fileUrl}
-                fileName={activePaper.fileName}
-                wordFileUrl={activePaper.wordFileUrl}
-                wordFileName={activePaper.wordFileName}
-                documentType="question_paper"
-                title={`${activePaper.title} — ${activePaper.class} (${activePaper.examTypeLabel || activePaper.examType})`}
-                userId={user?.uid || "guest_teacher"}
-                userRole={profile?.role || "teacher"}
-                userName={profile?.fullName || "शिक्षक"}
-                schoolName={schoolInfo.schoolName}
-                kendra={schoolInfo.kendra}
-                taluka={schoolInfo.taluka}
-                jilha={schoolInfo.jilha}
-                teacherName={schoolInfo.teacherName}
-                headmasterName={schoolInfo.headmasterName}
-                canEdit={true}
-                onBack={() => setActivePaper(null)}
-                metadataBadge={
-                  <div className="flex items-center gap-2 text-xs font-bold text-indigo-300">
-                    <span>{activePaper.examTypeLabel || activePaper.examType}</span>
-                    <span>•</span>
-                    <span>इयत्ता: {activePaper.class}</span>
-                    <span>•</span>
-                    <span>विषय: {activePaper.subject}</span>
-                    <span>•</span>
-                    <span>गुण: {activePaper.totalMarks}</span>
-                  </div>
-                }
-              />
-            ) : (
-              <QuestionPaperTemplate
-                paper={activePaper}
-                userId={user?.uid || "guest_teacher"}
-                userRole={profile?.role || "teacher"}
-                userName={profile?.fullName || "शिक्षक"}
-                canEdit={true}
-                onBack={() => setActivePaper(null)}
-              />
-            )}
-          </div>
-        ) : (
-          /* STEPPING SELECTION WORKFLOW */
-          <div className="space-y-6">
+              ) : (
+                <QuestionPaperTemplate
+                  paper={activePaper}
+                  userId={user?.uid || "guest_teacher"}
+                  userRole={profile?.role || "teacher"}
+                  userName={profile?.fullName || "शिक्षक"}
+                  canEdit={true}
+                  onBack={() => setActivePaper(null)}
+                />
+              )}
+            </div>
+          ) : (
+            /* STEPPING SELECTION WORKFLOW */
+            <div className="space-y-6">
 
 
-            {/* STEP 1: MEDIUM */}
-            {step === "medium" && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-800">
-                    पायरी १: माध्यम निवडा (Select Medium)
-                  </h2>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {MEDIUM_OPTIONS.map((med) => (
-                    <button
-                      key={med.id}
-                      onClick={() => {
-                        setSelectedMedium(med.id);
-                        setStep("class");
-                      }}
-                      className={`p-8 rounded-3xl text-left transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-xl relative overflow-hidden ${
-                        selectedMedium === med.id
-                          ? "bg-gradient-to-br " + med.color + " text-white border-transparent scale-102"
-                          : "bg-white text-slate-800 border-slate-200 hover:border-amber-400"
-                      }`}
-                    >
-                      <Languages className={`size-10 mb-4 ${selectedMedium === med.id ? "text-white" : "text-amber-600"}`} />
-                      <div className="text-2xl font-black">{med.labelMr}</div>
-                      <div className={`text-sm font-semibold mt-1 ${selectedMedium === med.id ? "text-white/80" : "text-slate-400"}`}>
-                        {med.labelEn}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* STEP 2: CLASS */}
-            {step === "class" && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
+              {/* STEP 1: MEDIUM */}
+              {step === "medium" && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                  <div className="flex items-center justify-between">
                     <h2 className="text-xl sm:text-2xl font-black text-slate-800">
-                      पायरी २: इयत्ता निवडा (Select Class)
+                      पायरी १: माध्यम निवडा (Select Medium)
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                      माध्यम: <span className="font-bold text-amber-700">{currentMediumObj?.labelMr}</span>
-                    </p>
                   </div>
-                  <button
-                    onClick={() => setStep("medium")}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 cursor-pointer"
-                  >
-                    <ChevronLeft className="size-4" /> माध्यम बदला
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {CLASS_OPTIONS.map((cls, idx) => {
-                    const isSelected = selectedClass === cls.id;
-                    const grad = GRADIENTS[idx % GRADIENTS.length];
-                    return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {MEDIUM_OPTIONS.map((med) => (
                       <button
-                        key={cls.id}
+                        key={med.id}
                         onClick={() => {
-                          setSelectedClass(cls.id);
-                          setSelectedSubject("");
-                          setStep("list");
+                          setSelectedMedium(med.id);
+                          setStep("class");
                         }}
-                        className={`p-6 rounded-2xl text-center transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-lg ${
-                          isSelected
-                            ? "bg-gradient-to-br " + grad.bg + " text-white border-transparent scale-102"
-                            : "bg-white text-slate-800 border-slate-200 hover:border-blue-400 hover:bg-blue-50/20"
-                        }`}
+                        className={`p-8 rounded-3xl text-left transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-xl relative overflow-hidden ${selectedMedium === med.id
+                            ? "bg-gradient-to-br " + med.color + " text-white border-transparent scale-102"
+                            : "bg-white text-slate-800 border-slate-200 hover:border-amber-400"
+                          }`}
                       >
-                        <GraduationCap className={`size-8 mx-auto mb-2 ${isSelected ? "text-white" : "text-blue-600"}`} />
-                        <div className="font-black text-base sm:text-lg">{cls.mr}</div>
-                        <div className={`text-xs font-semibold ${isSelected ? "text-white/80" : "text-slate-400"}`}>
-                          {cls.en}
+                        <Languages className={`size-10 mb-4 ${selectedMedium === med.id ? "text-white" : "text-amber-600"}`} />
+                        <div className="text-2xl font-black">{med.labelMr}</div>
+                        <div className={`text-sm font-semibold mt-1 ${selectedMedium === med.id ? "text-white/80" : "text-slate-400"}`}>
+                          {med.labelEn}
                         </div>
                       </button>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
+                    ))}
+                  </div>
+                </motion.div>
+              )}
 
-            {/* STEP 3: QUESTION PAPER LIST */}
-            {step === "list" && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                {/* 4 EXAM TABS: चाचणी १ | प्रथम सत्र | चाचणी २ | द्वितीय सत्र */}
-                <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-black text-xs shadow-xs">
-                        ★
-                      </div>
-                      <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
-                        परीक्षा निवडा (Select Exam):
-                      </h3>
+              {/* STEP 2: CLASS */}
+              {step === "class" && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-black text-slate-800">
+                        पायरी २: इयत्ता निवडा (Select Class)
+                      </h2>
+                      <p className="text-xs sm:text-sm text-slate-500 font-medium">
+                        माध्यम: <span className="font-bold text-amber-700">{currentMediumObj?.labelMr}</span>
+                      </p>
                     </div>
-                    <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
-                      सध्याची निवड: <strong className="text-indigo-950 font-black">{EXAM_TABS.find(t => t.id === selectedExamTab)?.labelMr || "चाचणी १"}</strong>
-                    </span>
+                    <button
+                      onClick={() => setStep("medium")}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                    >
+                      <ChevronLeft className="size-4" /> माध्यम बदला
+                    </button>
                   </div>
 
-                  {/* The 4 Exam Tabs Grid */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3.5">
-                    {EXAM_TABS.map((tab, idx) => {
-                      const isActive = selectedExamTab === tab.id;
-                      const IconComponent = tab.icon;
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {CLASS_OPTIONS.map((cls, idx) => {
+                      const isSelected = selectedClass === cls.id;
+                      const grad = GRADIENTS[idx % GRADIENTS.length];
                       return (
                         <button
-                          key={tab.id}
+                          key={cls.id}
                           onClick={() => {
-                            setSelectedExamTab(tab.id);
-                            setFilterExamType(tab.id);
+                            setSelectedClass(cls.id);
+                            setSelectedSubject("");
+                            setStep("list");
                           }}
-                          className={`relative p-2.5 sm:p-4 rounded-2xl text-left transition-all duration-200 border-2 cursor-pointer flex items-center gap-2 sm:gap-3 shadow-xs ${
-                            isActive
-                              ? `bg-gradient-to-r ${tab.color} text-white border-transparent shadow-md scale-[1.02]`
-                              : "bg-slate-50/70 hover:bg-white text-slate-800 border-slate-200 hover:border-indigo-300 hover:shadow-xs"
-                          }`}
-                        >
-                          <div
-                            className={`size-8 sm:size-10 rounded-xl flex items-center justify-center shrink-0 ${
-                              isActive ? "bg-white/20 text-white" : "bg-white text-slate-700 border border-slate-200 shadow-2xs"
+                          className={`p-6 rounded-2xl text-center transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-lg ${isSelected
+                              ? "bg-gradient-to-br " + grad.bg + " text-white border-transparent scale-102"
+                              : "bg-white text-slate-800 border-slate-200 hover:border-blue-400 hover:bg-blue-50/20"
                             }`}
-                          >
-                            <IconComponent className="size-4 sm:size-5" />
+                        >
+                          <GraduationCap className={`size-8 mx-auto mb-2 ${isSelected ? "text-white" : "text-blue-600"}`} />
+                          <div className="font-black text-base sm:text-lg">{cls.mr}</div>
+                          <div className={`text-xs font-semibold ${isSelected ? "text-white/80" : "text-slate-400"}`}>
+                            {cls.en}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1 sm:gap-1.5">
-                              <span
-                                className={`text-[9px] sm:text-[10px] font-black px-1 sm:px-1.5 py-0.5 rounded-md shrink-0 ${
-                                  isActive ? "bg-white/25 text-white" : "bg-slate-200 text-slate-700"
-                                }`}
-                              >
-                                {idx + 1}
-                              </span>
-                              <span className="font-black text-xs sm:text-base leading-tight whitespace-nowrap">
-                                {tab.labelMr}
-                              </span>
-                            </div>
-                            <div className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 truncate ${isActive ? "text-white/80" : "text-slate-400"}`}>
-                              {tab.labelEn}
-                            </div>
-                          </div>
-                          {isActive && (
-                            <span className="size-1.5 sm:size-2 rounded-full bg-white shadow-xs shrink-0" />
-                          )}
                         </button>
                       );
                     })}
                   </div>
-                </div>
+                </motion.div>
+              )}
 
-                {/* Context Header & Filter Bar */}
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
-                    <span className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 font-bold">
-                      {currentMediumObj?.labelMr}
-                    </span>
-                    <span className="text-slate-400">/</span>
-                    <span className="px-3 py-1 rounded-lg bg-indigo-100 text-indigo-800 font-bold">
-                      {currentClassObj?.mr}
-                    </span>
-                    <span className="text-slate-400">/</span>
-                    <span className="px-3 py-1 rounded-lg bg-purple-100 text-purple-800 font-bold">
-                      सर्व विषय एकत्रित प्रश्नपत्रिका (All Subjects)
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
-                    {/* Exam Type Filter */}
-                    <select
-                      value={filterExamType}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setFilterExamType(val);
-                        if (EXAM_TABS.some((t) => t.id === val)) {
-                          setSelectedExamTab(val);
-                        }
-                      }}
-                      className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-blue-500 cursor-pointer"
-                    >
-                      {EXAM_TYPES.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    {/* Search Input */}
-                    <div className="relative flex-1 sm:w-56">
-                      <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="प्रश्नपत्रिका शोधा..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500"
-                      />
-                    </div>
-
-                    <button
-                      onClick={() => setStep("class")}
-                      className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer flex items-center gap-1.5"
-                    >
-                      <ChevronLeft className="size-3.5" />
-                      <span>इयत्ता बदला</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* List Cards */}
-                {loading ? (
-                  <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
-                    <Loader2 className="size-8 animate-spin text-blue-600 mx-auto mb-2" />
-                    <p className="text-xs font-bold text-slate-500">प्रश्नपत्रिका लोड होत आहेत...</p>
-                  </div>
-                ) : currentSubjectPapers.length === 0 ? (
-                  <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-3">
-                    <div className="size-16 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
-                      <FileText className="size-8" />
-                    </div>
-                    <h4 className="text-base font-bold text-slate-800">
-                      कोणतीही प्रश्नपत्रिका उपलब्ध नाही
-                    </h4>
-                    <p className="text-xs text-slate-500 max-w-md mx-auto">
-                      {currentMediumObj?.labelMr} • {currentClassObj?.mr} साठी ॲडमिनने अद्याप प्रश्नपत्रिका अपलोड केलेली नाही.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {currentSubjectPapers.map((paper) => (
-                      <div
-                        key={paper.id}
-                        className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-blue-400 shadow-sm hover:shadow-lg transition-all space-y-4 flex flex-col justify-between"
-                      >
-                        <div className="space-y-2.5">
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">
-                                <Award className="size-3" />
-                                {paper.examTypeLabel || paper.examType}
-                              </span>
-                              <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
-                                एकूण गुण: {paper.totalMarks}
-                              </span>
-                            </div>
-                          </div>
-
-                          <h3 className="text-lg font-black text-slate-900 leading-snug">
-                            {paper.title}
-                          </h3>
-
-                          {paper.description && (
-                            <p className="text-xs text-slate-600 font-medium line-clamp-3 leading-relaxed">
-                              {paper.description}
-                            </p>
-                          )}
+              {/* STEP 3: QUESTION PAPER LIST */}
+              {step === "list" && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                  {/* 4 EXAM TABS: चाचणी १ | प्रथम सत्र | चाचणी २ | द्वितीय सत्र */}
+                  <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-black text-xs shadow-xs">
+                          ★
                         </div>
+                        <h3 className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                          परीक्षा निवडा (Select Exam):
+                        </h3>
+                      </div>
+                      <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+                        सध्याची निवड: <strong className="text-indigo-950 font-black">{EXAM_TABS.find(t => t.id === selectedExamTab)?.labelMr || "चाचणी १"}</strong>
+                      </span>
+                    </div>
 
-                        {/* Interactive Buttons */}
-                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 truncate max-w-[200px]">
-                            <FileText className="size-4 text-blue-600 shrink-0" />
-                            <span className="truncate">{paper.fileName || "प्रश्नपत्रिका PDF"}</span>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              onClick={() => {
-                                setActivePaper(paper);
-                              }}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                    {/* The 4 Exam Tabs Grid */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3.5">
+                      {EXAM_TABS.map((tab, idx) => {
+                        const isActive = selectedExamTab === tab.id;
+                        const IconComponent = tab.icon;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => {
+                              setSelectedExamTab(tab.id);
+                              setFilterExamType(tab.id);
+                            }}
+                            className={`relative p-2.5 sm:p-4 rounded-2xl text-left transition-all duration-200 border-2 cursor-pointer flex items-center gap-2 sm:gap-3 shadow-xs ${isActive
+                                ? `bg-gradient-to-r ${tab.color} text-white border-transparent shadow-md scale-[1.02]`
+                                : "bg-slate-50/70 hover:bg-white text-slate-800 border-slate-200 hover:border-indigo-300 hover:shadow-xs"
+                              }`}
+                          >
+                            <div
+                              className={`size-8 sm:size-10 rounded-xl flex items-center justify-center shrink-0 ${isActive ? "bg-white/20 text-white" : "bg-white text-slate-700 border border-slate-200 shadow-2xs"
+                                }`}
                             >
-                              <Eye className="size-3.5" />
-                              <span>पहा व संपादन करा</span>
-                            </button>
-                            {paper.fileUrl && (
-                              <a
-                                href={paper.fileUrl}
-                                download={paper.fileName || "question-paper.pdf"}
-                                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all"
-                                title="मूळ PDF डाउनलोड करा"
-                              >
-                                <Download className="size-4" />
-                              </a>
+                              <IconComponent className="size-4 sm:size-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1 sm:gap-1.5">
+                                <span
+                                  className={`text-[9px] sm:text-[10px] font-black px-1 sm:px-1.5 py-0.5 rounded-md shrink-0 ${isActive ? "bg-white/25 text-white" : "bg-slate-200 text-slate-700"
+                                    }`}
+                                >
+                                  {idx + 1}
+                                </span>
+                                <span className="font-black text-xs sm:text-base leading-tight whitespace-nowrap">
+                                  {tab.labelMr}
+                                </span>
+                              </div>
+                              <div className={`text-[10px] sm:text-[11px] font-semibold mt-0.5 truncate ${isActive ? "text-white/80" : "text-slate-400"}`}>
+                                {tab.labelEn}
+                              </div>
+                            </div>
+                            {isActive && (
+                              <span className="size-1.5 sm:size-2 rounded-full bg-white shadow-xs shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Context Header & Filter Bar */}
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
+                      <span className="px-3 py-1 rounded-lg bg-blue-100 text-blue-800 font-bold">
+                        {currentMediumObj?.labelMr}
+                      </span>
+                      <span className="text-slate-400">/</span>
+                      <span className="px-3 py-1 rounded-lg bg-indigo-100 text-indigo-800 font-bold">
+                        {currentClassObj?.mr}
+                      </span>
+                      <span className="text-slate-400">/</span>
+                      <span className="px-3 py-1 rounded-lg bg-purple-100 text-purple-800 font-bold">
+                        सर्व विषय एकत्रित प्रश्नपत्रिका (All Subjects)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+                      {/* Exam Type Filter */}
+                      <select
+                        value={filterExamType}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFilterExamType(val);
+                          if (EXAM_TABS.some((t) => t.id === val)) {
+                            setSelectedExamTab(val);
+                          }
+                        }}
+                        className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-blue-500 cursor-pointer"
+                      >
+                        {EXAM_TYPES.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Search Input */}
+                      <div className="relative flex-1 sm:w-56">
+                        <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="प्रश्नपत्रिका शोधा..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500"
+                        />
+                      </div>
+
+                      <button
+                        onClick={() => setStep("class")}
+                        className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer flex items-center gap-1.5"
+                      >
+                        <ChevronLeft className="size-3.5" />
+                        <span>इयत्ता बदला</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* List Cards */}
+                  {loading ? (
+                    <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
+                      <Loader2 className="size-8 animate-spin text-blue-600 mx-auto mb-2" />
+                      <p className="text-xs font-bold text-slate-500">प्रश्नपत्रिका लोड होत आहेत...</p>
+                    </div>
+                  ) : currentSubjectPapers.length === 0 ? (
+                    <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-3">
+                      <div className="size-16 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+                        <FileText className="size-8" />
+                      </div>
+                      <h4 className="text-base font-bold text-slate-800">
+                        कोणतीही प्रश्नपत्रिका उपलब्ध नाही
+                      </h4>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto">
+                        {currentMediumObj?.labelMr} • {currentClassObj?.mr} साठी ॲडमिनने अद्याप प्रश्नपत्रिका अपलोड केलेली नाही.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {currentSubjectPapers.map((paper) => (
+                        <div
+                          key={paper.id}
+                          onMouseEnter={() => {
+                            const u = paper.wordFileUrl || paper.fileUrl;
+                            if (u) fetchBinaryFile(u).catch(() => {});
+                          }}
+                          onTouchStart={() => {
+                            const u = paper.wordFileUrl || paper.fileUrl;
+                            if (u) fetchBinaryFile(u).catch(() => {});
+                          }}
+                          className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-blue-400 shadow-sm hover:shadow-lg transition-all space-y-4 flex flex-col justify-between"
+                        >
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold">
+                                  <Award className="size-3" />
+                                  {paper.examTypeLabel || paper.examType}
+                                </span>
+                                <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold">
+                                  एकूण गुण: {paper.totalMarks}
+                                </span>
+                              </div>
+                            </div>
+
+                            <h3 className="text-lg font-black text-slate-900 leading-snug">
+                              {paper.title}
+                            </h3>
+
+                            {paper.description && (
+                              <p className="text-xs text-slate-600 font-medium line-clamp-3 leading-relaxed">
+                                {paper.description}
+                              </p>
                             )}
                           </div>
+
+                          {/* Interactive Buttons */}
+                          <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 truncate max-w-[200px]">
+                              <FileText className="size-4 text-blue-600 shrink-0" />
+                              <span className="truncate">{paper.fileName || "प्रश्नपत्रिका PDF"}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => {
+                                  setActivePaper(paper);
+                                }}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                              >
+                                <Eye className="size-3.5" />
+                                <span>पहा व संपादन करा</span>
+                              </button>
+                              {paper.fileUrl && (
+                                <a
+                                  href={paper.fileUrl}
+                                  download={paper.fileName || "question-paper.pdf"}
+                                  className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all"
+                                  title="मूळ PDF डाउनलोड करा"
+                                >
+                                  <Download className="size-4" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </div>
-        )}
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </div>
+          )}
         </ModulePaywall>
       </main>
     </div>

@@ -93,6 +93,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const styleContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadCounter, setReloadCounter] = useState(0);
@@ -215,6 +216,9 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       try {
         setLoading(true);
         setLoadError(null);
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo(0, 0);
+        }
         setLoadingMsg(
           documentType === "homework"
             ? "Word गृहपाठ वाचला जात आहे..."
@@ -506,7 +510,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target?.closest?.('[data-field="school-name-text"], [data-field="school-name"], [data-field="total-marks-box"], [data-field="date-text"], [data-field="exam-title-text"], [data-field="class-text"], [data-field="subject-text"]')) {
+      if (target?.closest?.('[data-field="school-name-text"], [data-field="school-name"], [data-field="total-marks-box"], [data-field="date-text"], [data-field="exam-title-text"], [data-field="class-text"], [data-field="subject-text"], [data-field="roll-no-box"], [data-field="division-box"], [data-field="obtained-marks-box"]')) {
         if (e.key === "Enter") {
           e.preventDefault();
         }
@@ -730,6 +734,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
       if (!hasHeaderBox) {
         page.querySelectorAll('.qp-unified-header-box').forEach((el) => el.remove());
+        page.querySelectorAll('.qp-header-bg-mask').forEach((el) => el.remove());
         page.querySelectorAll('.qp-header-marks-block').forEach((el) => el.remove());
         page.querySelectorAll('.header-dots-mask').forEach((el) => el.remove());
         page.querySelectorAll('.header-orphan-boxes-mask').forEach((el) => el.remove());
@@ -883,7 +888,14 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           if (m && m[1]) totalMarks = m[1].trim();
         }
         if (!totalMarks) {
-          totalMarks = (classStd.includes("३") || classStd.includes("४") || paperTitle.includes("तिसरी") || paperTitle.includes("चौथी") || paperTitle.includes("संकलित")) ? "४०" : "२०";
+          const combined = (classStd + " " + paperTitle).toLowerCase();
+          if (/पाचवी|सहावी|सातवी|आठवी|५|६|७|८|5th|6th|7th|8th/i.test(combined)) {
+            totalMarks = "५०";
+          } else if (/तिसरी|चौथी|३|४|3rd|4th/i.test(combined)) {
+            totalMarks = "४०";
+          } else {
+            totalMarks = "२०";
+          }
         }
       }
       if (totalMarks === "४") totalMarks = "४०";
@@ -924,14 +936,33 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         ? `<div class="qp-sub-location" style="display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; gap: 8px; flex-shrink: 0; font-size: inherit; font-weight: 700; color: #0f172a; white-space: nowrap;">${pageSubParts.join('<span style="color: #94a3b8; font-weight: normal; margin: 0 4px; font-size: inherit;">|</span>')}</div>`
         : "";
 
-      // Step G: Remove all stray raw shapes inside header box region (< 25.5% and not Question 1)
+      // Check if this paper specifically uses the tall evaluation grid template (Class 1 & Class 2 primary papers)
+      const combinedClassContext = (classStd + " " + (paperTitle || "") + " " + pageText).toLowerCase();
+      const isClass1or2 =
+        /इयत्ता\s*[-_]?\s*(?:१|२|1|2|पहिली|दुसरी)\b/i.test(combinedClassContext) ||
+        /\b(?:std|class)\s*[-_]?\s*[12]\b/i.test(combinedClassContext) ||
+        /\b(?:1st|2nd)\b/i.test(combinedClassContext) ||
+        /पहिली|दुसरी|१ली|२री|१ ली|२ री/i.test(combinedClassContext);
+      const isExplicitHigherClass =
+        /इयत्ता\s*[-_]?\s*(?:३|४|५|६|७|८|3|4|5|6|7|8|तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी)\b/i.test(combinedClassContext) ||
+        /\b(?:std|class)\s*[-_]?\s*[3-8]\b/i.test(combinedClassContext) ||
+        /\b(?:3rd|4th|5th|6th|7th|8th)\b/i.test(combinedClassContext) ||
+        /तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी|३री|४थी|५वी|६वी|७वी|८वी/i.test(combinedClassContext);
+      const pageHasEvalGridAttr = page.getAttribute("data-has-eval-grid");
+      const isEvalGrid = pageHasEvalGridAttr === "true" || (isClass1or2 && !isExplicitHigherClass && pageHasEvalGridAttr !== "false");
+
+      // Step G: Remove all stray raw shapes inside header box region
       const allShapes = Array.from(page.querySelectorAll<HTMLElement>('.vml-shape-text'));
+      const headerThreshold = 26.2;
       allShapes.forEach((s) => {
         if (s.closest('.qp-unified-header-box')) return;
         const sTop = parseFloat(s.style.top || "100");
         const t = (s.textContent || "").trim();
-        const isQ = t.includes("प्रश्न") || t.includes("प्र.") || /q(?:ue)?\.?\s*[0-9]/i.test(t);
-        if (sTop < 25.5 && !isQ) {
+        const isQ =
+          /^(?:प्रश्न|प्र\.|q(?:ue)?\.?)\s*[०-९0-9]+/i.test(t) ||
+          /^[०-९0-9]+\s*[\)\.]\s*\S+/.test(t) ||
+          (t.length > 20 && (t.includes("प्रश्न") || t.includes("प्र.")));
+        if (sTop < headerThreshold && !isQ) {
           s.style.display = "none";
           s.style.visibility = "hidden";
           s.style.opacity = "0";
@@ -945,7 +976,22 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       page.querySelectorAll('.header-marks-corner-mask').forEach((el) => el.remove());
       page.querySelectorAll('.qp-header-marks-block').forEach((el) => el.remove());
 
-      // Step H: Create or Update .qp-unified-header-box (Single unified logic for ALL classes)
+      // Step G2: Ensure solid white background mask behind header box to eliminate background template double-borders & columns
+      let bgMask = page.querySelector<HTMLElement>('.qp-header-bg-mask');
+      if (!bgMask) {
+        bgMask = document.createElement("div");
+        bgMask.className = "qp-header-bg-mask";
+        page.insertBefore(bgMask, page.querySelector('.vml-shapes-layer') || page.firstChild);
+      }
+      bgMask.style.cssText = "position: absolute; left: 0; top: 0; width: 100%; height: 26.2%; background: #ffffff !important; z-index: 2; pointer-events: none;";
+
+      // Read dynamic header geometry detected from the document
+      const docHeaderTop = page.getAttribute("data-header-top-pct");
+      const docHeaderHeight = page.getAttribute("data-header-height-pct");
+      const docHeaderLeft = page.getAttribute("data-header-left-pct");
+      const docHeaderWidth = page.getAttribute("data-header-width-pct");
+
+      // Step H: Create or Update .qp-unified-header-box
       let headerBox = page.querySelector<HTMLElement>('.qp-unified-header-box');
       if (!headerBox) {
         headerBox = document.createElement("div");
@@ -954,6 +1000,15 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       }
       headerBox.className = "qp-unified-header-box";
       headerBox.setAttribute("data-field", "qp-unified-header-box");
+      headerBox.setAttribute("data-header-variant", isEvalGrid ? "eval-grid" : "standard");
+
+      // Apply dynamic header box coordinates detected from template geometry
+      if (docHeaderTop && docHeaderHeight && docHeaderLeft && docHeaderWidth) {
+        headerBox.style.setProperty("--header-top", `${docHeaderTop}%`);
+        headerBox.style.setProperty("--header-height", `${docHeaderHeight}%`);
+        headerBox.style.setProperty("--header-left", `${docHeaderLeft}%`);
+        headerBox.style.setProperty("--header-width", `${docHeaderWidth}%`);
+      }
 
       const schoolLen = (displaySchool || "").length;
       const schoolFontSize = schoolLen > 55
@@ -980,7 +1035,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           <span contenteditable="true" data-field="exam-title-text" style="font-size:clamp(8px,2.25cqw,13.5pt);font-weight:800;color:#0f172a;letter-spacing:0.2px;outline:none;cursor:text;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;width:100%;">${escapeHtmlStr(examTitle)}</span>
         </div>
 
-        <!-- Row 3: Class | Subject | Roll No -->
+        ${isEvalGrid ? `
+        <!-- Row 3: Class | Subject | Roll No (Eval Grid) -->
         <div style="width:100%;display:flex;align-items:center;justify-content:space-between;overflow:hidden;gap:4px;">
           <div style="flex:0 1 auto;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">
             <span contenteditable="true" data-field="class-text" style="outline:none;cursor:text;">${escapeHtmlStr(classStd)}</span>
@@ -990,11 +1046,11 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           </div>
           <div style="flex:0 0 auto;display:flex;align-items:center;gap:clamp(2px,0.6cqw,5px);white-space:nowrap;">
             <span style="font-size:clamp(7px,1.7cqw,10.5pt);font-weight:700;color:#0f172a;white-space:nowrap;">हजेरी क्रमांक -</span>
-            <div style="width:clamp(20px,4.4cqw,32px);height:clamp(13px,3.0cqw,20px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;flex-shrink:0;"></div>
+            <div contenteditable="true" data-field="roll-no-box" style="width:clamp(20px,4.4cqw,32px);height:clamp(13px,3.0cqw,20px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;flex-shrink:0;cursor:text;outline:none;"></div>
           </div>
         </div>
 
-        <!-- Row 4: Student Name | Total Marks -->
+        <!-- Row 4: Student Name | Total Marks (Eval Grid) -->
         <div style="width:100%;display:flex;align-items:center;justify-content:space-between;overflow:hidden;gap:4px;">
           <div style="display:flex;align-items:center;flex:1 1 auto;min-width:0;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;">
             <span style="flex-shrink:0;">विद्यार्थ्याचे नाव :- </span>
@@ -1006,16 +1062,71 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           </div>
         </div>
 
-        <!-- Row 5: Date | Obtained Marks -->
+        <!-- Row 5: Date | Obtained Marks (Eval Grid) -->
         <div style="width:100%;display:flex;align-items:center;justify-content:space-between;overflow:hidden;gap:4px;">
           <div data-field="exam-date" style="flex:0 0 auto;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
             <span>दि. </span><span contenteditable="true" data-field="date-text" style="outline:none;cursor:text;">${escapeHtmlStr(displayDate)}</span>
           </div>
           <div style="flex:0 0 auto;display:flex;align-items:center;gap:clamp(2px,0.6cqw,5px);white-space:nowrap;">
             <span style="font-size:clamp(7px,1.7cqw,10.5pt);font-weight:700;color:#0f172a;white-space:nowrap;">मिळालेले गुण -</span>
-            <div style="width:clamp(20px,4.4cqw,32px);height:clamp(13px,3.0cqw,20px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;flex-shrink:0;"></div>
+            <div contenteditable="true" data-field="obtained-marks-box" style="width:clamp(20px,4.4cqw,32px);height:clamp(13px,3.0cqw,20px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;flex-shrink:0;cursor:text;outline:none;"></div>
           </div>
         </div>
+        ` : `
+        <!-- Row 3: Class | Subject | Date (Standard Class 5-8) -->
+        <div style="width:100%;display:flex;align-items:center;justify-content:space-between;overflow:hidden;gap:6px;">
+          <div style="flex:0 1 auto;font-size:clamp(8px,1.85cqw,11.5pt);font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">
+            <span contenteditable="true" data-field="class-text" style="outline:none;cursor:text;">${escapeHtmlStr(classStd)}</span>
+          </div>
+          <div style="flex:1 1 auto;font-size:clamp(8.5px,2.0cqw,12.5pt);font-weight:800;color:#0f172a;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;min-width:0;">
+            <span contenteditable="true" data-field="subject-text" style="outline:none;cursor:text;">${escapeHtmlStr(displaySubject)}</span>
+          </div>
+          <div data-field="exam-date" style="flex:0 0 auto;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <span>दि. </span><span contenteditable="true" data-field="date-text" style="outline:none;cursor:text;">${escapeHtmlStr(displayDate)}</span>
+          </div>
+        </div>
+
+        <!-- Row 4: Student Name (Standard Class 5-8) -->
+        <div style="width:100%;display:flex;align-items:center;overflow:hidden;gap:4px;">
+          <div style="display:flex;align-items:center;width:100%;min-width:0;font-size:clamp(8px,1.85cqw,11.5pt);font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;">
+            <span style="flex-shrink:0;">विद्यार्थ्याचे नाव :- </span>
+            <span style="display:inline-block;flex:1;border-bottom:1.5px solid #0f172a;margin-left:4px;height:1em;vertical-align:middle;min-width:40px;"></span>
+          </div>
+        </div>
+
+        <!-- Row 5: Roll No | Division | Teacher Signature | Total Marks | Obtained Marks (Standard Class 5-8) -->
+        <div style="width:100%;display:flex;align-items:center;justify-content:space-between;overflow:hidden;gap:clamp(3px,0.8cqw,8px);flex-wrap:nowrap;">
+          <!-- Roll No -->
+          <div style="flex:0 0 auto;display:flex;align-items:center;gap:3px;white-space:nowrap;">
+            <span style="font-size:clamp(7px,1.6cqw,10pt);font-weight:700;color:#0f172a;white-space:nowrap;">हजेरी क्रमांक -</span>
+            <div contenteditable="true" data-field="roll-no-box" style="width:clamp(18px,3.8cqw,28px);height:clamp(13px,3.0cqw,20px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;flex-shrink:0;cursor:text;outline:none;"></div>
+          </div>
+
+          <!-- Division -->
+          <div style="flex:0 0 auto;display:flex;align-items:center;gap:3px;white-space:nowrap;">
+            <span style="font-size:clamp(7px,1.6cqw,10pt);font-weight:700;color:#0f172a;white-space:nowrap;">तुकडी -</span>
+            <div contenteditable="true" data-field="division-box" style="width:clamp(16px,3.2cqw,24px);height:clamp(13px,3.0cqw,20px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;flex-shrink:0;cursor:text;outline:none;"></div>
+          </div>
+
+          <!-- Teacher Signature -->
+          <div style="flex:0 1 auto;display:flex;align-items:center;gap:2px;white-space:nowrap;min-width:0;overflow:hidden;">
+            <span style="font-size:clamp(6.5px,1.5cqw,9.5pt);font-weight:700;color:#0f172a;white-space:nowrap;flex-shrink:0;">शिक्षकांची स्वाक्षरी -</span>
+            <span style="display:inline-block;width:clamp(25px,6cqw,60px);border-bottom:1.5px dotted #0f172a;margin-left:2px;height:1em;vertical-align:middle;flex-shrink:1;"></span>
+          </div>
+
+          <!-- Total Marks -->
+          <div style="flex:0 0 auto;display:flex;align-items:center;gap:3px;white-space:nowrap;">
+            <span style="font-size:clamp(7px,1.6cqw,10pt);font-weight:700;color:#0f172a;white-space:nowrap;">एकूण गुण -</span>
+            <div contenteditable="true" data-field="total-marks-box" title="एकूण गुण संपादित करा" style="width:clamp(20px,4.2cqw,32px);height:clamp(13px,3.0cqw,20px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,1.85cqw,11pt);font-weight:800;color:#0f172a;flex-shrink:0;cursor:text;outline:none;">${escapeHtmlStr(totalMarks)}</div>
+          </div>
+
+          <!-- Obtained Marks -->
+          <div style="flex:0 0 auto;display:flex;align-items:center;gap:3px;white-space:nowrap;">
+            <span style="font-size:clamp(7px,1.6cqw,10pt);font-weight:700;color:#0f172a;white-space:nowrap;">मिळालेले गुण -</span>
+            <div contenteditable="true" data-field="obtained-marks-box" style="width:clamp(18px,3.8cqw,28px);height:clamp(13px,3.0cqw,20px);border:1.5px solid #0f172a;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,1.85cqw,11pt);font-weight:700;color:#0f172a;flex-shrink:0;cursor:text;outline:none;"></div>
+          </div>
+        </div>
+        `}
       `;
 
       updatedSchool = true;
@@ -1703,6 +1814,124 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     }
   };
 
+  // Helper: Renders any page element at 100% desktop A4 fidelity (794px width) in an offscreen container.
+  // This guarantees that in Android WebViews and mobile browsers, the downloaded PDF has
+  // zero text wrapping divergence, zero overlapping text, and matches desktop web exactly!
+  const renderElementToA4Canvas = async (pageEl: HTMLElement): Promise<{ canvas: HTMLCanvasElement; aspect: number }> => {
+    // 1. Determine target dimensions
+    // Standard A4 width = 595.28 pt, height = 841.89 pt.
+    // In CSS screen pixels at 96 DPI: 595.28 * 4/3 = ~794px, 841.89 * 4/3 = ~1123px.
+    let aspect = 841.89 / 595.28; // 1.4142
+    const aspectMatch = pageEl.style.aspectRatio?.match(/([0-9.]+)\s*\/\s*([0-9.]+)/);
+    if (aspectMatch) {
+      const wPt = parseFloat(aspectMatch[1]) || 595.28;
+      const hPt = parseFloat(aspectMatch[2]) || 841.89;
+      aspect = hPt / wPt;
+    }
+
+    const targetWidthPx = 794;
+    const targetHeightPx = Math.round(targetWidthPx * aspect);
+
+    // 2. Create off-screen desktop capture wrapper with fixed 794px desktop width
+    // Placed at (0, 0) with zIndex: -99999 and pointerEvents: none so Android WebView
+    // paints it inside the viewport raster tree without flickering or culling (fixes blank PDF in WebView)
+    const captureContainer = document.createElement("div");
+    captureContainer.style.position = "fixed";
+    captureContainer.style.left = "0px";
+    captureContainer.style.top = "0px";
+    captureContainer.style.width = `${targetWidthPx}px`;
+    captureContainer.style.minWidth = `${targetWidthPx}px`;
+    captureContainer.style.maxWidth = `${targetWidthPx}px`;
+    captureContainer.style.height = `${targetHeightPx}px`;
+    captureContainer.style.minHeight = `${targetHeightPx}px`;
+    captureContainer.style.maxHeight = `${targetHeightPx}px`;
+    captureContainer.style.overflow = "hidden";
+    captureContainer.style.zIndex = "-99999";
+    captureContainer.style.pointerEvents = "none";
+    captureContainer.style.background = "#ffffff";
+    captureContainer.style.boxSizing = "border-box";
+
+    // 3. Clone the element
+    const clone = pageEl.cloneNode(true) as HTMLElement;
+    clone.style.width = `${targetWidthPx}px`;
+    clone.style.minWidth = `${targetWidthPx}px`;
+    clone.style.maxWidth = `${targetWidthPx}px`;
+    clone.style.height = `${targetHeightPx}px`;
+    clone.style.minHeight = `${targetHeightPx}px`;
+    clone.style.maxHeight = `${targetHeightPx}px`;
+    clone.style.margin = "0";
+    clone.style.boxShadow = "none";
+    clone.style.borderRadius = "0px";
+    clone.style.transform = "none";
+    clone.style.boxSizing = "border-box";
+    clone.style.position = "relative";
+    clone.style.overflow = "hidden";
+
+    // 4. In clone, lock all VML shape text boxes to exact desktop pixel font sizes
+    // This prevents html2canvas in Android WebView from failing on cqw or miscomputing font scale!
+    const shapeTexts = Array.from(clone.querySelectorAll<HTMLElement>(".vml-shape-text"));
+    shapeTexts.forEach((el) => {
+      const inlineStyle = el.getAttribute("style") || "";
+      const ptMatch = inlineStyle.match(/font-size:\s*([0-9.]+)pt/i);
+      if (ptMatch) {
+        const ptVal = parseFloat(ptMatch[1]);
+        const pxVal = (ptVal * (4 / 3)).toFixed(2);
+        el.style.fontSize = `${pxVal}px`;
+      }
+    });
+
+    captureContainer.appendChild(clone);
+    document.body.appendChild(captureContainer);
+
+    try {
+      // 5. Ensure all images in clone are completely loaded
+      const cloneImages = Array.from(clone.querySelectorAll<HTMLImageElement>("img"));
+      await Promise.all(
+        cloneImages.map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((res) => {
+            img.onload = res;
+            img.onerror = res;
+          });
+        })
+      );
+
+      // Wait 2 animation frames for browser to lay out the off-screen clone
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      // 6. Capture with high-DPI desktop scale
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: targetWidthPx,
+        windowHeight: targetHeightPx,
+        width: targetWidthPx,
+        height: targetHeightPx,
+        scrollX: 0,
+        scrollY: 0,
+        x: 0,
+        y: 0,
+        onclone: (clonedDoc) => {
+          try {
+            const styleTags = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"));
+            styleTags.forEach((st) => {
+              clonedDoc.head.appendChild(st.cloneNode(true));
+            });
+          } catch (_) {}
+        },
+      });
+
+      return { canvas, aspect };
+    } finally {
+      if (captureContainer.parentNode) {
+        captureContainer.parentNode.removeChild(captureContainer);
+      }
+    }
+  };
+
   // Download as-it-is PDF
   const handleDownloadPdf = async () => {
     if (!containerRef.current) return;
@@ -1752,35 +1981,16 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       let pdf: jsPDF | null = null;
 
       if (vmlPages.length > 0 || pageElements.length > 1) {
-        // Multi-page document: capture each page individually for exact pixel layout
+        // Multi-page document: capture each page individually with exact desktop A4 fidelity
         for (let i = 0; i < pageElements.length; i++) {
           const pageEl = pageElements[i];
-
-          // Temporarily remove shadow and border radius so they don't bleed into PDF
-          const origShadow = pageEl.style.boxShadow;
-          const origRadius = pageEl.style.borderRadius;
-          pageEl.style.boxShadow = "none";
-          pageEl.style.borderRadius = "0px";
-
-          const canvas = await html2canvas(pageEl, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            backgroundColor: "#ffffff",
-            scrollX: 0,
-            scrollY: 0,
-          });
-
-          pageEl.style.boxShadow = origShadow;
-          pageEl.style.borderRadius = origRadius;
+          const { canvas, aspect } = await renderElementToA4Canvas(pageEl);
 
           const imgData = canvas.toDataURL("image/jpeg", 0.95);
-          const pageAspect = canvas.height / canvas.width;
           const isHomeworkSheet = pageEl.classList.contains("homework-page-sheet") || documentType === "homework";
           const pdfWidth = 595.28; // Standard A4 width in pt
           // For homework sheets or standard A4 pages, guarantee exact standard A4 (841.89 pt)
-          const pdfHeight = (isHomeworkSheet || (pageAspect >= 1.25 && pageAspect <= 1.55)) ? 841.89 : pdfWidth * pageAspect;
+          const pdfHeight = (isHomeworkSheet || (aspect >= 1.25 && aspect <= 1.55)) ? 841.89 : pdfWidth * aspect;
 
           if (!pdf) {
             pdf = new jsPDF({
@@ -1798,15 +2008,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       } else {
         // Single continuous container or fallback
         const targetEl = pageElements[0] || containerRef.current;
-        const canvas = await html2canvas(targetEl, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          scrollX: 0,
-          scrollY: 0,
-        });
+        const { canvas } = await renderElementToA4Canvas(targetEl);
 
         const imgWidth = 595.28;
         const pageHeightPt = 841.89; // Standard A4 height
@@ -1904,7 +2106,17 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           documentType === "homework"
             ? formatHomeworkFileName(homeworkClass || paperTitle)
             : `${(paperTitle || "question_paper").replace(/[/\\?%*:|"<>]/g, "_")}.pdf`;
-        pdf.save(cleanTitle);
+
+        // Support Android WebView native download bridge if present, fallback to standard pdf.save
+        const win = window as any;
+        const pdfBase64 = pdf.output("datauristring");
+        if (typeof win.Android?.downloadBase64Pdf === "function") {
+          win.Android.downloadBase64Pdf(pdfBase64, cleanTitle);
+        } else if (typeof win.AndroidBridge?.downloadBase64Pdf === "function") {
+          win.AndroidBridge.downloadBase64Pdf(pdfBase64, cleanTitle);
+        } else {
+          pdf.save(cleanTitle);
+        }
         toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
       }
     } catch (err: any) {
@@ -1924,19 +2136,15 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     try {
       const filename = formatHomeworkFileName(homeworkClass || paperTitle);
 
-      const pages = containerRef.current.querySelectorAll<HTMLElement>(".docx-page, .vml-page-wrapper, .homework-a4-page");
+      const pages = containerRef.current.querySelectorAll<HTMLElement>(
+        ".vml-page-wrapper, .homework-page-sheet, .docx-wrapper > section.docx, .docx-wrapper > section.docx-doc, .docx-page, .homework-a4-page"
+      );
       let pdf: jsPDF | null = null;
 
       if (pages.length > 0) {
         for (let i = 0; i < pages.length; i++) {
           const pg = pages[i];
-          const canvas = await html2canvas(pg, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: "#ffffff",
-            logging: false,
-          });
+          const { canvas } = await renderElementToA4Canvas(pg);
           const imgData = canvas.toDataURL("image/jpeg", 0.95);
           if (i === 0) {
             pdf = new jsPDF({
@@ -1956,13 +2164,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           }
         }
       } else {
-        const canvas = await html2canvas(containerRef.current, {
-          scale: 1.5,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-        });
+        const { canvas } = await renderElementToA4Canvas(containerRef.current);
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
         pdf = new jsPDF({
           orientation: "portrait",
@@ -2113,7 +2315,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
               ) : (
                 <MessageCircle className="size-3.5" />
               )}
-              <span>WhatsApp PDF</span>
+              <span>WhatsApp वर पाठवा</span>
             </button>
           )}
 
@@ -2246,57 +2448,65 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       )}
 
       {/* Main Document Content Container */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto p-1 sm:p-8 flex justify-center bg-slate-200/70 print:p-0 print:bg-white custom-scrollbar touch-pan-x">
+      <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-auto p-1 sm:p-8 flex justify-center bg-slate-200/70 print:p-0 print:bg-white custom-scrollbar touch-pan-x">
         <div className="relative w-full max-w-[850px] min-h-0 sm:min-h-[1123px]">
           {loading && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-white/95 rounded-sm shadow-xl border border-slate-300">
-              <Loader2 className="size-10 animate-spin text-blue-600 mb-3" />
-              <h4 className="font-bold text-slate-800 text-sm">{loadingMsg}</h4>
-              <p className="text-xs text-slate-500 mt-1">
-                Word फाईलची रचना, कोष्टक व मजकूर मूळ स्थितीत लोड होत आहे...
-              </p>
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-start pt-14 sm:pt-20 p-6 sm:p-8 text-center bg-white/95 rounded-sm shadow-xl border border-slate-300">
+              <div className="sticky top-16 sm:top-24 flex flex-col items-center justify-center max-w-md mx-auto">
+                <div className="size-14 rounded-full bg-orange-50 border-2 border-orange-200 flex items-center justify-center mb-3.5 shadow-xs">
+                  <Loader2 className="size-8 animate-spin text-orange-500" />
+                </div>
+                <h4 className="font-extrabold text-slate-800 text-sm sm:text-base leading-snug">
+                  {loadingMsg}
+                </h4>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                  Word फाईलची रचना, कोष्टक व मजकूर मूळ स्थितीत लोड होत आहे...
+                </p>
+              </div>
             </div>
           )}
 
           {loadError && !loading && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 sm:p-8 text-center bg-white/98 rounded-sm shadow-xl border border-rose-200">
-              <div className="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center mb-4 text-rose-600 shadow-inner">
-                <AlertCircle className="size-8" />
-              </div>
-              <h3 className="font-bold text-slate-800 text-base mb-1">
-                {documentType === "homework" ? "Word गृहपाठ लोड होऊ शकला नाही" : "Word प्रश्नपत्रिका लोड होऊ शकली नाही"}
-              </h3>
-              <p className="text-xs text-rose-700 font-medium max-w-md mb-4 bg-rose-50 px-3.5 py-2.5 rounded-lg border border-rose-200">
-                {loadError}
-              </p>
-              <div className="flex items-center gap-3 flex-wrap justify-center">
-                <button
-                  onClick={() => setReloadCounter((c) => c + 1)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow transition-all cursor-pointer"
-                >
-                  <RotateCcw className="size-3.5" />
-                  <span>पुन्हा प्रयत्न करा (Retry)</span>
-                </button>
-                {fileUrl && (
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    download
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-2 border border-slate-300 transition-all cursor-pointer"
-                  >
-                    <Download className="size-3.5" />
-                    <span>थेट डाऊनलोड करा</span>
-                  </a>
-                )}
-                {onClose && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-start pt-12 sm:pt-16 p-6 sm:p-8 text-center bg-white/98 rounded-sm shadow-xl border border-rose-200">
+              <div className="sticky top-14 sm:top-20 flex flex-col items-center justify-center max-w-md mx-auto">
+                <div className="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center mb-4 text-rose-600 shadow-inner">
+                  <AlertCircle className="size-8" />
+                </div>
+                <h3 className="font-bold text-slate-800 text-base mb-1">
+                  {documentType === "homework" ? "Word गृहपाठ लोड होऊ शकला नाही" : "Word प्रश्नपत्रिका लोड होऊ शकली नाही"}
+                </h3>
+                <p className="text-xs text-rose-700 font-medium max-w-md mb-4 bg-rose-50 px-3.5 py-2.5 rounded-lg border border-rose-200">
+                  {loadError}
+                </p>
+                <div className="flex items-center gap-3 flex-wrap justify-center">
                   <button
-                    onClick={onClose}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                    onClick={() => setReloadCounter((c) => c + 1)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow transition-all cursor-pointer"
                   >
-                    बंद करा
+                    <RotateCcw className="size-3.5" />
+                    <span>पुन्हा प्रयत्न करा (Retry)</span>
                   </button>
-                )}
+                  {fileUrl && (
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      download
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-2 border border-slate-300 transition-all cursor-pointer"
+                    >
+                      <Download className="size-3.5" />
+                      <span>थेट डाऊनलोड करा</span>
+                    </a>
+                  )}
+                  {onClose && (
+                    <button
+                      onClick={onClose}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                    >
+                      बंद करा
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -2354,20 +2564,30 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         }
 
 
-        /* Unified Question Paper Header Box — strictly inside the Word template's border */
+        /* Solid white mask that completely wipes background image borders/columns behind header */
+        .qp-header-bg-mask {
+          position: absolute !important;
+          left: 0 !important;
+          top: 0 !important;
+          width: 100% !important;
+          height: 26.2% !important;
+          background: #ffffff !important;
+          z-index: 2 !important;
+          pointer-events: none !important;
+        }
+
+        /* Unified Question Paper Header Box — STANDARD (for Class 3, 4, 5, 6, 7, 8, etc.) */
         .qp-unified-header-box {
           position: absolute !important;
-          left: 9.8% !important;
-          top: 2.0% !important;
-          width: 82.6% !important;
-          /* Use max-height so content fills naturally but can never exceed the border.
-             Different Word template files have borders of slightly different heights,
-             so auto height + max-height is safer than a single fixed percentage. */
-          height: auto !important;
-          min-height: 18% !important;
-          max-height: 24.5% !important;
+          left: var(--header-left, 7.6%) !important;
+          top: var(--header-top, 2.2%) !important;
+          width: var(--header-width, 84.8%) !important;
+          height: var(--header-height, 22.2%) !important;
+          min-height: var(--header-height, 22.2%) !important;
+          max-height: calc(var(--header-height, 22.2%) + 1.5%) !important;
           background: #ffffff !important;
-          border: none !important;
+          border: 2px solid #0f172a !important;
+          border-radius: clamp(10px, 2.5cqw, 18px) !important;
           outline: none !important;
           box-shadow: none !important;
           z-index: 10 !important;
@@ -2383,6 +2603,20 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           pointer-events: auto !important;
           line-height: 1.25 !important;
           gap: clamp(1px, 0.35cqw, 3px) !important;
+        }
+
+        /* Unified Question Paper Header Box — EVAL-GRID ONLY (specifically for Class 1 & 2 with background boxes) */
+        .qp-unified-header-box[data-header-variant="eval-grid"],
+        .vml-page-wrapper[data-has-eval-grid="true"] .qp-unified-header-box {
+          left: 6.8% !important;
+          top: 1.8% !important;
+          width: 86.4% !important;
+          height: 23.4% !important;
+          min-height: 23.4% !important;
+          max-height: 25.0% !important;
+          border: 2px solid #0f172a !important;
+          border-radius: clamp(10px, 2.8cqw, 20px) !important;
+          padding: clamp(4px, 0.9cqw, 10px) clamp(8px, 1.8cqw, 16px) !important;
         }
 
         /* Every direct child row stays inside, no overflow, no extra growth */
@@ -2492,11 +2726,29 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             display: flex !important;
             position: absolute !important;
           }
+          .qp-header-bg-mask {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: 26.2% !important;
+            background: #ffffff !important;
+            z-index: 2 !important;
+            pointer-events: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           .qp-unified-header-box {
-            border: none !important;
+            border: 2px solid #000000 !important;
+            border-radius: 12px !important;
             background: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+          .qp-unified-header-box[data-header-variant="eval-grid"],
+          .vml-page-wrapper[data-has-eval-grid="true"] .qp-unified-header-box {
+            border: 2px solid #000000 !important;
+            border-radius: 12px !important;
           }
           [data-hidden-by-unified-header="true"] {
             display: none !important;
@@ -2533,18 +2785,33 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             border-radius: 2px !important;
           }
 
-          /* Unified Question Paper Header Box on Mobile */
+          /* Unified Question Paper Header Box on Mobile — STANDARD */
           .qp-unified-header-box {
-            left: 9.8% !important;
-            top: 2.0% !important;
-            width: 82.6% !important;
-            height: auto !important;
-            min-height: 18% !important;
-            max-height: 24.5% !important;
-            border: none !important;
+            left: var(--header-left, 7.6%) !important;
+            top: var(--header-top, 2.2%) !important;
+            width: var(--header-width, 84.8%) !important;
+            height: var(--header-height, 22.2%) !important;
+            min-height: var(--header-height, 22.2%) !important;
+            max-height: calc(var(--header-height, 22.2%) + 1.5%) !important;
+            border: 1.5px solid #0f172a !important;
+            border-radius: clamp(8px, 2.2cqw, 14px) !important;
             padding: clamp(2px, 0.5cqw, 5px) clamp(4px, 1.0cqw, 9px) !important;
             overflow: hidden !important;
             justify-content: space-evenly !important;
+          }
+
+          /* Unified Question Paper Header Box on Mobile — EVAL-GRID ONLY */
+          .qp-unified-header-box[data-header-variant="eval-grid"],
+          .vml-page-wrapper[data-has-eval-grid="true"] .qp-unified-header-box {
+            left: 6.8% !important;
+            top: 1.8% !important;
+            width: 86.4% !important;
+            height: 23.4% !important;
+            min-height: 23.4% !important;
+            max-height: 25.0% !important;
+            border: 1.5px solid #0f172a !important;
+            border-radius: clamp(10px, 2.8cqw, 20px) !important;
+            padding: clamp(3px, 0.7cqw, 6px) clamp(6px, 1.4cqw, 12px) !important;
           }
 
           .qp-unified-header-box [data-field="exam-title-text"] {
