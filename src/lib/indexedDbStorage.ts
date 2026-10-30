@@ -59,6 +59,24 @@ export async function getFileFromIndexedDB(key: string): Promise<Blob | null> {
 }
 
 /**
+ * Deletes a binary Blob from IndexedDB key
+ */
+export async function deleteFileFromIndexedDB(key: string): Promise<void> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+    });
+  } catch (e) {
+    console.warn("IndexedDB delete warning:", e);
+  }
+}
+
+/**
  * Gets a fresh Blob URL for a stored key, or returns original url if fallback
  */
 export async function getPersistentFileUrl(key: string, fallbackUrl?: string): Promise<string> {

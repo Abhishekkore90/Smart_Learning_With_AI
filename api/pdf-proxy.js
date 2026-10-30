@@ -1,7 +1,7 @@
 /**
  * Vercel Serverless Function: /api/pdf-proxy
  *
- * Proxies PDF files AND JSON data files from Bunny Storage with server-side AccessKey.
+ * Proxies PDF files, DOCX, XLSX, AND JSON data files from Bunny Storage with server-side AccessKey.
  * Fixes CORS / X-Frame-Options / CDN redirect issues on all devices.
  *
  * Usage:
@@ -97,10 +97,12 @@ export default async function handler(req, res) {
     // Detect correct Content-Type
     const isJson = targetUrl.endsWith(".json") || contentType.includes("json");
     const isPdf = targetUrl.endsWith(".pdf") || contentType.includes("pdf");
-    const isDocx = targetUrl.endsWith(".docx") || contentType.includes("wordprocessingml") || contentType.includes("officedocument");
+    const isDocx = targetUrl.endsWith(".docx") || contentType.includes("wordprocessingml");
+    const isXlsx = targetUrl.endsWith(".xlsx") || targetUrl.endsWith(".xls") || contentType.includes("spreadsheetml") || contentType.includes("excel");
     const responseContentType = isJson ? "application/json; charset=utf-8"
       : isPdf ? "application/pdf"
       : isDocx ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      : isXlsx ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       : contentType;
 
     res.setHeader("Content-Type", responseContentType);

@@ -104,10 +104,10 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
       // Subject key from raw text
       let sk: PageMeta["subjectKey"] = "other";
       let sl = "सामान्य विभाग";
-      if (/भाषा|मराठी|जोड्या जुळव|अक्षराला गोल कर|शब्द वाच|गिरव/i.test(allPageRawTextPre)) {
-        sk = "marathi"; sl = "मराठी विभाग (प्रथम भाषा)";
-      } else if (/english|oral\s*&amp;\s*practical|listen and act/i.test(allPageRawTextPre)) {
+      if (/sing any poem|beginning letter|uppercase|lowercase|alphabet|listen and act|match the picture|what is your name|favourite fruit|circle the correct|english|oral\s*&amp;\s*practical/i.test(allPageRawTextPre)) {
         sk = "english"; sl = "इंग्रजी विभाग (English)";
+      } else if (/भाषा|मराठी|जोड्या जुळव|अक्षराला गोल कर|शब्द वाच|गिरव/i.test(allPageRawTextPre)) {
+        sk = "marathi"; sl = "मराठी विभाग (प्रथम भाषा)";
       } else if (/गणित|संख्या|चित्रे मोज|मोठ्या गाडीखालील/i.test(allPageRawTextPre)) {
         sk = "math"; sl = "गणित विभाग (Mathematics)";
       } else if (/FORMATIVE EVALUATION|SUB\s*[-–]\s*MATH|Qu\.|Write numbers/i.test(allPageRawTextPre)) {
@@ -304,9 +304,14 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           }
 
           // Subject
-          if (!headerSubject && txt.includes("विषय")) {
-            const m = txt.match(/विषय\s*[-:–—]?\s*([^\n\r,•()]+)/i);
-            if (m && m[1]?.trim()) headerSubject = m[1].trim();
+          if (!headerSubject) {
+            const m = txt.match(/(?:विषय|subject|sub)\s*[-:–—]?\s*([^\n\r,•()]+)/i);
+            if (m && m[1]?.trim()) {
+              const cleanSub = m[1].trim();
+              if (cleanSub !== "सर्व विषय" && cleanSub !== "all" && cleanSub !== "सर्वविषय") {
+                headerSubject = cleanSub;
+              }
+            }
           }
 
           // Total Marks
@@ -320,6 +325,16 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
             const m = txt.match(/(?:दिनांक|दि\.?|date)\s*[:\-–—]?\s*([0-9०-९\/\-.]+)/i);
             if (m && m[1]) headerDate = m[1].trim();
           }
+        }
+      }
+
+      if (!headerSubject || headerSubject === "सर्व विषय" || headerSubject === "all") {
+        if (/sing any poem|beginning letter|uppercase|lowercase|alphabet|listen and act|match the picture|what is your name|favourite fruit|circle the correct|english|oral/i.test(allPageRawText)) {
+          headerSubject = "इंग्रजी";
+        } else if (/गणित|संख्या|चित्रे मोज|मोठ्या गाडीखालील|बेरीज|वजाबाकी/i.test(allPageRawText)) {
+          headerSubject = "गणित";
+        } else if (/भाषा|मराठी/i.test(allPageRawText)) {
+          headerSubject = "भाषा";
         }
       }
 
@@ -621,34 +636,34 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         } else if (isMarksShape) {
           whiteSpaceRule = "white-space: nowrap !important; word-break: normal !important; overflow: visible !important;";
           shapeAlignItems = "center";
-          shapeLineHeight = "1.35";
-          shapePadding = "0 2px";
-          extraBoxStyle += " min-width: 36px !important; width: auto !important; z-index: 11; justify-content: flex-end !important; text-align: right !important;";
+          shapeLineHeight = "1.2";
+          shapePadding = "0 1px";
+          extraBoxStyle += " z-index: 11; justify-content: flex-end !important; text-align: right !important;";
           if (leftRatio > 0.80 || leftPt > pageWidthPt * 0.80) {
             extraBoxStyle += " right: 10.458% !important; left: auto !important;";
           }
         } else if (isSubQuestionIndex) {
           whiteSpaceRule = "white-space: nowrap !important; word-break: normal !important; overflow: visible !important;";
           shapeAlignItems = "center";
-          shapeLineHeight = "1.35";
+          shapeLineHeight = "1.2";
           shapePadding = "0 1px";
-          extraBoxStyle += " min-width: 24px !important; width: auto !important; z-index: 10;";
+          extraBoxStyle += " z-index: 10;";
         } else if (isTableOperatorNum) {
           whiteSpaceRule = "white-space: nowrap !important; word-break: normal !important; overflow: visible !important;";
           shapeAlignItems = "center";
-          shapeLineHeight = "1.35";
+          shapeLineHeight = "1.2";
           shapePadding = "0 1px";
           const opMatch = trimmedText.match(/^([+\-−±])\s*([०-९0-9]+)$/);
           if (opMatch) {
             shapeInnerHtml = `${opMatch[1]}&nbsp;${opMatch[2]}`;
           }
-          extraBoxStyle += " min-width: 28px !important; width: auto !important; z-index: 10; letter-spacing: 1px !important;";
+          extraBoxStyle += " z-index: 10;";
         } else if (isShortMathToken || isShortWordToken) {
           whiteSpaceRule = "white-space: nowrap !important; word-break: normal !important; overflow: visible !important;";
           shapeAlignItems = "center";
-          shapeLineHeight = "1.35";
+          shapeLineHeight = "1.2";
           shapePadding = "0 1px";
-          extraBoxStyle += ` width: auto !important; min-width: ${Math.max(16, widthPt)}px !important; z-index: 10;`;
+          extraBoxStyle += " z-index: 10;";
         }
 
         shapesHtml.push(`

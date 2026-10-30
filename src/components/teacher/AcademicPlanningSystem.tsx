@@ -55,7 +55,7 @@ import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorag
 import { uploadFileWithProgress, deleteUploadedFile } from "@/lib/upload";
 
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
-import { fetchBinaryFile } from "@/lib/bunny-auth-pdf";
+import { fetchBinaryFile, isBufferValidBinary } from "@/lib/bunny-auth-pdf";
 import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
 import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord, formatMarathiClassName } from "@/lib/smartPlanningParser";
 import { extractSubjectSectionsFromExcel, normalizeSubjectName, isExamOrAssessmentText, isMarathiMonth, canonicalizeMarathiMonth } from "@/lib/smartSubjectSplitter";
@@ -2515,10 +2515,19 @@ export function AcademicPlanningSystem({
     const latestRec = planningFiles[rec.id] || rec;
     let targetUrl = latestRec.fileUrl;
 
-    // Prefer locally stored binary Blob from IndexedDB if available
-    const blobFromDb = await getFileFromIndexedDB(latestRec.id);
+    // Prefer locally stored binary Blob from IndexedDB if available and genuine
+    let blobFromDb = await getFileFromIndexedDB(latestRec.id);
     if (blobFromDb) {
-      targetUrl = URL.createObjectURL(blobFromDb);
+      const candidateAb = await blobFromDb.arrayBuffer();
+      if (isBufferValidBinary(candidateAb, false, false, true)) {
+        targetUrl = URL.createObjectURL(blobFromDb);
+      } else {
+        blobFromDb = null;
+        try {
+          const { deleteFileFromIndexedDB } = await import("@/lib/indexedDbStorage");
+          deleteFileFromIndexedDB(latestRec.id).catch(() => {});
+        } catch (_) {}
+      }
     }
     localStorage.setItem(`cce_meta_${latestRec.id}`, latestRec.uploadedAt || "");
 

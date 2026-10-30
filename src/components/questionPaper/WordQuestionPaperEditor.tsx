@@ -70,6 +70,40 @@ export interface WordQuestionPaperEditorProps {
   onClose?: () => void;
 }
 
+export const normalizeSubjectName = (raw?: string | null): string => {
+  if (!raw) return "";
+  const clean = raw.replace(/^विषय\s*[-:–—]?\s*/i, "").trim();
+  const lower = clean.toLowerCase();
+  if (lower === "सर्व विषय" || lower === "सर्वविषय" || lower === "all" || lower === "all subjects" || lower === "सर्व") {
+    return "";
+  }
+  if (lower.includes("english") || lower.includes("इंग्रजी") || lower.includes("oral") || lower.includes("written")) {
+    return "इंग्रजी";
+  }
+  if (lower.includes("marathi") || lower.includes("भाषा") || lower.includes("मराठी") || lower.includes("balbharati") || lower.includes("बालभारती")) {
+    return "भाषा";
+  }
+  if (lower.includes("math") || lower.includes("गणित")) {
+    return "गणित";
+  }
+  if (lower.includes("evs") || lower.includes("परिसर") || lower.includes("परिसर अभ्यास")) {
+    return "परिसर अभ्यास";
+  }
+  if (lower.includes("science") || lower.includes("विज्ञान") || lower.includes("सामान्य विज्ञान")) {
+    return "सामान्य विज्ञान";
+  }
+  if (lower.includes("hindi") || lower.includes("हिंदी")) {
+    return "हिंदी";
+  }
+  if (lower.includes("history") || lower.includes("इतिहास")) {
+    return "इतिहास";
+  }
+  if (lower.includes("geography") || lower.includes("भूगोल")) {
+    return "भूगोल";
+  }
+  return clean;
+};
+
 export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = ({
   fileUrl,
   file,
@@ -830,38 +864,85 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
       // Step C: Extract or Retain Subject
       let subjectName = "";
-      const existingSubjectEl = page.querySelector<HTMLElement>('[data-field="subject-text"]');
-      if (existingSubjectEl && existingSubjectEl.textContent?.trim() && !existingSubjectEl.textContent.includes("undefined")) {
-        subjectName = existingSubjectEl.textContent.trim();
-      } else if (extSubject) {
-        subjectName = extSubject;
-      } else {
+      const pageSubKey = page.getAttribute("data-subject-key") || "";
+
+      // 1. First priority: subject prop passed explicitly from DB / card (e.g. "english" -> "इंग्रजी")
+      // provided it is not "सर्व विषय"
+      if (subject) {
+        const normProp = normalizeSubjectName(subject);
+        if (normProp && !/सर्व\s*विषय|all/i.test(normProp)) {
+          subjectName = normProp;
+        }
+      }
+
+      // 2. Second priority: page's data-subject-key (detected from raw text or section headers)
+      if (!subjectName && pageSubKey) {
+        if (pageSubKey === "english") subjectName = "इंग्रजी";
+        else if (pageSubKey === "marathi") subjectName = "भाषा";
+        else if (pageSubKey === "math") subjectName = "गणित";
+        else if (pageSubKey === "evs") subjectName = "परिसर अभ्यास";
+        else if (pageSubKey === "science") subjectName = "सामान्य विज्ञान";
+        else if (pageSubKey === "hindi") subjectName = "हिंदी";
+      }
+
+      // 3. Third priority: existing header text in DOM, BUT ONLY IF it's not dummy "सर्व विषय"
+      if (!subjectName) {
+        const existingSubjectEl = page.querySelector<HTMLElement>('[data-field="subject-text"]');
+        const exVal = existingSubjectEl?.textContent?.replace(/^विषय\s*[-:–—]?\s*/i, "").trim() || "";
+        if (exVal && !/सर्व\s*विषय|all/i.test(exVal) && !exVal.includes("undefined")) {
+          subjectName = normalizeSubjectName(exVal) || exVal;
+        }
+      }
+
+      // 4. Fourth priority: extSubject extracted from docx attributes (if not "सर्व विषय")
+      if (!subjectName && extSubject && !/सर्व\s*विषय|all/i.test(extSubject)) {
+        subjectName = normalizeSubjectName(extSubject) || extSubject;
+      }
+
+      // 5. Fifth priority: look for shapes with "विषय" or "subject"
+      if (!subjectName) {
         const shapes = Array.from(page.querySelectorAll<HTMLElement>('.vml-shape-text'));
         for (const s of shapes) {
           if (s.closest('.qp-unified-header-box')) continue;
           const t = (s.textContent || "").trim();
           const sTop = parseFloat(s.style.top || "100");
-          if (sTop < 15.0 && t.includes("विषय")) {
-            const m = t.match(/विषय\s*[-:–—]?\s*([^\n\r,•()]+)/i);
+          if (sTop < 15.0 && (t.includes("विषय") || /subject/i.test(t))) {
+            const m = t.match(/(?:विषय|subject)\s*[-:–—]?\s*([^\n\r,•()]+)/i);
             if (m && m[1]?.trim()) {
-              subjectName = m[1].trim();
-              break;
+              const cand = m[1].trim();
+              if (!/सर्व\s*विषय|all/i.test(cand)) {
+                subjectName = normalizeSubjectName(cand) || cand;
+                break;
+              }
             }
           }
         }
-        if (!subjectName) {
-          const fullContext = (pageText + " " + paperTitle + " " + (subject || ""));
-          if (fullContext.includes("परिसर अभ्यास")) subjectName = "परिसर अभ्यास";
-          else if (fullContext.includes("भाषा") || fullContext.includes("मराठी")) subjectName = "भाषा";
-          else if (fullContext.includes("गणित")) subjectName = "गणित";
-          else if (fullContext.includes("इंग्रजी") || /english/i.test(fullContext)) subjectName = "इंग्रजी";
-          else if (fullContext.includes("हिंदी")) subjectName = "हिंदी";
-          else if (fullContext.includes("विज्ञान")) subjectName = "विज्ञान";
-          else if (fullContext.includes("सामाजिक")) subjectName = "सामाजिक शास्त्रे";
-        }
-        if (!subjectName && subject) subjectName = subject;
-        if (!subjectName) subjectName = "भाषा";
       }
+
+      // 6. Sixth priority: Content context detection from page text & paper title
+      if (!subjectName) {
+        const fullContext = (pageText + " " + paperTitle + " " + (subject || "")).toLowerCase();
+        if (/sing any poem|beginning letter|uppercase|lowercase|alphabet|match the picture|what is your name|favourite fruit|circle the correct|english|oral/i.test(fullContext)) {
+          subjectName = "इंग्रजी";
+        } else if (fullContext.includes("परिसर अभ्यास")) {
+          subjectName = "परिसर अभ्यास";
+        } else if (fullContext.includes("गणित") || /संख्या|चित्रे मोज|मोठ्या गाडीखालील|बेरीज|वजाबाकी/i.test(fullContext)) {
+          subjectName = "गणित";
+        } else if (fullContext.includes("इंग्रजी") || /english/i.test(fullContext)) {
+          subjectName = "इंग्रजी";
+        } else if (fullContext.includes("विज्ञान")) {
+          subjectName = "सामान्य विज्ञान";
+        } else if (fullContext.includes("हिंदी")) {
+          subjectName = "हिंदी";
+        } else if (fullContext.includes("सामाजिक")) {
+          subjectName = "सामाजिक शास्त्रे";
+        } else if (fullContext.includes("भाषा") || fullContext.includes("मराठी")) {
+          subjectName = "भाषा";
+        }
+      }
+
+      if (!subjectName && subject) subjectName = normalizeSubjectName(subject) || subject;
+      if (!subjectName) subjectName = "भाषा";
       subjectName = subjectName.replace(/^विषय\s*[-:–—]?\s*/i, "").trim();
       const displaySubject = `विषय - ${subjectName}`;
 
@@ -2783,6 +2864,15 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             max-width: 100% !important;
             margin: 0 auto 16px auto !important;
             border-radius: 2px !important;
+            -webkit-text-size-adjust: none !important;
+            text-size-adjust: none !important;
+          }
+
+          .vml-shapes-layer,
+          .vml-shape-text {
+            -webkit-text-size-adjust: none !important;
+            text-size-adjust: none !important;
+            max-height: 1000000px !important;
           }
 
           /* Unified Question Paper Header Box on Mobile — STANDARD */
@@ -2894,6 +2984,19 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
         .vml-shape-text:hover {
           outline: 1px dotted rgba(59, 130, 246, 0.4);
+        }
+
+        .vml-page-wrapper,
+        .vml-shapes-layer,
+        .vml-shape-text {
+          -webkit-text-size-adjust: none !important;
+          text-size-adjust: none !important;
+          box-sizing: border-box !important;
+        }
+
+        .vml-shape-text {
+          max-height: 1000000px !important;
+          line-height: 1.25 !important;
         }
 
         /* Ensure homework header tables are completely borderless and fit flush */

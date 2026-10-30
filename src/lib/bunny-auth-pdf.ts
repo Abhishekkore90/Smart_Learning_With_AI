@@ -67,15 +67,22 @@ export function getBunnyStorageUrl(publicUrl: string): string {
 }
 
 /**
- * Validates whether an ArrayBuffer is genuine binary data and not an HTML error/SPA fallback page.
+ * Validates whether an ArrayBuffer is genuine binary data and not an HTML/PHP error or script file.
  */
-export function isBufferValidBinary(ab: ArrayBuffer | null, isDocx: boolean = false, isPdf: boolean = false): boolean {
+export function isBufferValidBinary(
+  ab: ArrayBuffer | null,
+  isDocx: boolean = false,
+  isPdf: boolean = false,
+  isXlsx: boolean = false
+): boolean {
   if (!ab || ab.byteLength < 16) return false;
   const bytes = new Uint8Array(ab);
 
-  // If expected to be a Word .docx, it MUST start with ZIP magic bytes 'PK\x03\x04' or 'PK'
-  if (isDocx) {
-    return bytes[0] === 0x50 && bytes[1] === 0x4B;
+  // If expected to be a Word .docx or Excel .xlsx, it MUST start with ZIP magic bytes 'PK\x03\x04' (0x50, 0x4B)
+  if (isDocx || isXlsx) {
+    const isZip = bytes[0] === 0x50 && bytes[1] === 0x4B;
+    const isOle = isXlsx && bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0;
+    return isZip || isOle;
   }
 
   // If expected to be a PDF, it MUST start with '%PDF'
@@ -83,10 +90,20 @@ export function isBufferValidBinary(ab: ArrayBuffer | null, isDocx: boolean = fa
     return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
   }
 
-  // Otherwise, inspect beginning to reject HTML pages
-  const slice = bytes.slice(0, Math.min(bytes.length, 120));
-  const text = new TextDecoder().decode(slice).toLowerCase();
-  if (text.includes("<!doctype") || text.includes("<html") || text.includes("<head") || text.includes("<body")) {
+  // Otherwise, inspect beginning to reject HTML, PHP, JSON errors, or plain text
+  const slice = bytes.slice(0, Math.min(bytes.length, 256));
+  const text = new TextDecoder().decode(slice).trim().toLowerCase();
+  if (
+    text.startsWith("<?php") ||
+    text.includes("<?php") ||
+    text.startsWith("<!doctype") ||
+    text.includes("<html") ||
+    text.includes("<head") ||
+    text.includes("<body") ||
+    text.startsWith("{\"error\"") ||
+    text.includes("\"error\":") ||
+    text.includes("failed to fetch")
+  ) {
     return false;
   }
 
@@ -119,20 +136,32 @@ export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> 
     return null;
   }
 
+  const lowerUrl = url.toLowerCase();
+  const isDocx = lowerUrl.includes(".docx");
+  const isPdf = lowerUrl.includes(".pdf");
+  const isXlsx = lowerUrl.includes(".xlsx") || lowerUrl.includes(".xls");
+
   // 1. Check in-memory cache
   if (binaryMemoryCache.has(url)) {
-    return binaryMemoryCache.get(url)!;
+    const memBuf = binaryMemoryCache.get(url)!;
+    if (isBufferValidBinary(memBuf, isDocx, isPdf, isXlsx)) {
+      return memBuf;
+    }
+    binaryMemoryCache.delete(url);
   }
 
   // 2. Check IndexedDB persistent cache
   try {
-    const { getFileFromIndexedDB } = await import("@/lib/indexedDbStorage");
+    const { getFileFromIndexedDB, deleteFileFromIndexedDB } = await import("@/lib/indexedDbStorage");
     const cachedBlob = await getFileFromIndexedDB(`doc_binary_${url}`);
     if (cachedBlob && cachedBlob.size > 100) {
       const cachedAb = await cachedBlob.arrayBuffer();
-      if (isBufferValidBinary(cachedAb, url.toLowerCase().includes(".docx"), url.toLowerCase().includes(".pdf"))) {
+      if (isBufferValidBinary(cachedAb, isDocx, isPdf, isXlsx)) {
         binaryMemoryCache.set(url, cachedAb);
         return cachedAb;
+      } else {
+        // Corrupted cache entry (e.g. static PHP script mistakenly cached) — purge immediately!
+        deleteFileFromIndexedDB(`doc_binary_${url}`).catch(() => {});
       }
     }
   } catch (idbErr) {
@@ -145,21 +174,14 @@ export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> 
   }
 
   const fetchPromise = (async () => {
-    const lowerUrl = url.toLowerCase();
-    const isDocx = lowerUrl.includes(".docx");
-    const isPdf = lowerUrl.includes(".pdf");
     const isBunny = lowerUrl.includes("b-cdn.net") || lowerUrl.includes("bunnycdn.com");
 
     const candidates: Array<{ name: string; url: string; headers?: Record<string, string> }> = [];
 
     if (isBunny) {
-      // 1. Direct Bunny Storage with AccessKey - CORS-enabled directly from storage edge, fastest download
       const directStorage = getDirectBunnyStorageUrl(url);
-      if (directStorage) {
-        candidates.push({ name: "Direct Bunny Storage", url: directStorage.url, headers: directStorage.headers });
-      }
 
-      // 2. Local Vite proxy (DEV)
+      // In DEV: use Vite dev proxy
       if (import.meta.env.DEV && directStorage) {
         const zone = BUNNY_STORAGE_ZONE;
         const rawPath = decodeURIComponent(new URL(url).pathname).replace(/^\//, "");
@@ -167,18 +189,31 @@ export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> 
         candidates.push({ name: "Vite dev proxy", url: `/api/bunny-storage/${zone}/${cleanPath}` });
       }
 
-      // 3. Unified /api/pdf-proxy (Works on Vercel & serverless)
+      // Primary on Vercel & Production: Unified serverless proxy with server-side AccessKey
       candidates.push({ name: "api/pdf-proxy", url: `/api/pdf-proxy?url=${encodeURIComponent(url)}` });
 
-      // 4. PHP proxy on Hostinger / production
-      candidates.push({ name: "pdf-proxy.php", url: `/pdf-proxy.php?url=${encodeURIComponent(url)}` });
-      if (typeof window !== "undefined" && window.location.hostname !== "sgkbrainova.com") {
+      // Secondary: Direct Bunny Storage with AccessKey (browser CORS preflight)
+      if (directStorage) {
+        candidates.push({ name: "Direct Bunny Storage", url: directStorage.url, headers: directStorage.headers });
+      }
+
+      // Tertiary: Only execute PHP proxy on actual PHP host (sgkbrainova.com)
+      if (typeof window !== "undefined" && window.location.hostname === "sgkbrainova.com") {
+        candidates.push({ name: "pdf-proxy.php", url: `/pdf-proxy.php?url=${encodeURIComponent(url)}` });
+      } else if (
+        typeof window !== "undefined" &&
+        !window.location.hostname.includes("vercel.app") &&
+        window.location.hostname !== "localhost" &&
+        !window.location.hostname.includes("127.0.0.1")
+      ) {
         candidates.push({ name: "Hosted PHP proxy", url: `https://sgkbrainova.com/pdf-proxy.php?url=${encodeURIComponent(url)}` });
       }
     }
 
-    // Always include direct URL as an attempt (e.g. Firebase Storage, open CDN)
-    candidates.push({ name: "Direct URL", url });
+    // Direct URL: only include if NOT direct storage.bunnycdn.com (which requires AccessKey and logs 401 in console)
+    if (!lowerUrl.includes("storage.bunnycdn.com")) {
+      candidates.push({ name: "Direct URL", url });
+    }
 
     // Staggered parallel race: Start primary immediately (t=0ms).
     // If not completed within 600ms, start secondary concurrently.
@@ -235,10 +270,16 @@ export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> 
             });
             clearTimeout(timeoutId);
 
-            const cType = res.headers.get("content-type") || "";
-            if (res.ok && !cType.includes("text/html")) {
+            const cType = (res.headers.get("content-type") || "").toLowerCase();
+            if (
+              res.ok &&
+              !cType.includes("text/html") &&
+              !cType.includes("php") &&
+              !cType.includes("x-httpd-php") &&
+              !cType.includes("text/plain")
+            ) {
               const ab = await res.arrayBuffer();
-              if (isBufferValidBinary(ab, isDocx, isPdf)) {
+              if (isBufferValidBinary(ab, isDocx, isPdf, isXlsx)) {
                 onWinner(ab);
                 return;
               }
@@ -265,6 +306,8 @@ export async function fetchBinaryFile(url: string): Promise<ArrayBuffer | null> 
         const blob = new Blob([successfulAb], {
           type: isDocx
             ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            : isXlsx
+            ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             : isPdf
             ? "application/pdf"
             : "application/octet-stream"

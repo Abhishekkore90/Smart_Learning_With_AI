@@ -27,7 +27,7 @@ import {
   isVacationText,
   extractCleanMonthNameFromLine,
 } from "@/lib/smartSubjectSplitter";
-import { getBunnyStorageUrl, fetchBinaryFile } from "@/lib/bunny-auth-pdf";
+import { getBunnyStorageUrl, fetchBinaryFile, isBufferValidBinary } from "@/lib/bunny-auth-pdf";
 import {
   BookOpen,
   Calendar,
@@ -532,8 +532,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             try {
               const blobFromDb = await getFileFromIndexedDB(key);
               if (blobFromDb) {
-                buffer = await blobFromDb.arrayBuffer();
-                break;
+                const candidateBuf = await blobFromDb.arrayBuffer();
+                if (isBufferValidBinary(candidateBuf, false, false, true)) {
+                  buffer = candidateBuf;
+                  break;
+                }
               }
             } catch (e) { }
           }
