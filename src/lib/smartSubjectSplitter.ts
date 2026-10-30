@@ -482,22 +482,18 @@ export const isMonthBannerRow = (row: any[]): boolean => {
   if (/^\d{1,2}$/.test(c0) || /^[०-९]{1,2}$/.test(c0)) {
     return false;
   }
-  // 2. DATA ROW SAFEGUARD: If any cell has bullet point '•' or long sentence (> 30 chars), NEVER a banner!
-  if (row.some((c) => String(c || "").includes("•") || String(c || "").trim().length > 30)) {
+  // 2. DATA ROW SAFEGUARD: If any cell has bullet point '•', NEVER a banner!
+  if (row.some((c) => String(c || "").includes("•"))) {
     return false;
   }
-  // 3. Multi-column data rows (>= 4 filled cells) are NEVER banners!
-  if (nonEmpties.length >= 4) {
-    return false;
-  }
-  // 4. Exam or vacation rows are NEVER month banners!
+  // 3. Exam or vacation rows are NEVER month banners!
   if (isExamOrAssessmentText(nonEmpties.join(" ")) || isVacationText(nonEmpties.join(" "))) {
     return false;
   }
 
   const line = nonEmpties.join(" ").trim().toLowerCase();
 
-  if (
+  const isExplicitMonthBanner =
     line.includes("मासिक घटक नियोजन") ||
     line.includes("मासिक व घटक नियोजन") ||
     line.includes("अभ्यासक्रमाचे मासिक") ||
@@ -507,10 +503,22 @@ export const isMonthBannerRow = (row: any[]): boolean => {
     line.includes("मासिक नियोजन") ||
     (/(?:^|\s)(?:महिना|माहे|महीना|month|(?<![\u0900-\u097F])माह(?![\u0900-\u097F]))\s*[:-–]?/i.test(line) &&
       (/(?:^|\s)(?:विषय(?!ी|क|वर|चे|तील)|subject)\s*[:-–]/i.test(line) || /(?:^|\s)(?:इयत्ता|class)\s*[:-–]/i.test(line))) ||
-    (/(?:^|\s)(?:महिना|माहे|महीना|month|(?<![\u0900-\u097F])माह(?![\u0900-\u097F]))\s*[:-–]?\s*(?:जून|जुन|जुलै|जुलाई|ऑगस्ट|ऑगष्ट|आगस्ट|अगस्त|अगस्ट|सप्टेंबर|सितंबर|सितम्बर|ऑक्टोबर|अक्टूबर|अक्टोबर|नोव्हेंबर|नवंबर|नवम्बर|डिसेंबर|दिसंबर|दिसम्बर|जानेवारी|जनवरी|फेब्रुवारी|फरवरी|मार्च|एप्रिल|अप्रैल|मे|june|july|august|september|october|november|december|january|february|march|april|may)/i.test(line))
-  ) {
+    (/(?:^|\s)(?:महिना|माहे|महीना|month|(?<![\u0900-\u097F])माह(?![\u0900-\u097F]))\s*[:-–]?\s*(?:जून|जुन|जुलै|जुलाई|ऑगस्ट|ऑगष्ट|आगस्ट|अगस्त|अगस्ट|सप्टेंबर|सितंबर|सितम्बर|ऑक्टोबर|अक्टूबर|अक्टोबर|नोव्हेंबर|नवंबर|नवम्बर|डिसेंबर|दिसंबर|दिसम्बर|जानेवारी|जनवरी|फेब्रुवारी|फरवरी|मार्च|एप्रिल|अप्रैल|मे|june|july|august|september|october|november|december|january|february|march|april|may)/i.test(line));
+
+  // If not an explicit banner, DATA ROW SAFEGUARD: long sentence (> 30 chars) or >= 4 filled cells
+  if (!isExplicitMonthBanner) {
+    if (row.some((c) => String(c || "").trim().length > 30)) {
+      return false;
+    }
+    if (nonEmpties.length >= 4) {
+      return false;
+    }
+  }
+
+  if (isExplicitMonthBanner) {
     return true;
   }
+
   for (const c of nonEmpties) {
     const cLow = c.toLowerCase();
     if (
@@ -550,9 +558,9 @@ export const isMetadataRow = (row: any[]): boolean => {
   if (!line) return false;
   const lineNoSpace = line.replace(/\s+/g, "");
 
-  // Section / month banners that can be longer than 40 characters
+  // Section / month banners are handled as distinct monthly separators, NEVER as metadata rows
   if (isMonthBannerRow(row)) {
-    return true;
+    return false;
   }
 
   if (
@@ -612,6 +620,20 @@ export const isTableColumnHeaderRow = (row: any[]): boolean => {
   const line = nonEmpties.join(" ").trim().toLowerCase();
   if (!line) return false;
 
+  // SAFEGUARD: Dedicated month/planning banners are NEVER table column headers!
+  if (
+    line.includes("monthly & unit planning") ||
+    line.includes("monthly and unit planning") ||
+    line.includes("मासिक व घटक नियोजन") ||
+    line.includes("मासिक घटक नियोजन") ||
+    line.includes("अभ्यासक्रमाचे मासिक") ||
+    /\bmonth\s*[:-–]/i.test(line) ||
+    /(?:महिना|माहे)\s*[:-–]/i.test(line) ||
+    isMonthBannerRow(row)
+  ) {
+    return false;
+  }
+
   const firstCell = String(row[0] || "").trim().toLowerCase();
 
   // Primary Check 1: Day/Date header in col 0 + Topic/Outcome keywords in row
@@ -628,8 +650,11 @@ export const isTableColumnHeaderRow = (row: any[]): boolean => {
     firstCell.includes("अ.क्र") ||
     firstCell.includes("क्र.") ||
     firstCell.includes("sr") ||
-    firstCell.includes("महिना") ||
-    firstCell.includes("month") ||
+    firstCell === "महिना" ||
+    firstCell === "month" ||
+    firstCell === "month / महिना" ||
+    firstCell === "महिना / month" ||
+    firstCell === "माहे" ||
     firstCell === "day" ||
     firstCell === "date";
 
@@ -1646,15 +1671,18 @@ export function detectSubjectFromRow(row: string[], knownSubjects: string[]): st
             currentSubjectTitle || fallbackSubject,
             currentClassTitle || fallbackClass
           );
+          const isEngMonthPlan = /[a-zA-Z]/.test(currentMonthName);
           if (!monthlyMap[currentMonthName] || monthlyMap[currentMonthName].rows.length === 0) {
             monthlyMap[currentMonthName] = {
               monthName: currentMonthName,
-              displayMonthName: `अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - ${currentMonthName}`,
+              displayMonthName: isEngMonthPlan
+                ? `Monthly & Unit Planning - Month: ${currentMonthName}`
+                : `अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - ${currentMonthName}`,
               classTitle: currentClassTitle || fallbackClass || "",
               subjectTitle: currentSubjectTitle || fallbackSubject || "",
               plannedPeriods: currentPlannedPeriods,
               workingDays: currentWorkingDays,
-              headers: DEFAULT_MONTHLY_HEADERS,
+              headers: isEngMonthPlan ? DEFAULT_MONTHLY_ENGLISH_HEADERS : DEFAULT_MONTHLY_HEADERS,
               rows: normalizedMonthRows,
             };
           } else {
@@ -1690,7 +1718,7 @@ export function detectSubjectFromRow(row: string[], knownSubjects: string[]): st
           if (!detectedMonth) {
             for (let c = 0; c < Math.min(row.length, 3); c++) {
               const cVal = String(row[c] || "").trim();
-              if (cVal && isMarathiMonth(cVal)) {
+              if (cVal && (isMarathiMonth(cVal) || isEnglishMonth(cVal))) {
                 detectedMonth = extractCleanMonthNameFromLine(cVal);
                 if (detectedMonth) break;
               }
