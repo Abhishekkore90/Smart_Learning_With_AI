@@ -59,7 +59,7 @@ export function isExamOrAssessmentText(text: string): boolean {
     s.includes("उन्हाळी सुट्ट्या") ||
     s.includes("उन्हाळी सुटी") ||
     s.includes("उन्हाळी") ||
-    s.includes("मूल्यांकन") ||
+    (s.includes("मूल्यांकन") && !s.includes("मूल्यांकन कर") && !s.includes("मूल्यांकना")) ||
     s.includes("चाचणी क्र") ||
     s.includes("चाचणी") ||
     s.includes("मूल्यमापन क्र") ||
@@ -247,10 +247,10 @@ export function canonicalizeMarathiMonth(raw: string): string {
   if (/^(?:ज[ूु]न|june?|jun)$/i.test(clean)) return "जून";
   if (/^(?:जुल[ैे]|जुलाई|july?|jul)$/i.test(clean)) return "जुलै";
   if (/^(?:ऑग[सश]्ट|ऑग|आगस्ट|अगस्त|अगस्ट|aug(?:ust)?)$/i.test(clean)) return "ऑगस्ट";
-  if (/^(?:सप्ट[ेेंं]+(?:बर)?|सित[ंम]+बर|सित\.?|sep(?:t(?:ember)?)?)$/i.test(clean)) return "सप्टेंबर";
+  if (/^(?:सप्ट[ेेंं]+(?:बर)?|सित[ंमम्\u094D]+बर|सितंबर|सितम्बर|सित\.?|sep(?:t(?:ember)?)?)$/i.test(clean)) return "सप्टेंबर";
   if (/^(?:ऑक्ट[ोों]+(?:बर)?|अक्ट[ूोों]+बर|अक्टू\.?|oct(?:ober)?)$/i.test(clean)) return "ऑक्टोबर";
-  if (/^(?:नोव्ह[ेेंं]+(?:बर)?|नव[ंम]+बर|नव\.?|nov(?:ember)?)$/i.test(clean)) return "नोव्हेंबर";
-  if (/^(?:डिस[ेेंं]+(?:बर)?|दिस[ंम]+बर|दिस\.?|dec(?:ember)?)$/i.test(clean)) return "डिसेंबर";
+  if (/^(?:नोव्ह[ेेंं]+(?:बर)?|नव[ंमम्\u094D]+बर|नवंबर|नवम्बर|नव\.?|nov(?:ember)?)$/i.test(clean)) return "नोव्हेंबर";
+  if (/^(?:डिस[ेेंं]+(?:बर)?|दिस[ंमम्\u094D]+बर|दिसंबर|दिसम्बर|दिस\.?|dec(?:ember)?)$/i.test(clean)) return "डिसेंबर";
   if (/^(?:जान[ेे](?:वारी)?|जनवरी|जाने|जन\.?|jan(?:uary)?)$/i.test(clean)) return "जानेवारी";
   if (/^(?:फेब्र[ुू](?:वारी)?|फरवरी|फेब्रु|फर\.?|feb(?:ruary)?)$/i.test(clean)) return "फेब्रुवारी";
   if (/^(?:मार्च|mar(?:ch)?)$/i.test(clean)) return "मार्च";
@@ -298,7 +298,7 @@ export function isMarathiMonth(cellText: string): boolean {
     .toLowerCase();
 
   const monthRegex =
-    /^(?:ज[ूु]न|june?|jun|जुल[ैे]|जुलाई|july?|jul|ऑग[सश]्ट|ऑग|आगस्ट|अगस्त|अगस्ट|aug(?:ust)?|सप्ट[ेेंं]+(?:बर)?|सित[ंम]+बर|सित\.?|sep(?:t(?:ember)?)?|ऑक्ट[ोों]+(?:बर)?|अक्ट[ूोों]+बर|अक्टू\.?|oct(?:ober)?|नोव्ह[ेेंं]+(?:बर)?|नव[ंम]+बर|नव\.?|nov(?:ember)?|डिस[ेेंं]+(?:बर)?|दिस[ंम]+बर|दिस\.?|dec(?:ember)?|जान[ेे](?:वारी)?|जनवरी|जाने|जन\.?|jan(?:uary)?|फेब्र[ुू](?:वारी)?|फरवरी|फेब्रु|फर\.?|feb(?:ruary)?|मार्च|mar(?:ch)?|एप्रि(?:ल)?|अप्रैल|apr(?:il)?|मे|may)$/i;
+    /^(?:ज[ूु]न|june?|jun|जुल[ैे]|जुलाई|july?|jul|ऑग[सश]्ट|ऑग|आगस्ट|अगस्त|अगस्ट|aug(?:ust)?|सप्ट[ेेंं]+(?:बर)?|सित[ंमम्\u094D]+बर|सितंबर|सितम्बर|सित\.?|sep(?:t(?:ember)?)?|ऑक्ट[ोों]+(?:बर)?|अक्ट[ूोों]+बर|अक्टू\.?|oct(?:ober)?|नोव्ह[ेेंं]+(?:बर)?|नव[ंमम्\u094D]+बर|नवंबर|नवम्बर|नव\.?|nov(?:ember)?|डिस[ेेंं]+(?:बर)?|दिस[ंमम्\u094D]+बर|दिसंबर|दिसम्बर|दिस\.?|dec(?:ember)?|जान[ेे](?:वारी)?|जनवरी|जाने|जन\.?|jan(?:uary)?|फेब्र[ुू](?:वारी)?|फरवरी|फेब्रु|फर\.?|feb(?:ruary)?|मार्च|mar(?:ch)?|एप्रि(?:ल)?|अप्रैल|apr(?:il)?|मे|may)$/i;
 
   if (monthRegex.test(clean)) return true;
 
@@ -503,12 +503,13 @@ export const isMonthBannerRow = (row: any[]): boolean => {
     line.includes("मासिक नियोजन") ||
     // Hindi monthly planning banners (e.g. "पाठ्यक्रम की मासिक और घटक योजना (भाग - सितंबर २०२६)")
     line.includes("मासिक और घटक योजना") ||
+    line.includes("मासिक घटक योजना") ||
     line.includes("पाठ्यक्रम की मासिक") ||
     line.includes("माहवार योजना") ||
     line.includes("मासिक योजना") ||
-    (/(?:^|\s)(?:महिना|माहे|महीना|month|(?<![\u0900-\u097F])माह(?![\u0900-\u097F]))\s*[:-–]?/i.test(line) &&
+    (/(?:^|[\s\(])(?:महिना|माहे|महीना|month|(?<![\u0900-\u097F])माह(?![\u0900-\u097F]))\s*[:-–]?/i.test(line) &&
       (/(?:^|\s)(?:विषय(?!ी|क|वर|चे|तील)|subject)\s*[:-–]/i.test(line) || /(?:^|\s)(?:इयत्ता|class)\s*[:-–]/i.test(line))) ||
-    (/(?:^|\s)(?:महिना|माहे|महीना|month|(?<![\u0900-\u097F])माह(?![\u0900-\u097F]))\s*[:-–]?\s*(?:जून|जुन|जुलै|जुलाई|ऑगस्ट|ऑगष्ट|आगस्ट|अगस्त|अगस्ट|सप्टेंबर|सितंबर|सितम्बर|ऑक्टोबर|अक्टूबर|अक्टोबर|नोव्हेंबर|नवंबर|नवम्बर|डिसेंबर|दिसंबर|दिसम्बर|जानेवारी|जनवरी|फेब्रुवारी|फरवरी|मार्च|एप्रिल|अप्रैल|मे|june|july|august|september|october|november|december|january|february|march|april|may)/i.test(line));
+    (/(?:^|[\s\(])(?:महिना|माहे|महीना|month|(?<![\u0900-\u097F])माह(?![\u0900-\u097F]))\s*[:-–]?\s*(?:जून|जुन|जुलै|जुलाई|ऑगस्ट|ऑगष्ट|आगस्ट|अगस्त|अगस्ट|सप्टेंबर|सितंबर|सितम्बर|ऑक्टोबर|अक्टूबर|अक्टोबर|नोव्हेंबर|नवंबर|नवम्बर|डिसेंबर|दिसंबर|दिसम्बर|जानेवारी|जनवरी|फेब्रुवारी|फरवरी|मार्च|एप्रिल|अप्रैल|मे|june|july|august|september|october|november|december|january|february|march|april|may)/i.test(line));
 
   // If not an explicit banner, DATA ROW SAFEGUARD: long sentence (> 30 chars) or >= 4 filled cells
   if (!isExplicitMonthBanner) {
@@ -1602,10 +1603,13 @@ export function detectSubjectFromRow(row: string[], knownSubjects: string[]): st
       // Guard against regular exercise/reading lines that casually contain a month word
       const isBannerCandidate =
         /monthly\s*(?:&|and)?\s*unit\s*planning/i.test(l) ||
-        /मासिक\s*(?:व|आणि)?\s*घटक\s*नियोजन/i.test(l) ||
+        /मासिक\s*(?:व|आणि|और)?\s*घटक\s*(?:नियोजन|योजना)/i.test(l) ||
+        /पाठ्यक्रम\s*की\s*मासिक/i.test(l) ||
+        /माहवार\s*योजना/i.test(l) ||
+        /मासिक\s*योजना/i.test(l) ||
         /\bmonth\s*[:\-–]/i.test(l) ||
         /(?<![\u0900-\u097F])(?:माहे|महिना|माह|महीना)\s*[:\-–]/i.test(l) ||
-        (/विषय\s*[:\-–]/i.test(l) && /(?<![\u0900-\u097F])(?:ज[ूु]न|जून|जुलै|ऑगस्ट|सप्टेंबर|ऑक्टोबर|नोव्हेंबर|डिसेंबर|जानेवारी|फेब्रुवारी|मार्च|एप्रिल)(?![\u0900-\u097F])/i.test(l)) ||
+        (/(?:विषय|subject)\s*[:\-–]/i.test(l) && /(?<![\u0900-\u097F])(?:ज[ूु]न|जून|जुल[ैे]|जुलाई|ऑग[सश]्ट|आगस्ट|अगस्त|सप्ट[ेेंं]+(?:बर)?|सित[ंमम्\u094D]+बर|ऑक्ट[ोों]+(?:बर)?|अक्ट[ूोों]+बर|नोव्ह[ेेंं]+(?:बर)?|नव[ंमम्\u094D]+बर|डिस[ेेंं]+(?:बर)?|दिस[ंमम्\u094D]+बर|जान[ेे](?:वारी)?|जनवरी|फेब्र[ुू](?:वारी)?|फरवरी|मार्च|एप्रि(?:ल)?|अप्रैल|मे)(?![\u0900-\u097F])/i.test(l)) ||
         (l.length < 50 && (isMarathiMonth(l) || /\b(june|july|august|september|semptember|october|november|novembar|december|decembar|january|february|march|april)\b/i.test(l)));
 
       if (!isBannerCandidate) return null;
@@ -1642,7 +1646,7 @@ export function detectSubjectFromRow(row: string[], knownSubjects: string[]): st
       }
 
       // 3. Marathi Months with strict Unicode boundaries (STRICTLY prevents false matching on words like समजून, अजून)
-      const marMatch = l.match(/(?<![\u0900-\u097F])(ज[ूु]न|जून|जुल[ैे]|जुलाई|ऑग[सश]्ट|ऑग|आगस्ट|अगस्त|अगस्ट|सप्ट[ेेंं]+(?:बर)?|सित[ंम]+बर|ऑक्ट[ोों]+(?:बर)?|अक्ट[ूोों]+बर|नोव्ह[ेेंं]+(?:बर)?|नव[ंम]+बर|डिस[ेेंं]+(?:बर)?|दिस[ंम]+बर|जान[ेे](?:वारी)?|जनवरी|फेब्र[ुू](?:वारी)?|फरवरी|मार्च|एप्रि(?:ल)?|अप्रैल|मे)(?![\u0900-\u097F])(?:\s*([\d\u0966-\u096F]{4}))?/i);
+      const marMatch = l.match(/(?<![\u0900-\u097F])(ज[ूु]न|जून|जुल[ैे]|जुलाई|ऑग[सश]्ट|ऑग|आगस्ट|अगस्त|अगस्ट|सप्ट[ेेंं]+(?:बर)?|सित[ंमम्\u094D]+बर|सितंबर|सितम्बर|ऑक्ट[ोों]+(?:बर)?|अक्ट[ूोों]+बर|नोव्ह[ेेंं]+(?:बर)?|नव[ंमम्\u094D]+बर|नवंबर|नवम्बर|डिस[ेेंं]+(?:बर)?|दिस[ंमम्\u094D]+बर|दिसंबर|दिसम्बर|जान[ेे](?:वारी)?|जनवरी|फेब्र[ुू](?:वारी)?|फरवरी|मार्च|एप्रि(?:ल)?|अप्रैल|मे)(?![\u0900-\u097F])(?:\s*([\d\u0966-\u096F]{4}))?/i);
       if (marMatch) {
         const rawM = marMatch[1];
         const stdMar = canonicalizeMarathiMonth(rawM);
@@ -1705,7 +1709,10 @@ export function detectSubjectFromRow(row: string[], knownSubjects: string[]): st
 
         // Check for Clean Month Header Banner
         const hasMonthKeyword =
-          /मासिक\s*(?:व|आणि)?\s*घटक\s*नियोजन/i.test(line) ||
+          /मासिक\s*(?:व|आणि|और)?\s*घटक\s*(?:नियोजन|योजना)/i.test(line) ||
+          /पाठ्यक्रम\s*की\s*मासिक/i.test(line) ||
+          /माहवार\s*योजना/i.test(line) ||
+          /मासिक\s*योजना/i.test(line) ||
           /monthly\s*(?:&|and)?\s*unit\s*planning/i.test(line) ||
           /monthly\s*planning/i.test(line) ||
           /मासिक\s*नियोजन/i.test(line) ||

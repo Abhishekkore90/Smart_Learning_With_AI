@@ -28,6 +28,7 @@ import mammoth from "mammoth";
 import {
   isVmlDocx,
   parseVmlDocxToHtml,
+  formatStandardClassName,
 } from "@/services/vmlDocxParser";
 import {
   type HomeworkHeaderProfile,
@@ -854,48 +855,49 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       // Step B: Extract or Retain Class / Standard
       let classStd = "";
       const existingClassEl = page.querySelector<HTMLElement>('[data-field="class-text"]');
-      if (existingClassEl && existingClassEl.textContent?.trim() && !existingClassEl.textContent.includes("undefined")) {
-        classStd = existingClassEl.textContent.trim();
-      } else if (extClass) {
-        classStd = extClass;
+      if (extClass) {
+        classStd = formatStandardClassName(extClass) || extClass;
+      } else if (existingClassEl && existingClassEl.textContent?.trim() && !existingClassEl.textContent.includes("undefined")) {
+        classStd = formatStandardClassName(existingClassEl.textContent.trim()) || existingClassEl.textContent.trim();
       } else {
         const shapes = Array.from(page.querySelectorAll<HTMLElement>('.vml-shape-text'));
         for (const s of shapes) {
           if (s.closest('.qp-unified-header-box')) continue;
           const t = (s.textContent || "").trim();
           const sTop = parseFloat(s.style.top || "100");
-          if (sTop < 15.0 && (t.includes("इयत्ता") || /std|class/i.test(t))) {
-            const m = t.match(/इयत्ता\s*[-:–—]?\s*([०-९0-9]+(?:\s*(?:ली|री|थी|वी))?|पहिली|दुसरी|तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी|[१-८])/i);
+          if (sTop < 18.0 && (t.includes("इयत्ता") || /std|class/i.test(t))) {
+            const m = t.match(/(?:इयत्ता|std|class)\s*[-:–—.]?\s*([०-९0-9]+(?:\s*(?:st|nd|rd|th|ली|री|थी|वी))?|पहिली|दुसरी|तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी|[१-८])/i);
             if (m) {
-              classStd = m[0].trim();
+              const raw = m[1]?.trim() || m[0].trim();
+              classStd = formatStandardClassName(raw) || m[0].trim();
               break;
             }
           }
         }
         if (!classStd) {
           const fullContext = (pageText + " " + paperTitle + " " + (document.title || "")).toLowerCase();
-          if (fullContext.includes("तिसरी") || fullContext.includes("३री") || fullContext.includes("३ री") || /इयत्ता\s*[-_]?\s*3/i.test(fullContext)) {
-            classStd = "इयत्ता - ३ री";
-          } else if (fullContext.includes("चौथी") || fullContext.includes("४थी") || fullContext.includes("४ थी") || /इयत्ता\s*[-_]?\s*4/i.test(fullContext)) {
-            classStd = "इयत्ता - ४ थी";
-          } else if (fullContext.includes("पहिली") || fullContext.includes("१ली") || fullContext.includes("१ ली") || /इयत्ता\s*[-_]?\s*1/i.test(fullContext)) {
-            classStd = "इयत्ता - १ ली";
-          } else if (fullContext.includes("दुसरी") || fullContext.includes("२री") || fullContext.includes("२ री") || /इयत्ता\s*[-_]?\s*2/i.test(fullContext)) {
+          if (fullContext.includes("दुसरी") || fullContext.includes("२री") || fullContext.includes("२ री") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:2|२)(?:\s*(?:nd|री))?\b/i.test(fullContext) || /\b2\s*nd\b/i.test(fullContext)) {
             classStd = "इयत्ता - २ री";
-          } else if (fullContext.includes("पाचवी") || fullContext.includes("५वी") || fullContext.includes("५ वी") || /इयत्ता\s*[-_]?\s*5/i.test(fullContext)) {
+          } else if (fullContext.includes("तिसरी") || fullContext.includes("३री") || fullContext.includes("३ री") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:3|३)(?:\s*(?:rd|री))?\b/i.test(fullContext) || /\b3\s*rd\b/i.test(fullContext)) {
+            classStd = "इयत्ता - ३ री";
+          } else if (fullContext.includes("चौथी") || fullContext.includes("४थी") || fullContext.includes("४ थी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:4|४)(?:\s*(?:th|थी))?\b/i.test(fullContext) || /\b4\s*th\b/i.test(fullContext)) {
+            classStd = "इयत्ता - ४ थी";
+          } else if (fullContext.includes("पाचवी") || fullContext.includes("५वी") || fullContext.includes("५ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:5|५)(?:\s*(?:th|वी))?\b/i.test(fullContext) || /\b5\s*th\b/i.test(fullContext)) {
             classStd = "इयत्ता - ५ वी";
-          } else if (fullContext.includes("सहावी") || fullContext.includes("६वी") || fullContext.includes("६ वी") || /इयत्ता\s*[-_]?\s*6/i.test(fullContext)) {
+          } else if (fullContext.includes("सहावी") || fullContext.includes("६वी") || fullContext.includes("६ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:6|६)(?:\s*(?:th|वी))?\b/i.test(fullContext) || /\b6\s*th\b/i.test(fullContext)) {
             classStd = "इयत्ता - ६ वी";
-          } else if (fullContext.includes("सातवी") || fullContext.includes("७वी") || fullContext.includes("७ वी") || /इयत्ता\s*[-_]?\s*7/i.test(fullContext)) {
+          } else if (fullContext.includes("सातवी") || fullContext.includes("७वी") || fullContext.includes("७ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:7|७)(?:\s*(?:th|वी))?\b/i.test(fullContext) || /\b7\s*th\b/i.test(fullContext)) {
             classStd = "इयत्ता - ७ वी";
-          } else if (fullContext.includes("आठवी") || fullContext.includes("८वी") || fullContext.includes("८ वी") || /इयत्ता\s*[-_]?\s*8/i.test(fullContext)) {
+          } else if (fullContext.includes("आठवी") || fullContext.includes("८वी") || fullContext.includes("८ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:8|८)(?:\s*(?:th|वी))?\b/i.test(fullContext) || /\b8\s*th\b/i.test(fullContext)) {
             classStd = "इयत्ता - ८ वी";
+          } else if (fullContext.includes("पहिली") || fullContext.includes("१ली") || fullContext.includes("१ ली") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:1|१)(?:\s*(?:st|ली))?\b/i.test(fullContext) || /\b1\s*st\b/i.test(fullContext)) {
+            classStd = "इयत्ता - १ ली";
           }
         }
         if (!classStd) classStd = "इयत्ता - १ ली";
       }
       if (!classStd.startsWith("इयत्ता")) classStd = `इयत्ता - ${classStd}`;
-      classStd = classStd.replace(/^इयत्ता\s*[-:–—]?\s*/i, "इयत्ता - ").trim();
+      classStd = classStd.replace(/^इयत्ता\s*[-:–—.]?\s*/i, "इयत्ता - ").trim();
 
       // Step C: Extract or Retain Subject
       let subjectName = "";
@@ -993,7 +995,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           for (const s of shapes) {
             if (s.closest('.qp-unified-header-box')) continue;
             const t = (s.textContent || "").trim();
-            const m = t.match(/(?:एकूण\s*गुण|total\s*marks?|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
+            const m = t.match(/(?:एकूण\s*गुण|total\s*marks?|total\s*mark|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?|mark)\s*[:\-–—.]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
             if (m && m[1]) {
               const val = m[1].trim();
               const numVal = parseInt(val.replace(/[०-९]/g, (d) => String("०१२३४५६७८९".indexOf(d))), 10);
@@ -1004,7 +1006,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             }
           }
           if (!totalMarks) {
-            const m = (pageText + " " + paperTitle).match(/(?:एकूण\s*गुण|total\s*marks?|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
+            const m = (pageText + " " + paperTitle).match(/(?:एकूण\s*गुण|total\s*marks?|total\s*mark|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?|mark)\s*[:\-–—.]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
             if (m && m[1]) {
               const val = m[1].trim();
               const numVal = parseInt(val.replace(/[०-९]/g, (d) => String("०१२३४५६७८९".indexOf(d))), 10);
@@ -1019,6 +1021,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
               totalMarks = "५०";
             } else if (/तिसरी|चौथी|३|४|3rd|4th/i.test(combined)) {
               totalMarks = "४०";
+            } else if (/दुसरी|२|2nd/i.test(combined)) {
+              totalMarks = "३०";
             } else {
               totalMarks = "२०";
             }
@@ -2996,6 +3000,9 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             -webkit-text-size-adjust: none !important;
             text-size-adjust: none !important;
             max-height: 1000000px !important;
+            white-space: nowrap !important;
+            word-break: normal !important;
+            overflow: visible !important;
           }
 
           /* Unified Question Paper Header Box on Mobile — STANDARD */
@@ -3134,6 +3141,9 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         .vml-shape-text {
           max-height: 1000000px !important;
           line-height: 1.25 !important;
+          white-space: nowrap !important;
+          word-break: normal !important;
+          overflow: visible !important;
         }
 
         /* Ensure homework header tables are completely borderless and fit flush */

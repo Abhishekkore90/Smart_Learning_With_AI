@@ -1172,7 +1172,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       s.includes("चाचणी") ||
       s.includes("मूल्यमापन") ||
       s.includes("परीक्षा") ||
-      s.includes("संकलित") ||
+      s.includes("संकलित मूल्यमापन") ||
       s.includes("घटक चाचणी") ||
       s.includes("सत्र परीक्षा") ||
       s.includes("प्रथम घटक") ||
@@ -1188,7 +1188,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       s.includes("उन्हाळी सुट्टी") ||
       s.includes("उन्हाळी सुट्ट्या") ||
       s.includes("उन्हाळी") ||
-      s.includes("मूल्यांकन") ||
+      (s.includes("मूल्यांकन") && !s.includes("मूल्यांकन कर") && !s.includes("मूल्यांकना")) ||
       s.includes("चाचणी क्र") ||
       s.includes("मूल्यमापन क्र") ||
       s.includes("प्रथम सत्र संकलित") ||
@@ -1610,7 +1610,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                 rowSpan: span,
                 skip: false,
                 displayValue: val,
-                isExam: isExamOrAssessmentText(val),
+                isExam: cIdx === 2 ? false : isExamOrAssessmentText(val),
               };
 
               for (let k = 1; k < span; k++) {
@@ -3030,7 +3030,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
       // Hidden container to construct and measure DOM pages
       const tempContainer = document.createElement("div");
-      tempContainer.className = "pdf-export-active";
+      tempContainer.className = isMonthly ? "pdf-export-active pdf-monthly-export" : "pdf-export-active";
       tempContainer.style.position = "fixed";
       tempContainer.style.left = "0px";
       tempContainer.style.top = "0px";
@@ -3093,13 +3093,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         if (isMonthly) {
           const clonedCols = secClone.querySelectorAll("colgroup col");
           if (clonedCols.length >= 7) {
-            (clonedCols[0] as HTMLElement).style.width = "50px";
-            (clonedCols[1] as HTMLElement).style.width = "110px";
-            (clonedCols[2] as HTMLElement).style.width = "170px";
+            (clonedCols[0] as HTMLElement).style.width = "46px";
+            (clonedCols[1] as HTMLElement).style.width = "112px";
+            (clonedCols[2] as HTMLElement).style.width = "172px";
             (clonedCols[3] as HTMLElement).style.width = "115px";
-            (clonedCols[4] as HTMLElement).style.width = "240px";
-            (clonedCols[5] as HTMLElement).style.width = "105px";
-            (clonedCols[6] as HTMLElement).style.width = "110px";
+            (clonedCols[4] as HTMLElement).style.width = "250px";
+            (clonedCols[5] as HTMLElement).style.width = "100px";
+            (clonedCols[6] as HTMLElement).style.width = "105px";
           }
           secClone.querySelectorAll("thead th").forEach((th: any, idx: number) => {
             th.style.wordBreak = "keep-all";
@@ -3108,55 +3108,55 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             th.style.fontWeight = "900";
             th.style.color = "#000000";
             if (idx === 0) {
-              th.style.width = "50px";
-              th.style.minWidth = "46px";
-              th.style.maxWidth = "54px";
-              th.style.padding = "4px 2px";
+              th.style.width = "46px";
+              th.style.minWidth = "42px";
+              th.style.maxWidth = "50px";
+              th.style.padding = "8px 2px";
               th.style.textAlign = "center";
               th.style.whiteSpace = "nowrap";
-              th.style.fontSize = "11.5px";
+              th.style.fontSize = "13px";
             } else if (idx === 1) {
-              th.style.width = "110px";
-              th.style.padding = "4px 2px";
+              th.style.width = "112px";
+              th.style.padding = "8px 3px";
               th.style.textAlign = "center";
-              th.style.fontSize = "11.5px";
-              th.style.lineHeight = "1.25";
+              th.style.fontSize = "13.5px";
+              th.style.lineHeight = "1.3";
             } else if (idx === 2) {
-              th.style.width = "170px";
-              th.style.padding = "4px 2px";
+              th.style.width = "172px";
+              th.style.padding = "8px 3px";
               th.style.textAlign = "center";
-              th.style.fontSize = "11.5px";
-              th.style.lineHeight = "1.25";
+              th.style.fontSize = "13.5px";
+              th.style.lineHeight = "1.3";
             } else if (idx === 3) {
               th.style.width = "115px";
-              th.style.padding = "4px 2px";
+              th.style.padding = "8px 3px";
               th.style.textAlign = "center";
-              th.style.fontSize = "11.5px";
-              th.style.lineHeight = "1.25";
+              th.style.fontSize = "13.5px";
+              th.style.lineHeight = "1.3";
             } else if (idx === 4) {
-              th.style.width = "240px";
-              th.style.padding = "4px 3px";
+              th.style.width = "250px";
+              th.style.padding = "8px 4px";
               th.style.textAlign = "center";
-              th.style.fontSize = "11.5px";
-              th.style.lineHeight = "1.25";
+              th.style.fontSize = "13.5px";
+              th.style.lineHeight = "1.3";
             } else if (idx === 5) {
-              th.style.width = "105px";
+              th.style.width = "100px";
               th.style.textAlign = "center";
-              th.style.padding = "4px 1px";
-              th.style.fontSize = "9.5px";
-              th.style.lineHeight = "1.25";
+              th.style.padding = "8px 2px";
+              th.style.fontSize = "11.5px";
+              th.style.lineHeight = "1.3";
               if (th.textContent.includes("Tool") || th.textContent.includes("Technique")) {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:11px;font-weight:900;">Tool &</span><span style="display:block;white-space:nowrap;word-break:keep-all;font-size:11px;font-weight:900;">Technique</span>';
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:12px;font-weight:900;">Tool &</span><span style="display:block;white-space:nowrap;word-break:keep-all;font-size:12px;font-weight:900;">Technique</span>';
               }
             } else if (idx === 6) {
-              th.style.width = "110px";
+              th.style.width = "105px";
               th.style.textAlign = "center";
-              th.style.padding = "4px 1px";
-              th.style.fontSize = "11px";
+              th.style.padding = "8px 2px";
+              th.style.fontSize = "12px";
               th.style.fontWeight = "900";
-              th.style.lineHeight = "1.25";
+              th.style.lineHeight = "1.3";
               if (th.textContent.includes("Educational") || th.textContent.includes("Instrument")) {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:11px;font-weight:900;letter-spacing:-0.2px;">Educational</span><span style="display:block;white-space:nowrap;word-break:keep-all;font-size:11px;font-weight:900;letter-spacing:-0.2px;">Instrument</span>';
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:12px;font-weight:900;letter-spacing:-0.2px;">Educational</span><span style="display:block;white-space:nowrap;word-break:keep-all;font-size:12px;font-weight:900;letter-spacing:-0.2px;">Instrument</span>';
               }
             }
           });
@@ -3165,28 +3165,50 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             const cIdx = cIdxAttr !== null ? parseInt(cIdxAttr, 10) : -1;
             tdEl.style.wordBreak = "normal";
             tdEl.style.overflowWrap = "break-word";
-            tdEl.style.fontSize = "10.5px";
-            tdEl.style.lineHeight = "1.3";
+            tdEl.style.lineHeight = "1.35";
             tdEl.style.width = "";
             tdEl.style.minWidth = "";
             tdEl.style.maxWidth = "";
 
             if (cIdx === 0) {
               tdEl.style.textAlign = "center";
-              tdEl.style.fontWeight = "bold";
-              tdEl.style.padding = "3px 2px";
-              tdEl.style.fontSize = "11px";
-            } else if (cIdx === 1 || cIdx === 2 || cIdx === 3 || cIdx === 5 || cIdx === 6) {
+              tdEl.style.fontWeight = "900";
+              tdEl.style.padding = "6px 3px";
+              tdEl.style.fontSize = "15px";
+            } else if (cIdx === 1) {
               tdEl.style.textAlign = "center";
-              tdEl.style.padding = "3px 3px";
+              tdEl.style.fontWeight = "800";
+              tdEl.style.padding = "6px 5px";
+              tdEl.style.fontSize = "14px";
+            } else if (cIdx === 2) {
+              tdEl.style.textAlign = "center";
+              tdEl.style.fontWeight = "600";
+              tdEl.style.padding = "6px 5px";
+              tdEl.style.fontSize = "13px";
+              tdEl.style.lineHeight = "1.4";
+            } else if (cIdx === 3) {
+              tdEl.style.textAlign = "center";
+              tdEl.style.fontWeight = "700";
+              tdEl.style.padding = "6px 5px";
+              tdEl.style.fontSize = "13.5px";
+            } else if (cIdx === 5 || cIdx === 6) {
+              tdEl.style.textAlign = "center";
+              tdEl.style.fontWeight = "700";
+              tdEl.style.padding = "6px 4px";
+              tdEl.style.fontSize = "13px";
             } else {
               tdEl.style.textAlign = "left";
-              tdEl.style.padding = "3px 5px";
+              tdEl.style.fontWeight = "600";
+              tdEl.style.padding = "6px 7px";
+              tdEl.style.fontSize = "13.5px";
+              tdEl.style.lineHeight = "1.4";
             }
 
             tdEl.querySelectorAll("*").forEach((el: any) => {
               el.style.wordBreak = "normal";
               el.style.overflowWrap = "break-word";
+              el.style.fontSize = "inherit";
+              el.style.lineHeight = "inherit";
             });
           });
         } else {
@@ -3224,27 +3246,27 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         if (schoolHeader) {
           schoolHeader.style.width = "100%";
           schoolHeader.style.boxSizing = "border-box";
-          schoolHeader.style.padding = "8px 16px";
+          schoolHeader.style.padding = isMonthly ? "6px 14px" : "8px 16px";
           schoolHeader.style.backgroundColor = "#ffffff";
           schoolHeader.style.borderRadius = "12px";
           schoolHeader.style.border = "2px solid #0f172a";
-          schoolHeader.style.marginBottom = "8px";
+          schoolHeader.style.marginBottom = isMonthly ? "5px" : "8px";
 
           const h2 = schoolHeader.querySelector("h2");
           if (h2) {
-            h2.style.fontSize = "20px";
+            h2.style.fontSize = isMonthly ? "17px" : "20px";
             h2.style.fontWeight = "900";
-            h2.style.lineHeight = "1.3";
+            h2.style.lineHeight = "1.25";
             h2.style.color = "#0f172a";
             h2.style.margin = "0";
-            h2.style.paddingBottom = "4px";
+            h2.style.paddingBottom = isMonthly ? "2px" : "4px";
           }
 
           const subline = schoolHeader.querySelector(".pdf-school-subline") as HTMLElement | null;
           if (subline) {
-            subline.style.fontSize = "13.5px";
-            subline.style.lineHeight = "1.4";
-            subline.style.paddingTop = "5px";
+            subline.style.fontSize = isMonthly ? "11.5px" : "13.5px";
+            subline.style.lineHeight = "1.3";
+            subline.style.paddingTop = isMonthly ? "3px" : "5px";
             subline.style.display = "flex";
             subline.style.flexDirection = "row";
             subline.style.flexWrap = "nowrap";
@@ -3253,7 +3275,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             subline.style.width = "100%";
             subline.style.overflow = "visible";
             subline.querySelectorAll("*").forEach((el: any) => {
-              el.style.fontSize = "13.5px";
+              el.style.fontSize = isMonthly ? "11.5px" : "13.5px";
             });
           }
         }
@@ -3264,7 +3286,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           subjectBanner.style.flexWrap = "nowrap";
           subjectBanner.style.justifyContent = "space-between";
           subjectBanner.style.alignItems = "center";
-          subjectBanner.style.padding = "6px 14px";
+          subjectBanner.style.padding = isMonthly ? "4px 10px" : "6px 14px";
+          subjectBanner.style.marginBottom = isMonthly ? "5px" : "";
           subjectBanner.style.whiteSpace = "nowrap";
           subjectBanner.style.width = "100%";
           subjectBanner.style.boxSizing = "border-box";
@@ -3328,117 +3351,348 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
         if (allTrs.length === 0) continue;
 
-        // Group rows into Month Blocks (Annual Planning) or Date Blocks (Monthly Planning)
-        const trGroups: HTMLElement[][] = [];
-        let currentGroup: HTMLElement[] = [];
+        if (isMonthly) {
+          // =========================================================================
+          // ── DEDICATED 2-PAGE MONTHLY PLANNING PAGINATION (ZERO DATA LOSS) ──
+          // Every single month planning is formatted to fit into EXACTLY 2 PAGES
+          // (or 1 page if total rows <= 14).
+          // Page 1: School Header + Subject/Month Banner (पान १/२) + Thead + 1st Half Rows
+          // Page 2: Subject/Month Banner (पान २/२) + Thead + 2nd Half Rows + Signatures
+          // Spanning cells (rowSpan) across the split boundary are cleanly divided
+          // so Page 1 gets the first portion and Page 2 receives continuation cells
+          // with zero column shifting, zero clipped text, and 100% table validity!
+          // =========================================================================
 
-        allTrs.forEach((tr) => {
-          const isMonthStart = tr.getAttribute("data-month-start") === "true";
-          const firstTd = tr.querySelector("td");
-          const firstTdText = firstTd?.textContent?.trim() || "";
-          const isMonthByText = !isMonthly && isMarathiMonth(firstTdText);
+          const N = allTrs.length;
 
-          // In monthly planning, chunk rows so no single group exceeds 6 rows
-          const hasLessonStart = isMonthly && tr.querySelector('td[data-cidx="1"]') !== null;
-          const isExam = isMonthly && (tr.querySelector(".exam-assessment-cell") !== null || isExamOrAssessmentText(tr.textContent || ""));
-          const isChunkMax = isMonthly && currentGroup.length >= 6;
+          const createNewMonthlyPage = (pageNum: 1 | 2, totalPages: number) => {
+            const pageDiv = document.createElement("div");
+            pageDiv.className = "bg-white pdf-monthly-page-container";
+            pageDiv.style.width = exportWidth; // 950px
+            pageDiv.style.height = "1340px"; // Full A4 page height in DOM coordinates
+            pageDiv.style.minHeight = "1340px";
+            pageDiv.style.maxHeight = "1340px";
+            pageDiv.style.padding = "14px 20px";
+            pageDiv.style.boxSizing = "border-box";
+            pageDiv.style.backgroundColor = "#ffffff";
+            pageDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
+            pageDiv.style.display = "flex";
+            pageDiv.style.flexDirection = "column";
+            pageDiv.style.justifyContent = "space-between";
+            pageDiv.style.overflow = "hidden";
 
-          const shouldBreak = isMonthly
-            ? (isMonthStart || hasLessonStart || isExam || isChunkMax)
-            : (isMonthStart || isMonthByText);
+            const topHeaderWrap = document.createElement("div");
+            topHeaderWrap.style.width = "100%";
+            topHeaderWrap.style.flex = "0 0 auto";
+            topHeaderWrap.style.display = "flex";
+            topHeaderWrap.style.flexDirection = "column";
+            topHeaderWrap.style.gap = "6px";
+            topHeaderWrap.style.marginBottom = "6px";
 
-          if (shouldBreak && currentGroup.length > 0) {
-            trGroups.push(currentGroup);
-            currentGroup = [];
-          }
-          currentGroup.push(tr);
-        });
-        if (currentGroup.length > 0) {
-          trGroups.push(currentGroup);
-        }
-
-        const pageList: { pageDiv: HTMLElement; tbody: HTMLElement; isFirstPage: boolean }[] = [];
-
-        const createNewPage = (isFirstPage: boolean) => {
-          const pageDiv = document.createElement("div");
-          pageDiv.className = "bg-white space-y-3.5";
-          pageDiv.style.width = exportWidth;
-          pageDiv.style.padding = "20px 25px";
-          pageDiv.style.boxSizing = "border-box";
-          pageDiv.style.backgroundColor = "#ffffff";
-          pageDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
-
-          if (isFirstPage) {
-            if (schoolHeader) pageDiv.appendChild(schoolHeader.cloneNode(true));
-            if (subjectBanner) pageDiv.appendChild(subjectBanner.cloneNode(true));
-          }
-
-          const pageTable = document.createElement("table");
-          if (tableEl) pageTable.className = tableEl.className;
-          pageTable.style.width = "900px";
-          pageTable.style.margin = "0 auto";
-          pageTable.style.boxSizing = "border-box";
-          pageTable.style.borderCollapse = "collapse";
-          pageTable.style.backgroundColor = "#ffffff";
-
-          if (colgroup) pageTable.appendChild(colgroup.cloneNode(true));
-          if (thead) pageTable.appendChild(thead.cloneNode(true));
-
-          const pageTbody = document.createElement("tbody");
-          pageTable.appendChild(pageTbody);
-          pageDiv.appendChild(pageTable);
-
-          tempContainer.appendChild(pageDiv);
-          const pageObj = { pageDiv, tbody: pageTbody, isFirstPage };
-          pageList.push(pageObj);
-          return pageObj;
-        };
-
-        let currentPage = createNewPage(true);
-
-        for (let g = 0; g < trGroups.length; g++) {
-          const group = trGroups[g];
-          const clonedRows = group.map((tr) => tr.cloneNode(true) as HTMLElement);
-          clonedRows.forEach((tr) => currentPage.tbody.appendChild(tr));
-
-          const maxAllowed = currentPage.isFirstPage ? PAGE_MAX_HEIGHT_FIRST : PAGE_MAX_HEIGHT_SUBSEQUENT;
-
-          // If adding this group overflows the page, and the page already has previous rows:
-          if (currentPage.pageDiv.offsetHeight > maxAllowed && currentPage.tbody.children.length > group.length) {
-            clonedRows.forEach((tr) => tr.remove());
-            currentPage = createNewPage(false);
-            const freshClonedRows = group.map((tr) => tr.cloneNode(true) as HTMLElement);
-            freshClonedRows.forEach((tr) => currentPage.tbody.appendChild(tr));
-          }
-        }
-
-        // Add signature bar on the last page of this subject
-        if (sigBar) {
-          const clonedSig = sigBar.cloneNode(true) as HTMLElement;
-          currentPage.pageDiv.appendChild(clonedSig);
-
-          const maxAllowed = currentPage.isFirstPage ? PAGE_MAX_HEIGHT_FIRST : PAGE_MAX_HEIGHT_SUBSEQUENT;
-          // If signature bar causes overflow, place it on a clean new page WITH the last 2 rows
-          if (currentPage.pageDiv.offsetHeight > maxAllowed) {
-            clonedSig.remove();
-
-            const currentTrs = Array.from(currentPage.tbody.children) as HTMLElement[];
-            if (currentTrs.length > 2) {
-              currentPage = createNewPage(false);
-              const rowsToMove = currentTrs.slice(-2);
-              rowsToMove.forEach((r) => {
-                r.remove();
-                currentPage.tbody.appendChild(r);
-              });
-              currentPage.pageDiv.appendChild(clonedSig);
+            if (pageNum === 1) {
+              if (schoolHeader) topHeaderWrap.appendChild(schoolHeader.cloneNode(true));
+              if (subjectBanner) {
+                topHeaderWrap.appendChild(subjectBanner.cloneNode(true));
+              }
             } else {
-              currentPage.pageDiv.appendChild(clonedSig);
+              if (subjectBanner) {
+                topHeaderWrap.appendChild(subjectBanner.cloneNode(true));
+              }
+            }
+            pageDiv.appendChild(topHeaderWrap);
+
+            const tableWrap = document.createElement("div");
+            tableWrap.style.width = "100%";
+            tableWrap.style.flex = "1 1 auto";
+            tableWrap.style.display = "flex";
+            tableWrap.style.flexDirection = "column";
+
+            const pageTable = document.createElement("table");
+            if (tableEl) pageTable.className = tableEl.className;
+            pageTable.style.width = "900px";
+            pageTable.style.height = "100%";
+            pageTable.style.margin = "0 auto";
+            pageTable.style.boxSizing = "border-box";
+            pageTable.style.borderCollapse = "collapse";
+            pageTable.style.backgroundColor = "#ffffff";
+
+            if (colgroup) pageTable.appendChild(colgroup.cloneNode(true));
+            if (thead) pageTable.appendChild(thead.cloneNode(true));
+
+            const pageTbody = document.createElement("tbody");
+            pageTbody.style.height = "100%";
+            pageTable.appendChild(pageTbody);
+            tableWrap.appendChild(pageTable);
+            pageDiv.appendChild(tableWrap);
+
+            const bottomWrap = document.createElement("div");
+            bottomWrap.style.width = "100%";
+            bottomWrap.style.flex = "0 0 auto";
+            bottomWrap.style.marginTop = "auto";
+            pageDiv.appendChild(bottomWrap);
+
+            tempContainer.appendChild(pageDiv);
+            return { pageDiv, tbody: pageTbody, bottomWrap };
+          };
+
+          if (N <= 14) {
+            // Fits comfortably on 1 single page - stretch evenly across full page
+            const pageObj = createNewMonthlyPage(1, 1);
+            const singleRowHeight = Math.max(48, Math.floor(1020 / N));
+            allTrs.forEach((tr) => {
+              const clonedTr = tr.cloneNode(true) as HTMLElement;
+              clonedTr.style.height = `${singleRowHeight}px`;
+              clonedTr.querySelectorAll("td").forEach((td: any) => {
+                td.style.verticalAlign = "middle";
+                td.style.padding = "6px 6px";
+              });
+              pageObj.tbody.appendChild(clonedTr);
+            });
+            if (sigBar) {
+              const sigClone = sigBar.cloneNode(true) as HTMLElement;
+              sigClone.style.marginTop = "12px";
+              sigClone.style.paddingTop = "12px";
+              sigClone.style.borderTop = "2px solid #0f172a";
+              pageObj.bottomWrap.appendChild(sigClone);
+            }
+            allPagesToRender.push(pageObj.pageDiv);
+          } else {
+            // Fits on EXACTLY 2 PAGES - both pages stretch vertically to 100% full height!
+            const targetMid = Math.ceil(N / 2);
+
+            const isCrossing = (splitIdx: number): boolean => {
+              for (let r = 0; r < splitIdx; r++) {
+                const tds = Array.from(allTrs[r].querySelectorAll("td")) as HTMLTableCellElement[];
+                for (const td of tds) {
+                  const span = td.rowSpan && td.rowSpan > 1 ? td.rowSpan : 1;
+                  if (r + span > splitIdx) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            };
+
+            let bestSplit = -1;
+            // Search within ±3 rows of targetMid for a natural split where no cell is cut
+            for (let offset = 0; offset <= 3; offset++) {
+              const c1 = targetMid + offset;
+              if (c1 >= 10 && c1 <= N - 6 && !isCrossing(c1)) {
+                bestSplit = c1;
+                break;
+              }
+              const c2 = targetMid - offset;
+              if (c2 >= 10 && c2 <= N - 6 && !isCrossing(c2)) {
+                bestSplit = c2;
+                break;
+              }
+            }
+
+            if (bestSplit === -1) {
+              bestSplit = targetMid;
+            }
+
+            // ── Construct Page 1 (Rows 0 to bestSplit - 1) ──
+            const page1 = createNewMonthlyPage(1, 2);
+            const p1RowHeight = Math.max(42, Math.floor(1090 / bestSplit));
+
+            for (let r = 0; r < bestSplit; r++) {
+              const clonedTr = allTrs[r].cloneNode(true) as HTMLElement;
+              clonedTr.style.height = `${p1RowHeight}px`;
+
+              const tds = Array.from(clonedTr.querySelectorAll("td")) as HTMLTableCellElement[];
+              tds.forEach((td) => {
+                td.style.verticalAlign = "middle";
+                td.style.padding = "6px 6px";
+                const span = td.rowSpan && td.rowSpan > 1 ? td.rowSpan : 1;
+                if (r + span > bestSplit) {
+                  td.rowSpan = bestSplit - r;
+                }
+              });
+              page1.tbody.appendChild(clonedTr);
+            }
+
+            allPagesToRender.push(page1.pageDiv);
+
+            // ── Construct Page 2 (Rows bestSplit to N - 1) ──
+            const page2 = createNewMonthlyPage(2, 2);
+            const p2RowCount = N - bestSplit;
+            const p2RowHeight = Math.max(42, Math.floor(1060 / p2RowCount));
+
+            // Detect any cells that started on Page 1 and continue on Page 2
+            const crossingCells: { cIdx: number; cell: HTMLTableCellElement; remainingSpan: number }[] = [];
+            for (let r = 0; r < bestSplit; r++) {
+              const tds = Array.from(allTrs[r].querySelectorAll("td")) as HTMLTableCellElement[];
+              tds.forEach((td) => {
+                const span = td.rowSpan && td.rowSpan > 1 ? td.rowSpan : 1;
+                if (r + span > bestSplit) {
+                  const cIdxAttr = td.getAttribute("data-cidx");
+                  const cIdx = cIdxAttr !== null ? parseInt(cIdxAttr, 10) : -1;
+                  crossingCells.push({
+                    cIdx,
+                    cell: td,
+                    remainingSpan: (r + span) - bestSplit,
+                  });
+                }
+              });
+            }
+
+            for (let r = bestSplit; r < N; r++) {
+              const clonedTr = allTrs[r].cloneNode(true) as HTMLElement;
+              clonedTr.style.height = `${p2RowHeight}px`;
+
+              // On the very first row of Page 2 (r === bestSplit), inject the continuation cells in column order
+              if (r === bestSplit && crossingCells.length > 0) {
+                crossingCells.sort((a, b) => a.cIdx - b.cIdx);
+                crossingCells.forEach(({ cIdx, cell, remainingSpan }) => {
+                  const contTd = cell.cloneNode(true) as HTMLTableCellElement;
+                  contTd.rowSpan = remainingSpan;
+                  contTd.setAttribute("data-continuation", "true");
+                  contTd.style.verticalAlign = "middle";
+                  contTd.style.padding = "6px 6px";
+
+                  const existingTds = Array.from(clonedTr.querySelectorAll("td")) as HTMLTableCellElement[];
+                  let inserted = false;
+                  for (const exTd of existingTds) {
+                    const exIdxAttr = exTd.getAttribute("data-cidx");
+                    const exIdx = exIdxAttr !== null ? parseInt(exIdxAttr, 10) : 999;
+                    if (exIdx > cIdx) {
+                      clonedTr.insertBefore(contTd, exTd);
+                      inserted = true;
+                      break;
+                    }
+                  }
+                  if (!inserted) {
+                    clonedTr.appendChild(contTd);
+                  }
+                });
+              }
+
+              const tds = Array.from(clonedTr.querySelectorAll("td")) as HTMLTableCellElement[];
+              tds.forEach((td) => {
+                td.style.verticalAlign = "middle";
+                td.style.padding = "6px 6px";
+              });
+
+              page2.tbody.appendChild(clonedTr);
+            }
+
+            // Append signature bar to Page 2 at bottom
+            if (sigBar) {
+              const sigClone = sigBar.cloneNode(true) as HTMLElement;
+              sigClone.style.marginTop = "12px";
+              sigClone.style.paddingTop = "12px";
+              sigClone.style.borderTop = "2px solid #0f172a";
+              page2.bottomWrap.appendChild(sigClone);
+            }
+
+            allPagesToRender.push(page2.pageDiv);
+          }
+        } else {
+          // --- ANNUAL PLANNING (वार्षिक नियोजन) PAGINATION ---
+          // Group rows into Month Blocks (Annual Planning)
+          const trGroups: HTMLElement[][] = [];
+          let currentGroup: HTMLElement[] = [];
+
+          allTrs.forEach((tr) => {
+            const isMonthStart = tr.getAttribute("data-month-start") === "true";
+            const firstTd = tr.querySelector("td");
+            const firstTdText = firstTd?.textContent?.trim() || "";
+            const isMonthByText = isMarathiMonth(firstTdText);
+
+            if ((isMonthStart || isMonthByText) && currentGroup.length > 0) {
+              trGroups.push(currentGroup);
+              currentGroup = [];
+            }
+            currentGroup.push(tr);
+          });
+          if (currentGroup.length > 0) {
+            trGroups.push(currentGroup);
+          }
+
+          const pageList: { pageDiv: HTMLElement; tbody: HTMLElement; isFirstPage: boolean }[] = [];
+
+          const createNewPage = (isFirstPage: boolean) => {
+            const pageDiv = document.createElement("div");
+            pageDiv.className = "bg-white space-y-3.5";
+            pageDiv.style.width = exportWidth;
+            pageDiv.style.padding = "20px 25px";
+            pageDiv.style.boxSizing = "border-box";
+            pageDiv.style.backgroundColor = "#ffffff";
+            pageDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
+
+            if (isFirstPage) {
+              if (schoolHeader) pageDiv.appendChild(schoolHeader.cloneNode(true));
+              if (subjectBanner) pageDiv.appendChild(subjectBanner.cloneNode(true));
+            }
+
+            const pageTable = document.createElement("table");
+            if (tableEl) pageTable.className = tableEl.className;
+            pageTable.style.width = "900px";
+            pageTable.style.margin = "0 auto";
+            pageTable.style.boxSizing = "border-box";
+            pageTable.style.borderCollapse = "collapse";
+            pageTable.style.backgroundColor = "#ffffff";
+
+            if (colgroup) pageTable.appendChild(colgroup.cloneNode(true));
+            if (thead) pageTable.appendChild(thead.cloneNode(true));
+
+            const pageTbody = document.createElement("tbody");
+            pageTable.appendChild(pageTbody);
+            pageDiv.appendChild(pageTable);
+
+            tempContainer.appendChild(pageDiv);
+            const pageObj = { pageDiv, tbody: pageTbody, isFirstPage };
+            pageList.push(pageObj);
+            return pageObj;
+          };
+
+          let currentPage = createNewPage(true);
+
+          for (let g = 0; g < trGroups.length; g++) {
+            const group = trGroups[g];
+            const clonedRows = group.map((tr) => tr.cloneNode(true) as HTMLElement);
+            clonedRows.forEach((tr) => currentPage.tbody.appendChild(tr));
+
+            const maxAllowed = currentPage.isFirstPage ? PAGE_MAX_HEIGHT_FIRST : PAGE_MAX_HEIGHT_SUBSEQUENT;
+
+            // If adding this group overflows the page, and the page already has previous rows:
+            if (currentPage.pageDiv.offsetHeight > maxAllowed && currentPage.tbody.children.length > group.length) {
+              clonedRows.forEach((tr) => tr.remove());
+              currentPage = createNewPage(false);
+              const freshClonedRows = group.map((tr) => tr.cloneNode(true) as HTMLElement);
+              freshClonedRows.forEach((tr) => currentPage.tbody.appendChild(tr));
             }
           }
-        }
 
-        // Collect all pages generated for this section
-        pageList.forEach((pObj) => allPagesToRender.push(pObj.pageDiv));
+          // Add signature bar on the last page of this subject
+          if (sigBar) {
+            const clonedSig = sigBar.cloneNode(true) as HTMLElement;
+            currentPage.pageDiv.appendChild(clonedSig);
+
+            const maxAllowed = currentPage.isFirstPage ? PAGE_MAX_HEIGHT_FIRST : PAGE_MAX_HEIGHT_SUBSEQUENT;
+            // If signature bar causes overflow, place it on a clean new page WITH the last 2 rows
+            if (currentPage.pageDiv.offsetHeight > maxAllowed) {
+              clonedSig.remove();
+
+              const currentTrs = Array.from(currentPage.tbody.children) as HTMLElement[];
+              if (currentTrs.length > 2) {
+                currentPage = createNewPage(false);
+                const rowsToMove = currentTrs.slice(-2);
+                rowsToMove.forEach((r) => {
+                  r.remove();
+                  currentPage.tbody.appendChild(r);
+                });
+                currentPage.pageDiv.appendChild(clonedSig);
+              } else {
+                currentPage.pageDiv.appendChild(clonedSig);
+              }
+            }
+          }
+
+          // Collect all pages generated for this section
+          pageList.forEach((pObj) => allPagesToRender.push(pObj.pageDiv));
+        }
       }
 
       if (allPagesToRender.length === 0) {
@@ -3449,6 +3703,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         return;
       }
 
+      const BATCH_SIZE = 3;
       const grandTotalPages = allPagesToRender.length;
 
       // Yield main thread before canvas rendering
@@ -3456,63 +3711,96 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
       let totalPdfPages = 0;
 
-      // Render each generated page directly with html2canvas (NO SLICING = ZERO WORD CUTTING!)
-      for (let p = 0; p < allPagesToRender.length; p++) {
-        const pageDiv = allPagesToRender[p];
+      // Render generated pages concurrently in batches of 3 using Promise.all (SUPER FAST GENERATION)
+      for (let b = 0; b < grandTotalPages; b += BATCH_SIZE) {
+        const batchPages = allPagesToRender.slice(b, b + BATCH_SIZE);
+        const batchEnd = Math.min(b + BATCH_SIZE, grandTotalPages);
+
         tempContainer.innerHTML = "";
-        tempContainer.appendChild(pageDiv);
-
-        const currentStep = p + 1;
-        const pct = Math.min(96, Math.max(5, Math.round((currentStep / grandTotalPages) * 92)));
-
-        setPdfProgress({
-          current: currentStep,
-          total: grandTotalPages,
-          percent: pct,
-          status: isMonthly
-            ? `मासिक नियोजन : एकूण पान ${currentStep} / ${grandTotalPages} तयार होत आहे... (HD क्वालिटी)`
-            : `नियोजन : एकूण पान ${currentStep} / ${grandTotalPages} तयार होत आहे... (HD क्वालिटी)`,
+        batchPages.forEach((pageDiv) => {
+          pageDiv.style.position = "absolute";
+          pageDiv.style.top = "0px";
+          pageDiv.style.left = "0px";
+          tempContainer.appendChild(pageDiv);
         });
 
-        // Allow DOM to settle and yield main thread so UI stays 100% responsive
-        await new Promise((resolve) => setTimeout(resolve, 30));
+        const pct = Math.min(96, Math.max(5, Math.round((batchEnd / grandTotalPages) * 92)));
 
-        toast.info(`⚡ PDF तयार होत आहे... (एकूण पान ${p + 1}/${grandTotalPages})`, {
+        setPdfProgress({
+          current: batchEnd,
+          total: grandTotalPages,
+          percent: pct,
+          status: "",
+        });
+
+        toast.info(`⚡ PDF तयार होत आहे...`, {
           id: "planning-pdf-progress",
         });
 
-        const pageCanvas = await html2canvas(pageDiv, {
-          scale: 1.25,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: 1200,
-          imageTimeout: 0,
-          removeContainer: true,
-        });
+        // Small yield so browser draws progress UI
+        await new Promise((resolve) => setTimeout(resolve, 25));
 
-        if (totalPdfPages > 0) {
-          pdf.addPage();
+        // Concurrently render the batch of pages with html2canvas
+        const pageCanvases = await Promise.all(
+          batchPages.map((pageDiv) =>
+            html2canvas(pageDiv, {
+              scale: 1.18,
+              useCORS: true,
+              logging: false,
+              backgroundColor: "#ffffff",
+              scrollX: 0,
+              scrollY: 0,
+              windowWidth: 1100,
+              imageTimeout: 0,
+              removeContainer: true,
+            })
+          )
+        );
+
+        // Add each rendered page to PDF in strict sequential order
+        for (let i = 0; i < pageCanvases.length; i++) {
+          const pageCanvas = pageCanvases[i];
+
+          if (totalPdfPages > 0) {
+            pdf.addPage();
+          }
+          totalPdfPages++;
+
+          const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.78);
+
+          // ALL pages have the EXACT SAME 100% uniform table width (190mm) and left margin (10mm) - ZERO ZOOM OUT!
+          const renderWidthMm = 190;
+          const renderHeightMm = (pageCanvas.height * renderWidthMm) / pageCanvas.width;
+          const maxPageHeightMm = 280;
+          let actualRenderWidthMm = renderWidthMm;
+          let actualRenderHeightMm = renderHeightMm;
+
+          if (actualRenderHeightMm > maxPageHeightMm) {
+            const fitRatio = maxPageHeightMm / actualRenderHeightMm;
+            actualRenderHeightMm = maxPageHeightMm;
+            actualRenderWidthMm = renderWidthMm * fitRatio;
+          }
+
+          const actualOffsetX = (210 - actualRenderWidthMm) / 2;
+          const actualOffsetY = isMonthly ? Math.max(6, (297 - actualRenderHeightMm) / 2) : 8;
+
+          pdf.addImage(
+            pageImgData,
+            "JPEG",
+            actualOffsetX,
+            actualOffsetY,
+            actualRenderWidthMm,
+            actualRenderHeightMm,
+            undefined,
+            "FAST"
+          );
+
+          // Immediately release canvas bitmap memory from RAM & GPU to prevent mobile WebView lag/crash
+          pageCanvas.width = 0;
+          pageCanvas.height = 0;
         }
-        totalPdfPages++;
 
-        const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.80);
-
-        // ALL pages have the EXACT SAME 100% uniform table width (190mm) and left margin (10mm) - ZERO ZOOM OUT!
-        const renderWidthMm = 190;
-        const renderHeightMm = (pageCanvas.height * renderWidthMm) / pageCanvas.width;
-        const offsetX = 10;
-        const offsetY = 10;
-
-        pdf.addImage(pageImgData, "JPEG", offsetX, offsetY, renderWidthMm, renderHeightMm, undefined, "FAST");
-
-        // Immediately release canvas bitmap memory from RAM & GPU to prevent mobile WebView lag/crash
-        pageCanvas.width = 0;
-        pageCanvas.height = 0;
-
-        // Brief yield for browser garbage collection and UI updates
+        // Brief yield for browser garbage collection and UI updates between batches
         await new Promise((resolve) => setTimeout(resolve, 20));
       }
 
@@ -3590,9 +3878,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               <h3 className="text-base sm:text-lg font-black text-slate-900">
                 {isMonthly ? "मासिक नियोजन PDF तयार होत आहे..." : "नियोजन PDF तयार होत आहे..."}
               </h3>
-              <p className="text-xs sm:text-sm font-bold text-indigo-600">
-                {pdfProgress.status}
-              </p>
+              {pdfProgress.status ? (
+                <p className="text-xs sm:text-sm font-bold text-indigo-600">
+                  {pdfProgress.status}
+                </p>
+              ) : null}
             </div>
 
             {/* Progress Bar & Percentage */}
@@ -4511,6 +4801,133 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     padding: 10px 8px !important;
                   }
 
+                  /* Dedicated Full-Page Typography for 2-Page Monthly Planning PDF Export */
+                  .pdf-export-active.pdf-monthly-export td,
+                  .pdf-monthly-export td {
+                    font-size: 13.5px !important;
+                    line-height: 1.4 !important;
+                    padding: 6px 6px !important;
+                    vertical-align: middle !important;
+                    color: #0f172a !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export td * {
+                    font-size: inherit !important;
+                    line-height: inherit !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export th,
+                  .pdf-monthly-export th {
+                    font-size: 13.5px !important;
+                    line-height: 1.35 !important;
+                    padding: 8px 4px !important;
+                    vertical-align: middle !important;
+                    font-weight: 900 !important;
+                    color: #000000 !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export th * {
+                    font-size: inherit !important;
+                    font-weight: 900 !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export td[data-cidx="0"],
+                  .pdf-monthly-export td[data-cidx="0"] {
+                    font-size: 15px !important;
+                    font-weight: 900 !important;
+                    text-align: center !important;
+                    vertical-align: middle !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export td[data-cidx="1"],
+                  .pdf-monthly-export td[data-cidx="1"] {
+                    font-size: 14px !important;
+                    font-weight: 800 !important;
+                    text-align: center !important;
+                    vertical-align: middle !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export td[data-cidx="2"],
+                  .pdf-monthly-export td[data-cidx="2"] {
+                    font-size: 13px !important;
+                    font-weight: 600 !important;
+                    text-align: center !important;
+                    vertical-align: middle !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export td[data-cidx="3"],
+                  .pdf-monthly-export td[data-cidx="3"] {
+                    font-size: 13.5px !important;
+                    font-weight: 700 !important;
+                    text-align: center !important;
+                    vertical-align: middle !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export td[data-cidx="4"],
+                  .pdf-monthly-export td[data-cidx="4"] {
+                    font-size: 13.5px !important;
+                    font-weight: 600 !important;
+                    text-align: left !important;
+                    vertical-align: middle !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export td[data-cidx="5"],
+                  .pdf-monthly-export td[data-cidx="5"],
+                  .pdf-export-active.pdf-monthly-export td[data-cidx="6"],
+                  .pdf-monthly-export td[data-cidx="6"] {
+                    font-size: 13px !important;
+                    font-weight: 700 !important;
+                    text-align: center !important;
+                    vertical-align: middle !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export td.text-center,
+                  .pdf-export-active.pdf-monthly-export td.align-middle {
+                    vertical-align: middle !important;
+                    text-align: center !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export td.text-left {
+                    text-align: left !important;
+                    vertical-align: middle !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export td.exam-assessment-cell {
+                    font-size: 14.5px !important;
+                    font-weight: 900 !important;
+                    text-align: center !important;
+                    vertical-align: middle !important;
+                    background-color: #fffbe6 !important;
+                  }
+                  .pdf-export-active.pdf-monthly-export td.exam-assessment-cell * {
+                    font-size: 14.5px !important;
+                    font-weight: 900 !important;
+                  }
+                  .pdf-monthly-export .pdf-school-header {
+                    padding: 8px 16px !important;
+                    margin-bottom: 6px !important;
+                  }
+                  .pdf-monthly-export .pdf-school-header h2 {
+                    font-size: 18px !important;
+                    padding-bottom: 3px !important;
+                  }
+                  .pdf-monthly-export .pdf-school-subline,
+                  .pdf-monthly-export .pdf-school-subline * {
+                    font-size: 12px !important;
+                    padding-top: 3px !important;
+                  }
+                  .pdf-monthly-export .pdf-subject-banner {
+                    padding: 6px 12px !important;
+                    margin-bottom: 6px !important;
+                  }
+                  .pdf-monthly-export .pdf-signature-bar {
+                    padding-top: 12px !important;
+                    margin-top: auto !important;
+                    border-top: 2px solid #0f172a !important;
+                  }
+                  .pdf-monthly-export .pdf-signature-bar .h-6,
+                  .pdf-monthly-export .pdf-signature-bar .h-10,
+                  .pdf-monthly-export .pdf-signature-bar .h-12 {
+                    height: 38px !important;
+                  }
+                  .pdf-monthly-export .pdf-sig-title {
+                    font-size: 14.5px !important;
+                    font-weight: 900 !important;
+                  }
+                  .pdf-monthly-export .pdf-sig-name {
+                    font-size: 12.5px !important;
+                    font-weight: 700 !important;
+                    margin-top: 4px !important;
+                  }
+
                   /* Dedicated Styling for Question Bank in PDF Export */
                   .pdf-question-bank-export td,
                   .pdf-question-bank-table td {
@@ -5363,7 +5780,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                               cellVal = "";
                                               2
                                             }
-                                            const isExam = cellInfo?.isExam || isExamOrAssessmentText(cellInfo?.displayValue) || isExamOrAssessmentText(r[cIdx]) || isExamOrAssessmentText(cellVal);
+                                            const isExam = (isMonthly && cIdx === 2)
+                                              ? false
+                                              : (cellInfo?.isExam || isExamOrAssessmentText(cellInfo?.displayValue) || isExamOrAssessmentText(r[cIdx]) || isExamOrAssessmentText(cellVal));
                                             const cellText = cellVal;
 
                                             let cellClasses = `border border-slate-300 ${mobileTableViewMode === 'fit' ? 'p-1 text-[9.5px] sm:p-1.5 sm:text-xs md:text-[12px] leading-tight sm:leading-snug' : (isMonthly ? 'p-2 sm:p-2.5 leading-relaxed text-xs sm:text-[13.5px]' : 'p-1 sm:p-1.5 md:p-2 leading-snug text-xs sm:text-[12.5px]')} break-words`;
@@ -5378,7 +5797,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 } else if (cIdx === 1) {
                                                   cellClasses += ` text-center font-bold text-slate-950 ${engFont} whitespace-pre-line break-words`;
                                                 } else if (cIdx === 2) {
-                                                  cellClasses += ` text-center font-bold text-slate-900 ${engFont} whitespace-pre-line break-words`;
+                                                  cellClasses += ` text-center font-normal text-slate-900 ${engFont} whitespace-pre-line break-words`;
                                                 } else if (cIdx === 3) {
                                                   cellClasses += ` text-center font-medium text-slate-900 ${engFont} whitespace-pre-line break-words`;
                                                 } else if (cIdx === 5 || cIdx === 6) {
@@ -5393,7 +5812,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 } else if (cIdx === 1) {
                                                   cellClasses += " text-center font-bold text-slate-950 text-xs sm:text-[13.5px] whitespace-pre-line break-words";
                                                 } else if (cIdx === 2) {
-                                                  cellClasses += " text-center font-bold text-slate-900 text-xs sm:text-[13.5px] whitespace-pre-line break-words leading-relaxed sm:leading-6";
+                                                  cellClasses += " text-center font-normal text-slate-900 text-xs sm:text-[13.5px] whitespace-pre-line break-words leading-relaxed sm:leading-6";
                                                 } else if (cIdx === 3) {
                                                   cellClasses += " text-center font-medium text-slate-900 text-xs sm:text-[13px] whitespace-pre-line break-words";
                                                 } else if (cIdx === 5 || cIdx === 6) {

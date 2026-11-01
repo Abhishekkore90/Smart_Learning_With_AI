@@ -21,6 +21,91 @@ export interface VmlParsedPage {
 }
 
 /**
+ * Normalizes any detected class/standard string (in English or Marathi) to the standard Marathi header format:
+ * e.g. "Std - 2 nd", "2nd", "Class 2", "२री", "दुसरी" -> "इयत्ता - २ री"
+ */
+export function formatStandardClassName(val: string): string {
+  if (!val) return "";
+  const s = val.toLowerCase().trim();
+  // Class 2 / दुसरी
+  if (
+    s.includes("दुसरी") ||
+    /^(?:2|२)(?:\s*(?:nd|री))?$/i.test(s) ||
+    /(?:इयत्ता|std|class)\s*[-:–—.]*\s*(?:2|२)(?:\s*(?:nd|री))?\b/i.test(s) ||
+    /\b2\s*nd\b/i.test(s)
+  ) {
+    return "इयत्ता - २ री";
+  }
+  // Class 1 / पहिली
+  if (
+    s.includes("पहिली") ||
+    /^(?:1|१)(?:\s*(?:st|ली))?$/i.test(s) ||
+    /(?:इयत्ता|std|class)\s*[-:–—.]*\s*(?:1|१)(?:\s*(?:st|ली))?\b/i.test(s) ||
+    /\b1\s*st\b/i.test(s)
+  ) {
+    return "इयत्ता - १ ली";
+  }
+  // Class 3 / तिसरी
+  if (
+    s.includes("तिसरी") ||
+    /^(?:3|३)(?:\s*(?:rd|री))?$/i.test(s) ||
+    /(?:इयत्ता|std|class)\s*[-:–—.]*\s*(?:3|३)(?:\s*(?:rd|री))?\b/i.test(s) ||
+    /\b3\s*rd\b/i.test(s)
+  ) {
+    return "इयत्ता - ३ री";
+  }
+  // Class 4 / चौथी
+  if (
+    s.includes("चौथी") ||
+    /^(?:4|४)(?:\s*(?:th|थी))?$/i.test(s) ||
+    /(?:इयत्ता|std|class)\s*[-:–—.]*\s*(?:4|४)(?:\s*(?:th|थी))?\b/i.test(s) ||
+    /\b4\s*th\b/i.test(s)
+  ) {
+    return "इयत्ता - ४ थी";
+  }
+  // Class 5 / पाचवी
+  if (
+    s.includes("पाचवी") ||
+    /^(?:5|५)(?:\s*(?:th|वी))?$/i.test(s) ||
+    /(?:इयत्ता|std|class)\s*[-:–—.]*\s*(?:5|५)(?:\s*(?:th|वी))?\b/i.test(s) ||
+    /\b5\s*th\b/i.test(s)
+  ) {
+    return "इयत्ता - ५ वी";
+  }
+  // Class 6 / सहावी
+  if (
+    s.includes("सहावी") ||
+    /^(?:6|६)(?:\s*(?:th|वी))?$/i.test(s) ||
+    /(?:इयत्ता|std|class)\s*[-:–—.]*\s*(?:6|६)(?:\s*(?:th|वी))?\b/i.test(s) ||
+    /\b6\s*th\b/i.test(s)
+  ) {
+    return "इयत्ता - ६ वी";
+  }
+  // Class 7 / सातवी
+  if (
+    s.includes("सातवी") ||
+    /^(?:7|७)(?:\s*(?:th|वी))?$/i.test(s) ||
+    /(?:इयत्ता|std|class)\s*[-:–—.]*\s*(?:7|७)(?:\s*(?:th|वी))?\b/i.test(s) ||
+    /\b7\s*th\b/i.test(s)
+  ) {
+    return "इयत्ता - ७ वी";
+  }
+  // Class 8 / आठवी
+  if (
+    s.includes("आठवी") ||
+    /^(?:8|८)(?:\s*(?:th|वी))?$/i.test(s) ||
+    /(?:इयत्ता|std|class)\s*[-:–—.]*\s*(?:8|८)(?:\s*(?:th|वी))?\b/i.test(s) ||
+    /\b8\s*th\b/i.test(s)
+  ) {
+    return "इयत्ता - ८ वी";
+  }
+  if (!val.startsWith("इयत्ता")) {
+    return `इयत्ता - ${val}`;
+  }
+  return val;
+}
+
+/**
  * Checks if a Word (.docx) file is composed of full-page background images + VML textboxes.
  * This pattern is widely used in question papers with custom decorative borders, frames, and illustration backgrounds.
  */
@@ -89,6 +174,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
       compactSubjectName?: string;
       extractedSubject?: string;
       extractedTotalMarks?: string;
+      extractedClass?: string;
       isSubjectStart: boolean; // first page of a subject section
       isSubjectEnd: boolean;   // last page of a subject section (set in second pass)
     }
@@ -238,13 +324,23 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           .map((t) => t.replace(/<[^>]+>/g, ""))
           .join(" ")
           .trim();
-        const m = txt.match(/(?:एकूण\s*गुण|total\s*marks?|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
+        const m = txt.match(/(?:एकूण\s*गुण|total\s*marks?|total\s*mark|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?|mark)\s*[:\-–—.]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
         if (m && m[1]) {
           const val = m[1].trim();
           const numVal = parseInt(val.replace(/[०-९]/g, (d) => String("०१२३४५६७८९".indexOf(d))), 10);
           if (numVal >= 10 && numVal <= 100) {
             pageMarksPre = val;
             break;
+          }
+        }
+      }
+      if (!pageMarksPre) {
+        const mBox = allPageRawTextPre.match(/(?:total\s*marks?|total\s*mark|एकूण\s*गुण|marks?|mark)\s*[:\-–—.]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
+        if (mBox && mBox[1]) {
+          const val = mBox[1].trim();
+          const numVal = parseInt(val.replace(/[०-९]/g, (d) => String("०१२३४५६७८९".indexOf(d))), 10);
+          if (numVal >= 10 && numVal <= 100) {
+            pageMarksPre = val;
           }
         }
       }
@@ -260,6 +356,44 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
             pageMarksPre = txt;
             break;
           }
+        }
+      }
+
+      // Extract class in Pass 0
+      let pageClassPre = "";
+      for (const s of shapes) {
+        const sTop = parseFloat(s.match(/margin-top:([0-9.]+)pt/)?.[1] || "999");
+        if (sTop / pageHeightPtPre >= 0.255) continue;
+        const txt = (s.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [])
+          .map((t) => t.replace(/<[^>]+>/g, ""))
+          .join(" ")
+          .trim();
+        if (txt.includes("इयत्ता") || /std|class/i.test(txt)) {
+          const m = txt.match(/(?:इयत्ता|std|class)\s*[-:–—.]?\s*([०-९0-9]+(?:\s*(?:st|nd|rd|th|ली|री|थी|वी))?|पहिली|दुसरी|तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी|[१-८])/i);
+          if (m) {
+            const raw = m[1]?.trim() || m[0].trim();
+            pageClassPre = formatStandardClassName(raw);
+            if (pageClassPre) break;
+          }
+        }
+      }
+      if (!pageClassPre) {
+        if (allPageRawTextPre.includes("दुसरी") || allPageRawTextPre.includes("२री") || allPageRawTextPre.includes("२ री") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:2|२)(?:\s*(?:nd|री))?\b/i.test(allPageRawTextPre) || /\b2\s*nd\b/i.test(allPageRawTextPre)) {
+          pageClassPre = "इयत्ता - २ री";
+        } else if (allPageRawTextPre.includes("तिसरी") || allPageRawTextPre.includes("३री") || allPageRawTextPre.includes("३ री") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:3|३)(?:\s*(?:rd|री))?\b/i.test(allPageRawTextPre) || /\b3\s*rd\b/i.test(allPageRawTextPre)) {
+          pageClassPre = "इयत्ता - ३ री";
+        } else if (allPageRawTextPre.includes("चौथी") || allPageRawTextPre.includes("४थी") || allPageRawTextPre.includes("४ थी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:4|४)(?:\s*(?:th|थी))?\b/i.test(allPageRawTextPre) || /\b4\s*th\b/i.test(allPageRawTextPre)) {
+          pageClassPre = "इयत्ता - ४ थी";
+        } else if (allPageRawTextPre.includes("पाचवी") || allPageRawTextPre.includes("५वी") || allPageRawTextPre.includes("५ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:5|५)(?:\s*(?:th|वी))?\b/i.test(allPageRawTextPre) || /\b5\s*th\b/i.test(allPageRawTextPre)) {
+          pageClassPre = "इयत्ता - ५ वी";
+        } else if (allPageRawTextPre.includes("सहावी") || allPageRawTextPre.includes("६वी") || allPageRawTextPre.includes("६ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:6|६)(?:\s*(?:th|वी))?\b/i.test(allPageRawTextPre) || /\b6\s*th\b/i.test(allPageRawTextPre)) {
+          pageClassPre = "इयत्ता - ६ वी";
+        } else if (allPageRawTextPre.includes("सातवी") || allPageRawTextPre.includes("७वी") || allPageRawTextPre.includes("७ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:7|७)(?:\s*(?:th|वी))?\b/i.test(allPageRawTextPre) || /\b7\s*th\b/i.test(allPageRawTextPre)) {
+          pageClassPre = "इयत्ता - ७ वी";
+        } else if (allPageRawTextPre.includes("आठवी") || allPageRawTextPre.includes("८वी") || allPageRawTextPre.includes("८ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:8|८)(?:\s*(?:th|वी))?\b/i.test(allPageRawTextPre) || /\b8\s*th\b/i.test(allPageRawTextPre)) {
+          pageClassPre = "इयत्ता - ८ वी";
+        } else if (allPageRawTextPre.includes("पहिली") || allPageRawTextPre.includes("१ली") || allPageRawTextPre.includes("१ ली") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:1|१)(?:\s*(?:st|ली))?\b/i.test(allPageRawTextPre) || /\b1\s*st\b/i.test(allPageRawTextPre)) {
+          pageClassPre = "इयत्ता - १ ली";
         }
       }
 
@@ -308,6 +442,9 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
       if (!pageMarksPre && pageMetas.length > 0 && !isHeaderPage) {
         pageMarksPre = pageMetas[pageMetas.length - 1].extractedTotalMarks || "";
       }
+      if (!pageClassPre && pageMetas.length > 0 && !isHeaderPage) {
+        pageClassPre = pageMetas[pageMetas.length - 1].extractedClass || "";
+      }
 
       pageMetas.push({
         subjectKey: sk,
@@ -317,6 +454,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         compactSubjectName: compactSubName,
         extractedSubject: explicitSubPre,
         extractedTotalMarks: pageMarksPre,
+        extractedClass: pageClassPre,
         isSubjectStart,
         isSubjectEnd: false,
       });
@@ -472,8 +610,11 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
           // Class
           if (!headerClass && (txt.includes("इयत्ता") || /std|class/i.test(txt))) {
-            const m = txt.match(/इयत्ता\s*[-:–—]?\s*([०-९0-9]+(?:\s*(?:ली|री|थी|वी))?|पहिली|दुसरी|तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी|[१-८])/i);
-            if (m) headerClass = m[0].trim();
+            const m = txt.match(/(?:इयत्ता|std|class)\s*[-:–—.]?\s*([०-९0-9]+(?:\s*(?:st|nd|rd|th|ली|री|थी|वी))?|पहिली|दुसरी|तिसरी|चौथी|पाचवी|सहावी|सातवी|आठवी|[१-८])/i);
+            if (m) {
+              const matchedRaw = m[1]?.trim() || m[0].trim();
+              headerClass = formatStandardClassName(matchedRaw) || m[0].trim();
+            }
           }
 
           // Subject
@@ -489,7 +630,7 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
 
           // Total Marks
           if (!headerTotalMarks) {
-            const m = txt.match(/(?:एकूण\s*गुण|total\s*marks?|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?)\s*[:\-–—]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
+            const m = txt.match(/(?:एकूण\s*गुण|total\s*marks?|total\s*mark|कमाल\s*गुण|max(?:imum)?\s*marks?|गुण|marks?|mark)\s*[:\-–—.]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
             if (m && m[1]) {
               const val = m[1].trim();
               const numVal = parseInt(val.replace(/[०-९]/g, (d) => String("०१२३४५६७८९".indexOf(d))), 10);
@@ -530,6 +671,39 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
           headerSubject = "गणित";
         } else if (/भाषा|मराठी/i.test(allPageRawText)) {
           headerSubject = "भाषा";
+        }
+      }
+
+      if (!headerClass) {
+        if (allPageRawText.includes("दुसरी") || allPageRawText.includes("२री") || allPageRawText.includes("२ री") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:2|२)(?:\s*(?:nd|री))?\b/i.test(allPageRawText) || /\b2\s*nd\b/i.test(allPageRawText)) {
+          headerClass = "इयत्ता - २ री";
+        } else if (allPageRawText.includes("तिसरी") || allPageRawText.includes("३री") || allPageRawText.includes("३ री") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:3|३)(?:\s*(?:rd|री))?\b/i.test(allPageRawText) || /\b3\s*rd\b/i.test(allPageRawText)) {
+          headerClass = "इयत्ता - ३ री";
+        } else if (allPageRawText.includes("चौथी") || allPageRawText.includes("४थी") || allPageRawText.includes("४ थी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:4|४)(?:\s*(?:th|थी))?\b/i.test(allPageRawText) || /\b4\s*th\b/i.test(allPageRawText)) {
+          headerClass = "इयत्ता - ४ थी";
+        } else if (allPageRawText.includes("पाचवी") || allPageRawText.includes("५वी") || allPageRawText.includes("५ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:5|५)(?:\s*(?:th|वी))?\b/i.test(allPageRawText) || /\b5\s*th\b/i.test(allPageRawText)) {
+          headerClass = "इयत्ता - ५ वी";
+        } else if (allPageRawText.includes("सहावी") || allPageRawText.includes("६वी") || allPageRawText.includes("६ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:6|६)(?:\s*(?:th|वी))?\b/i.test(allPageRawText) || /\b6\s*th\b/i.test(allPageRawText)) {
+          headerClass = "इयत्ता - ६ वी";
+        } else if (allPageRawText.includes("सातवी") || allPageRawText.includes("७वी") || allPageRawText.includes("७ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:7|७)(?:\s*(?:th|वी))?\b/i.test(allPageRawText) || /\b7\s*th\b/i.test(allPageRawText)) {
+          headerClass = "इयत्ता - ७ वी";
+        } else if (allPageRawText.includes("आठवी") || allPageRawText.includes("८वी") || allPageRawText.includes("८ वी") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:8|८)(?:\s*(?:th|वी))?\b/i.test(allPageRawText) || /\b8\s*th\b/i.test(allPageRawText)) {
+          headerClass = "इयत्ता - ८ वी";
+        } else if (allPageRawText.includes("पहिली") || allPageRawText.includes("१ली") || allPageRawText.includes("१ ली") || /(?:इयत्ता|std|class)\s*[-_–:.]*\s*(?:1|१)(?:\s*(?:st|ली))?\b/i.test(allPageRawText) || /\b1\s*st\b/i.test(allPageRawText)) {
+          headerClass = "इयत्ता - १ ली";
+        } else if (meta.extractedClass) {
+          headerClass = meta.extractedClass;
+        }
+      }
+
+      if (!headerTotalMarks) {
+        const mBox = allPageRawText.match(/(?:total\s*marks?|total\s*mark|एकूण\s*गुण|marks?|mark)\s*[:\-–—.]?\s*\[?\s*([०-९0-9]+)\s*\]?/i);
+        if (mBox && mBox[1]) {
+          const val = mBox[1].trim();
+          const numVal = parseInt(val.replace(/[०-९]/g, (d) => String("०१२३४५६७८९".indexOf(d))), 10);
+          if (numVal >= 10 && numVal <= 100) {
+            headerTotalMarks = val;
+          }
         }
       }
 
@@ -800,7 +974,10 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         const align = isCenter ? "center" : isRight ? "right" : "left";
         const justifyCss = isCenter ? "center" : isRight ? "flex-end" : "flex-start";
 
-        const szMatch = s.match(/<w:szCs[^>]*w:val="([0-9]+)"/) || s.match(/<w:sz[^>]*w:val="([0-9]+)"/);
+        const szMatch =
+          s.match(/<w:sz\s+[^>]*w:val="([0-9]+)"/) ||
+          s.match(/<w:sz\s*w:val="([0-9]+)"/) ||
+          s.match(/<w:szCs[^>]*w:val="([0-9]+)"/);
         const fontSizePt = szMatch ? parseInt(szMatch[1], 10) / 2 : 12;
         const fontSizeCqw = ((fontSizePt / pageWidthPt) * 100).toFixed(3);
 
@@ -837,7 +1014,9 @@ export async function parseVmlDocxToHtml(arrayBuffer: ArrayBuffer): Promise<stri
         // 5. Short word / token, e.g. "दह", "ह", "श", "द", "ए"
         const isShortWordToken = trimmedText.length <= 6 && !trimmedText.includes(" ");
 
-        let whiteSpaceRule = "white-space: pre-wrap; word-break: break-word;";
+        let whiteSpaceRule = (s.includes("<w:br") || (s.match(/<w:p[\s>]/g) || []).length > 1)
+          ? "white-space: pre !important; word-break: normal !important; overflow: visible !important;"
+          : "white-space: nowrap !important; word-break: normal !important; overflow: visible !important;";
         let shapeAlignItems = "center";
         let shapeLineHeight = "1.25";
         let shapePadding = "0px 2px";
