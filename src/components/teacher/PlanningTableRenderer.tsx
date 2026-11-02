@@ -3285,6 +3285,42 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               el.style.color = "#000000";
               el.style.lineHeight = "inherit";
             });
+
+            // For Marathi "साधन तंत्रे" (cIdx === 5): If words cannot fit in a single line,
+            // cleanly divide them into 2 lines (e.g. "तोंडीकाम,प्रात्यक्षिक" -> "तोंडीकाम," on line 1, "प्रात्यक्षिक" on line 2)
+            if (cIdx === 5) {
+              const rawTxt = tdEl.textContent?.trim() || "";
+              if (!isSecEng && rawTxt) {
+                if (rawTxt.includes(",")) {
+                  const parts = rawTxt.split(",").map((p: string) => p.trim()).filter(Boolean);
+                  if (parts.length > 1) {
+                    tdEl.innerHTML = parts
+                      .map((p: string, pIdx: number) => {
+                        const comma = pIdx < parts.length - 1 ? "," : "";
+                        return `<span style="display:block;white-space:nowrap;line-height:1.25;font-size:11px;font-weight:700;color:#000000;text-align:center;">${p}${comma}</span>`;
+                      })
+                      .join("");
+                  }
+                } else if (rawTxt.includes("/")) {
+                  const parts = rawTxt.split("/").map((p: string) => p.trim()).filter(Boolean);
+                  if (parts.length > 1) {
+                    tdEl.innerHTML = parts
+                      .map((p: string, pIdx: number) => {
+                        const slash = pIdx < parts.length - 1 ? " /" : "";
+                        return `<span style="display:block;white-space:nowrap;line-height:1.25;font-size:11px;font-weight:700;color:#000000;text-align:center;">${p}${slash}</span>`;
+                      })
+                      .join("");
+                  }
+                } else if (rawTxt.includes(" ") && rawTxt.length > 9) {
+                  const parts = rawTxt.split(/\s+/).map((p: string) => p.trim()).filter(Boolean);
+                  if (parts.length > 1) {
+                    tdEl.innerHTML = parts
+                      .map((p: string) => `<span style="display:block;white-space:nowrap;line-height:1.25;font-size:11px;font-weight:700;color:#000000;text-align:center;">${p}</span>`)
+                      .join("");
+                  }
+                }
+              }
+            }
           });
                 } else {
           // Annual Planning: Enforce consistent desktop columns and font sizes in PDF across Web and WebView
