@@ -1091,6 +1091,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               if (idx === 0 && (cleaned.includes("दिनांक") || cleaned.toLowerCase().includes("date"))) {
                 cleaned = "दिवस";
               }
+              if (idx === 3 || cleaned.includes("पाठ्यांश") || cleaned.includes("उद्देश") || cleaned.includes("अध्ययन मुद्दे")) {
+                cleaned = "अध्ययन मुद्दे";
+              }
               if (idx === 1 || cleaned.includes("उपघटक")) {
                 cleaned = cleaned.replace(/\/?\s*उपघटक/g, "").replace(/\/\s*$/, "").trim() || "पाठ / घटक";
               }
@@ -3030,7 +3033,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
       // Hidden container to construct and measure DOM pages
       const tempContainer = document.createElement("div");
-      tempContainer.className = isMonthly ? "pdf-export-active pdf-monthly-export" : "pdf-export-active";
+      tempContainer.className = "pdf-export-active";
       tempContainer.style.position = "fixed";
       tempContainer.style.left = "0px";
       tempContainer.style.top = "0px";
@@ -3044,6 +3047,32 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       const PAGE_MAX_HEIGHT_SUBSEQUENT = 1220;
 
       const allPagesToRender: HTMLElement[] = [];
+
+      // For Monthly Planning: Merge any orphan 1-3 row March section into March + April combined section
+      if (isMonthly) {
+        for (let i = subjectSections.length - 1; i >= 0; i--) {
+          const sec = subjectSections[i];
+          const trs = sec.querySelectorAll("tbody tr");
+          if (trs.length <= 3 && i < subjectSections.length - 1) {
+            const nextSec = subjectSections[i + 1];
+            const nextBanner = nextSec.querySelector(".pdf-subject-banner")?.textContent || "";
+            const curBanner = sec.querySelector(".pdf-subject-banner")?.textContent || "";
+            if (
+              (curBanner.includes("मार्च") && nextBanner.includes("मार्च")) ||
+              (curBanner.includes("मार्च") && nextBanner.includes("एप्रिल"))
+            ) {
+              const nextTbody = nextSec.querySelector("tbody");
+              if (nextTbody) {
+                Array.from(trs).reverse().forEach((tr) => {
+                  nextTbody.insertBefore(tr, nextTbody.firstChild);
+                });
+              }
+              sec.remove();
+              subjectSections.splice(i, 1);
+            }
+          }
+        }
+      }
 
       for (let i = 0; i < subjectSections.length; i++) {
         const sec = subjectSections[i];
@@ -3093,13 +3122,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         if (isMonthly) {
           const clonedCols = secClone.querySelectorAll("colgroup col");
           if (clonedCols.length >= 7) {
-            (clonedCols[0] as HTMLElement).style.width = "46px";
-            (clonedCols[1] as HTMLElement).style.width = "112px";
-            (clonedCols[2] as HTMLElement).style.width = "172px";
+            (clonedCols[0] as HTMLElement).style.width = "50px";
+            (clonedCols[1] as HTMLElement).style.width = "110px";
+            (clonedCols[2] as HTMLElement).style.width = "170px";
             (clonedCols[3] as HTMLElement).style.width = "115px";
-            (clonedCols[4] as HTMLElement).style.width = "250px";
-            (clonedCols[5] as HTMLElement).style.width = "100px";
-            (clonedCols[6] as HTMLElement).style.width = "105px";
+            (clonedCols[4] as HTMLElement).style.width = "225px";
+            (clonedCols[5] as HTMLElement).style.width = "105px";
+            (clonedCols[6] as HTMLElement).style.width = "125px";
           }
           secClone.querySelectorAll("thead th").forEach((th: any, idx: number) => {
             th.style.wordBreak = "keep-all";
@@ -3107,65 +3136,75 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             th.style.hyphens = "none";
             th.style.fontWeight = "900";
             th.style.color = "#000000";
+            th.style.fontSize = "14.5px";
+            th.style.lineHeight = "1.25";
+            th.style.textAlign = "center";
+            th.style.verticalAlign = "middle";
+
             if (idx === 0) {
-              th.style.width = "46px";
-              th.style.minWidth = "42px";
-              th.style.maxWidth = "50px";
-              th.style.padding = "8px 2px";
-              th.style.textAlign = "center";
+              th.style.width = "50px";
+              th.style.padding = "6px 2px";
               th.style.whiteSpace = "nowrap";
-              th.style.fontSize = "13px";
+              th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">दिवस</span>';
             } else if (idx === 1) {
-              th.style.width = "112px";
-              th.style.padding = "8px 3px";
-              th.style.textAlign = "center";
-              th.style.fontSize = "13.5px";
-              th.style.lineHeight = "1.3";
+              th.style.width = "110px";
+              th.style.padding = "6px 2px";
+              if (th.textContent.includes("Lesson")) {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Lesson</span>';
+              } else {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">पाठ / घटक</span>';
+              }
             } else if (idx === 2) {
-              th.style.width = "172px";
-              th.style.padding = "8px 3px";
-              th.style.textAlign = "center";
-              th.style.fontSize = "13.5px";
-              th.style.lineHeight = "1.3";
+              th.style.width = "170px";
+              th.style.padding = "6px 2px";
+              if (th.textContent.includes("Outcome")) {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Learning Outcomes</span>';
+              } else {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">अध्ययन निष्पत्ती</span>';
+              }
             } else if (idx === 3) {
               th.style.width = "115px";
-              th.style.padding = "8px 3px";
-              th.style.textAlign = "center";
-              th.style.fontSize = "13.5px";
-              th.style.lineHeight = "1.3";
+              th.style.padding = "6px 2px";
+              if (th.textContent.includes("Point") || th.textContent.includes("Aim")) {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Teaching Point</span>';
+              } else {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">अध्ययन मुद्दे</span>';
+              }
             } else if (idx === 4) {
-              th.style.width = "250px";
-              th.style.padding = "8px 4px";
-              th.style.textAlign = "center";
-              th.style.fontSize = "13.5px";
-              th.style.lineHeight = "1.3";
+              th.style.width = "225px";
+              th.style.padding = "6px 3px";
+              if (th.textContent.includes("Experience")) {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Teaching Experience</span>';
+              } else {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">अध्ययन अनुभवाचे स्वरूप</span>';
+              }
             } else if (idx === 5) {
-              th.style.width = "100px";
-              th.style.textAlign = "center";
-              th.style.padding = "8px 2px";
-              th.style.fontSize = "11.5px";
-              th.style.lineHeight = "1.3";
+              th.style.width = "105px";
+              th.style.padding = "6px 1px";
               if (th.textContent.includes("Tool") || th.textContent.includes("Technique")) {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:12px;font-weight:900;">Tool &</span><span style="display:block;white-space:nowrap;word-break:keep-all;font-size:12px;font-weight:900;">Technique</span>';
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Tool & Technique</span>';
+              } else {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">साधन तंत्रे</span>';
               }
             } else if (idx === 6) {
-              th.style.width = "105px";
-              th.style.textAlign = "center";
-              th.style.padding = "8px 2px";
-              th.style.fontSize = "12px";
-              th.style.fontWeight = "900";
-              th.style.lineHeight = "1.3";
+              th.style.width = "125px";
+              th.style.padding = "6px 1px";
               if (th.textContent.includes("Educational") || th.textContent.includes("Instrument")) {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:12px;font-weight:900;letter-spacing:-0.2px;">Educational</span><span style="display:block;white-space:nowrap;word-break:keep-all;font-size:12px;font-weight:900;letter-spacing:-0.2px;">Instrument</span>';
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14px;font-weight:900;color:#000000;letter-spacing:-0.2px;">Educational Instrument</span>';
+              } else {
+                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14px;font-weight:900;color:#000000;">शैक्षणिक साहित्य</span>';
               }
             }
           });
-          secClone.querySelectorAll("tbody td").forEach((tdEl: any) => {
+                    secClone.querySelectorAll("tbody td").forEach((tdEl: any) => {
             const cIdxAttr = tdEl.getAttribute("data-cidx");
             const cIdx = cIdxAttr !== null ? parseInt(cIdxAttr, 10) : -1;
             tdEl.style.wordBreak = "normal";
             tdEl.style.overflowWrap = "break-word";
-            tdEl.style.lineHeight = "1.35";
+            tdEl.style.fontSize = "11.5px";
+            tdEl.style.fontWeight = "600";
+            tdEl.style.color = "#000000";
+            tdEl.style.lineHeight = "1.3";
             tdEl.style.width = "";
             tdEl.style.minWidth = "";
             tdEl.style.maxWidth = "";
@@ -3173,45 +3212,26 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             if (cIdx === 0) {
               tdEl.style.textAlign = "center";
               tdEl.style.fontWeight = "900";
-              tdEl.style.padding = "6px 3px";
-              tdEl.style.fontSize = "15px";
-            } else if (cIdx === 1) {
+              tdEl.style.padding = "3px 2px";
+              tdEl.style.fontSize = "12px";
+            } else if (cIdx === 1 || cIdx === 2 || cIdx === 3 || cIdx === 5 || cIdx === 6) {
               tdEl.style.textAlign = "center";
-              tdEl.style.fontWeight = "800";
-              tdEl.style.padding = "6px 5px";
-              tdEl.style.fontSize = "14px";
-            } else if (cIdx === 2) {
-              tdEl.style.textAlign = "center";
-              tdEl.style.fontWeight = "600";
-              tdEl.style.padding = "6px 5px";
-              tdEl.style.fontSize = "13px";
-              tdEl.style.lineHeight = "1.4";
-            } else if (cIdx === 3) {
-              tdEl.style.textAlign = "center";
-              tdEl.style.fontWeight = "700";
-              tdEl.style.padding = "6px 5px";
-              tdEl.style.fontSize = "13.5px";
-            } else if (cIdx === 5 || cIdx === 6) {
-              tdEl.style.textAlign = "center";
-              tdEl.style.fontWeight = "700";
-              tdEl.style.padding = "6px 4px";
-              tdEl.style.fontSize = "13px";
+              tdEl.style.padding = "3px 3px";
             } else {
               tdEl.style.textAlign = "left";
-              tdEl.style.fontWeight = "600";
-              tdEl.style.padding = "6px 7px";
-              tdEl.style.fontSize = "13.5px";
-              tdEl.style.lineHeight = "1.4";
+              tdEl.style.padding = "3px 4px";
             }
 
             tdEl.querySelectorAll("*").forEach((el: any) => {
               el.style.wordBreak = "normal";
               el.style.overflowWrap = "break-word";
               el.style.fontSize = "inherit";
+              el.style.fontWeight = "inherit";
+              el.style.color = "#000000";
               el.style.lineHeight = "inherit";
             });
           });
-        } else {
+                } else {
           // Annual Planning: Enforce consistent desktop columns and font sizes in PDF across Web and WebView
           const clonedCols = secClone.querySelectorAll("colgroup col");
           if (clonedCols.length >= 6) {
@@ -3338,9 +3358,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             el.style.display = "inline-block";
           });
 
+          subjectBanner.style.color = "#000000";
+          subjectBanner.style.borderColor = "#000000";
+          subjectBanner.style.backgroundColor = "#fffbe7";
           subjectBanner.querySelectorAll("*").forEach((el: any) => {
             el.style.flexWrap = "nowrap";
             el.style.whiteSpace = "nowrap";
+            el.style.color = "#000000";
+            el.style.fontWeight = "900";
           });
         }
         const tableEl = secClone.querySelector("table");
@@ -3353,32 +3378,68 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
         if (isMonthly) {
           // =========================================================================
-          // ── DEDICATED 2-PAGE MONTHLY PLANNING PAGINATION (ZERO DATA LOSS) ──
-          // Every single month planning is formatted to fit into EXACTLY 2 PAGES
-          // (or 1 page if total rows <= 14).
-          // Page 1: School Header + Subject/Month Banner (पान १/२) + Thead + 1st Half Rows
-          // Page 2: Subject/Month Banner (पान २/२) + Thead + 2nd Half Rows + Signatures
-          // Spanning cells (rowSpan) across the split boundary are cleanly divided
-          // so Page 1 gets the first portion and Page 2 receives continuation cells
-          // with zero column shifting, zero clipped text, and 100% table validity!
+          // Dynamic Natural-Height Monthly Planning Pagination:
+          // 1. Rows take natural content height (compact for 1 line, expanding for multi-line).
+          // 2. Fills Page 1 naturally until full (no artificial 50/50 cut and zero empty space).
+          // 3. Subject banner is placed ONLY on Page 1 (never repeated on continuation pages).
+          // 4. Clean continuation to Page 2 when Page 1 is full, preserving rowSpan continuations.
+          // 5. Teacher and Headmaster signatures guaranteed at the end of EVERY month.
+          // 6. Dividing line between table and signatures is removed completely.
           // =========================================================================
-
           const N = allTrs.length;
 
-          const createNewMonthlyPage = (pageNum: 1 | 2, totalPages: number) => {
+          // Prepare clean signature element without any divider line
+          let cleanSig: HTMLElement | null = null;
+          if (sigBar) {
+            cleanSig = sigBar.cloneNode(true) as HTMLElement;
+            cleanSig.style.borderTop = "none";
+            cleanSig.style.marginTop = "20px";
+            cleanSig.style.paddingTop = "6px";
+            cleanSig.style.width = "900px";
+            cleanSig.style.boxSizing = "border-box";
+            cleanSig.style.display = "grid";
+            cleanSig.style.gridTemplateColumns = "1fr 1fr";
+            cleanSig.style.textAlign = "center";
+            cleanSig.classList.remove("border-t-2", "border-slate-300");
+
+            cleanSig.querySelectorAll("*").forEach((el: any) => {
+              if (el.style) el.style.borderTop = "none";
+            });
+
+            cleanSig.querySelectorAll(".border-dotted").forEach((el: any) => {
+              el.style.borderTop = "1.5px dotted #64748b";
+              el.style.width = "180px";
+              el.style.margin = "0 auto 6px auto";
+            });
+
+            cleanSig.querySelectorAll(".pdf-sig-title").forEach((el: any) => {
+              el.style.fontSize = "14px";
+              el.style.fontWeight = "900";
+              el.style.color = "#000000";
+              el.style.lineHeight = "1.3";
+            });
+            cleanSig.querySelectorAll(".pdf-sig-name").forEach((el: any) => {
+              el.style.fontSize = "12px";
+              el.style.fontWeight = "700";
+              el.style.color = "#334155";
+              el.style.marginTop = "3px";
+            });
+          }
+
+          const createNewMonthlyPage = (isFirstPageOfMonth: boolean) => {
             const pageDiv = document.createElement("div");
-            pageDiv.className = "bg-white pdf-monthly-page-container";
+            pageDiv.className = "bg-white space-y-2";
             pageDiv.style.width = exportWidth; // 950px
-            pageDiv.style.height = "1340px"; // Full A4 page height in DOM coordinates
-            pageDiv.style.minHeight = "1340px";
-            pageDiv.style.maxHeight = "1340px";
-            pageDiv.style.padding = "14px 20px";
+            pageDiv.style.minHeight = "1260px";
+            pageDiv.style.height = "1260px";
+            pageDiv.style.maxHeight = "1260px";
+            pageDiv.style.padding = "16px 20px";
             pageDiv.style.boxSizing = "border-box";
             pageDiv.style.backgroundColor = "#ffffff";
             pageDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
             pageDiv.style.display = "flex";
             pageDiv.style.flexDirection = "column";
-            pageDiv.style.justifyContent = "space-between";
+            pageDiv.style.justifyContent = "flex-start"; // Natural top-to-bottom layout
             pageDiv.style.overflow = "hidden";
 
             const topHeaderWrap = document.createElement("div");
@@ -3387,30 +3448,24 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             topHeaderWrap.style.display = "flex";
             topHeaderWrap.style.flexDirection = "column";
             topHeaderWrap.style.gap = "6px";
-            topHeaderWrap.style.marginBottom = "6px";
+            topHeaderWrap.style.marginBottom = isFirstPageOfMonth ? "6px" : "0px";
 
-            if (pageNum === 1) {
+            // Only first page of month gets school header and subject banner!
+            if (isFirstPageOfMonth) {
               if (schoolHeader) topHeaderWrap.appendChild(schoolHeader.cloneNode(true));
-              if (subjectBanner) {
-                topHeaderWrap.appendChild(subjectBanner.cloneNode(true));
-              }
-            } else {
-              if (subjectBanner) {
-                topHeaderWrap.appendChild(subjectBanner.cloneNode(true));
-              }
+              if (subjectBanner) topHeaderWrap.appendChild(subjectBanner.cloneNode(true));
             }
             pageDiv.appendChild(topHeaderWrap);
 
             const tableWrap = document.createElement("div");
             tableWrap.style.width = "100%";
-            tableWrap.style.flex = "1 1 auto";
+            tableWrap.style.flex = "0 0 auto";
             tableWrap.style.display = "flex";
             tableWrap.style.flexDirection = "column";
 
             const pageTable = document.createElement("table");
             if (tableEl) pageTable.className = tableEl.className;
             pageTable.style.width = "900px";
-            pageTable.style.height = "100%";
             pageTable.style.margin = "0 auto";
             pageTable.style.boxSizing = "border-box";
             pageTable.style.borderCollapse = "collapse";
@@ -3420,7 +3475,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             if (thead) pageTable.appendChild(thead.cloneNode(true));
 
             const pageTbody = document.createElement("tbody");
-            pageTbody.style.height = "100%";
             pageTable.appendChild(pageTbody);
             tableWrap.appendChild(pageTable);
             pageDiv.appendChild(tableWrap);
@@ -3428,128 +3482,109 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             const bottomWrap = document.createElement("div");
             bottomWrap.style.width = "100%";
             bottomWrap.style.flex = "0 0 auto";
-            bottomWrap.style.marginTop = "auto";
+            bottomWrap.style.marginTop = "20px";
             pageDiv.appendChild(bottomWrap);
 
+            tempContainer.innerHTML = "";
             tempContainer.appendChild(pageDiv);
-            return { pageDiv, tbody: pageTbody, bottomWrap };
+            return { pageDiv, topHeaderWrap, tableWrap, tbody: pageTbody, bottomWrap };
           };
 
-          if (N <= 14) {
-            // Fits comfortably on 1 single page - stretch evenly across full page
-            const pageObj = createNewMonthlyPage(1, 1);
-            const singleRowHeight = Math.max(48, Math.floor(1020 / N));
-            allTrs.forEach((tr) => {
-              const clonedTr = tr.cloneNode(true) as HTMLElement;
-              clonedTr.style.height = `${singleRowHeight}px`;
-              clonedTr.querySelectorAll("td").forEach((td: any) => {
-                td.style.verticalAlign = "middle";
-                td.style.padding = "6px 6px";
-              });
-              pageObj.tbody.appendChild(clonedTr);
-            });
-            if (sigBar) {
-              const sigClone = sigBar.cloneNode(true) as HTMLElement;
-              sigClone.style.marginTop = "12px";
-              sigClone.style.paddingTop = "12px";
-              sigClone.style.borderTop = "2px solid #0f172a";
-              pageObj.bottomWrap.appendChild(sigClone);
-            }
-            allPagesToRender.push(pageObj.pageDiv);
-          } else {
-            // Fits on EXACTLY 2 PAGES - both pages stretch vertically to 100% full height!
-            const targetMid = Math.ceil(N / 2);
+          // Dynamic page-filling loop:
+          let currentPage = createNewMonthlyPage(true);
+          let pageRowStartIndex = 0;
+          const MAX_ALLOWED_HEIGHT = 1215; // px content limit inside 1260px container (padding 32px)
 
-            const isCrossing = (splitIdx: number): boolean => {
-              for (let r = 0; r < splitIdx; r++) {
+          for (let rIdx = 0; rIdx < N; rIdx++) {
+            const origTr = allTrs[rIdx];
+            const clonedTr = origTr.cloneNode(true) as HTMLElement;
+            // Let row take natural content height (do NOT fix height)
+            clonedTr.style.height = "auto";
+            clonedTr.querySelectorAll("td").forEach((td) => {
+              td.style.verticalAlign = "middle";
+              td.style.padding = "4px 5px";
+            });
+
+            // Append clonedTr to current page tbody
+            currentPage.tbody.appendChild(clonedTr);
+
+            // Check if this is the last row of the month or near the end
+            const isLastRow = (rIdx === N - 1);
+            if (isLastRow && cleanSig) {
+              currentPage.bottomWrap.appendChild(cleanSig.cloneNode(true));
+            }
+
+            // Measure total content height
+            const totalContentHeight =
+              currentPage.topHeaderWrap.offsetHeight +
+              currentPage.tableWrap.offsetHeight +
+              currentPage.bottomWrap.offsetHeight;
+
+            // If we are at the second-to-last row (N - 2), test if row N-1 + signature would fit on this page.
+            // If they won't fit, break now so the final page has at least 2 rows + signatures!
+            const isSecondLast = (rIdx === N - 2);
+            const wouldLastFit = !isSecondLast || (totalContentHeight + 130 <= MAX_ALLOWED_HEIGHT);
+
+            if (totalContentHeight <= MAX_ALLOWED_HEIGHT && wouldLastFit) {
+              // Fits comfortably on currentPage!
+              if (isLastRow) {
+                allPagesToRender.push(currentPage.pageDiv);
+              }
+            } else {
+              // Does NOT fit on currentPage!
+              // Remove clonedTr (and signature if added)
+              clonedTr.remove();
+              if (isLastRow) {
+                currentPage.bottomWrap.innerHTML = "";
+              }
+
+              // Handle rowSpan crossing across the page split
+              const splitIdx = rIdx;
+              const crossingCells: { cIdx: number; cell: HTMLTableCellElement; remainingSpan: number }[] = [];
+
+              for (let r = pageRowStartIndex; r < splitIdx; r++) {
                 const tds = Array.from(allTrs[r].querySelectorAll("td")) as HTMLTableCellElement[];
-                for (const td of tds) {
+                tds.forEach((td) => {
                   const span = td.rowSpan && td.rowSpan > 1 ? td.rowSpan : 1;
                   if (r + span > splitIdx) {
-                    return true;
+                    const cIdxAttr = td.getAttribute("data-cidx");
+                    const cIdx = cIdxAttr !== null ? parseInt(cIdxAttr, 10) : -1;
+                    crossingCells.push({
+                      cIdx,
+                      cell: td,
+                      remainingSpan: (r + span) - splitIdx,
+                    });
+
+                    // Adjust span on currentPage
+                    const currentTrs = Array.from(currentPage.tbody.querySelectorAll("tr"));
+                    const relIdx = r - pageRowStartIndex;
+                    if (currentTrs[relIdx]) {
+                      const curTds = Array.from(currentTrs[relIdx].querySelectorAll("td"));
+                      const matchTd = curTds.find(t => (t.getAttribute("data-cidx") !== null ? parseInt(t.getAttribute("data-cidx")!, 10) : -1) === cIdx);
+                      if (matchTd) {
+                        matchTd.rowSpan = splitIdx - r;
+                      }
+                    }
                   }
-                }
+                });
               }
-              return false;
-            };
 
-            let bestSplit = -1;
-            // Search within ±3 rows of targetMid for a natural split where no cell is cut
-            for (let offset = 0; offset <= 3; offset++) {
-              const c1 = targetMid + offset;
-              if (c1 >= 10 && c1 <= N - 6 && !isCrossing(c1)) {
-                bestSplit = c1;
-                break;
-              }
-              const c2 = targetMid - offset;
-              if (c2 >= 10 && c2 <= N - 6 && !isCrossing(c2)) {
-                bestSplit = c2;
-                break;
-              }
-            }
+              // Finalize currentPage and push to render list
+              allPagesToRender.push(currentPage.pageDiv);
 
-            if (bestSplit === -1) {
-              bestSplit = targetMid;
-            }
+              // Create next page (continuation page: false -> no header/banner)
+              currentPage = createNewMonthlyPage(false);
+              pageRowStartIndex = splitIdx;
 
-            // ── Construct Page 1 (Rows 0 to bestSplit - 1) ──
-            const page1 = createNewMonthlyPage(1, 2);
-            const p1RowHeight = Math.max(42, Math.floor(1090 / bestSplit));
-
-            for (let r = 0; r < bestSplit; r++) {
-              const clonedTr = allTrs[r].cloneNode(true) as HTMLElement;
-              clonedTr.style.height = `${p1RowHeight}px`;
-
-              const tds = Array.from(clonedTr.querySelectorAll("td")) as HTMLTableCellElement[];
-              tds.forEach((td) => {
-                td.style.verticalAlign = "middle";
-                td.style.padding = "6px 6px";
-                const span = td.rowSpan && td.rowSpan > 1 ? td.rowSpan : 1;
-                if (r + span > bestSplit) {
-                  td.rowSpan = bestSplit - r;
-                }
-              });
-              page1.tbody.appendChild(clonedTr);
-            }
-
-            allPagesToRender.push(page1.pageDiv);
-
-            // ── Construct Page 2 (Rows bestSplit to N - 1) ──
-            const page2 = createNewMonthlyPage(2, 2);
-            const p2RowCount = N - bestSplit;
-            const p2RowHeight = Math.max(42, Math.floor(1060 / p2RowCount));
-
-            // Detect any cells that started on Page 1 and continue on Page 2
-            const crossingCells: { cIdx: number; cell: HTMLTableCellElement; remainingSpan: number }[] = [];
-            for (let r = 0; r < bestSplit; r++) {
-              const tds = Array.from(allTrs[r].querySelectorAll("td")) as HTMLTableCellElement[];
-              tds.forEach((td) => {
-                const span = td.rowSpan && td.rowSpan > 1 ? td.rowSpan : 1;
-                if (r + span > bestSplit) {
-                  const cIdxAttr = td.getAttribute("data-cidx");
-                  const cIdx = cIdxAttr !== null ? parseInt(cIdxAttr, 10) : -1;
-                  crossingCells.push({
-                    cIdx,
-                    cell: td,
-                    remainingSpan: (r + span) - bestSplit,
-                  });
-                }
-              });
-            }
-
-            for (let r = bestSplit; r < N; r++) {
-              const clonedTr = allTrs[r].cloneNode(true) as HTMLElement;
-              clonedTr.style.height = `${p2RowHeight}px`;
-
-              // On the very first row of Page 2 (r === bestSplit), inject the continuation cells in column order
-              if (r === bestSplit && crossingCells.length > 0) {
+              // Insert continuation cells into clonedTr if needed
+              if (crossingCells.length > 0) {
                 crossingCells.sort((a, b) => a.cIdx - b.cIdx);
                 crossingCells.forEach(({ cIdx, cell, remainingSpan }) => {
                   const contTd = cell.cloneNode(true) as HTMLTableCellElement;
                   contTd.rowSpan = remainingSpan;
                   contTd.setAttribute("data-continuation", "true");
                   contTd.style.verticalAlign = "middle";
-                  contTd.style.padding = "6px 6px";
+                  contTd.style.padding = "4px 5px";
 
                   const existingTds = Array.from(clonedTr.querySelectorAll("td")) as HTMLTableCellElement[];
                   let inserted = false;
@@ -3568,25 +3603,15 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                 });
               }
 
-              const tds = Array.from(clonedTr.querySelectorAll("td")) as HTMLTableCellElement[];
-              tds.forEach((td) => {
-                td.style.verticalAlign = "middle";
-                td.style.padding = "6px 6px";
-              });
+              // Append clonedTr to new page
+              currentPage.tbody.appendChild(clonedTr);
 
-              page2.tbody.appendChild(clonedTr);
+              // If this was the last row, append signature and finalize new page
+              if (isLastRow && cleanSig) {
+                currentPage.bottomWrap.appendChild(cleanSig.cloneNode(true));
+                allPagesToRender.push(currentPage.pageDiv);
+              }
             }
-
-            // Append signature bar to Page 2 at bottom
-            if (sigBar) {
-              const sigClone = sigBar.cloneNode(true) as HTMLElement;
-              sigClone.style.marginTop = "12px";
-              sigClone.style.paddingTop = "12px";
-              sigClone.style.borderTop = "2px solid #0f172a";
-              page2.bottomWrap.appendChild(sigClone);
-            }
-
-            allPagesToRender.push(page2.pageDiv);
           }
         } else {
           // --- ANNUAL PLANNING (वार्षिक नियोजन) PAGINATION ---
@@ -3641,6 +3666,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             pageTable.appendChild(pageTbody);
             pageDiv.appendChild(pageTable);
 
+            tempContainer.innerHTML = "";
             tempContainer.appendChild(pageDiv);
             const pageObj = { pageDiv, tbody: pageTbody, isFirstPage };
             pageList.push(pageObj);
@@ -3703,82 +3729,109 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         return;
       }
 
-      const BATCH_SIZE = 3;
       const grandTotalPages = allPagesToRender.length;
-
-      // Yield main thread before canvas rendering
-      await new Promise((resolve) => setTimeout(resolve, 40));
-
       let totalPdfPages = 0;
+      const BATCH_SIZE = 3; // Generate multiple pages concurrently (3 pages at a time)
 
-      // Render generated pages concurrently in batches of 3 using Promise.all (SUPER FAST GENERATION)
+      // Yield main thread before canvas rendering so progress modal initializes
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      // Concurrent Multi-Page Batch Rendering:
+      // Generates multiple pages at the same time in parallel using Promise.all,
+      // while giving each page its OWN isolated container to prevent DOM cloning overlaps!
       for (let b = 0; b < grandTotalPages; b += BATCH_SIZE) {
         const batchPages = allPagesToRender.slice(b, b + BATCH_SIZE);
         const batchEnd = Math.min(b + BATCH_SIZE, grandTotalPages);
+        const pageRangeText = b + 1 === batchEnd ? `पान क्र. ${batchEnd}` : `पाने ${b + 1} ते ${batchEnd}`;
 
-        tempContainer.innerHTML = "";
-        batchPages.forEach((pageDiv) => {
-          pageDiv.style.position = "absolute";
-          pageDiv.style.top = "0px";
-          pageDiv.style.left = "0px";
-          tempContainer.appendChild(pageDiv);
-        });
-
-        const pct = Math.min(96, Math.max(5, Math.round((batchEnd / grandTotalPages) * 92)));
+        const currentPercent = Math.min(96, Math.max(5, Math.round((batchEnd / grandTotalPages) * 92)));
 
         setPdfProgress({
           current: batchEnd,
           total: grandTotalPages,
-          percent: pct,
-          status: "",
+          percent: currentPercent,
+          status: `${pageRangeText} / ${grandTotalPages} एकाच वेळी तयार होत आहेत...`,
         });
 
-        toast.info(`⚡ PDF तयार होत आहे...`, {
+        toast.info(`⚡ PDF ${pageRangeText} / ${grandTotalPages} एकाच वेळी तयार होत आहेत...`, {
           id: "planning-pdf-progress",
         });
 
-        // Small yield so browser draws progress UI
-        await new Promise((resolve) => setTimeout(resolve, 25));
+        // Fast minimal yield so browser redraws UI progress indicator smoothly
+        await new Promise((resolve) => setTimeout(resolve, 15));
 
-        // Concurrently render the batch of pages with html2canvas
-        const pageCanvases = await Promise.all(
-          batchPages.map((pageDiv) =>
-            html2canvas(pageDiv, {
-              scale: 1.18,
-              useCORS: true,
+        // Create an isolated container for each page in the batch to avoid sibling DOM interference
+        const batchContainers: HTMLElement[] = [];
+        const batchCanvases = await Promise.all(
+          batchPages.map(async (pageDiv) => {
+            const pageCont = document.createElement("div");
+            pageCont.className = "pdf-export-active";
+            pageCont.style.position = "fixed";
+            pageCont.style.left = "0px";
+            pageCont.style.top = "0px";
+            pageCont.style.zIndex = "-9999";
+            pageCont.style.width = exportWidth;
+            pageCont.style.backgroundColor = "#ffffff";
+            pageCont.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
+            pageCont.style.pointerEvents = "none";
+            pageCont.appendChild(pageDiv);
+            document.body.appendChild(pageCont);
+            batchContainers.push(pageCont);
+
+            const canvasWidth = pageDiv.offsetWidth || 950;
+            const canvasHeight = pageDiv.offsetHeight || 1260;
+
+            const c = await html2canvas(pageDiv, {
+              scale: 1.1,
+              useCORS: false,
               logging: false,
               backgroundColor: "#ffffff",
               scrollX: 0,
               scrollY: 0,
-              windowWidth: 1100,
+              width: canvasWidth,
+              height: canvasHeight,
+              windowWidth: canvasWidth,
+              windowHeight: canvasHeight,
               imageTimeout: 0,
               removeContainer: true,
-            })
-          )
+            });
+
+            return c;
+          })
         );
 
-        // Add each rendered page to PDF in strict sequential order
-        for (let i = 0; i < pageCanvases.length; i++) {
-          const pageCanvas = pageCanvases[i];
+        // Immediately detach all batch containers to free memory
+        batchContainers.forEach((cont) => {
+          if (cont.parentNode) cont.parentNode.removeChild(cont);
+        });
 
+        // Add rendered pages to PDF in strict sequential order
+        for (let i = 0; i < batchCanvases.length; i++) {
+          const pageCanvas = batchCanvases[i];
           if (totalPdfPages > 0) {
             pdf.addPage();
           }
           totalPdfPages++;
 
-          const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.78);
+          const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.75);
 
           // ALL pages have the EXACT SAME 100% uniform table width (190mm) and left margin (10mm) - ZERO ZOOM OUT!
           const renderWidthMm = 190;
-          const renderHeightMm = (pageCanvas.height * renderWidthMm) / pageCanvas.width;
           const maxPageHeightMm = 280;
+          const canvasAspectHeightMm = (pageCanvas.height * renderWidthMm) / pageCanvas.width;
           let actualRenderWidthMm = renderWidthMm;
-          let actualRenderHeightMm = renderHeightMm;
+          let actualRenderHeightMm = canvasAspectHeightMm;
 
-          if (actualRenderHeightMm > maxPageHeightMm) {
-            const fitRatio = maxPageHeightMm / actualRenderHeightMm;
-            actualRenderHeightMm = maxPageHeightMm;
-            actualRenderWidthMm = renderWidthMm * fitRatio;
+          if (isMonthly) {
+            // For Monthly Planning: ALWAYS guarantee 100% full width (190mm) with exact 10mm margins on left & right
+            actualRenderWidthMm = 190;
+            actualRenderHeightMm = Math.min(278, canvasAspectHeightMm);
+          } else {
+            if (actualRenderHeightMm > maxPageHeightMm) {
+              const fitRatio = maxPageHeightMm / actualRenderHeightMm;
+              actualRenderHeightMm = maxPageHeightMm;
+              actualRenderWidthMm = renderWidthMm * fitRatio;
+            }
           }
 
           const actualOffsetX = (210 - actualRenderWidthMm) / 2;
@@ -3795,13 +3848,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             "FAST"
           );
 
-          // Immediately release canvas bitmap memory from RAM & GPU to prevent mobile WebView lag/crash
+          // Immediately release canvas bitmap memory from RAM & GPU to prevent memory accumulation
           pageCanvas.width = 0;
           pageCanvas.height = 0;
         }
 
-        // Brief yield for browser garbage collection and UI updates between batches
-        await new Promise((resolve) => setTimeout(resolve, 20));
+        // Brief yield between batches
+        await new Promise((resolve) => setTimeout(resolve, 10));
       }
 
       if (tempContainer.parentNode) {
@@ -4891,27 +4944,31 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     font-size: 14.5px !important;
                     font-weight: 900 !important;
                   }
-                  .pdf-monthly-export .pdf-school-header {
-                    padding: 8px 16px !important;
-                    margin-bottom: 6px !important;
+                  .pdf-export-active .pdf-subject-banner {
+                    color: #000000 !important;
+                    border-color: #000000 !important;
+                    background-color: #fffbe7 !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
                   }
-                  .pdf-monthly-export .pdf-school-header h2 {
-                    font-size: 18px !important;
-                    padding-bottom: 3px !important;
+                  .pdf-export-active .pdf-subject-banner * {
+                    flex-wrap: nowrap !important;
+                    white-space: nowrap !important;
+                    word-break: keep-all !important;
+                    color: #000000 !important;
+                    font-weight: 900 !important;
                   }
-                  .pdf-monthly-export .pdf-school-subline,
-                  .pdf-monthly-export .pdf-school-subline * {
+                  .pdf-export-active th:first-child,
+                  .pdf-export-active td:first-child {
+                    padding-left: 2px !important;
+                    padding-right: 2px !important;
+                    text-align: center !important;
+                    white-space: nowrap !important;
+                    overflow: visible !important;
+                  }
+                  .pdf-export-active th:first-child {
                     font-size: 12px !important;
-                    padding-top: 3px !important;
-                  }
-                  .pdf-monthly-export .pdf-subject-banner {
-                    padding: 6px 12px !important;
-                    margin-bottom: 6px !important;
-                  }
-                  .pdf-monthly-export .pdf-signature-bar {
-                    padding-top: 12px !important;
-                    margin-top: auto !important;
-                    border-top: 2px solid #0f172a !important;
+                    font-weight: 900 !important;
                   }
                   .pdf-monthly-export .pdf-signature-bar .h-6,
                   .pdf-monthly-export .pdf-signature-bar .h-10,
@@ -5096,9 +5153,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     width: 100% !important;
                   }
                   .pdf-export-active .pdf-signature-bar {
-                    padding-top: 24px !important;
-                    margin-top: 20px !important;
-                    border-top: 2px solid #0f172a !important;
+                    padding-top: 14px !important;
+                    margin-top: 16px !important;
+                    border-top: none !important;
                   }
                   .pdf-export-active .pdf-sig-title {
                     font-size: 17px !important;
@@ -5251,9 +5308,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           {(() => {
                             const parts = getSectionBannerParts(sec);
                             return (
-                              <div className="pdf-subject-banner relative bg-gradient-to-r from-amber-50/95 via-amber-50 to-orange-50/90 border-2 border-amber-300 text-amber-950 px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-xl flex flex-nowrap items-center justify-between shadow-xs overflow-hidden print:py-0.5 print:px-2 w-full">
+                              <div className="pdf-subject-banner relative bg-[#fffbe7] border-2 border-slate-900 text-slate-950 px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-xl flex flex-nowrap items-center justify-between shadow-xs overflow-hidden print:py-0.5 print:px-2 w-full" style={{ backgroundColor: "#fffbe7" }}>
                                 <div className="w-full flex-1 min-w-0 overflow-x-auto scrollbar-thin scrollbar-thumb-amber-300 sm:scrollbar-none [-webkit-overflow-scrolling:touch] py-0.5">
-                                  <div className="w-full min-w-full flex flex-nowrap items-center justify-between gap-2 sm:gap-3 text-xs sm:text-[13px] md:text-sm font-black text-amber-950 whitespace-nowrap">
+                                  <div className="w-full min-w-full flex flex-nowrap items-center justify-between gap-2 sm:gap-3 text-xs sm:text-[13px] md:text-sm font-black text-slate-950 whitespace-nowrap">
                                     {parts.segments.map((seg, idx) => {
                                       const colonMatch = seg.match(/^(.*?)\s*(:-|:)\s*(.*)$/);
                                       const hasColon = !!colonMatch;
@@ -5263,7 +5320,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                       return (
                                         <React.Fragment key={idx}>
                                           {idx > 0 && (
-                                            <span className="pdf-banner-dot text-amber-400 font-black select-none text-xs sm:text-sm shrink-0">
+                                            <span className="pdf-banner-dot text-slate-950 font-black select-none text-xs sm:text-sm shrink-0">
                                               •
                                             </span>
                                           )}
@@ -5271,14 +5328,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                             {idx === 0 ? (
                                               <div className="pdf-banner-title flex items-center gap-1.5 shrink-0">
                                                 <BookOpen className="pdf-banner-icon size-3.5 sm:size-4 md:size-4.5 text-amber-600 shrink-0" />
-                                                <span className="font-black text-amber-950">
+                                                <span className="font-black text-slate-950">
                                                   {seg}
                                                 </span>
                                               </div>
                                             ) : hasColon ? (
                                               <span className="inline-flex items-center">
-                                                <span className="font-bold text-amber-800/90">{label}</span>
-                                                <span className="font-black text-amber-600 mx-1 shrink-0">:</span>
+                                                <span className="font-bold text-slate-950">{label}</span>
+                                                <span className="font-black text-slate-950 mx-1 shrink-0">:</span>
                                                 <span className="font-black text-amber-950">{val}</span>
                                               </span>
                                             ) : (
@@ -5380,7 +5437,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                       <col key="m6" style={{ width: "11%", minWidth: "35px" }} />,
                                       ...(isInlineEditing ? [<col key="mEdit" style={{ width: "8%" }} />] : [])
                                     ] : [
-                                      <col key="m0" style={{ width: "3.5%", minWidth: "26px", maxWidth: "38px" }} />,
+                                      <col key="m0" style={{ width: "4.5%", minWidth: "44px", maxWidth: "54px" }} />,
                                       <col key="m1" style={{ width: "10.5%" }} />,
                                       <col key="m2" style={{ width: "17.5%" }} />,
                                       <col key="m3" style={{ width: "13.5%" }} />,
@@ -5433,7 +5490,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                         : (i === 0
                                           ? (mobileTableViewMode === "fit"
                                             ? { width: "5.5%", minWidth: "24px", maxWidth: "34px", padding: "3px 1px", wordBreak: "keep-all" }
-                                            : { width: "3.5%", minWidth: "26px", maxWidth: "38px", padding: "4px 2px" })
+                                            : { width: "4.5%", minWidth: "44px", maxWidth: "54px", padding: "4px 2px" })
                                           : i === 4
                                             ? (mobileTableViewMode === "fit"
                                               ? { width: "26%", padding: "3px 1px", wordBreak: "keep-all" }
@@ -5479,7 +5536,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                           ...thStyle,
                                           fontSize: mobileTableViewMode === "fit"
                                             ? undefined
-                                            : (isMonthly && isSecEng ? (i === 5 || i === 6 ? "11.5px" : "12px") : "12px"),
+                                            : "14px",
                                           fontWeight: 900,
                                           color: "#000000",
                                         }}
@@ -5532,62 +5589,48 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                                     : hText
                                                       : i === 0
                                                         ? (
-                                                          <span className="font-black text-black inline-block whitespace-nowrap" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
+                                                          <span className="font-black text-black inline-block whitespace-nowrap" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "14px", color: "#000000" }}>
                                                             दिवस
                                                           </span>
                                                         )
                                                         : i === 1
                                                           ? (
-                                                            <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
-                                                              <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>पाठ /</span>
-                                                              <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>घटक</span>
+                                                            <span className="flex items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "14px", color: "#000000" }}>
+                                                              <span className="whitespace-nowrap" style={{ wordBreak: "keep-all" }}>पाठ / घटक</span>
                                                             </span>
                                                           )
-                                                          : i === 2
-                                                            ? (
-                                                              <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
-                                                                <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>अध्ययन</span>
-                                                                <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>निष्पत्ती</span>
+                                                        : i === 2
+                                                          ? (
+                                                            <span className="flex items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "14px", color: "#000000" }}>
+                                                              <span className="whitespace-nowrap" style={{ wordBreak: "keep-all" }}>अध्ययन निष्पत्ती</span>
+                                                            </span>
+                                                          )
+                                                        : i === 3
+                                                          ? (
+                                                            <span className="flex items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "14px", color: "#000000" }}>
+                                                              <span className="whitespace-nowrap" style={{ wordBreak: "keep-all" }}>अध्ययन मुद्दे</span>
+                                                            </span>
+                                                          )
+                                                        : i === 4
+                                                          ? (
+                                                            <span className="flex items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "14px", color: "#000000" }}>
+                                                              <span className="whitespace-nowrap" style={{ wordBreak: "keep-all" }}>
+                                                                {hText || "अध्ययन अनुभवाचे स्वरूप"}
                                                               </span>
-                                                            )
-                                                            : i === 3
-                                                              ? (
-                                                                <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
-                                                                  <span className="sm:hidden block">
-                                                                    <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>मुद्दे /</span>
-                                                                    <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>उद्देश</span>
-                                                                  </span>
-                                                                  <span className="hidden sm:inline">
-                                                                    {hText.replace(/\/?\s*उपघटक/g, "").replace(/\/\s*$/, "").trim() || "अध्ययन मुद्दे / पाठ्यांश उद्देश"}
-                                                                  </span>
-                                                                </span>
-                                                              )
-                                                              : i === 4
-                                                                ? (
-                                                                  <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
-                                                                    <span className="sm:hidden block">
-                                                                      <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>अध्ययन अनुभव</span>
-                                                                      <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>स्वरूप</span>
-                                                                    </span>
-                                                                    <span className="hidden sm:inline">
-                                                                      {hText || "अध्ययन अनुभवाचे स्वरूप"}
-                                                                    </span>
-                                                                  </span>
-                                                                )
-                                                                : i === 5
-                                                                  ? (
-                                                                    <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
-                                                                      <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>साधन</span>
-                                                                      <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>तंत्रे</span>
-                                                                    </span>
-                                                                  )
-                                                                  : i === 6
-                                                                    ? (
-                                                                      <span className="flex flex-col items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "12px" }}>
-                                                                        <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>शैक्षणिक</span>
-                                                                        <span className="block whitespace-nowrap" style={{ wordBreak: "keep-all" }}>साहित्य</span>
-                                                                      </span>
-                                                                    )
+                                                            </span>
+                                                          )
+                                                        : i === 5
+                                                          ? (
+                                                            <span className="flex items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "14px", color: "#000000" }}>
+                                                              <span className="whitespace-nowrap" style={{ wordBreak: "keep-all" }}>साधन तंत्रे</span>
+                                                            </span>
+                                                          )
+                                                        : i === 6
+                                                          ? (
+                                                            <span className="flex items-center justify-center text-center w-full leading-tight font-black text-black" style={{ wordBreak: "keep-all", overflowWrap: "normal", fontWeight: 900, fontSize: mobileTableViewMode === "fit" ? undefined : "14px", color: "#000000" }}>
+                                                              <span className="whitespace-nowrap" style={{ wordBreak: "keep-all" }}>शैक्षणिक साहित्य</span>
+                                                            </span>
+                                                          )
                                                                     : isMonthly
                                                                       ? hText
                                                                         .replace(/\/?\s*उपघटक/g, "").replace(/\/\s*$/, "").trim()
@@ -5655,7 +5698,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                 <AutoHeightTextarea
                                                   value={r[3] || ""}
                                                   onChange={(val) => handleCellChange(sec.subjectName, rIdx, 3, val)}
-                                                  placeholder={isSecEng ? "Teaching Point/ Aim..." : "अध्ययन मुद्दे/पाठ्यांश उद्देश..."}
+                                                  placeholder={isSecEng ? "Teaching Point/ Aim..." : "अध्ययन मुद्दे..."}
                                                 />
                                               </td>
                                               {/* Monthly Col 4: Experience */}

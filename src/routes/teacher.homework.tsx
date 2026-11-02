@@ -311,7 +311,7 @@ function HomeworkPage() {
                           ? `शाळा: ${hwProfile.schoolName} ${hwProfile.teacherName ? `• शिक्षक: ${hwProfile.teacherName}` : ""}`
                           : "शाळा व शिक्षक माहिती सेट करा (Set Header Info)"}
                       </span>
-                      <Edit3 className="size-3 text-amber-300 ml-1" />
+                      wi                 <Edit3 className="size-3 text-amber-300 ml-1" />
                     </button>
                     {hwProfile.schoolName && (
                       <span className="text-[11px] text-emerald-200 font-medium">
@@ -338,8 +338,8 @@ function HomeworkPage() {
                       setStep("medium");
                     }}
                     className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${mainTab === "homework" && step === "medium"
-                        ? "bg-white text-emerald-900 shadow-md font-black"
-                        : "text-white/80 hover:text-white"
+                      ? "bg-white text-emerald-900 shadow-md font-black"
+                      : "text-white/80 hover:text-white"
                       }`}
                   >
                     १. माध्यम
@@ -351,8 +351,8 @@ function HomeworkPage() {
                       setStep("class");
                     }}
                     className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${mainTab === "homework" && step === "class"
-                        ? "bg-white text-emerald-900 shadow-md font-black"
-                        : "text-white/80 hover:text-white"
+                      ? "bg-white text-emerald-900 shadow-md font-black"
+                      : "text-white/80 hover:text-white"
                       }`}
                   >
                     २. इयत्ता
@@ -371,14 +371,14 @@ function HomeworkPage() {
                   type="button"
                   onClick={() => setMainTab("homework")}
                   className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all duration-300 cursor-pointer shadow-sm active:scale-98 ${mainTab === "homework"
-                      ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/60 scale-[1.02]"
-                      : "bg-emerald-50/70 hover:bg-emerald-100/90 text-emerald-950 border border-emerald-200/80 hover:border-emerald-400 hover:scale-[1.01]"
+                    ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/60 scale-[1.02]"
+                    : "bg-emerald-50/70 hover:bg-emerald-100/90 text-emerald-950 border border-emerald-200/80 hover:border-emerald-400 hover:scale-[1.01]"
                     }`}
                 >
                   <div
                     className={`size-8 rounded-xl flex items-center justify-center shrink-0 ${mainTab === "homework"
-                        ? "bg-white/20 text-white shadow-xs"
-                        : "bg-emerald-600 text-white shadow-xs"
+                      ? "bg-white/20 text-white shadow-xs"
+                      : "bg-emerald-600 text-white shadow-xs"
                       }`}
                   >
                     <BookOpen className="size-4.5" />
@@ -402,14 +402,14 @@ function HomeworkPage() {
                   type="button"
                   onClick={() => setMainTab("mcq")}
                   className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all duration-300 cursor-pointer shadow-sm active:scale-98 ${mainTab === "mcq"
-                      ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30 ring-2 ring-purple-400/60 scale-[1.02]"
-                      : "bg-indigo-50/70 hover:bg-indigo-100/90 text-indigo-950 border border-indigo-200/80 hover:border-indigo-400 hover:scale-[1.01]"
+                    ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30 ring-2 ring-purple-400/60 scale-[1.02]"
+                    : "bg-indigo-50/70 hover:bg-indigo-100/90 text-indigo-950 border border-indigo-200/80 hover:border-indigo-400 hover:scale-[1.01]"
                     }`}
                 >
                   <div
                     className={`size-8 rounded-xl flex items-center justify-center shrink-0 ${mainTab === "mcq"
-                        ? "bg-white/20 text-amber-300 shadow-xs"
-                        : "bg-indigo-600 text-amber-300 shadow-xs"
+                      ? "bg-white/20 text-amber-300 shadow-xs"
+                      : "bg-indigo-600 text-amber-300 shadow-xs"
                       }`}
                   >
                     <Sparkles className="size-4.5" />
@@ -475,8 +475,8 @@ function HomeworkPage() {
                         <button
                           onClick={() => setPreviewTab("doc")}
                           className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${previewTab === "doc"
-                              ? "bg-teal-700 text-white shadow-xs"
-                              : "text-slate-600 hover:text-slate-900"
+                            ? "bg-teal-700 text-white shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
                             }`}
                         >
                           {isWordHomework(activeHomework)
@@ -488,8 +488,8 @@ function HomeworkPage() {
                         <button
                           onClick={() => setPreviewTab("template")}
                           className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${previewTab === "template"
-                              ? "bg-teal-700 text-white shadow-xs"
-                              : "text-slate-600 hover:text-slate-900"
+                            ? "bg-teal-700 text-white shadow-xs"
+                            : "text-slate-600 hover:text-slate-900"
                             }`}
                         >
                           दैनिक कार्यपुस्तिका (Worksheet)
@@ -566,8 +566,8 @@ function HomeworkPage() {
                               setStep("class");
                             }}
                             className={`p-8 rounded-3xl text-left transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-xl relative overflow-hidden ${selectedMedium === med.id
-                                ? "bg-gradient-to-br " + med.color + " text-white border-transparent scale-102"
-                                : "bg-white text-slate-800 border-slate-200 hover:border-amber-400"
+                              ? "bg-gradient-to-br " + med.color + " text-white border-transparent scale-102"
+                              : "bg-white text-slate-800 border-slate-200 hover:border-amber-400"
                               }`}
                           >
                             <Languages className={`size-10 mb-4 ${selectedMedium === med.id ? "text-white" : "text-amber-600"}`} />
@@ -614,8 +614,8 @@ function HomeworkPage() {
                                 setStep("list");
                               }}
                               className={`p-6 rounded-2xl text-center transition-all duration-300 border-2 cursor-pointer shadow-sm hover:shadow-lg ${isSelected
-                                  ? "bg-gradient-to-br " + grad.bg + " text-white border-transparent scale-102"
-                                  : "bg-white text-slate-800 border-slate-200 hover:border-amber-400 hover:bg-amber-50/20"
+                                ? "bg-gradient-to-br " + grad.bg + " text-white border-transparent scale-102"
+                                : "bg-white text-slate-800 border-slate-200 hover:border-amber-400 hover:bg-amber-50/20"
                                 }`}
                             >
                               <GraduationCap className={`size-8 mx-auto mb-2 ${isSelected ? "text-white" : "text-amber-600"}`} />
@@ -696,8 +696,8 @@ function HomeworkPage() {
                             type="button"
                             onClick={() => setViewMode("calendar")}
                             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all cursor-pointer ${viewMode === "calendar"
-                                ? "bg-emerald-600 text-white shadow-xs font-black"
-                                : "text-slate-600 hover:text-slate-900"
+                              ? "bg-emerald-600 text-white shadow-xs font-black"
+                              : "text-slate-600 hover:text-slate-900"
                               }`}
                           >
                             <Calendar className="size-3.5" />
@@ -708,8 +708,8 @@ function HomeworkPage() {
                             type="button"
                             onClick={() => setViewMode("list")}
                             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all cursor-pointer ${viewMode === "list"
-                                ? "bg-emerald-600 text-white shadow-xs font-black"
-                                : "text-slate-600 hover:text-slate-900"
+                              ? "bg-emerald-600 text-white shadow-xs font-black"
+                              : "text-slate-600 hover:text-slate-900"
                               }`}
                           >
                             <Layers className="size-3.5" />

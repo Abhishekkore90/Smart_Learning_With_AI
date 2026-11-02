@@ -1539,7 +1539,7 @@ export function detectSubjectFromRow(row: string[], knownSubjects: string[]): st
       "दिवस",
       "पाठ / घटक",
       "अध्ययन निष्पत्ती",
-      "अध्ययन मुद्दे / पाठ्यांश उद्देश",
+      "अध्ययन मुद्दे",
       "अध्ययन अनुभवाचे स्वरूप",
       "साधन तंत्रे",
       "शैक्षणिक साहित्य",
@@ -1834,6 +1834,18 @@ export function detectSubjectFromRow(row: string[], knownSubjects: string[]): st
       });
 
       flushCurrentMonth();
+
+      // Clean up orphan 1-3 row March fragment if March + April combined exists to prevent 1-row empty pages
+      const marchKey = Object.keys(monthlyMap).find(
+        (k) => (k.includes("मार्च") || k.toLowerCase().includes("march")) && !k.includes("एप्रिल") && !k.toLowerCase().includes("april")
+      );
+      const marchAprilKey = Object.keys(monthlyMap).find(
+        (k) => (k.includes("मार्च + एप्रिल") || k.toLowerCase().includes("march + april") || (k.includes("मार्च") && k.includes("एप्रिल")))
+      );
+      if (marchKey && marchAprilKey && monthlyMap[marchKey].rows.length <= 3) {
+        monthlyMap[marchAprilKey].rows.unshift(...monthlyMap[marchKey].rows);
+        delete monthlyMap[marchKey];
+      }
 
       // Strictly sort monthlyMap in Academic Year Chronological Order (June 2026 -> April 2027)
       const sortedEntries = Object.entries(monthlyMap).sort(([nameA], [nameB]) => {
