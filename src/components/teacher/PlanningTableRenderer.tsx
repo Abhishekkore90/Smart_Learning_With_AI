@@ -2993,6 +2993,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         return "";
       };
 
+      const exportStartTime = performance.now();
       const activeSubjectName = getRealSubjectName();
       toast.info(
         activeSubjectName
@@ -3057,9 +3058,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             const nextSec = subjectSections[i + 1];
             const nextBanner = nextSec.querySelector(".pdf-subject-banner")?.textContent || "";
             const curBanner = sec.querySelector(".pdf-subject-banner")?.textContent || "";
+            const curText = (curBanner || "").toLowerCase();
+            const nextText = (nextBanner || "").toLowerCase();
             if (
-              (curBanner.includes("मार्च") && nextBanner.includes("मार्च")) ||
-              (curBanner.includes("मार्च") && nextBanner.includes("एप्रिल"))
+              (curText.includes("मार्च") && nextText.includes("मार्च")) ||
+              (curText.includes("मार्च") && nextText.includes("एप्रिल")) ||
+              (curText.includes("march") && nextText.includes("march")) ||
+              (curText.includes("march") && nextText.includes("april"))
             ) {
               const nextTbody = nextSec.querySelector("tbody");
               if (nextTbody) {
@@ -3097,24 +3102,83 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           }
         });
 
-        // Explicitly center exam, assessment, and vacation cells in cloned element for PDF export
-        secClone.querySelectorAll("tbody tr td").forEach((tdEl: any) => {
-          const text = tdEl.textContent?.trim() || "";
-          if (isExamOrAssessmentText(text) || tdEl.classList.contains("exam-assessment-cell")) {
-            tdEl.style.textAlign = "center";
-            tdEl.style.verticalAlign = "middle";
-            tdEl.style.fontWeight = "900";
-            tdEl.style.backgroundColor = "#fffbe6";
-            tdEl.classList.add("text-center");
-            tdEl.classList.remove("text-left");
-            Array.from(tdEl.children).forEach((child: any) => {
-              child.style.textAlign = "center";
-              child.style.margin = "0 auto";
-              child.style.display = "flex";
-              child.style.justifyContent = "center";
-              child.style.alignItems = "center";
-              child.style.width = "100%";
-            });
+        // Detect whether this section/medium is English or Marathi
+        const secText = (secClone.textContent || "").toLowerCase();
+        const bannerText = (secClone.querySelector(".pdf-subject-banner")?.textContent || "").toLowerCase();
+        const rawThTexts = Array.from(secClone.querySelectorAll("thead th")).map(th => th.textContent?.trim().toLowerCase() || "");
+        const isSecEng =
+          record?.mediumId === "english" ||
+          record?.mediumId === "semi-english" ||
+          bannerText.includes("english") ||
+          bannerText.includes("semi-english") ||
+          rawThTexts.some(h => h.includes("lesson") || h.includes("learning outcomes") || h.includes("teaching point") || h.includes("teaching experience") || h.includes("teaching poin")) ||
+          secText.includes("teaching experience") ||
+          secText.includes("learning outcomes");
+
+        // Format Exam, Assessment, and Vacation rows as clean full-width centered rows
+        secClone.querySelectorAll("tbody tr").forEach((tr: any) => {
+          const cells = Array.from(tr.querySelectorAll("td")) as HTMLElement[];
+          const fullRowText = cells.map((c) => c.textContent?.trim() || "").join(" ").toLowerCase();
+          const isExam =
+            isExamOrAssessmentText(fullRowText) ||
+            fullRowText.includes("unit test") ||
+            fullRowText.includes("term exam") ||
+            fullRowText.includes("summer vacation") ||
+            fullRowText.includes("diwali vacation") ||
+            fullRowText.includes("first unit") ||
+            fullRowText.includes("second unit") ||
+            fullRowText.includes("examination");
+
+          if (isExam) {
+            let examTitle = "";
+            for (const c of cells) {
+              const t = c.textContent?.trim() || "";
+              if (isExamOrAssessmentText(t) || /exam|test|vacation|चाचणी|सत्र|सुट्टी/i.test(t)) {
+                examTitle = t;
+                break;
+              }
+            }
+            if (!examTitle) examTitle = cells.map(c => c.textContent?.trim()).filter(Boolean).join(" - ");
+
+            const dayCell = cells[0];
+            const dayText = dayCell?.textContent?.trim() || "";
+            const isDayNumber = /^\d+$/.test(dayText);
+
+            tr.innerHTML = "";
+            if (isDayNumber) {
+              const tdDay = document.createElement("td");
+              tdDay.style.textAlign = "center";
+              tdDay.style.verticalAlign = "middle";
+              tdDay.style.fontWeight = "900";
+              tdDay.style.fontSize = "12px";
+              tdDay.style.padding = "4px 2px";
+              tdDay.textContent = dayText;
+              tr.appendChild(tdDay);
+
+              const tdBanner = document.createElement("td");
+              tdBanner.colSpan = 6;
+              tdBanner.style.textAlign = "center";
+              tdBanner.style.verticalAlign = "middle";
+              tdBanner.style.fontWeight = "900";
+              tdBanner.style.fontSize = "12.5px";
+              tdBanner.style.backgroundColor = "#fffbe6";
+              tdBanner.style.color = "#000000";
+              tdBanner.style.padding = "5px 8px";
+              tdBanner.textContent = examTitle;
+              tr.appendChild(tdBanner);
+            } else {
+              const tdBanner = document.createElement("td");
+              tdBanner.colSpan = 7;
+              tdBanner.style.textAlign = "center";
+              tdBanner.style.verticalAlign = "middle";
+              tdBanner.style.fontWeight = "900";
+              tdBanner.style.fontSize = "12.5px";
+              tdBanner.style.backgroundColor = "#fffbe6";
+              tdBanner.style.color = "#000000";
+              tdBanner.style.padding = "5px 8px";
+              tdBanner.textContent = examTitle;
+              tr.appendChild(tdBanner);
+            }
           }
         });
 
@@ -3145,66 +3209,57 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               th.style.width = "50px";
               th.style.padding = "6px 2px";
               th.style.whiteSpace = "nowrap";
-              th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">दिवस</span>';
+              th.innerHTML = isSecEng
+                ? '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Day</span>'
+                : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">दिवस</span>';
             } else if (idx === 1) {
               th.style.width = "110px";
               th.style.padding = "6px 2px";
-              if (th.textContent.includes("Lesson")) {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Lesson</span>';
-              } else {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">पाठ / घटक</span>';
-              }
+              th.innerHTML = isSecEng
+                ? '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Lesson</span>'
+                : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">पाठ / घटक</span>';
             } else if (idx === 2) {
               th.style.width = "170px";
               th.style.padding = "6px 2px";
-              if (th.textContent.includes("Outcome")) {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Learning Outcomes</span>';
-              } else {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">अध्ययन निष्पत्ती</span>';
-              }
+              th.innerHTML = isSecEng
+                ? '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Learning Outcomes</span>'
+                : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">अध्ययन निष्पत्ती</span>';
             } else if (idx === 3) {
               th.style.width = "115px";
               th.style.padding = "6px 2px";
-              if (th.textContent.includes("Point") || th.textContent.includes("Aim")) {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Teaching Point</span>';
-              } else {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">अध्ययन मुद्दे</span>';
-              }
+              th.innerHTML = isSecEng
+                ? '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Teaching Point</span>'
+                : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">अध्ययन मुद्दे</span>';
             } else if (idx === 4) {
               th.style.width = "225px";
               th.style.padding = "6px 3px";
-              if (th.textContent.includes("Experience")) {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Teaching Experience</span>';
-              } else {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">अध्ययन अनुभवाचे स्वरूप</span>';
-              }
+              th.innerHTML = isSecEng
+                ? '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Teaching Experience</span>'
+                : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">अध्ययन अनुभवाचे स्वरूप</span>';
             } else if (idx === 5) {
               th.style.width = "105px";
-              th.style.padding = "6px 1px";
-              if (th.textContent.includes("Tool") || th.textContent.includes("Technique")) {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">Tool & Technique</span>';
-              } else {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">साधन तंत्रे</span>';
-              }
+              th.style.padding = "4px 1px";
+              th.innerHTML = isSecEng
+                ? '<span style="display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;font-size:13px;font-weight:900;color:#000000;"><span style="white-space:nowrap;">Tool &amp;</span><span style="white-space:nowrap;">Technique</span></span>'
+                : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">साधन तंत्रे</span>';
             } else if (idx === 6) {
               th.style.width = "125px";
-              th.style.padding = "6px 1px";
-              if (th.textContent.includes("Educational") || th.textContent.includes("Instrument")) {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14px;font-weight:900;color:#000000;letter-spacing:-0.2px;">Educational Instrument</span>';
-              } else {
-                th.innerHTML = '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14px;font-weight:900;color:#000000;">शैक्षणिक साहित्य</span>';
-              }
+              th.style.padding = "4px 1px";
+              th.innerHTML = isSecEng
+                ? '<span style="display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;font-size:13px;font-weight:900;color:#000000;"><span style="white-space:nowrap;">Educational</span><span style="white-space:nowrap;">Instrument</span></span>'
+                : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14px;font-weight:900;color:#000000;">शैक्षणिक साहित्य</span>';
             }
           });
-                    secClone.querySelectorAll("tbody td").forEach((tdEl: any) => {
+
+          secClone.querySelectorAll("tbody td").forEach((tdEl: any) => {
             const cIdxAttr = tdEl.getAttribute("data-cidx");
             const cIdx = cIdxAttr !== null ? parseInt(cIdxAttr, 10) : -1;
             tdEl.style.wordBreak = "normal";
             tdEl.style.overflowWrap = "break-word";
-            tdEl.style.fontSize = "11.5px";
+            tdEl.style.fontSize = isSecEng ? "11px" : "11.5px";
             tdEl.style.fontWeight = "600";
             tdEl.style.color = "#000000";
-            tdEl.style.lineHeight = "1.3";
+            tdEl.style.lineHeight = isSecEng ? "1.25" : "1.3";
             tdEl.style.width = "";
             tdEl.style.minWidth = "";
             tdEl.style.maxWidth = "";
@@ -3212,14 +3267,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             if (cIdx === 0) {
               tdEl.style.textAlign = "center";
               tdEl.style.fontWeight = "900";
-              tdEl.style.padding = "3px 2px";
+              tdEl.style.padding = isSecEng ? "2.5px 2px" : "3px 2px";
               tdEl.style.fontSize = "12px";
             } else if (cIdx === 1 || cIdx === 2 || cIdx === 3 || cIdx === 5 || cIdx === 6) {
               tdEl.style.textAlign = "center";
-              tdEl.style.padding = "3px 3px";
+              tdEl.style.padding = isSecEng ? "2.5px 3px" : "3px 3px";
             } else {
               tdEl.style.textAlign = "left";
-              tdEl.style.padding = "3px 4px";
+              tdEl.style.padding = isSecEng ? "2.5px 4px" : "3px 4px";
             }
 
             tdEl.querySelectorAll("*").forEach((el: any) => {
@@ -3359,13 +3414,15 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           });
 
           subjectBanner.style.color = "#000000";
-          subjectBanner.style.borderColor = "#000000";
-          subjectBanner.style.backgroundColor = "#fffbe7";
+          subjectBanner.style.border = "1.5px solid #000000";
+          subjectBanner.style.borderRadius = "9999px";
+          subjectBanner.style.setProperty("background-color", "#fffbe7", "important");
           subjectBanner.querySelectorAll("*").forEach((el: any) => {
             el.style.flexWrap = "nowrap";
             el.style.whiteSpace = "nowrap";
             el.style.color = "#000000";
             el.style.fontWeight = "900";
+            el.style.backgroundColor = "transparent";
           });
         }
         const tableEl = secClone.querySelector("table");
@@ -3490,28 +3547,29 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             return { pageDiv, topHeaderWrap, tableWrap, tbody: pageTbody, bottomWrap };
           };
 
-          // Dynamic page-filling loop:
+          // Dynamic page-filling loop with orphan page elimination:
           let currentPage = createNewMonthlyPage(true);
           let pageRowStartIndex = 0;
-          const MAX_ALLOWED_HEIGHT = 1215; // px content limit inside 1260px container (padding 32px)
 
           for (let rIdx = 0; rIdx < N; rIdx++) {
             const origTr = allTrs[rIdx];
             const clonedTr = origTr.cloneNode(true) as HTMLElement;
-            // Let row take natural content height (do NOT fix height)
             clonedTr.style.height = "auto";
             clonedTr.querySelectorAll("td").forEach((td) => {
               td.style.verticalAlign = "middle";
-              td.style.padding = "4px 5px";
+              td.style.padding = isSecEng ? "3px 4px" : "3.5px 5px";
             });
 
             // Append clonedTr to current page tbody
             currentPage.tbody.appendChild(clonedTr);
 
-            // Check if this is the last row of the month or near the end
+            // Check if this is the last row of the month
             const isLastRow = (rIdx === N - 1);
             if (isLastRow && cleanSig) {
-              currentPage.bottomWrap.appendChild(cleanSig.cloneNode(true));
+              const sigClone = cleanSig.cloneNode(true) as HTMLElement;
+              sigClone.style.marginTop = (currentPage.pageDiv.offsetHeight > 1100) ? "8px" : "16px";
+              currentPage.bottomWrap.innerHTML = "";
+              currentPage.bottomWrap.appendChild(sigClone);
             }
 
             // Measure total content height
@@ -3520,12 +3578,19 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               currentPage.tableWrap.offsetHeight +
               currentPage.bottomWrap.offsetHeight;
 
-            // If we are at the second-to-last row (N - 2), test if row N-1 + signature would fit on this page.
-            // If they won't fit, break now so the final page has at least 2 rows + signatures!
-            const isSecondLast = (rIdx === N - 2);
-            const wouldLastFit = !isSecondLast || (totalContentHeight + 130 <= MAX_ALLOWED_HEIGHT);
+            // Height limit: on continuation pages there are no headers, so available content fits up to 1240px inside 1260px container
+            const maxAllowedForPage = currentPage.pageDiv.querySelector(".pdf-school-header") ? 1220 : 1240;
 
-            if (totalContentHeight <= MAX_ALLOWED_HEIGHT && wouldLastFit) {
+            // Orphan Prevention: If only 1 or 2 rows remain in the entire month, keep them on the current page
+            // so an almost-blank 3rd page with 1 single row is NEVER generated!
+            const remainingRowsInMonth = N - 1 - rIdx;
+            const isNearMonthEnd = remainingRowsInMonth <= 2;
+            const threshold = isNearMonthEnd ? 1250 : maxAllowedForPage;
+
+            const isSecondLast = (rIdx === N - 2);
+            const wouldLastFit = !isSecondLast || (totalContentHeight + 105 <= threshold);
+
+            if (totalContentHeight <= threshold && wouldLastFit) {
               // Fits comfortably on currentPage!
               if (isLastRow) {
                 allPagesToRender.push(currentPage.pageDiv);
@@ -3882,10 +3947,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
       await triggerPlanningPdfDownload(pdf, filename);
 
+      const durationSec = ((performance.now() - exportStartTime) / 1000).toFixed(1);
+      console.log(`[PDF_TIMING] Completed ${grandTotalPages} pages in ${durationSec}s (${((performance.now() - exportStartTime) / grandTotalPages / 1000).toFixed(2)}s/page)`);
+
       toast.success(
         realSubj
-          ? `🎉 विषय : ${realSubj} चे PDF यशस्वीरित्या डाऊनलोड झाले!`
-          : "🎉 सर्व विषयांचे एकत्र (Combined) PDF यशस्वीरित्या डाऊनलोड झाले!"
+          ? `🎉 विषय : ${realSubj} चे PDF (${grandTotalPages} पाने) अवघ्या ${durationSec} सेकंदात डाऊनलोड झाले!`
+          : `🎉 सर्व विषयांचे एकत्र (Combined) PDF (${grandTotalPages} पाने) अवघ्या ${durationSec} सेकंदात डाऊनलोड झाले!`
       );
     } catch (err) {
       console.error("PDF download error:", err);

@@ -260,7 +260,7 @@ function ModulePage() {
         <div className="absolute -bottom-64 left-1/4 size-[800px] bg-[#D6B97A]/10 rounded-full blur-[100px] animate-blob animation-delay-2000" />
       </div>
 
-      {moduleId !== "daily-assembly" && moduleId !== "special-day" && (
+      {moduleId !== "daily-assembly" && moduleId !== "special-day" && moduleId !== "annual-monthly-planning" && (
         <header className="bg-white/40 backdrop-blur-2xl border-b border-[#E8DFD1]/50 fixed top-0 left-0 right-0 h-16 z-30 px-4 md:px-8 flex items-center">
           <div className="max-w-full w-full mx-auto flex items-center justify-between relative z-10">
             <div className="flex items-center gap-3 md:gap-8">
@@ -316,7 +316,7 @@ function ModulePage() {
         </header>
       )}
 
-      <main className={`flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full ${moduleId === 'daily-assembly' || moduleId === 'special-day' ? 'pt-4' : 'pt-24'} mx-auto w-full relative z-10`}>
+      <main className={`flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full ${moduleId === 'daily-assembly' || moduleId === 'special-day' || moduleId === 'annual-monthly-planning' ? 'pt-4' : 'pt-24'} mx-auto w-full relative z-10`}>
         <ModulePaywall
           moduleId={moduleId}
           defaultTitle={config.m}
