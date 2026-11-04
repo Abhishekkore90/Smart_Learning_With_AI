@@ -57,6 +57,7 @@
     "docx": "^9.8.1",
     "docx-preview": "^0.4.1",
     "embla-carousel-react": "^8.6.0",
+    "fabric": "^7.4.0",
     "firebase": "^12.13.0",
     "framer-motion": "^12.38.0",
     "html-to-image": "^1.11.13",

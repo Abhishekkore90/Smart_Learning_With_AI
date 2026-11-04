@@ -46,6 +46,15 @@ import { useLanguage } from "@/hooks/use-language";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { toPng } from "html-to-image";
+import {
+  CornerOrnaments,
+  CelebrationBalloonsLeft,
+  CelebrationBalloonsRight,
+  FestiveBirthdayCake,
+  GoldenLaurelWreath,
+  FloatingSparkles,
+  CardBackgroundThemeLayer,
+} from "@/components/teacher/CreativeCardDecorations";
 
 export const Route = createFileRoute("/teacher/templates/edit/$templateId")({
   component: TemplateEditorPage,
@@ -338,6 +347,58 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
   },
 };
 
+
+const BACKGROUND_IMAGE_OPTIONS = [
+  {
+    id: "balloons",
+    label: "🎈 3D Golden Balloons",
+    labelMr: "🎈 ३D सोनेरी फुगे",
+    url: "/templates/birthday_balloons_3d.jpg",
+  },
+  {
+    id: "galaxy",
+    label: "🌌 Cosmic Galaxy",
+    labelMr: "🌌 कॉस्मिक आकाशगंगा",
+    url: "/templates/birthday_galaxy_3d.jpg",
+  },
+  {
+    id: "cake",
+    label: "🎂 3D Cake Studio",
+    labelMr: "🎂 ३D केक स्टुडिओ",
+    url: "/templates/birthday_clean_3d.jpg",
+  },
+  {
+    id: "poster",
+    label: "✨ Royal Celebration",
+    labelMr: "✨ रॉयल सेलिब्रेशन",
+    url: "/templates/birthday_poster_hd.jpg",
+  },
+  {
+    id: "redcarpet",
+    label: "🏆 Red Carpet Gala",
+    labelMr: "🏆 रेड कार्पेट सन्मान",
+    url: "/templates/studentofmonth_red_carpet_3d.jpg",
+  },
+  {
+    id: "library",
+    label: "📚 Scholastic Hall",
+    labelMr: "📚 भव्य ग्रंथालय हॉल",
+    url: "/templates/studentofmonth_library_3d.jpg",
+  },
+  {
+    id: "stage",
+    label: "🎭 Annual Stage",
+    labelMr: "🎭 वार्षिक महोत्सव मंच",
+    url: "/templates/annual_hd.jpg",
+  },
+  {
+    id: "award",
+    label: "🎖️ Merit Citation",
+    labelMr: "🎖️ सुवर्ण सन्मान",
+    url: "/templates/achievement_clean_3d.jpg",
+  },
+];
+
 function TemplateEditorPage() {
   const { templateId } = Route.useParams();
   const { lang } = useLanguage();
@@ -349,6 +410,16 @@ function TemplateEditorPage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const templateRef = useRef<HTMLDivElement>(null);
   const [studentPhoto, setStudentPhoto] = useState<string | null>(null);
+  const [selectedBgTheme, setSelectedBgTheme] = useState<string>("auto");
+  const [selectedBgImage, setSelectedBgImage] = useState<string>(() => {
+    if (templateId?.includes("birthday-2")) return "/templates/birthday_galaxy_3d.jpg";
+    if (templateId?.includes("birthday-3")) return "/templates/birthday_clean_3d.jpg";
+    if (templateId?.includes("birthday")) return "/templates/birthday_balloons_3d.jpg";
+    if (templateId?.includes("studentofmonth")) return "/templates/studentofmonth_red_carpet_3d.jpg";
+    if (templateId?.includes("achievement")) return "/templates/achievement_clean_3d.jpg";
+    if (templateId?.includes("annual")) return "/templates/annual_hd.jpg";
+    return "/templates/birthday_balloons_3d.jpg";
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -602,6 +673,9 @@ function TemplateEditorPage() {
   const isAnnual = templateId?.includes("annual");
   const isCultural = templateId?.includes("cultural");
   const isAchievement = templateId?.includes("achievement");
+  const isBirthday = templateId?.includes("birthday") || (!isAnnual && !isCultural && !isAchievement && !templateId?.includes("sports") && !templateId?.includes("admission"));
+  const isSports = templateId?.includes("sports");
+  const isAdmission = templateId?.includes("admission");
 
   const handleShareToStudent = async () => {
     setIsSaving(true);
@@ -915,6 +989,71 @@ function TemplateEditorPage() {
                   </div>
                 </div>
 
+                {/* Background Image Selection Gallery */}
+                <div className="space-y-2.5 group">
+                  <div className="flex items-center justify-between ml-1">
+                    <label className="text-xs sm:text-sm font-extrabold text-slate-700 tracking-normal block">
+                      {lang === "mr" ? "आकर्षक बॅकग्राउंड चित्र निवडा (Background Image)" : "Choose Background Image"}
+                    </label>
+                    <span className="text-[10px] text-pink-600 font-extrabold uppercase tracking-wider bg-pink-50 px-2 py-0.5 rounded-md border border-pink-200">
+                      3D HD Scenery
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {BACKGROUND_IMAGE_OPTIONS.map((img) => (
+                      <button
+                        key={img.id}
+                        type="button"
+                        onClick={() => setSelectedBgImage(img.url)}
+                        className={`group/btn relative aspect-[4/3] rounded-2xl overflow-hidden border-2 transition-all p-0.5 cursor-pointer ${
+                          selectedBgImage === img.url
+                            ? "border-pink-500 shadow-lg ring-2 ring-pink-500/40 scale-105 z-10"
+                            : "border-slate-200 hover:border-slate-400 opacity-75 hover:opacity-100"
+                        }`}
+                      >
+                        <img
+                          src={img.url}
+                          alt={img.label}
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent flex items-end p-1">
+                          <span className="text-[8px] sm:text-[9px] font-black text-white truncate drop-shadow-md w-full text-left">
+                            {lang === "mr" ? img.labelMr : img.label}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Background Visual Theme Overlay Selector */}
+                <div className="space-y-2 group">
+                  <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
+                    {lang === "mr" ? "बॅकग्राउंड इफेक्ट्स (Lighting Effects)" : "Background Lighting Effects"}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: "royal-gold-bokeh", label: "🌟 Royal Gold Bokeh", labelMr: "🌟 रॉयल गोल्ड बोकेह" },
+                      { id: "party-streamers", label: "🎉 Party Streamers", labelMr: "🎉 पार्टी स्ट्रीमर्स" },
+                      { id: "cosmic-galaxy", label: "🌌 Cosmic Galaxy", labelMr: "🌌 कॉस्मिक गॅलक्सी" },
+                      { id: "royal-palace", label: "🏛️ Red Velvet Palace", labelMr: "🏛️ रेड वेलव्हेट पॅलेस" },
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setSelectedBgTheme(t.id)}
+                        className={`px-3 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-1.5 border cursor-pointer ${
+                          (selectedBgTheme === t.id || (selectedBgTheme === "auto" && t.id === "royal-gold-bokeh"))
+                            ? "bg-slate-900 text-amber-300 border-slate-900 shadow-md scale-[1.02]"
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        {lang === "mr" ? t.labelMr : t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Photo Upload Option */}
                 <div className="space-y-2 group">
                   <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
@@ -948,7 +1087,20 @@ function TemplateEditorPage() {
                   </div>
                 </div>
 
-                <div className="pt-6">
+                <div className="pt-6 space-y-4">
+                  <button
+                    onClick={handleShareToStudent}
+                    disabled={isSaving}
+                    className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="size-5 animate-spin" />
+                    ) : (
+                      <Send className="size-5" />
+                    )}{" "}
+                    {lang === "mr" ? "डॅशबोर्डवर शेअर करा" : lang === "hi" ? "डैशबोर्ड पर साझा करें" : "Share to Dashboard"}
+                  </button>
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       onClick={handleDownloadTemplate}
@@ -991,11 +1143,26 @@ function TemplateEditorPage() {
               className="w-full aspect-[3/4] min-h-[480px] sm:min-h-[560px] rounded-[2rem] sm:rounded-[3rem] md:rounded-[4rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] overflow-hidden relative group border-4 sm:border-8 md:border-[12px] border-white"
             >
               <div className="w-full h-full relative overflow-hidden flex flex-col">
-                {/* Dynamic Background */}
-                <div
-                  className="absolute inset-0"
-                  style={{ background: configToUse.bg }}
-                />
+                {/* Realistic Background Image */}
+                {selectedBgImage ? (
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    <img
+                      src={selectedBgImage}
+                      alt="Template Atmosphere"
+                      className="w-full h-full object-cover object-center filter brightness-[0.52] contrast-[1.2] scale-105 transition-all duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/60 mix-blend-multiply" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.85)_100%)]" />
+                  </div>
+                ) : (
+                  <div
+                    className="absolute inset-0"
+                    style={{ background: configToUse.bg }}
+                  />
+                )}
+
+                {/* Rich Theme Scenery (Bokeh Lights, Streamers, Cosmic Stars, Velvet Damask) */}
+                <CardBackgroundThemeLayer themeType={selectedBgTheme} templateId={templateId} />
 
                 {/* Animated Floating Elements */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -1027,112 +1194,183 @@ function TemplateEditorPage() {
                 <div className="absolute -top-32 -right-32 size-96 bg-white/10 rounded-full blur-[120px] animate-pulse" />
                 <div className="absolute -bottom-32 -left-32 size-96 bg-black/40 rounded-full blur-[120px]" />
 
+                {/* Corner Ornaments */}
+                <CornerOrnaments color="#fef08a" />
+
+                {/* Floating Celebration Balloons & Sparkles (For Birthday & Celebratory) */}
+                {isBirthday && (
+                  <>
+                    <CelebrationBalloonsLeft />
+                    <CelebrationBalloonsRight />
+                  </>
+                )}
+                <FloatingSparkles />
+
                 {/* Card Content */}
-                <div className="relative z-10 w-full h-full flex flex-col items-center justify-between p-4 sm:p-8 md:p-12 text-center overflow-y-auto no-scrollbar">
-                  <div className="w-full flex flex-col items-center my-auto py-2 sm:py-4">
+                <div className="relative z-10 w-full h-full flex flex-col items-center justify-between p-4 sm:p-6 md:p-8 text-center overflow-y-auto no-scrollbar">
+                  
+                  {/* Top Celebratory Header Badge */}
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300/40 backdrop-blur-md shadow-md mb-2 shrink-0"
+                  >
+                    <Sparkles className="size-3 text-amber-300 animate-spin" style={{ animationDuration: "6s" }} />
+                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-amber-200">
+                      {isBirthday
+                        ? "✦ SPECIAL BIRTHDAY CELEBRATION ✦"
+                        : isAchievement
+                          ? "★ OFFICIAL MERIT AWARD ★"
+                          : isAnnual
+                            ? "✦ ANNUAL FUNCTION CELEBRATION ✦"
+                            : "✦ SCHOLASTIC EXCELLENCE ✦"}
+                    </span>
+                    <Sparkles className="size-3 text-amber-300" />
+                  </motion.div>
+
+                  {/* Main Hero Container */}
+                  <div className="w-full flex flex-col items-center my-auto py-1 sm:py-2">
+                    
+                    {/* Visual Focus: Prominent High-Impact Hero Photo Frame or 3D Cake / Laurel Wreath */}
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      transition={{ type: "spring", damping: 12 }}
-                      className="size-16 sm:size-20 md:size-24 lg:size-28 bg-white/10 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center mb-3 sm:mb-6 md:mb-8 border border-white/20 shadow-2xl relative backdrop-blur-2xl shrink-0"
+                      transition={{ type: "spring", damping: 14 }}
+                      className="relative my-3 sm:my-4 shrink-0"
                     >
                       {studentPhoto ? (
-                        <img 
-                          src={studentPhoto} 
-                          alt="Student" 
-                          className="w-full h-full object-cover rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem]" 
-                        />
+                        <div className="relative size-44 sm:size-52 md:size-56 rounded-full p-2 bg-gradient-to-tr from-amber-400 via-yellow-200 to-amber-600 shadow-[0_20px_50px_rgba(0,0,0,0.8)] drop-shadow-[0_0_30px_rgba(251,191,36,0.4)] border-2 border-white/80">
+                          {/* Inner Bevel Ring */}
+                          <div className="w-full h-full rounded-full overflow-hidden border-2 border-amber-950/20 relative shadow-inner">
+                            <img
+                              src={studentPhoto}
+                              alt={studentName}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          </div>
+
+                          {/* Top-Center Royal Badge */}
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 rounded-full shadow-lg border border-white flex items-center gap-1.5 z-20 whitespace-nowrap">
+                            <Crown className="size-3.5 sm:size-4 text-amber-950 fill-amber-950" />
+                            <span className="text-[9px] sm:text-[10px] font-black uppercase text-amber-950 tracking-wider">
+                              {isBirthday ? "BIRTHDAY STAR" : isAchievement ? "HONORED ACHIEVER" : "STAR SCHOLAR"}
+                            </span>
+                          </div>
+
+                          {/* Bottom-Right Golden Star Emblem */}
+                          <div className="absolute bottom-1 right-2 size-8 sm:size-9 bg-amber-400 rounded-full flex items-center justify-center shadow-lg border-2 border-white rotate-12">
+                            <Star className="size-4 sm:size-5 text-amber-950 fill-amber-950" />
+                          </div>
+                        </div>
+                      ) : isBirthday ? (
+                        <div className="flex flex-col items-center py-2">
+                          <div className="scale-125 sm:scale-150 transform mb-3">
+                            <FestiveBirthdayCake />
+                          </div>
+                          <div className="px-4 py-1 rounded-full bg-pink-500/30 border border-pink-400/40 backdrop-blur-sm text-[10px] font-black text-pink-200 tracking-wider shadow-md">
+                            🎂 CELEBRATION TIME • MAKE A WISH 🎂
+                          </div>
+                        </div>
+                      ) : isAchievement ? (
+                        <div className="relative flex items-center justify-center py-2">
+                          <GoldenLaurelWreath className="size-36 sm:size-44" />
+                          <Trophy className="absolute size-14 text-amber-300 drop-shadow-[0_0_20px_rgba(251,191,36,0.9)]" />
+                        </div>
                       ) : (
-                        <configToUse.icon className="size-8 sm:size-10 md:size-12 lg:size-14 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
+                        <div className="size-32 sm:size-40 rounded-3xl bg-white/15 backdrop-blur-xl border border-white/30 flex items-center justify-center shadow-2xl relative">
+                          <configToUse.icon className="size-16 sm:size-20 text-amber-300 drop-shadow-[0_0_20px_rgba(251,191,36,0.7)]" />
+                          <div className="absolute -top-3 -right-3 size-10 bg-amber-400 rounded-full flex items-center justify-center shadow-md border-2 border-white">
+                            <Star className="size-5 text-amber-950 fill-amber-950" />
+                          </div>
+                        </div>
                       )}
-                      <div
-                        className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 size-7 sm:size-9 md:size-10 bg-pink-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg rotate-12 animate-pulse"
-                      >
-                        <Heart className="size-3.5 sm:size-4 md:size-5 text-white" fill="white" />
-                      </div>
                     </motion.div>
 
+                    {/* Card Title */}
                     <motion.h1
                       key={configToUse.title}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-normal py-1 mb-2 sm:mb-4 italic drop-shadow-2xl leading-tight"
+                      className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-normal py-1 italic drop-shadow-2xl leading-tight"
                     >
                       {configToUse.title}
                     </motion.h1>
 
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: "60px" }}
-                      className="h-1 sm:h-1.5 bg-white/30 rounded-full mb-3 sm:mb-6 md:mb-8 shadow-glow"
-                      style={{ background: configToUse.accent }}
+                      animate={{ width: "80px" }}
+                      className="h-1 bg-gradient-to-r from-transparent via-amber-300 to-transparent rounded-full my-2 shadow-glow"
                     />
 
-                    <div className="space-y-1 sm:space-y-2 mb-3 sm:mb-6 md:mb-8 max-w-full px-2">
-                      <p className="text-white/80 font-black uppercase tracking-normal text-[10px] sm:text-xs md:text-sm">
-                        {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
-                      </p>
+                    {/* Honored Student Name */}
+                    <div className="space-y-0.5 sm:space-y-1 mb-2 max-w-full px-2">
+                      <div className="flex items-center justify-center gap-2 text-amber-200/90 font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs">
+                        <span className="h-px w-5 bg-gradient-to-r from-transparent to-amber-300/60" />
+                        <span>{lang === "mr" ? "गौरवमूर्ती" : lang === "hi" ? "गौरवान्वित नाम" : "Presented To"}</span>
+                        <span className="h-px w-5 bg-gradient-to-l from-transparent to-amber-300/60" />
+                      </div>
                       <motion.h2
                         key={studentName}
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-black tracking-normal leading-tight py-1 break-words max-w-full"
-                        style={{
-                          backgroundImage: configToUse.accent,
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                          filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
-                        }}
+                        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-normal leading-tight py-1 break-words max-w-full bg-gradient-to-r from-amber-100 via-yellow-200 to-amber-400 bg-clip-text text-transparent filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
                       >
                         {studentName}
                       </motion.h2>
                     </div>
 
-                    <div className="max-w-[95%] mx-auto mb-3 sm:mb-6 md:mb-8">
-                      <motion.p
-                        key={configToUse.quote}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-white/90 font-bold text-xs sm:text-sm md:text-base lg:text-lg italic leading-relaxed"
-                      >
-                        "{configToUse.quote}"
-                      </motion.p>
-                    </div>
-
+                    {/* Frosted Wishing Quote Box */}
                     <motion.div
-                      initial={{ y: 20, opacity: 0 }}
+                      key={configToUse.quote}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="bg-black/35 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-white/15 shadow-xl max-w-[92%] mx-auto my-2 relative"
+                    >
+                      <p className="text-white/95 font-medium text-xs sm:text-sm md:text-base italic leading-relaxed">
+                        "{configToUse.quote}"
+                      </p>
+                    </motion.div>
+
+                    {/* Student Class & Badge */}
+                    <motion.div
+                      initial={{ y: 15, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
-                      className="bg-black/30 px-4 sm:px-8 md:px-10 py-2 sm:py-3 md:py-4 rounded-[1rem] sm:rounded-[1.25rem] md:rounded-[1.5rem] border border-white/10 shadow-2xl flex items-center gap-2 sm:gap-3 backdrop-blur-xl mb-2 sm:mb-4"
+                      className="bg-gradient-to-r from-amber-500/20 via-yellow-500/25 to-amber-500/20 border border-amber-300/40 px-5 py-1.5 rounded-full backdrop-blur-md shadow-lg inline-flex items-center gap-2 my-1"
                     >
                       {isAnnual ? (
-                        <Theater className="size-4 sm:size-5 text-white/70" />
+                        <Theater className="size-4 text-amber-300" />
                       ) : isCultural ? (
-                        <PaletteIcon className="size-4 sm:size-5 text-white/70" />
+                        <PaletteIcon className="size-4 text-amber-300" />
                       ) : isAchievement ? (
-                        <Trophy className="size-4 sm:size-5 text-white/70" />
+                        <Trophy className="size-4 text-amber-300" />
                       ) : (
-                        <GraduationCap className="size-4 sm:size-5 text-white/70" />
+                        <GraduationCap className="size-4 text-amber-300" />
                       )}
-                      <span className="text-white font-black text-xs sm:text-sm tracking-wider uppercase italic">
+                      <span className="text-amber-100 font-black text-xs sm:text-sm tracking-widest uppercase">
                         {studentClass}
                       </span>
+                      <Star className="size-3 text-amber-300 fill-amber-300" />
                     </motion.div>
                   </div>
 
-                  {/* Footer Branding */}
-                  <div className="w-full pt-2 px-2 flex justify-between items-end opacity-50 shrink-0">
-                    <div className="text-left">
-                      <p className="text-[9px] sm:text-[10px] font-black text-white uppercase tracking-widest">
-                        {lang === "mr" ? "प्रीमियम कार्ड" : lang === "hi" ? "प्रीमियम कार्ड" : "Premium Card"}
-                      </p>
-                      <p className="text-[7px] sm:text-[8px] font-bold text-white/60">
-                        ID: {templateId?.toUpperCase()}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="size-6 sm:size-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
-                        <Star className="size-3 sm:size-4 text-white" />
+                  {/* 3. Creative Footer: School Emblem & Academic Session Seal */}
+                  <div className="w-full pt-2 border-t border-white/15 flex items-center justify-between px-2 text-amber-200/90 shrink-0">
+                    <div className="flex items-center gap-2 text-left">
+                      <div className="size-7 rounded-xl bg-amber-400/20 border border-amber-300/40 flex items-center justify-center">
+                        <PartyPopper className="size-3.5 text-amber-300" />
                       </div>
+                      <div>
+                        <p className="text-[9px] font-black tracking-widest uppercase text-white/90">
+                          SMART LEARNING ACADEMY
+                        </p>
+                        <p className="text-[8px] font-semibold text-amber-300/80">
+                          ACADEMIC YEAR 2026-27 • ID: {templateId?.toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-amber-200 shadow-sm">
+                      <Award className="size-3 text-amber-300" />
+                      <span>OFFICIAL CARD</span>
                     </div>
                   </div>
                 </div>

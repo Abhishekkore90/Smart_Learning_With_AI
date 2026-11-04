@@ -95,7 +95,11 @@ import { Route as TeacherTimetableAssignClassSubjectRouteImport } from './routes
 import { Route as TeacherTimetableAllRouteImport } from './routes/teacher.timetable.all'
 import { Route as TeacherTimetableAddTeacherRouteImport } from './routes/teacher.timetable.add-teacher'
 import { Route as TeacherTimetableAddSubjectRouteImport } from './routes/teacher.timetable.add-subject'
+import { Route as TeacherTemplatesStudentofmonthRouteImport } from './routes/teacher.templates.studentofmonth'
 import { Route as TeacherTemplatesSportsRouteImport } from './routes/teacher.templates.sports'
+import { Route as TeacherTemplatesResultRouteImport } from './routes/teacher.templates.result'
+import { Route as TeacherTemplatesProfileRouteImport } from './routes/teacher.templates.profile'
+import { Route as TeacherTemplatesIdcardRouteImport } from './routes/teacher.templates.idcard'
 import { Route as TeacherTemplatesCulturalRouteImport } from './routes/teacher.templates.cultural'
 import { Route as TeacherTemplatesBirthdayRouteImport } from './routes/teacher.templates.birthday'
 import { Route as TeacherTemplatesAnnualRouteImport } from './routes/teacher.templates.annual'
@@ -546,9 +550,30 @@ const TeacherTimetableAddSubjectRoute =
     path: '/add-subject',
     getParentRoute: () => TeacherTimetableRoute,
   } as any)
+const TeacherTemplatesStudentofmonthRoute =
+  TeacherTemplatesStudentofmonthRouteImport.update({
+    id: '/studentofmonth',
+    path: '/studentofmonth',
+    getParentRoute: () => TeacherTemplatesRoute,
+  } as any)
 const TeacherTemplatesSportsRoute = TeacherTemplatesSportsRouteImport.update({
   id: '/sports',
   path: '/sports',
+  getParentRoute: () => TeacherTemplatesRoute,
+} as any)
+const TeacherTemplatesResultRoute = TeacherTemplatesResultRouteImport.update({
+  id: '/result',
+  path: '/result',
+  getParentRoute: () => TeacherTemplatesRoute,
+} as any)
+const TeacherTemplatesProfileRoute = TeacherTemplatesProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => TeacherTemplatesRoute,
+} as any)
+const TeacherTemplatesIdcardRoute = TeacherTemplatesIdcardRouteImport.update({
+  id: '/idcard',
+  path: '/idcard',
   getParentRoute: () => TeacherTemplatesRoute,
 } as any)
 const TeacherTemplatesCulturalRoute =
@@ -723,7 +748,11 @@ export interface FileRoutesByFullPath {
   '/teacher/templates/annual': typeof TeacherTemplatesAnnualRoute
   '/teacher/templates/birthday': typeof TeacherTemplatesBirthdayRoute
   '/teacher/templates/cultural': typeof TeacherTemplatesCulturalRoute
+  '/teacher/templates/idcard': typeof TeacherTemplatesIdcardRoute
+  '/teacher/templates/profile': typeof TeacherTemplatesProfileRoute
+  '/teacher/templates/result': typeof TeacherTemplatesResultRoute
   '/teacher/templates/sports': typeof TeacherTemplatesSportsRoute
+  '/teacher/templates/studentofmonth': typeof TeacherTemplatesStudentofmonthRoute
   '/teacher/timetable/add-subject': typeof TeacherTimetableAddSubjectRoute
   '/teacher/timetable/add-teacher': typeof TeacherTimetableAddTeacherRoute
   '/teacher/timetable/all': typeof TeacherTimetableAllRoute
@@ -825,7 +854,11 @@ export interface FileRoutesByTo {
   '/teacher/templates/annual': typeof TeacherTemplatesAnnualRoute
   '/teacher/templates/birthday': typeof TeacherTemplatesBirthdayRoute
   '/teacher/templates/cultural': typeof TeacherTemplatesCulturalRoute
+  '/teacher/templates/idcard': typeof TeacherTemplatesIdcardRoute
+  '/teacher/templates/profile': typeof TeacherTemplatesProfileRoute
+  '/teacher/templates/result': typeof TeacherTemplatesResultRoute
   '/teacher/templates/sports': typeof TeacherTemplatesSportsRoute
+  '/teacher/templates/studentofmonth': typeof TeacherTemplatesStudentofmonthRoute
   '/teacher/timetable/add-subject': typeof TeacherTimetableAddSubjectRoute
   '/teacher/timetable/add-teacher': typeof TeacherTimetableAddTeacherRoute
   '/teacher/timetable/all': typeof TeacherTimetableAllRoute
@@ -929,7 +962,11 @@ export interface FileRoutesById {
   '/teacher/templates/annual': typeof TeacherTemplatesAnnualRoute
   '/teacher/templates/birthday': typeof TeacherTemplatesBirthdayRoute
   '/teacher/templates/cultural': typeof TeacherTemplatesCulturalRoute
+  '/teacher/templates/idcard': typeof TeacherTemplatesIdcardRoute
+  '/teacher/templates/profile': typeof TeacherTemplatesProfileRoute
+  '/teacher/templates/result': typeof TeacherTemplatesResultRoute
   '/teacher/templates/sports': typeof TeacherTemplatesSportsRoute
+  '/teacher/templates/studentofmonth': typeof TeacherTemplatesStudentofmonthRoute
   '/teacher/timetable/add-subject': typeof TeacherTimetableAddSubjectRoute
   '/teacher/timetable/add-teacher': typeof TeacherTimetableAddTeacherRoute
   '/teacher/timetable/all': typeof TeacherTimetableAllRoute
@@ -1034,7 +1071,11 @@ export interface FileRouteTypes {
     | '/teacher/templates/annual'
     | '/teacher/templates/birthday'
     | '/teacher/templates/cultural'
+    | '/teacher/templates/idcard'
+    | '/teacher/templates/profile'
+    | '/teacher/templates/result'
     | '/teacher/templates/sports'
+    | '/teacher/templates/studentofmonth'
     | '/teacher/timetable/add-subject'
     | '/teacher/timetable/add-teacher'
     | '/teacher/timetable/all'
@@ -1136,7 +1177,11 @@ export interface FileRouteTypes {
     | '/teacher/templates/annual'
     | '/teacher/templates/birthday'
     | '/teacher/templates/cultural'
+    | '/teacher/templates/idcard'
+    | '/teacher/templates/profile'
+    | '/teacher/templates/result'
     | '/teacher/templates/sports'
+    | '/teacher/templates/studentofmonth'
     | '/teacher/timetable/add-subject'
     | '/teacher/timetable/add-teacher'
     | '/teacher/timetable/all'
@@ -1239,7 +1284,11 @@ export interface FileRouteTypes {
     | '/teacher/templates/annual'
     | '/teacher/templates/birthday'
     | '/teacher/templates/cultural'
+    | '/teacher/templates/idcard'
+    | '/teacher/templates/profile'
+    | '/teacher/templates/result'
     | '/teacher/templates/sports'
+    | '/teacher/templates/studentofmonth'
     | '/teacher/timetable/add-subject'
     | '/teacher/timetable/add-teacher'
     | '/teacher/timetable/all'
@@ -1942,11 +1991,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeacherTimetableAddSubjectRouteImport
       parentRoute: typeof TeacherTimetableRoute
     }
+    '/teacher/templates/studentofmonth': {
+      id: '/teacher/templates/studentofmonth'
+      path: '/studentofmonth'
+      fullPath: '/teacher/templates/studentofmonth'
+      preLoaderRoute: typeof TeacherTemplatesStudentofmonthRouteImport
+      parentRoute: typeof TeacherTemplatesRoute
+    }
     '/teacher/templates/sports': {
       id: '/teacher/templates/sports'
       path: '/sports'
       fullPath: '/teacher/templates/sports'
       preLoaderRoute: typeof TeacherTemplatesSportsRouteImport
+      parentRoute: typeof TeacherTemplatesRoute
+    }
+    '/teacher/templates/result': {
+      id: '/teacher/templates/result'
+      path: '/result'
+      fullPath: '/teacher/templates/result'
+      preLoaderRoute: typeof TeacherTemplatesResultRouteImport
+      parentRoute: typeof TeacherTemplatesRoute
+    }
+    '/teacher/templates/profile': {
+      id: '/teacher/templates/profile'
+      path: '/profile'
+      fullPath: '/teacher/templates/profile'
+      preLoaderRoute: typeof TeacherTemplatesProfileRouteImport
+      parentRoute: typeof TeacherTemplatesRoute
+    }
+    '/teacher/templates/idcard': {
+      id: '/teacher/templates/idcard'
+      path: '/idcard'
+      fullPath: '/teacher/templates/idcard'
+      preLoaderRoute: typeof TeacherTemplatesIdcardRouteImport
       parentRoute: typeof TeacherTemplatesRoute
     }
     '/teacher/templates/cultural': {
@@ -2073,7 +2150,11 @@ interface TeacherTemplatesRouteChildren {
   TeacherTemplatesAnnualRoute: typeof TeacherTemplatesAnnualRoute
   TeacherTemplatesBirthdayRoute: typeof TeacherTemplatesBirthdayRoute
   TeacherTemplatesCulturalRoute: typeof TeacherTemplatesCulturalRoute
+  TeacherTemplatesIdcardRoute: typeof TeacherTemplatesIdcardRoute
+  TeacherTemplatesProfileRoute: typeof TeacherTemplatesProfileRoute
+  TeacherTemplatesResultRoute: typeof TeacherTemplatesResultRoute
   TeacherTemplatesSportsRoute: typeof TeacherTemplatesSportsRoute
+  TeacherTemplatesStudentofmonthRoute: typeof TeacherTemplatesStudentofmonthRoute
   TeacherTemplatesEditTemplateIdRoute: typeof TeacherTemplatesEditTemplateIdRoute
 }
 
@@ -2083,7 +2164,11 @@ const TeacherTemplatesRouteChildren: TeacherTemplatesRouteChildren = {
   TeacherTemplatesAnnualRoute: TeacherTemplatesAnnualRoute,
   TeacherTemplatesBirthdayRoute: TeacherTemplatesBirthdayRoute,
   TeacherTemplatesCulturalRoute: TeacherTemplatesCulturalRoute,
+  TeacherTemplatesIdcardRoute: TeacherTemplatesIdcardRoute,
+  TeacherTemplatesProfileRoute: TeacherTemplatesProfileRoute,
+  TeacherTemplatesResultRoute: TeacherTemplatesResultRoute,
   TeacherTemplatesSportsRoute: TeacherTemplatesSportsRoute,
+  TeacherTemplatesStudentofmonthRoute: TeacherTemplatesStudentofmonthRoute,
   TeacherTemplatesEditTemplateIdRoute: TeacherTemplatesEditTemplateIdRoute,
 }
 
