@@ -120,7 +120,7 @@ function LandingPage() {
       iconBg: "bg-white",
       iconColor: "text-icon-pink",
       btnHover: "group-hover:bg-icon-pink group-hover:text-white group-hover:border-transparent",
-      actionText: "Open Digital School Software",
+      actionText: "Open Digital School",
       to: "/digital-school",
     },
     {
@@ -186,7 +186,7 @@ function LandingPage() {
         {/* Floating Cards Container on Left Side */}
         <div className="relative z-20 w-full px-3 xs:px-4 sm:px-6 md:px-8 lg:px-10 pt-3 xs:pt-4 sm:pt-28 md:pt-32 pb-4 sm:pb-8 flex flex-col sm:flex-row justify-start min-h-[460px] xs:min-h-[520px] sm:min-h-[620px] md:min-h-[680px] lg:min-h-[720px]">
           
-          {/* MOBILE VIEW: Ultra-Compact Slim Vertical Stack on Upper Left */}
+          {/* MOBILE VIEW: Fully Legible Vertical Stack on Upper Left (No Cutoffs) */}
           <motion.div
             initial="hidden"
             animate="show"
@@ -198,7 +198,7 @@ function LandingPage() {
                 transition: { staggerChildren: 0.08, delayChildren: 0.2 },
               },
             }}
-            className="flex flex-col gap-4 xs:gap-5 w-[170px] xs:w-[190px] mt-2 xs:mt-3 mb-auto sm:hidden"
+            className="flex flex-col gap-3.5 xs:gap-4.5 w-[215px] xs:w-[240px] max-w-[65%] mt-2 xs:mt-3 mb-auto sm:hidden"
           >
             {landingCards.map((card, index) => {
               const Icon = card.icon;
@@ -226,28 +226,28 @@ function LandingPage() {
                       navigate({ to: card.to as any, search: (card as any).search });
                     }
                   }}
-                  className="relative group p-2 rounded-xl border border-white/25 bg-slate-950/80 backdrop-blur-xl shadow-xl active:bg-slate-900 flex items-center justify-between gap-1.5 overflow-hidden cursor-pointer"
+                  className="relative group p-2 xs:p-2.5 rounded-2xl border border-white/25 bg-slate-950/85 backdrop-blur-xl shadow-xl active:bg-slate-900 flex items-center justify-between gap-2 overflow-hidden cursor-pointer"
                 >
                   {/* Subtle Glow Accent */}
-                  <div className={`absolute -inset-px rounded-xl bg-gradient-to-r ${customStyles.gradient} opacity-25 blur-xs pointer-events-none`} />
+                  <div className={`absolute -inset-px rounded-2xl bg-gradient-to-r ${customStyles.gradient} opacity-25 blur-xs pointer-events-none`} />
 
-                  <div className="relative z-10 flex items-center gap-2 min-w-0 flex-1">
-                    <div className={`size-7 rounded-lg ${customStyles.iconBg} backdrop-blur-md flex items-center justify-center border shadow-xs text-white shrink-0`}>
-                      <Icon className="size-3.5 text-white" strokeWidth={2.2} />
+                  <div className="relative z-10 flex items-center gap-2 xs:gap-2.5 min-w-0 flex-1">
+                    <div className={`size-8 rounded-xl ${customStyles.iconBg} backdrop-blur-md flex items-center justify-center border shadow-xs text-white shrink-0`}>
+                      <Icon className="size-4 text-white" strokeWidth={2.2} />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-[11px] font-black text-white tracking-tight leading-tight truncate">
+                      <h3 className="text-[11.5px] xs:text-xs font-black text-white tracking-tight leading-snug whitespace-normal break-words">
                         {card.title}
                       </h3>
-                      <span className={`text-[8px] font-black uppercase tracking-wider ${customStyles.textAccent} block truncate mt-0.5`}>
+                      <span className={`text-[8.5px] xs:text-[9px] font-black uppercase tracking-wider ${customStyles.textAccent} block whitespace-normal leading-tight mt-0.5`}>
                         {card.actionText}
                       </span>
                     </div>
                   </div>
 
-                  <div className="relative z-10 size-5 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 text-white shrink-0">
-                    <ArrowRight className="size-2.5" />
+                  <div className="relative z-10 size-6 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 text-white shrink-0">
+                    <ArrowRight className="size-3" />
                   </div>
                 </motion.div>
               );
@@ -340,7 +340,7 @@ function LandingPage() {
                         <Icon className="size-3.5 sm:size-4 transition-transform duration-500" strokeWidth={2.2} />
                       </div>
 
-                      <h3 className="text-xs sm:text-base font-black text-white tracking-tight leading-tight truncate flex-1">
+                      <h3 className="text-sm sm:text-base font-black text-white tracking-tight leading-snug break-words flex-1">
                         {card.title}
                       </h3>
                     </div>
@@ -452,16 +452,18 @@ function LandingPage() {
                   className="relative z-20 p-5 sm:p-7 flex flex-col gap-3.5 sm:gap-4 h-full w-full cursor-pointer"
                 >
                   {/* 1. Top Header: Icon & Title & Mobile Expand Button */}
-                  <div className="flex items-center justify-between gap-2.5">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex items-start sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                       <div
                         className={`size-10 sm:size-12 rounded-2xl ${card.softBg} ${card.iconColor} flex items-center justify-center shadow-md border border-white/50 transition-all duration-500 group-hover:bg-white group-hover:shadow-lg group-hover:scale-110 shrink-0`}
                       >
                         <Icon size={22} className="transition-transform duration-500" strokeWidth={2.2} />
                       </div>
-                      <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight truncate leading-tight group-hover:text-slate-950 dark:group-hover:text-white">
-                        {card.title}
-                      </h3>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-snug group-hover:text-slate-950 dark:group-hover:text-white break-words">
+                          {card.title}
+                        </h3>
+                      </div>
                     </div>
 
                     <button
@@ -470,9 +472,10 @@ function LandingPage() {
                         e.stopPropagation();
                         setGridExpandedIndex(isGridExpanded ? null : index);
                       }}
-                      className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900 px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 transition-all shrink-0"
+                      className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900 px-2 sm:px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 transition-all shrink-0 self-start sm:self-center"
                     >
-                      <span>{isGridExpanded ? "कमी करा" : "सविस्तर माहिती"}</span>
+                      <span className="hidden xs:inline">{isGridExpanded ? "कमी करा" : "सविस्तर माहिती"}</span>
+                      <span className="xs:hidden">{isGridExpanded ? "कमी" : "माहिती"}</span>
                       <ChevronDown className={`size-3 transition-transform ${isGridExpanded ? "rotate-180" : "animate-bounce"}`} />
                     </button>
                   </div>

@@ -1,5 +1,11 @@
 import React from "react";
-import { CardBackgroundThemeLayer } from "./CreativeCardDecorations";
+import {
+  CardBackgroundThemeLayer,
+  RealisticPaperclipSVG,
+  CelebrationGiftBoxSVG,
+  GoldenLaurelWreath,
+  OverheadSpotlightBeam,
+} from "./CreativeCardDecorations";
 import {
   Crown,
   Cake,
@@ -53,6 +59,8 @@ export interface CustomTemplateProps {
   className?: string;
   interactive?: boolean;
   onCanvasReady?: any;
+  frameStyle?: "circle" | "polaroid" | "arch" | "laurel";
+  sticker?: "crown" | "gifts" | "medal" | "gradcap" | "none";
 }
 
 export interface TemplateThemeItem {
@@ -302,6 +310,8 @@ export function CustomTemplateFrame({
   grade = "A+",
   barcodeNumber = "202600012",
   className = "",
+  frameStyle,
+  sticker = "crown",
 }: CustomTemplateProps) {
   const numericId =
     typeof variantId === "number"
@@ -402,26 +412,58 @@ export function CustomTemplateFrame({
         {/* Prominent Hero Photo Container with Multi-Layered Golden Bevel */}
         <div className="relative my-2 sm:my-3">
           {studentPhoto ? (
-            <div className="size-32 sm:size-36 md:size-40 rounded-full p-1.5 bg-gradient-to-tr from-amber-400 via-yellow-200 to-amber-600 shadow-[0_15px_35px_rgba(0,0,0,0.7)] drop-shadow-[0_0_20px_rgba(251,191,36,0.35)] border-2 border-white/80 group-hover:scale-105 transition-transform duration-300">
-              <div className="size-full rounded-full overflow-hidden border border-amber-950/20 shadow-inner">
-                <img
-                  src={studentPhoto}
-                  alt={studentName}
-                  className="size-full object-cover"
-                />
-              </div>
+            (() => {
+              const effectiveFrame = frameStyle || (category === "birthday" && numericId === 1 ? "polaroid" : category === "studentofmonth" && numericId === 2 ? "arch" : "circle");
 
-              {/* Top Crown Honor Badge */}
-              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 border border-white text-[8px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md whitespace-nowrap">
-                <Crown className="size-2.5 fill-amber-950" />
-                <span>{category === "birthday" ? "BIRTHDAY STAR" : category === "studentofmonth" ? "TOP SCHOLAR" : "HONORED"}</span>
-              </div>
+              if (effectiveFrame === "polaroid") {
+                return (
+                  <div className="w-32 h-40 sm:w-36 sm:h-44 bg-white p-2 pb-6 rounded-sm shadow-2xl rotate-[-2deg] relative border border-slate-100 group-hover:scale-105 transition-transform duration-300">
+                    <RealisticPaperclipSVG className="absolute -top-3 -left-2 size-7 pointer-events-none z-20" color="#f59e0b" />
+                    <div className="w-full h-full overflow-hidden bg-slate-900 border border-slate-200">
+                      <img src={studentPhoto} alt={studentName} className="size-full object-cover" />
+                    </div>
+                    <p className="text-[8px] font-black text-slate-800 tracking-wider uppercase text-center mt-1 truncate">
+                      ★ {studentName} ★
+                    </p>
+                  </div>
+                );
+              }
 
-              {/* Bottom Star Badge */}
-              <div className="absolute bottom-0 right-1 size-7 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center border border-white shadow-md rotate-12">
-                <Star className="size-3.5 fill-slate-950" />
-              </div>
-            </div>
+              if (effectiveFrame === "arch") {
+                return (
+                  <div className="w-32 h-40 sm:w-36 sm:h-44 rounded-t-[5rem] rounded-b-xl p-1.5 bg-gradient-to-t from-amber-500 via-yellow-200 to-amber-400 shadow-2xl border border-white relative group-hover:scale-105 transition-transform duration-300">
+                    <div className="w-full h-full rounded-t-[4.5rem] rounded-b-lg overflow-hidden bg-slate-900">
+                      <img src={studentPhoto} alt={studentName} className="size-full object-cover" />
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="size-32 sm:size-36 md:size-40 rounded-full p-1.5 bg-gradient-to-tr from-amber-400 via-yellow-200 to-amber-600 shadow-[0_15px_35px_rgba(0,0,0,0.7)] drop-shadow-[0_0_20px_rgba(251,191,36,0.35)] border-2 border-white/80 group-hover:scale-105 transition-transform duration-300 relative">
+                  <div className="size-full rounded-full overflow-hidden border border-amber-950/20 shadow-inner">
+                    <img
+                      src={studentPhoto}
+                      alt={studentName}
+                      className="size-full object-cover"
+                    />
+                  </div>
+
+                  {/* Top Crown Honor Badge */}
+                  {sticker === "crown" && (
+                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 border border-white text-[8px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md whitespace-nowrap">
+                      <Crown className="size-2.5 fill-amber-950" />
+                      <span>{category === "birthday" ? "BIRTHDAY STAR" : category === "studentofmonth" ? "TOP SCHOLAR" : "HONORED"}</span>
+                    </div>
+                  )}
+
+                  {/* Bottom Star Badge */}
+                  <div className="absolute bottom-0 right-1 size-7 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center border border-white shadow-md rotate-12">
+                    <Star className="size-3.5 fill-slate-950" />
+                  </div>
+                </div>
+              );
+            })()
           ) : (
             <div className="size-28 sm:size-32 rounded-full bg-white/12 backdrop-blur-md flex items-center justify-center border-2 border-white/30 shadow-2xl p-2 group-hover:scale-105 transition-transform duration-300 relative">
               <div className="size-full rounded-full border border-amber-300/40 flex items-center justify-center bg-black/20">

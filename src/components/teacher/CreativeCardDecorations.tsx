@@ -726,3 +726,136 @@ export function CardBackgroundThemeLayer({
       return <RoyalGoldBokehTheme />;
   }
 }
+
+
+/**
+ * Realistic Metallic Paperclip (For Polaroid Frame)
+ */
+export function RealisticPaperclipSVG({ className = "size-8", color = "#e2e8f0" }: { className?: string; color?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 40 70" fill="none">
+      <defs>
+        <linearGradient id="clipShine" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="40%" stopColor={color} />
+          <stop offset="100%" stopColor="#64748b" />
+        </linearGradient>
+        <filter id="clipDropShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="1.5" dy="2.5" stdDeviation="1.5" floodColor="#000000" floodOpacity="0.45" />
+        </filter>
+      </defs>
+      <path
+        d="M 12 60 L 12 18 C 12 10, 28 10, 28 18 L 28 54 C 28 60, 18 60, 18 54 L 18 24 C 18 20, 24 20, 24 24 L 24 50"
+        stroke="url(#clipShine)"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        fill="none"
+        filter="url(#clipDropShadow)"
+      />
+    </svg>
+  );
+}
+
+/**
+ * 3D Celebration Gift Box with Ribbon
+ */
+export function CelebrationGiftBoxSVG({ className = "size-12" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 80 80" fill="none">
+      <defs>
+        <linearGradient id="giftBody" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#f43f5e" />
+          <stop offset="50%" stopColor="#e11d48" />
+          <stop offset="100%" stopColor="#9f1239" />
+        </linearGradient>
+        <linearGradient id="giftLid" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fb7185" />
+          <stop offset="100%" stopColor="#be123c" />
+        </linearGradient>
+        <linearGradient id="goldRibbon" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#fef08a" />
+          <stop offset="50%" stopColor="#f59e0b" />
+          <stop offset="100%" stopColor="#b45309" />
+        </linearGradient>
+      </defs>
+
+      {/* Main Box */}
+      <rect x="15" y="32" width="50" height="42" rx="5" fill="url(#giftBody)" />
+      {/* Box Lid */}
+      <rect x="11" y="24" width="58" height="12" rx="3" fill="url(#giftLid)" />
+
+      {/* Vertical Ribbon */}
+      <rect x="35" y="32" width="10" height="42" fill="url(#goldRibbon)" />
+      <rect x="35" y="24" width="10" height="12" fill="url(#goldRibbon)" />
+
+      {/* Horizontal Ribbon */}
+      <rect x="15" y="48" width="50" height="10" fill="url(#goldRibbon)" />
+
+      {/* Ribbon Bow */}
+      <path
+        d="M 40 24 C 30 10, 20 18, 35 24 Z"
+        fill="url(#goldRibbon)"
+      />
+      <path
+        d="M 40 24 C 50 10, 60 18, 45 24 Z"
+        fill="url(#goldRibbon)"
+      />
+      <circle cx="40" cy="24" r="3.5" fill="#fef08a" />
+    </svg>
+  );
+}
+
+/**
+ * Overhead Studio Spotlight Beam
+ */
+export function OverheadSpotlightBeam() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+      <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-[120%] h-[75%] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-200/25 via-yellow-400/8 to-transparent blur-2xl" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-80 bg-gradient-to-b from-white/20 via-amber-300/10 to-transparent blur-3xl transform -skew-x-6" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-80 bg-gradient-to-b from-white/20 via-amber-300/10 to-transparent blur-3xl transform skew-x-6" />
+    </div>
+  );
+}
+
+/**
+ * Golden Medal Emblem with Ribbon
+ */
+export function GoldenMedalEmblemSVG({ className = "size-10" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 60 75" fill="none">
+      <defs>
+        <linearGradient id="medalGold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#fef08a" />
+          <stop offset="50%" stopColor="#f59e0b" />
+          <stop offset="100%" stopColor="#92400e" />
+        </linearGradient>
+        <linearGradient id="ribbonRed" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ef4444" />
+          <stop offset="100%" stopColor="#991b1b" />
+        </linearGradient>
+        <linearGradient id="ribbonBlue" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#1e3a8a" />
+        </linearGradient>
+      </defs>
+
+      {/* Ribbon Tails */}
+      <polygon points="18,0 26,0 34,35 22,35" fill="url(#ribbonRed)" />
+      <polygon points="34,0 42,0 38,35 26,35" fill="url(#ribbonBlue)" />
+      <polygon points="22,35 14,48 24,45 28,48 30,35" fill="url(#ribbonRed)" />
+      <polygon points="38,35 46,48 36,45 32,48 30,35" fill="url(#ribbonBlue)" />
+
+      {/* Golden Medal Disc */}
+      <circle cx="30" cy="48" r="18" fill="url(#medalGold)" stroke="#fef08a" strokeWidth="1.5" />
+      <circle cx="30" cy="48" r="14" stroke="#78350f" strokeWidth="1" strokeDasharray="2 1.5" fill="none" opacity="0.6" />
+
+      {/* Star / #1 in center */}
+      <path
+        d="M 30 38 L 32.5 44 L 38 44.5 L 34 48 L 35 54 L 30 50.5 L 25 54 L 26 48 L 22 44.5 L 27.5 44 Z"
+        fill="#ffffff"
+        opacity="0.9"
+      />
+    </svg>
+  );
+}
