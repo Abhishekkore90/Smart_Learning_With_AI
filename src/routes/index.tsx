@@ -98,17 +98,17 @@ function LandingPage() {
 
   const landingCards = [
     {
-      title: "AI Teacher",
-      desc: t.c1_desc || "Access virtual AI mentors, study bots, and real-time coding assistance.",
-      icon: Bot,
-      color: "blue",
-      softBg: "bg-feature-blue/90",
-      blobColor: "bg-icon-blue/15",
+      title: t.c2_title || "Teacher Section",
+      desc: t.c2_desc || `👩‍🏫 शिक्षकांसाठी सर्वसमावेशक डिजिटल सुविधा! वेळापत्रक, दैनिक परिपाठ, आकर्षक टेम्पलेट, वार्षिक व मासिक नियोजन, प्रश्नपेढी, टाचणवही, CCE निकाल, HPC Card, मासिक सभा - शाळा स्तरावरील सर्व समित्यांचे मासिक अहवाल व इतिवृत्त निमंत्रण पत्रासह उपलब्ध आणि Mid Day Meal (MDM) यांसारखी शाळेच्या दैनंदिन कामासाठी आवश्यक साधने एकाच ठिकाणी उपलब्ध.\n📊 SQAAF Evaluation द्वारे स्वयंमूल्यांकन व बाह्य मूल्यांकन अहवालासह एकत्रित गुणांकन ताक्त्यासह श्रेणी , तर शिक्षक संचिका व विद्यार्थी संचयिका यामुळे आवश्यक माहिती व्यवस्थित तयार, एडिट आणि प्रिंट करता येते.\n✨ माहिती एकदा भरल्यानंतर अनेक ठिकाणी तिचा उपयोग होऊन वेळ, श्रम आणि कागदपत्रांची पुनरावृत्ती कमी होते.\n🚀 SGK BRAINOVA – शिक्षकांचे काम अधिक सोपे, जलद, स्मार्ट आणि डिजिटल बनवणारे एक विश्वासार्ह व्यासपीठ!`,
+      icon: School,
+      color: "green",
+      softBg: "bg-feature-green/90",
+      blobColor: "bg-icon-green/15",
       iconBg: "bg-white",
-      iconColor: "text-icon-blue",
-      btnHover: "group-hover:bg-icon-blue group-hover:text-white group-hover:border-transparent",
-      actionText: t.c1_action || "Launch AI Suite",
-      to: "/ai-tools",
+      iconColor: "text-icon-green",
+      btnHover: "group-hover:bg-icon-green group-hover:text-white group-hover:border-transparent",
+      actionText: t.c2_action || "Enter Teacher Suite",
+      to: "/teacher",
     },
     {
       title: "Digital School Software",
@@ -124,17 +124,17 @@ function LandingPage() {
       to: "/digital-school",
     },
     {
-      title: t.c2_title || "Teacher Section",
-      desc: t.c2_desc || `👩‍🏫 शिक्षकांसाठी सर्वसमावेशक डिजिटल सुविधा! वेळापत्रक, दैनिक परिपाठ, आकर्षक टेम्पलेट, वार्षिक व मासिक नियोजन, प्रश्नपेढी, टाचणवही, CCE निकाल, HPC Card, मासिक सभा - शाळा स्तरावरील सर्व समित्यांचे मासिक अहवाल व इतिवृत्त निमंत्रण पत्रासह उपलब्ध आणि Mid Day Meal (MDM) यांसारखी शाळेच्या दैनंदिन कामासाठी आवश्यक साधने एकाच ठिकाणी उपलब्ध.\n📊 SQAAF Evaluation द्वारे स्वयंमूल्यांकन व बाह्य मूल्यांकन अहवालासह एकत्रित गुणांकन ताक्त्यासह श्रेणी , तर शिक्षक संचिका व विद्यार्थी संचयिका यामुळे आवश्यक माहिती व्यवस्थित तयार, एडिट आणि प्रिंट करता येते.\n✨ माहिती एकदा भरल्यानंतर अनेक ठिकाणी तिचा उपयोग होऊन वेळ, श्रम आणि कागदपत्रांची पुनरावृत्ती कमी होते.\n🚀 SGK BRAINOVA – शिक्षकांचे काम अधिक सोपे, जलद, स्मार्ट आणि डिजिटल बनवणारे एक विश्वासार्ह व्यासपीठ!`,
-      icon: School,
-      color: "green",
-      softBg: "bg-feature-green/90",
-      blobColor: "bg-icon-green/15",
+      title: "AI Teacher",
+      desc: t.c1_desc || "Access virtual AI mentors, study bots, and real-time coding assistance.",
+      icon: Bot,
+      color: "blue",
+      softBg: "bg-feature-blue/90",
+      blobColor: "bg-icon-blue/15",
       iconBg: "bg-white",
-      iconColor: "text-icon-green",
-      btnHover: "group-hover:bg-icon-green group-hover:text-white group-hover:border-transparent",
-      actionText: t.c2_action || "Enter Teacher Suite",
-      to: "/teacher",
+      iconColor: "text-icon-blue",
+      btnHover: "group-hover:bg-icon-blue group-hover:text-white group-hover:border-transparent",
+      actionText: t.c1_action || "Launch AI Suite",
+      to: "/ai-tools",
     },
     {
       title: t.c3_title || "Courses",
@@ -149,7 +149,7 @@ function LandingPage() {
       actionText: t.c3_action || "Explore Courses",
       to: "/courses",
     },
-    ];
+  ];
 
   return (
     <div className="min-h-screen font-sans selection:bg-primary/20 selection:text-primary overflow-x-hidden relative text-text dark:text-white bg-background">
@@ -198,7 +198,7 @@ function LandingPage() {
                 transition: { staggerChildren: 0.08, delayChildren: 0.2 },
               },
             }}
-            className="flex flex-col gap-3.5 xs:gap-4.5 w-[215px] xs:w-[240px] max-w-[65%] mt-2 xs:mt-3 mb-auto sm:hidden"
+            className="flex flex-col gap-5 xs:gap-6 w-[215px] xs:w-[240px] max-w-[65%] mt-2 xs:mt-3 mb-auto sm:hidden"
           >
             {landingCards.map((card, index) => {
               const Icon = card.icon;
@@ -382,7 +382,7 @@ function LandingPage() {
               transition: { staggerChildren: 0.12, delayChildren: 0.4 },
             },
           }}
-          className="mt-12 sm:mt-16 md:mt-24 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full"
+          className="mt-12 sm:mt-16 md:mt-24 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7 sm:gap-8 w-full"
         >
           {landingCards.map((card, index) => {
             const Icon = card.icon;
