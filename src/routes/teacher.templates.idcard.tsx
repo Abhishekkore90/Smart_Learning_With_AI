@@ -33,7 +33,7 @@ const IDCARD_TEMPLATES = [
 ];
 
 function IdCardTemplatesPage() {
-  const { lang } = useLanguage();
+  const { lang, setLang } = useLanguage();
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -41,21 +41,21 @@ function IdCardTemplatesPage() {
       <TeacherSidebar />
 
       <main className="lg:pl-0 pt-16 min-h-screen">
-        <div className="p-4 md:p-10 space-y-8 max-w-7xl mx-auto">
+        <div className="p-3 xs:p-4 md:p-10 space-y-4 sm:space-y-8 max-w-7xl mx-auto">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden bg-gradient-to-r from-red-950 via-rose-950 to-slate-950 rounded-[3rem] p-8 md:p-12 text-white shadow-2xl border border-rose-500/20"
+            className="relative overflow-hidden bg-gradient-to-r from-red-950 via-rose-950 to-slate-950 rounded-2xl sm:rounded-3xl md:rounded-[3rem] p-4 xs:p-5 sm:p-8 md:p-12 text-white shadow-xl md:shadow-2xl border border-rose-500/20"
           >
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-rose-500/10 via-transparent to-black/60 pointer-events-none" />
 
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-6">
               <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-rose-500/20 backdrop-blur-md rounded-full border border-rose-400/40 text-rose-300 text-xs font-black uppercase tracking-widest">
-                  <CreditCard className="size-3.5 text-rose-300" /> 10 Realistic 3D Student ID Cards
+                <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-4 sm:py-1.5 bg-rose-500/20 backdrop-blur-md rounded-full border border-rose-400/40 text-rose-300 text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest">
+                  <CreditCard className="size-3 sm:size-3.5 text-rose-300" /> 10 Realistic 3D Student ID Cards
                 </div>
-                <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight">
+                <h2 className="text-xl xs:text-2xl sm:text-3xl md:text-5xl font-black tracking-tight leading-tight">
                   {lang === "mr"
                     ? "विद्यार्थी ओळखपत्र "
                     : lang === "hi"
@@ -65,19 +65,45 @@ function IdCardTemplatesPage() {
                     {lang === "mr" ? "१० भव्य ३D कार्ड्स" : "10 3D Cards"}
                   </span>
                 </h2>
-                <p className="text-rose-100/70 text-sm max-w-xl font-medium">
+                <p className="text-rose-100/70 text-xs sm:text-sm max-w-xl font-medium line-clamp-2 sm:line-clamp-none">
                   {lang === "mr"
                     ? "मेटॅलिक क्लिप, सर्क्युलर फोटो फ्रेम, बारकोड आणि संपूर्ण विद्यार्थी तपशीलासह १० कस्टम ३D कार्ड्स."
                     : "10 custom 3D ID cards with metallic lanyard clips, circular frames, and barcodes."}
                 </p>
               </div>
-              <Link
+              <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0 flex-wrap">
+                <div className="flex items-center gap-1 bg-black/40 backdrop-blur-md p-1 rounded-xl border border-white/20 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setLang("mr")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      lang === "mr"
+                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md scale-105"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    🇮🇳 मराठी
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLang("en")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      lang === "en"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md scale-105"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    🇬🇧 English
+                  </button>
+                </div>
+                <Link
                 to="/teacher/templates"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-slate-950 rounded-2xl font-black text-xs uppercase tracking-wider hover:scale-105 transition-all shadow-xl self-start md:self-auto"
+                className="inline-flex items-center gap-1.5 px-4 py-2 sm:px-6 sm:py-3 bg-white text-slate-950 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs uppercase tracking-wider hover:scale-105 transition-all shadow-md sm:shadow-xl self-start sm:self-auto shrink-0"
               >
-                <ArrowLeft className="size-4" />{" "}
+                <ArrowLeft className="size-3.5 sm:size-4" />{" "}
                 {lang === "mr" ? "सर्व टेम्पलेट्स" : "All Templates"}
               </Link>
+              </div>
             </div>
           </motion.div>
 
@@ -96,8 +122,8 @@ function IdCardTemplatesPage() {
                   <CustomTemplateFrame
                     category="idcard"
                     variantId={template.id}
-                    studentName="SATYAJIT PATIL"
-                    studentClass="5th"
+                    studentName={lang === "mr" ? "सत्यजित पाटील" : "SATYAJIT PATIL"}
+                    studentClass={lang === "mr" ? "इयत्ता ५-वी" : "5th"}
                     rollNo="12"
                     gender="Male"
                     dob="04/05/2015"

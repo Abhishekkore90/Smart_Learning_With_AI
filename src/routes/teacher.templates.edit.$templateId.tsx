@@ -64,9 +64,13 @@ import {
   GoldenMedalEmblemSVG,
 } from "@/components/teacher/CreativeCardDecorations";
 
+
+
 export const Route = createFileRoute("/teacher/templates/edit/$templateId")({
   component: TemplateEditorPage,
 });
+
+
 
 const TEMPLATE_CONFIGS: Record<string, any> = {
   // Birthday Templates
@@ -126,6 +130,8 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
     quote: "You are a true gem. May your brilliance illuminate every path.",
     particleColor: "rgba(248, 250, 252, 0.4)",
   },
+
+
 
   // --- Student of the Month 3D Templates (10 Cards) ---
   "studentofmonth-1": {
@@ -219,6 +225,8 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
     particleColor: "rgba(56, 189, 248, 0.4)",
   },
 
+
+
   // --- Student ID Card 3D Templates (10 Cards) ---
   "idcard-1": {
     name: "Royale Burgundy & Gold",
@@ -310,6 +318,8 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
     quote: "Official High-Security Identification • Smart Learning Academy",
     particleColor: "rgba(244, 244, 245, 0.4)",
   },
+
+
 
   // --- Result & Progress Report 3D Templates (10 Cards) ---
   "result-1": {
@@ -403,6 +413,8 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
     particleColor: "rgba(250, 204, 21, 0.4)",
   },
 
+
+
   // --- Student Profile Dossier 3D Templates (10 Cards) ---
   "profile-1": {
     name: "Holistic 360° Student Dossier",
@@ -494,6 +506,8 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
     quote: "An all-round exemplary student with high distinction across all metrics.",
     particleColor: "rgba(251, 191, 36, 0.4)",
   },
+
+
 
   // Admission Templates
   "admission-1": {
@@ -725,6 +739,9 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
 };
 
 
+
+
+
 const BACKGROUND_IMAGE_OPTIONS = [
   {
     id: "som_clean",
@@ -806,23 +823,130 @@ const BACKGROUND_IMAGE_OPTIONS = [
   },
 ];
 
+
+
 function TemplateEditorPage() {
   const { templateId } = Route.useParams();
-  const { lang } = useLanguage();
+  const { lang, setLang } = useLanguage();
+  // Disable accidental pull-to-refresh reload in WebView on THIS PAGE ONLY
+  useEffect(() => {
+    const prevOverscroll = document.body.style.overscrollBehavior;
+    const prevOverscrollY = document.body.style.overscrollBehaviorY;
+    document.body.style.overscrollBehavior = "none";
+    document.body.style.overscrollBehaviorY = "none";
+    return () => {
+      document.body.style.overscrollBehavior = prevOverscroll;
+      document.body.style.overscrollBehaviorY = prevOverscrollY;
+    };
+  }, []);
   const [studentName, setStudentName] = useState(() => {
-    if (templateId?.includes("studentofmonth")) return "SATYAJIT PATIL";
-    if (templateId?.includes("idcard")) return "AARAV DESHMUKH";
-    if (templateId?.includes("result")) return "SANVI JADHAV";
-    if (templateId?.includes("profile")) return "ROHAN KULKARNI";
-    return "ADITYA SHINDE";
+    try {
+      const saved = sessionStorage.getItem(`template_draft_${templateId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.studentName) return parsed.studentName;
+      }
+    } catch (e) {}
+    const isMr = lang === "mr";
+    if (templateId?.includes("studentofmonth")) return isMr ? "सत्यजित पाटील" : "SATYAJIT PATIL";
+    if (templateId?.includes("idcard")) return isMr ? "आरव देशमुख" : "AARAV DESHMUKH";
+    if (templateId?.includes("result")) return isMr ? "सान्वी जाधव" : "SANVI JADHAV";
+    if (templateId?.includes("profile")) return isMr ? "रोहन कुलकर्णी" : "ROHAN KULKARNI";
+    return isMr ? "आदित्य शिंदे" : "ADITYA SHINDE";
   });
-  const [studentClass, setStudentClass] = useState("CLASS 5-A");
-  const [cardTitle, setCardTitle] = useState("");
-  const [cardQuote, setCardQuote] = useState("");
+  const [studentClass, setStudentClass] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(`template_draft_${templateId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.studentClass) return parsed.studentClass;
+      }
+    } catch (e) {}
+    return lang === "mr" ? "इयत्ता ५-वी" : "CLASS 5-A";
+  });
+  const handleLanguageChange = (newLang: any) => {
+    setLang(newLang);
+    if (newLang === "mr") {
+      if (studentName === "SATYAJIT PATIL") setStudentName("सत्यजित पाटील");
+      else if (studentName === "AARAV DESHMUKH") setStudentName("आरव देशमुख");
+      else if (studentName === "SANVI JADHAV") setStudentName("सान्वी जाधव");
+      else if (studentName === "ROHAN KULKARNI") setStudentName("रोहन कुलकर्णी");
+      else if (studentName === "ADITYA SHINDE") setStudentName("आदित्य शिंदे");
+      if (studentClass === "CLASS 5-A" || studentClass === "5th Standard" || studentClass === "5th") {
+        setStudentClass("इयत्ता ५-वी");
+      }
+      if (wisherName === "Principal & Teaching Staff" || !wisherName) {
+        setWisherName("मुख्याध्यापक व शिक्षक वृंद");
+      }
+    } else {
+      if (studentName === "सत्यजित पाटील") setStudentName("SATYAJIT PATIL");
+      else if (studentName === "आरव देशमुख") setStudentName("AARAV DESHMUKH");
+      else if (studentName === "सान्वी जाधव") setStudentName("SANVI JADHAV");
+      else if (studentName === "रोहन कुलकर्णी") setStudentName("ROHAN KULKARNI");
+      else if (studentName === "आदित्य शिंदे") setStudentName("ADITYA SHINDE");
+      if (studentClass === "इयत्ता ५-वी") {
+        setStudentClass("CLASS 5-A");
+      }
+      if (wisherName === "मुख्याध्यापक व शिक्षक वृंद") {
+        setWisherName("Principal & Teaching Staff");
+      }
+    }
+  };
+  const [cardTitle, setCardTitle] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(`template_draft_${templateId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.cardTitle) return parsed.cardTitle;
+      }
+    } catch (e) {}
+    return "";
+  });
+  const [cardQuote, setCardQuote] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(`template_draft_${templateId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.cardQuote) return parsed.cardQuote;
+      }
+    } catch (e) {}
+    return "";
+  });
+  const [wisherName, setWisherName] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(`template_draft_${templateId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.wisherName) return parsed.wisherName;
+      }
+    } catch (e) {}
+    try {
+      const savedSchool = localStorage.getItem("timetable_school_details");
+      if (savedSchool) {
+        const parsed = JSON.parse(savedSchool);
+        if (parsed.headmasterName) {
+          return `${parsed.headmasterName} व शिक्षक वृंद`;
+        }
+        if (parsed.schoolName) {
+          return parsed.schoolName;
+        }
+      }
+    } catch {}
+    return lang === "mr" ? "मुख्याध्यापक व शिक्षक वृंद" : "Principal & Teaching Staff";
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const templateRef = useRef<HTMLDivElement>(null);
-  const [studentPhoto, setStudentPhoto] = useState<string | null>(null);
+  const [studentPhoto, setStudentPhoto] = useState<string | null>(() => {
+    try {
+      const saved = sessionStorage.getItem(`template_draft_${templateId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.studentPhoto) return parsed.studentPhoto;
+      }
+    } catch (e) {}
+    return null;
+  });
   const [selectedBgTheme, setSelectedBgTheme] = useState<string>("auto");
   const [selectedBgImage, setSelectedBgImage] = useState<string>(() => {
     if (templateId?.includes("birthday-2")) return "/templates/birthday_galaxy_3d.jpg";
@@ -843,8 +967,12 @@ function TemplateEditorPage() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+
+
   // Display photo fallback so frames and stickers work immediately
   const displayPhoto = studentPhoto || "/templates/sample_student_portrait.png";
+
+
 
   // Advanced Visual Customization States (Items 1, 2, 4, 5, 6)
   const [frameStyle, setFrameStyle] = useState<"circle" | "polaroid" | "arch" | "laurel">("circle");
@@ -855,6 +983,8 @@ function TemplateEditorPage() {
   const [photoOffsetY, setPhotoOffsetY] = useState<number>(0);
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [isMobilePreviewCollapsed, setIsMobilePreviewCollapsed] = useState(false);
+
+
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -867,8 +997,12 @@ function TemplateEditorPage() {
     }
   };
 
+
+
   const config = useMemo(() => {
     if (TEMPLATE_CONFIGS[templateId]) return TEMPLATE_CONFIGS[templateId];
+
+
 
     // Comprehensive Category Detection for Fallbacks
     const isSOM = templateId?.includes("studentofmonth") || templateId?.startsWith("som-");
@@ -881,6 +1015,8 @@ function TemplateEditorPage() {
     const isAnn = templateId?.includes("annual");
     const isCult = templateId?.includes("cultural");
     const isBday = templateId?.includes("birthday");
+
+
 
     return {
       bg: isSOM
@@ -965,6 +1101,26 @@ function TemplateEditorPage() {
       particleColor: "rgba(255, 255, 255, 0.4)",
     };
   }, [templateId]);
+
+
+
+
+  // Auto-save form draft so that accidental pull-to-refresh or webview reload never loses filled data on this page
+  useEffect(() => {
+    try {
+      const draft = {
+        studentName,
+        studentClass,
+        cardTitle,
+        cardQuote,
+        wisherName,
+        studentPhoto,
+        frameStyle,
+        activeSticker,
+      };
+      sessionStorage.setItem(`template_draft_${templateId}`, JSON.stringify(draft));
+    } catch (e) {}
+  }, [studentName, studentClass, cardTitle, cardQuote, wisherName, studentPhoto, frameStyle, activeSticker, templateId]);
 
   const translatedTitle = useMemo(() => {
     if (lang === "mr") {
@@ -1084,6 +1240,8 @@ function TemplateEditorPage() {
     return config.title;
   }, [config.title, templateId, lang]);
 
+
+
   const translatedQuote = useMemo(() => {
     if (lang === "mr") {
       if (templateId?.startsWith("studentofmonth") || templateId?.startsWith("som-")) {
@@ -1176,17 +1334,25 @@ function TemplateEditorPage() {
     return config.quote;
   }, [config.quote, templateId, lang]);
 
+
+
   useEffect(() => {
     setCardTitle(translatedTitle);
   }, [translatedTitle]);
+
+
 
   useEffect(() => {
     setCardQuote(translatedQuote);
   }, [translatedQuote]);
 
+
+
   const configTrans = useMemo(() => {
     return { ...config, title: translatedTitle, quote: translatedQuote };
   }, [config, translatedTitle, translatedQuote]);
+
+
 
   const configToUse = useMemo(() => {
     return {
@@ -1195,6 +1361,8 @@ function TemplateEditorPage() {
       quote: cardQuote,
     };
   }, [configTrans, cardTitle, cardQuote]);
+
+
 
   const isStudentOfMonth = Boolean(templateId?.includes("studentofmonth") || templateId?.startsWith("som-"));
   const isIdCard = Boolean(templateId?.includes("idcard"));
@@ -1206,6 +1374,8 @@ function TemplateEditorPage() {
   const isAnnual = Boolean(templateId?.includes("annual"));
   const isCultural = Boolean(templateId?.includes("cultural"));
   const isBirthday = Boolean(templateId?.includes("birthday"));
+
+
 
   const handleShareToStudent = async () => {
     setIsSaving(true);
@@ -1230,6 +1400,8 @@ function TemplateEditorPage() {
                         ? "Achievement"
                         : "Birthday";
 
+
+
       await addDoc(collection(db, "shared_cards"), {
         templateId,
         studentName,
@@ -1240,6 +1412,8 @@ function TemplateEditorPage() {
         createdAt: new Date().toISOString(),
         type,
       });
+
+
 
       toast.success(
         lang === "mr"
@@ -1258,15 +1432,23 @@ function TemplateEditorPage() {
 
 
 
+
+
+
+
   const generateCardImage = async () => {
     if (!templateRef.current) {
       throw new Error("Card element not found");
     }
 
+
+
     // Ensure pristine unscaled 2K export even when mobile preview scaling is active
     const el = templateRef.current;
     const prevTransform = el.style.transform;
     el.style.transform = "none";
+
+
 
     let dataUrl: string;
     try {
@@ -1279,19 +1461,29 @@ function TemplateEditorPage() {
       el.style.transform = prevTransform;
     }
 
+
+
     const res = await fetch(dataUrl);
     const blob = await res.blob();
+
+
 
     const safeStudentName = (studentName || "student").trim().replace(/\s+/g, '_');
     const safeTitle = (cardTitle || configToUse.title || "card").trim().replace(/\s+/g, '_');
     const filename = `${safeStudentName}_${safeTitle}.png`;
 
+
+
     return { blob, dataUrl, filename };
   };
+
+
 
   const handleDownloadTemplate = async () => {
     if (!templateRef.current) return;
     setIsDownloading(true);
+
+
 
     try {
       const { dataUrl, filename } = await generateCardImage();
@@ -1301,6 +1493,8 @@ function TemplateEditorPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+
 
       toast.success(
         lang === "mr"
@@ -1324,15 +1518,23 @@ function TemplateEditorPage() {
     }
   };
 
+
+
   const handleWhatsAppShare = async () => {
     if (!templateRef.current) return;
     setIsDownloading(true);
+
+
 
     try {
       const { blob, dataUrl, filename } = await generateCardImage();
       const file = new File([blob], filename, { type: "image/png" });
 
+
+
       let sharedSuccessfully = false;
+
+
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
@@ -1351,6 +1553,8 @@ function TemplateEditorPage() {
         }
       }
 
+
+
       if (!sharedSuccessfully) {
         try {
           await navigator.clipboard.write([
@@ -1364,6 +1568,8 @@ function TemplateEditorPage() {
               : "Card image copied! Paste it in WhatsApp (Ctrl+V)."
           );
 
+
+
           setTimeout(() => {
             window.open("https://wa.me/", "_blank");
           }, 1200);
@@ -1376,11 +1582,15 @@ function TemplateEditorPage() {
           link.click();
           document.body.removeChild(link);
 
+
+
           toast.success(
             lang === "mr"
               ? "कार्ड इमेज डाउनलोड झाली! आता WhatsApp मध्ये जोडा (Attach)."
               : "Card image downloaded! Attach it in WhatsApp."
           );
+
+
 
           setTimeout(() => {
             window.open("https://wa.me/", "_blank");
@@ -1400,10 +1610,14 @@ function TemplateEditorPage() {
     }
   };
 
+
+
   return (
     <div className="h-screen flex flex-col bg-[#F8FAFC] overflow-hidden select-none">
       <TeacherHeader />
       <TeacherSidebar />
+
+
 
       {/* Main Studio Workspace - Fixed Studio Layout (No Whole-Page Scroll) */}
       <main className="flex-1 pt-16 flex flex-col lg:flex-row overflow-hidden relative">
@@ -1422,6 +1636,8 @@ function TemplateEditorPage() {
                 ({lang === "mr" ? "बदल त्वरित दिसतील" : "Instant updates"})
               </span>
             </div>
+
+
 
             <div className="flex items-center gap-1.5">
               <button
@@ -1443,6 +1659,8 @@ function TemplateEditorPage() {
               </button>
             </div>
           </div>
+
+
 
           {!isMobilePreviewCollapsed && (
             <div className="relative flex items-center justify-center w-[190px] h-[245px] sm:w-[230px] sm:h-[295px] lg:w-full lg:h-full lg:max-w-[420px] sm:lg:max-w-[460px] xl:max-w-[500px] lg:aspect-[3/4] lg:max-h-[calc(100vh-6rem)]">
@@ -1473,8 +1691,12 @@ function TemplateEditorPage() {
                   />
                 )}
 
+
+
                 {/* Rich Theme Scenery (Bokeh Lights, Streamers, Cosmic Stars, Velvet Damask) */}
                 <CardBackgroundThemeLayer themeType={selectedBgTheme} templateId={templateId} />
+
+
 
                 {/* Animated Floating Elements */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -1502,12 +1724,18 @@ function TemplateEditorPage() {
                   ))}
                 </div>
 
+
+
                 {/* Decorative Glows */}
                 <div className="absolute -top-32 -right-32 size-96 bg-white/10 rounded-full blur-[120px] animate-pulse" />
                 <div className="absolute -bottom-32 -left-32 size-96 bg-black/40 rounded-full blur-[120px]" />
 
+
+
                 {/* Corner Ornaments */}
                 <CornerOrnaments color="#fef08a" />
+
+
 
                 {/* Floating Celebration Balloons & Sparkles (For Birthday & Celebratory) */}
                 {isBirthday && (
@@ -1517,6 +1745,8 @@ function TemplateEditorPage() {
                   </>
                 )}
                 <FloatingSparkles />
+
+
 
                 {/* Card Content */}
                 <div className="relative z-10 w-full h-full flex flex-col items-center justify-between p-3 sm:p-4 md:p-5 text-center overflow-hidden select-none">
@@ -1530,35 +1760,39 @@ function TemplateEditorPage() {
                     <Sparkles className="size-3 text-amber-300 animate-spin" style={{ animationDuration: "6s" }} />
                     <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-amber-200">
                       {isBirthday
-                        ? "✦ SPECIAL BIRTHDAY CELEBRATION ✦"
+                        ? (lang === "mr" ? "✦ विशेष वाढदिवस सोहळा ✦" : "✦ SPECIAL BIRTHDAY CELEBRATION ✦")
                         : isStudentOfMonth
-                          ? "★ STUDENT OF THE MONTH • OFFICIAL AWARD ★"
+                          ? (lang === "mr" ? "★ महिन्याचा विद्यार्थी • अधिकृत गौरव ★" : "★ STUDENT OF THE MONTH • OFFICIAL AWARD ★")
                           : isIdCard
-                            ? "★ OFFICIAL STUDENT IDENTITY CARD ★"
+                            ? (lang === "mr" ? "★ अधिकृत विद्यार्थी ओळखपत्र ★" : "★ OFFICIAL STUDENT IDENTITY CARD ★")
                             : isResult
-                              ? "★ ACADEMIC PROGRESS & MERIT REPORT ★"
+                              ? (lang === "mr" ? "★ शैक्षणिक प्रगती व गुणवत्ता अहवाल ★" : "★ ACADEMIC PROGRESS & MERIT REPORT ★")
                               : isProfile
-                                ? "★ OFFICIAL STUDENT PROFILE DOSSIER ★"
+                                ? (lang === "mr" ? "★ अधिकृत विद्यार्थी प्रोफाइल डॉझियर ★" : "★ OFFICIAL STUDENT PROFILE DOSSIER ★")
                                 : isAchievement
-                                  ? "★ OFFICIAL MERIT & ACHIEVEMENT AWARD ★"
+                                  ? (lang === "mr" ? "★ विशेष प्राविण्य व प्रशस्तीपत्रक ★" : "★ OFFICIAL MERIT & ACHIEVEMENT AWARD ★")
                                   : isAdmission
-                                    ? "★ WELCOME TO OUR SCHOOL FAMILY ★"
+                                    ? (lang === "mr" ? "★ शाळेत सहर्ष स्वागत ★" : "★ WELCOME TO OUR SCHOOL FAMILY ★")
                                     : isSports
-                                      ? "★ CHAMPIONSHIP ATHLETE • SPORTS MERIT ★"
+                                      ? (lang === "mr" ? "★ क्रीडा स्पर्धा विजेता गौरव ★" : "★ CHAMPIONSHIP ATHLETE • SPORTS MERIT ★")
                                       : isAnnual
-                                        ? "✦ ANNUAL FUNCTION CELEBRATION ✦"
+                                        ? (lang === "mr" ? "✦ वार्षिक स्नेहसंमेलन सोहळा ✦" : "✦ ANNUAL FUNCTION CELEBRATION ✦")
                                         : isCultural
-                                          ? "★ CULTURAL FESTIVAL & TALENT SHOW ★"
-                                          : "✦ SCHOLASTIC EXCELLENCE ✦"}
+                                          ? (lang === "mr" ? "★ सांस्कृतिक कला महोत्सव ★" : "★ CULTURAL FESTIVAL & TALENT SHOW ★")
+                                          : (lang === "mr" ? "✦ शैक्षणिक उत्कृष्टता ✦" : "✦ SCHOLASTIC EXCELLENCE ✦")}
                     </span>
                     <Sparkles className="size-3 text-amber-300" />
                   </motion.div>
+
+
 
                   {/* Main Hero Container */}
                   <div className="w-full flex flex-col items-center justify-center my-auto py-0">
                     
                     {/* 4. Overhead Studio Spotlight Beam */}
                     {spotlightEnabled && <OverheadSpotlightBeam />}
+
+
 
                     {/* Visual Focus: Customizable High-Impact Hero Photo Frame */}
                     <motion.div
@@ -1642,42 +1876,50 @@ function TemplateEditorPage() {
                             </div>
                           )}
 
+
+
                           {/* 5. ACTIVE STICKERS OVERLAY */}
                           {activeSticker === "crown" && (
                             <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 rounded-full shadow-lg border border-white flex items-center gap-1.5 z-30 whitespace-nowrap">
                               <Crown className="size-3.5 sm:size-4 text-amber-950 fill-amber-950" />
                               <span className="text-[9px] sm:text-[10px] font-black uppercase text-amber-950 tracking-wider">
                                 {isBirthday
-  ? "BIRTHDAY STAR"
-  : isStudentOfMonth
-    ? "STUDENT OF THE MONTH"
-    : isIdCard
-      ? "STUDENT PASS"
-      : isResult
-        ? "ACADEMIC TOPPER"
-        : isProfile
-          ? "HONOR SCHOLAR"
-          : isAchievement
-            ? "HONORED ACHIEVER"
-            : isSports
-              ? "SPORTS CHAMPION"
-              : "STAR SCHOLAR"}
+                                  ? (lang === "mr" ? "वाढदिवस स्टार" : "BIRTHDAY STAR")
+                                  : isStudentOfMonth
+                                    ? (lang === "mr" ? "महिन्याचा विद्यार्थी" : "STUDENT OF THE MONTH")
+                                    : isIdCard
+                                      ? (lang === "mr" ? "विद्यार्थी ओळखपत्र" : "STUDENT PASS")
+                                      : isResult
+                                        ? (lang === "mr" ? "शैक्षणिक टॉपर" : "ACADEMIC TOPPER")
+                                        : isProfile
+                                          ? (lang === "mr" ? "आदर्श विद्यार्थी" : "HONOR SCHOLAR")
+                                          : isAchievement
+                                            ? (lang === "mr" ? "गुणवंत विद्यार्थी" : "HONORED ACHIEVER")
+                                            : isSports
+                                              ? (lang === "mr" ? "क्रीडा विजेता" : "SPORTS CHAMPION")
+                                              : (lang === "mr" ? "स्टार स्कॉलर" : "STAR SCHOLAR")}
                               </span>
                             </div>
                           )}
+
+
 
                           {activeSticker === "gifts" && (
                             <CelebrationGiftBoxSVG className="absolute -bottom-3 -right-3 size-12 sm:size-14 drop-shadow-[0_8px_16px_rgba(0,0,0,0.8)] z-30" />
                           )}
 
+
+
                           {activeSticker === "medal" && (
                             <GoldenMedalEmblemSVG className="absolute -bottom-4 -left-3 size-12 sm:size-14 drop-shadow-[0_8px_16px_rgba(0,0,0,0.8)] z-30" />
                           )}
 
+
+
                           {activeSticker === "gradcap" && (
                             <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-black/60 px-3 py-1 rounded-full backdrop-blur-md border border-amber-300/60 shadow-lg flex items-center gap-1.5 z-30">
                               <GraduationCap className="size-4 text-amber-300 fill-amber-300" />
-                              <span className="text-[9px] font-black uppercase text-amber-200">HONOR ROLL</span>
+                              <span className="text-[9px] font-black uppercase text-amber-200">{lang === "mr" ? "गुणवत्ता यादी" : "HONOR ROLL"}</span>
                             </div>
                           )}
                         </div>
@@ -1764,6 +2006,8 @@ function TemplateEditorPage() {
                       )}
                     </motion.div>
 
+
+
                     {/* 2. Card Title with Calligraphy / Typography Styles */}
                     <motion.h1
                       key={configToUse.title}
@@ -1780,11 +2024,15 @@ function TemplateEditorPage() {
                       {configToUse.title}
                     </motion.h1>
 
+
+
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: "45px" }}
                       className="h-0.5 bg-gradient-to-r from-transparent via-amber-300 to-transparent rounded-full my-0.5 shadow-glow"
                     />
+
+
 
                     {/* Honored Student Name */}
                     <div className="space-y-0.5 sm:space-y-1 mb-2 max-w-full px-2">
@@ -1803,6 +2051,8 @@ function TemplateEditorPage() {
                       </motion.h2>
                     </div>
 
+
+
                     {/* Frosted Wishing Quote Box */}
                     <motion.div
                       key={configToUse.quote}
@@ -1814,6 +2064,8 @@ function TemplateEditorPage() {
                         "{configToUse.quote}"
                       </p>
                     </motion.div>
+
+
 
                     {/* Student Class & Badge */}
                     <motion.div
@@ -1837,36 +2089,43 @@ function TemplateEditorPage() {
                     </motion.div>
                   </div>
 
-                  {/* 3. Creative Footer: School Emblem & Academic Session Seal */}
-                  <div className="w-full pt-2 border-t border-white/15 flex items-center justify-between px-2 text-amber-200/90 shrink-0">
-                    <div className="flex items-center gap-2 text-left">
-                      <div className="size-7 rounded-xl bg-amber-400/20 border border-amber-300/40 flex items-center justify-center">
-                        <PartyPopper className="size-3.5 text-amber-300" />
+
+
+                  {/* 3. Creative Footer: Wisher's Name / शुभेच्छुक */}
+                  <div className="w-full pt-2 border-t border-white/15 flex items-center justify-center px-2 sm:px-3 text-amber-200/90 shrink-0">
+                    <div className="w-full bg-black/40 backdrop-blur-md px-3 sm:px-4 py-1.5 rounded-xl border border-white/15 flex items-center justify-between gap-2 shadow-sm">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="size-6 rounded-lg bg-amber-400/25 border border-amber-300/40 flex items-center justify-center shrink-0">
+                          <Heart className="size-3 text-pink-300 fill-pink-400/50" />
+                        </div>
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <span className="text-[9px] sm:text-[10px] font-extrabold text-amber-300 tracking-wider uppercase shrink-0">
+                            {lang === "mr" ? "शुभेच्छुक :" : lang === "hi" ? "शुभचिंतक :" : "Best Wishes :"}
+                          </span>
+                          <span className="text-[10px] sm:text-[11px] font-black text-white tracking-wide uppercase truncate drop-shadow-sm">
+                            {wisherName || (lang === "mr" ? "मुख्याध्यापक व शिक्षक वृंद" : "Principal & Teaching Staff")}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[9px] font-black tracking-widest uppercase text-white/90">
-                          SMART LEARNING ACADEMY
-                        </p>
-                        <p className="text-[8px] font-semibold text-amber-300/80">
-                          ACADEMIC YEAR 2026-27 • ID: {templateId?.toUpperCase()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-amber-200 shadow-sm">
-                      <Award className="size-3 text-amber-300" />
-                      <span>OFFICIAL CARD</span>
+                      <Sparkles className="size-3 text-amber-300 shrink-0 animate-pulse" />
                     </div>
                   </div>
                 </div>
               </div>
 
+
+
               {/* Shimmer Effect */}
               <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 pointer-events-none group-hover:translate-x-full transition-transform duration-1500 ease-in-out" />
             </motion.div>
 
+
+
               </div>
             </div>
           )}
+
+
 
           <p className="mt-3 text-slate-500 font-extrabold text-xs tracking-normal hidden lg:flex items-center justify-center gap-2">
             <PartyPopper className="size-3.5 text-pink-500" /> {lang === "mr" ? "थेट प्रिव्ह्यू • अल्ट्रा-प्रीमियम डिजिटल कार्ड" : "Live Preview • Ultra-Premium Digital Card"}
@@ -1874,21 +2133,57 @@ function TemplateEditorPage() {
         </div>
       
 
+
+
 {/* 1. Left Panel: Independent Scrollable Controls Sidebar */}
         <div
           className="w-full lg:w-[480px] xl:w-[540px] flex-1 lg:h-full overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 shrink-0 bg-white lg:border-r border-slate-200/80 shadow-sm order-2 lg:order-1"
         >
-            <button
-              onClick={() => window.history.back()}
-              className="flex items-center gap-2 text-slate-400 hover:text-slate-900 font-bold transition-all text-sm mb-4 group"
-            >
-              <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />{" "}
-              {lang === "mr"
-                ? "टेम्पलेट्सवर परत जा"
-                : lang === "hi"
-                  ? "टेम्पलेट्स पर वापस जाएं"
-                  : "Back to Templates"}
-            </button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white/90 p-3 rounded-2xl border border-slate-200/80 shadow-sm mb-4">
+              <button
+                onClick={() => window.history.back()}
+                className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold transition-all text-xs uppercase tracking-wider group cursor-pointer"
+              >
+                <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />{" "}
+                {lang === "mr"
+                  ? "टेम्पलेट्सवर परत जा"
+                  : lang === "hi"
+                    ? "टेम्पलेट्स पर वापस जाएं"
+                    : "Back to Templates"}
+              </button>
+              {/* Prominent Language Switcher */}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner self-end sm:self-auto">
+                <span className="text-[10px] font-black text-slate-500 uppercase px-2 hidden sm:inline">
+                  {lang === "mr" ? "भाषा :" : "Lang :"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleLanguageChange("mr")}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    lang === "mr"
+                      ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm scale-105"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white"
+                  }`}
+                >
+                  <span>🇮🇳</span>
+                  <span>मराठी</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleLanguageChange("en")}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                    lang === "en"
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm scale-105"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white"
+                  }`}
+                >
+                  <span>🇬🇧</span>
+                  <span>English</span>
+                </button>
+              </div>
+            </div>
+
+
 
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -1912,6 +2207,8 @@ function TemplateEditorPage() {
                 </p>
               </div>
 
+
+
               <div className="space-y-8">
                 <div className="space-y-2 group">
                   <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
@@ -1933,6 +2230,8 @@ function TemplateEditorPage() {
                     />
                   </div>
                 </div>
+
+
 
                 <div className="space-y-2 group">
                   <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
@@ -1976,6 +2275,8 @@ function TemplateEditorPage() {
                   </div>
                 </div>
 
+
+
                 <div className="space-y-2 group">
                   <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
                     {lang === "mr" ? "कार्ड मथळा (Title)" : lang === "hi" ? "कार्ड का शीर्षक" : "Card Title"}
@@ -1991,6 +2292,8 @@ function TemplateEditorPage() {
                   </div>
                 </div>
 
+
+
                 <div className="space-y-2 group">
                   <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
                     {lang === "mr" ? "शुभेच्छा संदेश (Quote)" : lang === "hi" ? "शुभकामना संदेश (Quote)" : "Wishing Message / Quote"}
@@ -2005,6 +2308,26 @@ function TemplateEditorPage() {
                     />
                   </div>
                 </div>
+
+
+
+                <div className="space-y-2 group">
+                  <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
+                    {lang === "mr" ? "शुभेच्छुकाचे नाव (Wisher Name)" : lang === "hi" ? "शुभचिंतक का नाम" : "Wisher Name / Organization"}
+                  </label>
+                  <div className="bg-slate-50 rounded-[2rem] flex items-center gap-4 px-8 border-2 border-transparent focus-within:bg-white focus-within:border-amber-500/20 transition-all shadow-inner">
+                    <Heart className="size-5 text-slate-300 group-focus-within:text-amber-500" />
+                    <input
+                      type="text"
+                      value={wisherName}
+                      onChange={(e) => setWisherName(e.target.value)}
+                      placeholder={lang === "mr" ? "उदा. मुख्याध्यापक, शिक्षक वृंद किंवा शाळेचे नाव" : "E.g. Principal, Staff or School Name"}
+                      className="bg-transparent outline-none w-full py-6 text-sm font-black text-slate-900"
+                    />
+                  </div>
+                </div>
+
+
 
                 {/* Background Image Selection Gallery */}
                 <div className="space-y-2.5 group">
@@ -2043,6 +2366,8 @@ function TemplateEditorPage() {
                   </div>
                 </div>
 
+
+
                 {/* Background Visual Theme Overlay Selector */}
                 <div className="space-y-2 group">
                   <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
@@ -2071,6 +2396,8 @@ function TemplateEditorPage() {
                   </div>
                 </div>
 
+
+
                 {/* Photo Upload Option */}
                 <div className="space-y-2 group">
                   <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
@@ -2090,12 +2417,15 @@ function TemplateEditorPage() {
                       className="bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors font-bold text-xs uppercase tracking-wider rounded-2xl px-6 py-4 flex items-center gap-2 cursor-pointer shadow-sm"
                     >
                       <ImageIcon className="size-4" />
-                      {displayPhoto ? (lang === "mr" ? "फोटो बदला" : "Change Photo") : (lang === "mr" ? "फोटो निवडा" : "Select Photo")}
+                      {studentPhoto ? (lang === "mr" ? "फोटो बदला" : "Change Photo") : (lang === "mr" ? "फोटो ॲड करा" : "Add Photo")}
                     </button>
-                    {displayPhoto && (
+                    {studentPhoto && (
                       <button
                         type="button"
-                        onClick={() => setStudentPhoto(null)}
+                        onClick={() => {
+                          setStudentPhoto(null);
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
                         className="bg-red-50 border border-red-150 text-red-600 hover:bg-red-100 transition-colors font-bold text-xs uppercase tracking-wider rounded-2xl px-6 py-4 cursor-pointer shadow-sm"
                       >
                         {lang === "mr" ? "काढून टाका" : "Remove"}
@@ -2103,6 +2433,8 @@ function TemplateEditorPage() {
                     )}
                   </div>
                 </div>
+
+
 
                 {/* 1. Photo Frame Styles Picker */}
                 <div className="space-y-2 group">
@@ -2132,6 +2464,8 @@ function TemplateEditorPage() {
                     ))}
                   </div>
                 </div>
+
+
 
                 {/* 6. Photo Zoom & Position Adjustment Controls (Only when photo exists) */}
                 {studentPhoto && (
@@ -2166,6 +2500,8 @@ function TemplateEditorPage() {
                       </button>
                     </div>
 
+
+
                     <div className="flex items-center justify-between pt-1 text-xs">
                       <span className="text-[11px] font-bold text-slate-600">{lang === "mr" ? "स्थान हलवा:" : "Pan:"}</span>
                       <div className="flex gap-1.5">
@@ -2195,6 +2531,8 @@ function TemplateEditorPage() {
                   </div>
                 )}
 
+
+
                 {/* 2. Typography Style */}
                 <div className="space-y-2 group">
                   <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
@@ -2222,6 +2560,8 @@ function TemplateEditorPage() {
                   </div>
                 </div>
 
+
+
                 {/* 4 & 5. Studio Lighting Spotlight & Decorative Stickers */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Spotlight Toggle */}
@@ -2242,6 +2582,8 @@ function TemplateEditorPage() {
                       {spotlightEnabled ? "ON" : "OFF"}
                     </button>
                   </div>
+
+
 
                   {/* Stickers Picker */}
                   <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
@@ -2271,25 +2613,14 @@ function TemplateEditorPage() {
                   </div>
                 </div>
 
-                <div className="pt-6 space-y-4">
-                  <button
-                    onClick={handleShareToStudent}
-                    disabled={isSaving}
-                    className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl"
-                  >
-                    {isSaving ? (
-                      <Loader2 className="size-5 animate-spin" />
-                    ) : (
-                      <Send className="size-5" />
-                    )}{" "}
-                    {lang === "mr" ? "डॅशबोर्डवर शेअर करा" : lang === "hi" ? "डैशबोर्ड पर साझा करें" : "Share to Dashboard"}
-                  </button>
-                  
+
+
+                <div className="pt-6">
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       onClick={handleDownloadTemplate}
                       disabled={isDownloading}
-                      className="w-full bg-indigo-500 text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-lg"
+                      className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-[0.98] text-white py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-500/25"
                     >
                       {isDownloading ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -2299,10 +2630,12 @@ function TemplateEditorPage() {
                       {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
                     </button>
 
+
+
                     <button
                       onClick={handleWhatsAppShare}
                       disabled={isDownloading}
-                      className="w-full bg-[#25D366] text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#128C7E] transition-all shadow-lg"
+                      className="w-full bg-[#25D366] hover:bg-[#1ebe5b] active:scale-[0.98] text-white py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/25"
                     >
                       {isDownloading ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -2316,6 +2649,9 @@ function TemplateEditorPage() {
               </div>
             </motion.div>
         </div>
+
+
+
 
 
         {/* Fullscreen Preview Lightbox Modal */}
@@ -2342,6 +2678,8 @@ function TemplateEditorPage() {
                   <X className="size-5" />
                 </button>
               </div>
+
+
 
               {/* Centered Large Card Preview */}
               <div className="flex-1 w-full flex items-center justify-center overflow-hidden py-2">
@@ -2372,27 +2710,27 @@ function TemplateEditorPage() {
                       <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300/40 backdrop-blur-md mb-2 shrink-0">
                         <Sparkles className="size-3 text-amber-300" />
                         <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-amber-200">
-                          {isBirthday
-                            ? "✦ SPECIAL BIRTHDAY CELEBRATION ✦"
-                            : isStudentOfMonth
-                              ? "★ STUDENT OF THE MONTH • OFFICIAL AWARD ★"
-                              : isIdCard
-                                ? "★ OFFICIAL STUDENT IDENTITY CARD ★"
-                                : isResult
-                                  ? "★ ACADEMIC PROGRESS & MERIT REPORT ★"
-                                  : isProfile
-                                    ? "★ OFFICIAL STUDENT PROFILE DOSSIER ★"
-                                    : isAchievement
-                                      ? "★ OFFICIAL MERIT & ACHIEVEMENT AWARD ★"
-                                      : isAdmission
-                                        ? "★ WELCOME TO OUR SCHOOL FAMILY ★"
-                                        : isSports
-                                          ? "★ CHAMPIONSHIP ATHLETE • SPORTS MERIT ★"
-                                          : isAnnual
-                                            ? "✦ ANNUAL FUNCTION CELEBRATION ✦"
-                                            : isCultural
-                                              ? "★ CULTURAL FESTIVAL & TALENT SHOW ★"
-                                              : "✦ SCHOLASTIC EXCELLENCE ✦"}
+                      {isBirthday
+                        ? (lang === "mr" ? "✦ विशेष वाढदिवस सोहळा ✦" : "✦ SPECIAL BIRTHDAY CELEBRATION ✦")
+                        : isStudentOfMonth
+                          ? (lang === "mr" ? "★ महिन्याचा विद्यार्थी • अधिकृत गौरव ★" : "★ STUDENT OF THE MONTH • OFFICIAL AWARD ★")
+                          : isIdCard
+                            ? (lang === "mr" ? "★ अधिकृत विद्यार्थी ओळखपत्र ★" : "★ OFFICIAL STUDENT IDENTITY CARD ★")
+                            : isResult
+                              ? (lang === "mr" ? "★ शैक्षणिक प्रगती व गुणवत्ता अहवाल ★" : "★ ACADEMIC PROGRESS & MERIT REPORT ★")
+                              : isProfile
+                                ? (lang === "mr" ? "★ अधिकृत विद्यार्थी प्रोफाइल डॉझियर ★" : "★ OFFICIAL STUDENT PROFILE DOSSIER ★")
+                                : isAchievement
+                                  ? (lang === "mr" ? "★ विशेष प्राविण्य व प्रशस्तीपत्रक ★" : "★ OFFICIAL MERIT & ACHIEVEMENT AWARD ★")
+                                  : isAdmission
+                                    ? (lang === "mr" ? "★ शाळेत सहर्ष स्वागत ★" : "★ WELCOME TO OUR SCHOOL FAMILY ★")
+                                    : isSports
+                                      ? (lang === "mr" ? "★ क्रीडा स्पर्धा विजेता गौरव ★" : "★ CHAMPIONSHIP ATHLETE • SPORTS MERIT ★")
+                                      : isAnnual
+                                        ? (lang === "mr" ? "✦ वार्षिक स्नेहसंमेलन सोहळा ✦" : "✦ ANNUAL FUNCTION CELEBRATION ✦")
+                                        : isCultural
+                                          ? (lang === "mr" ? "★ सांस्कृतिक कला महोत्सव ★" : "★ CULTURAL FESTIVAL & TALENT SHOW ★")
+                                          : (lang === "mr" ? "✦ शैक्षणिक उत्कृष्टता ✦" : "✦ SCHOLASTIC EXCELLENCE ✦")}
                         </span>
                       </div>
                       <div className="relative my-1 shrink-0">
@@ -2440,17 +2778,30 @@ function TemplateEditorPage() {
                         <span className="text-amber-100 font-black text-xs uppercase">{studentClass}</span>
                         <Star className="size-3 text-amber-300 fill-amber-300" />
                       </div>
-                      <div className="w-full pt-2 border-t border-white/15 flex items-center justify-between px-2 text-amber-200/90 shrink-0">
-                        <p className="text-[9px] font-black tracking-widest uppercase text-white/90">SMART LEARNING ACADEMY</p>
-                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 text-[8px] font-black uppercase text-amber-200">
-                          <Award className="size-3 text-amber-300" />
-                          <span>OFFICIAL CARD</span>
+                      <div className="w-full pt-2 border-t border-white/15 flex items-center justify-center px-2 sm:px-3 text-amber-200/90 shrink-0">
+                        <div className="w-full bg-black/40 backdrop-blur-md px-3 sm:px-4 py-1.5 rounded-xl border border-white/15 flex items-center justify-between gap-2 shadow-sm">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <div className="size-6 rounded-lg bg-amber-400/25 border border-amber-300/40 flex items-center justify-center shrink-0">
+                              <Heart className="size-3 text-pink-300 fill-pink-400/50" />
+                            </div>
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <span className="text-[9px] sm:text-[10px] font-extrabold text-amber-300 tracking-wider uppercase shrink-0">
+                                {lang === "mr" ? "शुभेच्छुक :" : lang === "hi" ? "शुभचिंतक :" : "Best Wishes :"}
+                              </span>
+                              <span className="text-[10px] sm:text-[11px] font-black text-white tracking-wide uppercase truncate drop-shadow-sm">
+                                {wisherName || (lang === "mr" ? "मुख्याध्यापक व शिक्षक वृंद" : "Principal & Teaching Staff")}
+                              </span>
+                            </div>
+                          </div>
+                          <Sparkles className="size-3 text-amber-300 shrink-0" />
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+
+
 
               {/* Action Buttons */}
               <div className="w-full max-w-sm flex items-center gap-3 pt-3 shrink-0">
@@ -2482,6 +2833,8 @@ function TemplateEditorPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+
 
 </main>
     </div>

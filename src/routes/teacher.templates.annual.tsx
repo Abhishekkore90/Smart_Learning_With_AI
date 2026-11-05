@@ -110,7 +110,7 @@ const ANNUAL_TEMPLATES = [
 ];
 
 function AnnualTemplatesPage() {
-  const { lang } = useLanguage();
+  const { lang, setLang } = useLanguage();
   const [studentName, setStudentName] = useState("ADITYA DESHMUKH");
   const [eventName, setEventName] = useState("ANNUAL GALA 2026");
 
@@ -129,31 +129,31 @@ function AnnualTemplatesPage() {
       <TeacherSidebar />
 
       <main className="lg:pl-0 pt-16 min-h-screen">
-        <div className="p-6 md:p-10 space-y-10">
+        <div className="p-3 xs:p-4 md:p-10 space-y-4 sm:space-y-10">
           {/* Cinematic Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden bg-slate-900 rounded-[3.5rem] p-10 md:p-16 text-white shadow-2xl"
+            className="relative overflow-hidden bg-slate-900 rounded-2xl sm:rounded-3xl md:rounded-[3.5rem] p-4 xs:p-5 sm:p-10 md:p-16 text-white shadow-xl md:shadow-2xl"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-amber-600/30 via-transparent to-orange-600/30" />
             <div className="absolute -right-20 -top-20 size-96 bg-amber-500/10 rounded-full blur-[120px] animate-pulse" />
 
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-12">
-              <div className="space-y-6">
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-6 md:gap-12">
+              <div className="space-y-2 sm:space-y-4 md:space-y-6">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="inline-flex items-center gap-2 px-5 py-2 bg-amber-500/20 backdrop-blur-xl rounded-full border border-amber-500/30 text-amber-400 text-[10px] font-black uppercase tracking-[0.2em]"
+                  className="inline-flex items-center gap-2 px-3 py-1 sm:px-5 sm:py-2 bg-amber-500/20 backdrop-blur-xl rounded-full border border-amber-500/30 text-amber-400 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]"
                 >
-                  <Sparkles className="size-4" />{" "}
+                  <Sparkles className="size-3 sm:size-4" />{" "}
                   {lang === "mr"
                     ? "स्नेहसंमेलन नियंत्रण केंद्र"
                     : lang === "hi"
                       ? "वार्षिकोत्सव नियंत्रण केंद्र"
                       : "Annual Command Center"}
                 </motion.div>
-                <h2 className="text-6xl md:text-7xl font-black tracking-tighter leading-none">
+                <h2 className="text-2xl xs:text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter leading-tight sm:leading-none">
                   {lang === "mr" ? "वार्षिक" : lang === "hi" ? "वार्षिक" : "Annual"}{" "}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400 italic">
                     {lang === "mr"
@@ -163,7 +163,7 @@ function AnnualTemplatesPage() {
                         : "Excellence"}
                   </span>
                 </h2>
-                <p className="text-slate-400 font-medium max-w-2xl text-xl leading-relaxed">
+                <p className="text-slate-400 font-medium max-w-2xl text-xs sm:text-base md:text-xl leading-relaxed line-clamp-2 sm:line-clamp-none">
                   {lang === "mr"
                     ? "सिनेमॅटिक आमंत्रणे आणि पुरस्कार टेम्पलेट्ससह तुमच्या शाळेचा भव्य सोहळा आयोजित करा."
                     : lang === "hi"
@@ -171,13 +171,39 @@ function AnnualTemplatesPage() {
                       : "Orchestrate your school's grandest night with cinematic invitations and award templates. Legacy, talent, and glory."}
                 </p>
               </div>
-              <Link
+              <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0 flex-wrap">
+                <div className="flex items-center gap-1 bg-black/40 backdrop-blur-md p-1 rounded-xl border border-white/20 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setLang("mr")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      lang === "mr"
+                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md scale-105"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    🇮🇳 मराठी
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLang("en")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                      lang === "en"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md scale-105"
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    🇬🇧 English
+                  </button>
+                </div>
+                <Link
                 to="/teacher/templates"
-                className="group flex items-center gap-4 px-10 py-6 bg-white text-slate-900 rounded-[2.5rem] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-2xl"
+                className="group flex items-center gap-2 sm:gap-4 px-4 py-2 sm:px-6 sm:py-3.5 md:px-10 md:py-6 bg-white text-slate-900 rounded-xl sm:rounded-2xl md:rounded-[2.5rem] font-black text-[11px] sm:text-xs uppercase tracking-wider sm:tracking-widest hover:scale-105 transition-all shadow-md sm:shadow-2xl self-start sm:self-auto shrink-0"
               >
-                <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform" />{" "}
+                <ArrowLeft className="size-3.5 sm:size-5 group-hover:-translate-x-1 transition-transform" />{" "}
                 {lang === "mr" ? "टेम्प्लेट्स" : lang === "hi" ? "टेम्प्लेट्स" : "Templates"}
               </Link>
+              </div>
             </div>
           </motion.div>
 

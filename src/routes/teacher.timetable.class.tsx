@@ -14,6 +14,10 @@ import {
   Pencil,
   Save,
   ChevronLeft,
+  School,
+  Check,
+  RotateCcw,
+  X,
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
@@ -490,12 +494,85 @@ function ClassTimetablePage() {
   const [gridData, setGridData] = useState<any>(null);
   const [savingGrid, setSavingGrid] = useState(false);
 
+  // Timetable Edit Mode and School Details Modal states
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSchoolModalOpen, setIsSchoolModalOpen] = useState(false);
+  const [schoolForm, setSchoolForm] = useState({
+    schoolName: "",
+    center: "",
+    taluka: "",
+    district: "",
+    academicYear: "2026-27",
+    teacherName: "",
+    headmasterName: "",
+  });
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [containerHeight, setContainerHeight] = useState(0);
 
+  // Sync schoolForm whenever gridData changes
   useEffect(() => {
-    const handleResize = () => {
+    if (gridData) {
+      setSchoolForm({
+        schoolName: gridData.schoolName || "",
+        center: gridData.center || "",
+        taluka: gridData.taluka || "",
+        district: gridData.district || "",
+        academicYear: gridData.academicYear || "2026-27",
+        teacherName: gridData.teacherName || "",
+        headmasterName: gridData.headmasterName || "",
+      });
+    }
+  }, [gridData]);
+
+  const handleSaveSchoolDetails = async () => {
+    if (!gridData) return;
+    const updated = {
+      ...gridData,
+      schoolName: schoolForm.schoolName,
+      center: schoolForm.center,
+      taluka: schoolForm.taluka,
+      district: schoolForm.district,
+      academicYear: schoolForm.academicYear,
+      teacherName: schoolForm.teacherName,
+      headmasterName: schoolForm.headmasterName,
+    };
+    setGridData(updated);
+
+    try {
+      const cachedSetup = localStorage.getItem("teacher_module_setup_data");
+      const parsed = cachedSetup ? JSON.parse(cachedSetup) : {};
+      const merged = {
+        ...parsed,
+        schoolName: schoolForm.schoolName,
+        center: schoolForm.center,
+        taluka: schoolForm.taluka,
+        district: schoolForm.district,
+        teacherName: schoolForm.teacherName,
+        headmasterName: schoolForm.headmasterName,
+        academicYear: schoolForm.academicYear,
+      };
+      localStorage.setItem("teacher_module_setup_data", JSON.stringify(merged));
+    } catch (e) {
+      console.warn("Could not save to localStorage:", e);
+    }
+
+    if (user) {
+      try {
+        const targetDocRef = doc(db, "teacher_edited_timetables", `${user.uid}_${selectedClass}`);
+        await setDoc(targetDocRef, updated);
+      } catch (e) {
+        console.warn("Auto-save to firestore error:", e);
+      }
+    }
+
+    setIsSchoolModalOpen(false);
+    toast.success(lang === "mr" ? "शाळेची माहिती यशस्वीरित्या जतन झाली आणि वेळापत्रकात सेट झाली!" : "School details saved and applied to timetable!");
+  };
+
+  useEffect(() => {
+    const updateDimensions = () => {
       if (!containerRef.current) return;
       const parentWidth = containerRef.current.clientWidth || window.innerWidth;
       const targetWidth = 1000;
@@ -504,19 +581,42 @@ function ClassTimetablePage() {
 
       const tableEl = document.getElementById("editable-timetable-container");
       if (tableEl) {
-        setContainerHeight(tableEl.scrollHeight);
+        const h = Math.max(tableEl.scrollHeight, tableEl.offsetHeight);
+        setContainerHeight(h);
       }
     };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    const timer = setTimeout(handleResize, 100);
-    const timer2 = setTimeout(handleResize, 350);
+
+    updateDimensions();
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && containerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        updateDimensions();
+      });
+      resizeObserver.observe(containerRef.current);
+      const tableEl = document.getElementById("editable-timetable-container");
+      if (tableEl) {
+        resizeObserver.observe(tableEl);
+      }
+    }
+
+    window.addEventListener("resize", updateDimensions);
+    window.addEventListener("orientationchange", updateDimensions);
+    if ((document as any).fonts && (document as any).fonts.ready) {
+      (document as any).fonts.ready.then(updateDimensions);
+    }
+
+    const timer1 = setTimeout(updateDimensions, 150);
+    const timer2 = setTimeout(updateDimensions, 600);
+
     return () => {
-      window.removeEventListener("resize", handleResize);
-      clearTimeout(timer);
+      if (resizeObserver) resizeObserver.disconnect();
+      window.removeEventListener("resize", updateDimensions);
+      window.removeEventListener("orientationchange", updateDimensions);
+      clearTimeout(timer1);
       clearTimeout(timer2);
     };
-  }, [gridData]);
+  }, [gridData, isEditing]);
 
   const cellInputStyle = {
     border: 'none',
@@ -705,138 +805,215 @@ function ClassTimetablePage() {
     }
   };
 
+  // Native Android & Mobile WebView download trigger
+  const triggerDeviceDownload = (cdnUrl: string, filename: string, pdfBlob?: Blob) => {
+    try {
+      const win = window as any;
+      if (typeof win.Android?.downloadFile === "function") {
+        win.Android.downloadFile(cdnUrl, filename);
+        return;
+      }
+      if (typeof win.AndroidBridge?.downloadFile === "function") {
+        win.AndroidBridge.downloadFile(cdnUrl, filename);
+        return;
+      }
+      if (typeof win.flutter_inappwebview?.callHandler === "function") {
+        win.flutter_inappwebview.callHandler("downloadFile", cdnUrl, filename);
+        return;
+      }
+      if (typeof win.webkit?.messageHandlers?.downloadFile?.postMessage === "function") {
+        win.webkit.messageHandlers.downloadFile.postMessage({ url: cdnUrl, filename });
+        return;
+      }
+
+      if (pdfBlob) {
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = filename;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (document.body.contains(link)) document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 3000);
+        return;
+      }
+
+      if (cdnUrl) {
+        const link = document.createElement("a");
+        link.href = cdnUrl;
+        link.download = filename;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          if (document.body.contains(link)) document.body.removeChild(link);
+        }, 3000);
+      }
+    } catch (e) {
+      console.error("Device download error:", e);
+    }
+  };
+
   const handleDownloadPDFDirectly = async () => {
     const element = document.getElementById("editable-timetable-container");
     if (!element) return;
 
-    const parentContainer = element.parentElement;
-    const isHiddenOnScreen = parentContainer && parentContainer.classList.contains('hidden');
+    toast.success(lang === "mr" ? "PDF तयार होत आहे..." : "Generating PDF...");
 
-    if (isHiddenOnScreen && parentContainer) {
-      parentContainer.classList.remove('hidden');
-      parentContainer.style.position = 'absolute';
-      parentContainer.style.left = '-9999px';
-      parentContainer.style.top = '0';
-      parentContainer.style.display = 'block';
-    }
+    let tempWrapper: HTMLDivElement | null = null;
+    try {
+      // Create an off-screen clone so that the live on-screen view is completely untouched
+      const clone = element.cloneNode(true) as HTMLElement;
+      clone.id = "timetable-pdf-clone";
 
-    const inputs = element.querySelectorAll('input');
-    const tempSpans: { input: HTMLInputElement; span: HTMLSpanElement }[] = [];
+      // Match all live input values from original element to clone
+      const origInputs = element.querySelectorAll('input');
+      const cloneInputs = clone.querySelectorAll('input');
+      origInputs.forEach((origInput, idx) => {
+        if (cloneInputs[idx]) {
+          cloneInputs[idx].value = origInput.value;
+        }
+      });
 
-    inputs.forEach((input: HTMLInputElement) => {
-      const textNode = document.createElement('span');
-      textNode.innerText = input.value;
-      textNode.className = input.className;
-      textNode.style.cssText = input.style.cssText;
-      textNode.style.display = 'inline-block';
-      textNode.style.textAlign = input.style.textAlign || 'center';
-      textNode.style.border = 'none';
-      textNode.style.outline = 'none';
+      // Replace inputs with spans inside the clone only
+      cloneInputs.forEach((input: HTMLInputElement) => {
+        const textNode = document.createElement('span');
+        textNode.innerText = input.value;
+        textNode.className = input.className;
+        textNode.style.cssText = input.style.cssText;
+        textNode.style.display = 'inline-block';
+        textNode.style.textAlign = input.style.textAlign || 'center';
+        textNode.style.border = 'none';
+        textNode.style.outline = 'none';
 
-      const isTableInput = input.closest('table') !== null;
-      if (isTableInput) {
-        textNode.style.whiteSpace = 'nowrap';
-        textNode.style.overflow = 'hidden';
-        textNode.style.textOverflow = 'ellipsis';
-      } else {
-        textNode.style.verticalAlign = 'middle';
-        textNode.style.height = 'auto';
-      }
+        const isTableInput = input.closest('table') !== null;
+        if (isTableInput) {
+          textNode.style.whiteSpace = 'nowrap';
+          textNode.style.overflow = 'hidden';
+          textNode.style.textOverflow = 'ellipsis';
+        } else {
+          textNode.style.verticalAlign = 'middle';
+          textNode.style.height = 'auto';
+        }
 
-      input.style.setProperty('display', 'none', 'important');
-      input.parentNode?.insertBefore(textNode, input.nextSibling);
-      tempSpans.push({ input, span: textNode });
-    });
+        input.parentNode?.replaceChild(textNode, input);
+      });
 
-    const opt = {
-      margin: [0.15, 0.15, 0.15, 0.15],
-      filename: `${selectedClass}_Timetable.pdf`,
-      image: { type: "jpeg", quality: 1.0 },
-      html2canvas: {
+      // 1. Create a clean off-screen staging container placed at (0, 0)
+      // with zIndex -99999 so WebViews render the layout inside the viewport
+      tempWrapper = document.createElement('div');
+      tempWrapper.setAttribute('data-pdf-temp', 'true');
+      tempWrapper.style.position = 'fixed';
+      tempWrapper.style.top = '0px';
+      tempWrapper.style.left = '0px';
+      tempWrapper.style.width = '1000px';
+      tempWrapper.style.background = '#ffffff';
+      tempWrapper.style.zIndex = '-99999';
+      tempWrapper.style.overflow = 'visible';
+      tempWrapper.style.pointerEvents = 'none';
+
+      // 2. Format clone: clean, compact padding with zero top whitespace
+      clone.style.zoom = '1';
+      (clone.style as any).WebkitZoom = '1';
+      clone.style.width = '1000px';
+      clone.style.minWidth = '1000px';
+      clone.style.maxWidth = '1000px';
+      clone.style.margin = '0';
+      clone.style.padding = '8px 12px 12px 12px';
+      clone.style.boxSizing = 'border-box';
+      clone.style.transform = 'none';
+      clone.style.backgroundColor = '#ffffff';
+
+      tempWrapper.appendChild(clone);
+      document.body.appendChild(tempWrapper);
+
+      // Allow browser / WebView layout and fonts to settle
+      await new Promise((resolve) => setTimeout(resolve, 350));
+
+      // 3. Capture with html2canvas-pro at high resolution (scale: 3 for crystal clear print)
+      const { default: html2canvas } = await import("html2canvas-pro");
+      const canvas = await html2canvas(clone, {
         scale: 3,
         useCORS: true,
         logging: false,
-        letterRendering: true,
-        windowWidth: 1050,
-        scrollX: 0,
-        scrollY: 0
-      },
-      jsPDF: { unit: "in", format: "a4", orientation: "landscape" },
-      pagebreak: { mode: ['css'] }
-    };
+        backgroundColor: '#ffffff',
+      });
 
-    toast.success(lang === "mr" ? "PDF तयार होत आहे..." : "Generating PDF...");
+      // 4. Generate 1-page A4 Landscape PDF using jsPDF
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
 
-    const prevZoom = element.style.zoom;
-    const prevWebkitZoom = (element.style as any).WebkitZoom;
-    const prevMarginTop = element.style.marginTop;
+      const pageWidth = 297;  // A4 landscape width in mm
+      const pageHeight = 210; // A4 landscape height in mm
 
-    try {
-      element.style.zoom = '1';
-      (element.style as any).WebkitZoom = '1';
-      element.style.transform = 'scale(0.95)';
-      element.style.transformOrigin = 'top center';
+      // 5mm margins on all sides so timetable has maximum printable area
+      const maxContentWidth = pageWidth - 10;   // 287mm
+      const maxContentHeight = pageHeight - 10; // 200mm
 
-      const renderedHeight = (element.offsetHeight || element.getBoundingClientRect().height || 520) * 0.95;
-      const pageHeightPx = 735;
-      const freeSpace = pageHeightPx - renderedHeight;
-      const topOffset = Math.max(20, Math.floor(freeSpace / 2));
+      const canvasAspect = canvas.width / canvas.height;
+      let imgWidth = maxContentWidth;
+      let imgHeight = imgWidth / canvasAspect;
 
-      element.style.marginTop = `${topOffset}px`;
+      // If the rendered timetable is taller, scale proportionally to fit page height
+      if (imgHeight > maxContentHeight) {
+        imgHeight = maxContentHeight;
+        imgWidth = imgHeight * canvasAspect;
+      }
 
-      const opt = {
-        margin: [0, 0.15, 0, 0.15],
-        filename: `${selectedClass}_Timetable.pdf`,
-        image: { type: "jpeg", quality: 1.0 },
-        html2canvas: {
-          scale: 3,
-          useCORS: true,
-          logging: false,
-          letterRendering: true,
-          windowWidth: 1050,
-          scrollX: 0,
-          scrollY: 0
-        },
-        jsPDF: { unit: "in", format: "a4", orientation: "landscape" },
-        pagebreak: { mode: ['css'] }
-      };
+      // Center perfectly on the single A4 Landscape page
+      const xOffset = (pageWidth - imgWidth) / 2;
+      const yOffset = (pageHeight - imgHeight) / 2;
 
-      const html2pdf = (await import("html2pdf.js")).default;
-      const worker = html2pdf().set(opt).from(element);
-      await worker.save();
+      const imgData = canvas.toDataURL("image/jpeg", 0.98);
+      pdf.addImage(imgData, "JPEG", xOffset, yOffset, imgWidth, imgHeight, undefined, "FAST");
 
-      try {
-        const pdfBlob = (await worker.output("blob")) as Blob;
-        const fileName = `Class_${selectedClass || "Timetable"}_${Date.now()}.pdf`;
-        const cdnUrl = await uploadBlobToBunny(`timetables/${fileName}`, pdfBlob);
-        console.log("Uploaded Timetable PDF to Bunny Storage:", cdnUrl);
-      } catch (uploadErr: any) {
-        console.warn("Could not upload Timetable PDF to Bunny Storage:", uploadErr);
+      const downloadFilename = `${selectedClass}_Timetable.pdf`;
+      const pdfBlob = pdf.output("blob");
+
+      // Upload to Bunny Storage for persistent CDN URL
+      let cdnUrl = "";
+      const fileName = `Class_${selectedClass || "Timetable"}_${Date.now()}.pdf`;
+      if (pdfBlob) {
+        try {
+          cdnUrl = await uploadBlobToBunny(`timetables/${fileName}`, pdfBlob);
+          console.log("Uploaded Timetable PDF to Bunny Storage:", cdnUrl);
+        } catch (uploadErr: any) {
+          console.warn("Could not upload Timetable PDF to Bunny Storage:", uploadErr);
+        }
+      }
+
+      // Check for WebView application bridge or save in browser
+      const win = window as any;
+      const isWebViewBridge = typeof win.Android?.downloadFile === "function" ||
+                              typeof win.AndroidBridge?.downloadFile === "function" ||
+                              typeof win.flutter_inappwebview?.callHandler === "function" ||
+                              typeof win.webkit?.messageHandlers?.downloadFile?.postMessage === "function";
+
+      if (isWebViewBridge) {
+        triggerDeviceDownload(cdnUrl, downloadFilename, pdfBlob);
+        toast.success(lang === "mr" ? "PDF यशस्वीरीत्या डाऊनलोड झाली!" : "PDF downloaded successfully!");
+      } else {
+        pdf.save(downloadFilename);
       }
     } catch (err) {
       console.error("PDF generation error:", err);
-      toast.error("Failed to generate PDF");
+      toast.error(lang === "mr" ? "PDF तयार करण्यात त्रुटी आली" : "Failed to generate PDF");
     } finally {
-      element.style.zoom = prevZoom;
-      (element.style as any).WebkitZoom = prevWebkitZoom;
-      element.style.transform = '';
-      element.style.transformOrigin = '';
-      element.style.marginTop = prevMarginTop;
-      tempSpans.forEach(({ input, span }) => {
-        input.style.display = '';
-        span.parentNode?.removeChild(span);
-      });
-      if (isHiddenOnScreen && parentContainer) {
-        parentContainer.classList.add('hidden');
-        parentContainer.style.position = '';
-        parentContainer.style.left = '';
-        parentContainer.style.top = '';
-        parentContainer.style.display = '';
+      if (tempWrapper && tempWrapper.parentNode) {
+        tempWrapper.parentNode.removeChild(tempWrapper);
       }
     }
   };
 
-  const selectedClassNameEn = CLASS_NAME_MAP[selectedClass]?.en || selectedClass;
+      const selectedClassNameEn = CLASS_NAME_MAP[selectedClass]?.en || selectedClass;
 
   return (
     <div className="min-h-screen bg-slate-50/50 font-sans flex flex-col">
@@ -845,55 +1022,98 @@ function ClassTimetablePage() {
         <TeacherSidebar />
         <main className="flex-1 min-w-0 lg:pl-0 p-3 sm:p-4 md:p-6 space-y-6 w-full max-w-full">
 
-          <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-6 md:p-8 shadow-sm space-y-6 w-full max-w-full min-w-0">
-            <div className="flex items-center">
+          <div className="bg-white border border-slate-200 rounded-2xl p-2.5 sm:p-4 shadow-sm space-y-2.5 w-full max-w-full min-w-0">
+            {/* Top Row: Back to classes & Mode status in one compact line */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
               <Link
                 to="/teacher/timetable"
-                className="inline-flex items-center gap-1.5 text-xs font-black text-slate-500 hover:text-[#8b5cf6] uppercase tracking-widest transition-colors"
+                className="inline-flex items-center gap-1 text-[11px] font-black text-slate-500 hover:text-indigo-600 uppercase tracking-wider transition-colors"
               >
-                <ChevronLeft className="size-4" /> Back to Classes / इयत्ता निवडा
+                <ChevronLeft className="size-3.5" /> Back to Classes / इयत्ता निवडा
               </Link>
-            </div>
-            <div className="bg-gradient-to-r from-violet-50 to-indigo-50/50 p-4 sm:p-6 rounded-xl sm:rounded-[2rem] border border-indigo-100/50 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-5">
-              <div className="size-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md flex-shrink-0">
-                <Calendar className="size-7 animate-pulse" />
-              </div>
-              <div className="space-y-1">
-                <h2 className="text-xl font-black text-slate-800">
-                  {t.title} (Class {selectedClassNameEn})
-                </h2>
-                <p className="text-xs font-bold text-slate-500">
-                  {lang === "mr" ? "खालील तक्त्यामध्ये बदल करा आणि बदल जतन करा." : "Edit the schedule grid below and save changes."}
-                </p>
+
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-600">
+                <div className={`size-2 rounded-full ${isEditing ? "bg-amber-500 animate-ping" : "bg-emerald-500"}`} />
+                <span>
+                  {isEditing
+                    ? (lang === "mr" ? "संपादन मोड चालू" : "Edit Mode Active")
+                    : (lang === "mr" ? "पूर्वावलोकन मोड" : "Preview Mode")}
+                </span>
               </div>
             </div>
 
             {loading ? (
-              <div className="h-96 flex flex-col items-center justify-center text-slate-400 gap-4">
-                <Loader2 className="size-12 text-indigo-600 animate-spin" />
+              <div className="h-64 flex flex-col items-center justify-center text-slate-400 gap-3">
+                <Loader2 className="size-8 text-indigo-600 animate-spin" />
                 <p className="text-xs font-black uppercase tracking-wider animate-pulse">
                   {lang === "mr" ? "वेळापत्रक लोड होत आहे..." : "Loading timetable..."}
                 </p>
               </div>
             ) : gridData ? (
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/60 shadow-sm">
-                  <span className="text-xs font-bold text-slate-500 text-center sm:text-left">
-                    {lang === "mr" ? "येथे तुम्ही बदल करू शकता आणि बदल जतन करू शकता." : "You can edit cells below and click save."}
-                  </span>
-                  <div className="flex flex-col min-[480px]:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+              <div className="space-y-3">
+                {/* Short Compact Header & Controls Bar */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 bg-slate-50 p-2 sm:p-2.5 rounded-xl border border-slate-200/80">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="size-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                      <Calendar className="size-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="text-xs sm:text-sm font-black text-slate-800 tracking-tight leading-tight truncate">
+                        {t.title} ({selectedClassNameEn})
+                      </h2>
+                      <p className="text-[10px] text-slate-500 font-medium truncate">
+                        {isEditing
+                          ? (lang === "mr" ? "तक्त्यातील मजकूर संपादित करा आणि सेव्ह करा." : "Edit cells below and save changes.")
+                          : (lang === "mr" ? "बदल करण्यासाठी 'संपादित करा' बटण दाबा." : "Click 'Edit' to change schedule.")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-start sm:justify-end shrink-0">
+                    {/* 1. School Details Button */}
                     <button
-                      onClick={handleSaveGridOnly}
-                      disabled={savingGrid}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50"
+                      onClick={() => setIsSchoolModalOpen(true)}
+                      className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-lg text-[11px] font-black transition-all cursor-pointer shadow-xs active:scale-95"
+                      title={lang === "mr" ? "शाळेचे नाव, केंद्र, तालुका, जिल्हा भरा" : "Fill School Details"}
                     >
-                      {savingGrid ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Save className="size-4" />
-                      )}
-                      <span>{lang === "mr" ? "बदल जतन करा" : "Save Changes"}</span>
+                      <School className="size-3.5" />
+                      <span>{lang === "mr" ? "शाळा माहिती" : "School Details"}</span>
                     </button>
+
+                    {/* 2. Edit Mode Toggle */}
+                    {isEditing ? (
+                      <>
+                        <button
+                          onClick={handleSaveGridOnly}
+                          disabled={savingGrid}
+                          className="flex items-center justify-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-black transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50 ring-1 ring-emerald-400"
+                        >
+                          {savingGrid ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Save className="size-3.5" />
+                          )}
+                          <span>{lang === "mr" ? "जतन करा" : "Save"}</span>
+                        </button>
+                        <button
+                          onClick={() => setIsEditing(false)}
+                          className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-[11px] font-bold transition-all cursor-pointer active:scale-95"
+                        >
+                          <Check className="size-3.5" />
+                          <span>{lang === "mr" ? "पूर्ण" : "Done"}</span>
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="flex items-center justify-center gap-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[11px] font-black transition-all cursor-pointer shadow-xs active:scale-95"
+                      >
+                        <Pencil className="size-3.5" />
+                        <span>{lang === "mr" ? "संपादित करा" : "Edit Timetable"}</span>
+                      </button>
+                    )}
+
+                    {/* 3. Reset Button */}
                     <button
                       onClick={() => {
                         if (window.confirm(lang === "mr" ? "तुम्हाला खात्री आहे की तुम्हाला हे वेळापत्रक मूळ स्वरूपात पुनर्संचयित करायचे आहे? (यामुळे आधीचे सर्व बदल नष्ट होतील)" : "Are you sure you want to reset this timetable to default template? (This will overwrite all existing edits)")) {
@@ -910,17 +1130,20 @@ function ClassTimetablePage() {
                           toast.success(lang === "mr" ? "वेळापत्रक मूळ स्वरूपात आणले गेले आहे. ते जतन करण्यासाठी 'बदल जतन करा' वर क्लिक करा." : "Timetable reset to default. Click 'Save Changes' to commit.");
                         }
                       }}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md active:scale-95"
+                      className="flex items-center justify-center size-8 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 rounded-lg transition-all cursor-pointer active:scale-95"
+                      title={lang === "mr" ? "मूळ स्वरूपात आणा" : "Reset to Default"}
                     >
-                      <span>{lang === "mr" ? "मूळ स्वरूपात आणा" : "Reset to Default"}</span>
+                      <RotateCcw className="size-3.5" />
                     </button>
+
+                    {/* 4. PDF Download */}
                     <button
                       onClick={handleDownloadPDFDirectly}
                       disabled={savingGrid}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50"
+                      className="flex items-center justify-center gap-1 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg text-[11px] font-black transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
                     >
-                      <Download className="size-4" />
-                      <span>{lang === "mr" ? "PDF डाउनलोड" : "Download PDF"}</span>
+                      <Download className="size-3.5" />
+                      <span>PDF</span>
                     </button>
                   </div>
                 </div>
@@ -933,7 +1156,7 @@ function ClassTimetablePage() {
                     WebkitOverflowScrolling: 'touch',
                     ...(scale < 1
                       ? {
-                          height: containerHeight ? `${containerHeight * scale + 10}px` : 'auto',
+                          height: containerHeight ? `${containerHeight * scale + 16}px` : 'auto',
                           overflow: 'hidden'
                         }
                       : {})
@@ -941,7 +1164,7 @@ function ClassTimetablePage() {
                 >
                   <div
                     id="editable-timetable-container"
-                    className="p-4 pt-10 bg-white text-slate-900 border border-black shadow-sm font-sans space-y-3 w-[1000px] min-w-[1000px] mx-auto overflow-hidden"
+                    className="p-3 sm:p-4 pt-4 sm:pt-6 bg-white text-slate-900 border border-black shadow-sm font-sans space-y-2.5 sm:space-y-3 w-[1000px] min-w-[1000px] mx-auto overflow-hidden"
                     style={
                       scale < 1
                         ? {
@@ -966,64 +1189,133 @@ function ClassTimetablePage() {
                       <div className="flex-1 flex justify-center whitespace-nowrap overflow-visible mx-4">
                         <div className="px-6 py-1.5 text-center rounded-lg shadow-sm whitespace-nowrap flex items-center justify-center gap-1" style={{ background: 'linear-gradient(to bottom, #ffffff, #e6f7ff)', border: '1px solid black' }}>
                           <span className="text-sm md:text-base font-black text-slate-800 tracking-wider whitespace-nowrap">
-                            वेळापत्रक ( इयत्ता :- <input type="text" value={gridData.classNameMr || selectedClass} onChange={(e) => handleHeaderChange("classNameMr", e.target.value)} style={{ ...cellInputStyle, width: getDynamicWidth(gridData.classNameMr || selectedClass, 5) }} className="font-black text-center text-slate-800 text-sm md:text-base bg-transparent inline-block outline-none" /> )
+                            वेळापत्रक ( इयत्ता :- {isEditing ? (
+                              <input
+                                type="text"
+                                value={gridData.classNameMr || selectedClass}
+                                onChange={(e) => handleHeaderChange("classNameMr", e.target.value)}
+                                style={{ ...cellInputStyle, width: getDynamicWidth(gridData.classNameMr || selectedClass, 5) }}
+                                className="font-black text-center text-slate-800 text-sm md:text-base bg-amber-50/70 border-b border-amber-400 inline-block outline-none"
+                              />
+                            ) : (
+                              <span className="font-black text-slate-800 underline decoration-indigo-400 decoration-2">
+                                {gridData.classNameMr || selectedClass}
+                              </span>
+                            )} )
                           </span>
                         </div>
                       </div>
                       <div className="px-4 py-1.5 text-center rounded-lg whitespace-nowrap flex-shrink-0" style={{ background: 'linear-gradient(to bottom, #ffffff, #e6f7ff)', border: '1px solid black' }}>
                         <span className="text-xs font-black text-slate-800 whitespace-nowrap">
-                          सन <input type="text" value={gridData.academicYear} onChange={(e) => handleHeaderChange("academicYear", e.target.value)} style={{ ...cellInputStyle, width: getDynamicWidth(gridData.academicYear, 7) }} className="font-black text-center text-slate-800 text-xs bg-transparent inline-block outline-none" />
+                          सन {isEditing ? (
+                            <input
+                              type="text"
+                              value={gridData.academicYear}
+                              onChange={(e) => handleHeaderChange("academicYear", e.target.value)}
+                              style={{ ...cellInputStyle, width: getDynamicWidth(gridData.academicYear, 7) }}
+                              className="font-black text-center text-slate-800 text-xs bg-amber-50/70 border-b border-amber-400 inline-block outline-none"
+                            />
+                          ) : (
+                            <span className="font-black text-slate-800">
+                              {gridData.academicYear}
+                            </span>
+                          )}
                         </span>
                       </div>
                     </div>
 
-                    <div className="border border-black text-[10px] font-bold grid grid-cols-12 bg-white">
-                      <div className="col-span-5 flex items-center gap-1 p-1.5 bg-white whitespace-nowrap" style={{ borderRight: '1px solid black' }}>
-                        <span className="whitespace-nowrap flex-shrink-0">शाळेचे नाव :</span>
-                        <input
-                          type="text"
-                          value={gridData.schoolName}
-                          onChange={(e) => handleHeaderChange("schoolName", e.target.value)}
-                          style={{ ...cellInputStyle, textAlign: 'left' }}
-                          className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-transparent outline-none min-w-0"
-                        />
+                    {/* School Details Header Bar */}
+                    <div className="border border-black text-[11px] font-bold grid grid-cols-12 bg-white">
+                      <div className="col-span-5 flex items-center gap-1.5 p-1.5 bg-white whitespace-nowrap overflow-hidden" style={{ borderRight: '1px solid black' }}>
+                        <span className="whitespace-nowrap flex-shrink-0 font-extrabold text-slate-900">शाळेचे नाव :</span>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={gridData.schoolName}
+                            onChange={(e) => handleHeaderChange("schoolName", e.target.value)}
+                            style={{ ...cellInputStyle, textAlign: 'left' }}
+                            className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0"
+                            placeholder="शाळेचे नाव टाका"
+                          />
+                        ) : (
+                          <span
+                            onClick={() => setIsSchoolModalOpen(true)}
+                            className="font-black text-slate-900 px-1 py-0.5 truncate text-[11.5px] font-black cursor-pointer hover:text-indigo-600 transition-colors"
+                            title="शाळेची माहिती बदलण्यासाठी येथे क्लिक करा"
+                          >
+                            {gridData.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
+                          </span>
+                        )}
                       </div>
-                      <div className="col-span-2 flex items-center gap-1 p-1.5 whitespace-nowrap" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
-                        <span className="whitespace-nowrap flex-shrink-0">केंद्र :-</span>
-                        <input
-                          type="text"
-                          value={gridData.center}
-                          onChange={(e) => handleHeaderChange("center", e.target.value)}
-                          style={{ ...cellInputStyle, textAlign: 'left' }}
-                          className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-transparent outline-none min-w-0"
-                        />
+                      <div className="col-span-2 flex items-center gap-1.5 p-1.5 whitespace-nowrap overflow-hidden" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
+                        <span className="whitespace-nowrap flex-shrink-0 font-extrabold text-slate-900">केंद्र :-</span>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={gridData.center}
+                            onChange={(e) => handleHeaderChange("center", e.target.value)}
+                            style={{ ...cellInputStyle, textAlign: 'left' }}
+                            className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0"
+                            placeholder="केंद्र"
+                          />
+                        ) : (
+                          <span
+                            onClick={() => setIsSchoolModalOpen(true)}
+                            className="font-bold text-slate-900 px-1 py-0.5 truncate text-[11px] font-extrabold cursor-pointer hover:text-indigo-600 transition-colors"
+                            title="शाळेची माहिती बदलण्यासाठी येथे क्लिक करा"
+                          >
+                            {gridData.center || "-"}
+                          </span>
+                        )}
                       </div>
-                      <div className="col-span-2 flex items-center gap-1 p-1.5 whitespace-nowrap" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
-                        <span className="whitespace-nowrap flex-shrink-0">तालुका :-</span>
-                        <input
-                          type="text"
-                          value={gridData.taluka}
-                          onChange={(e) => handleHeaderChange("taluka", e.target.value)}
-                          style={{ ...cellInputStyle, textAlign: 'left' }}
-                          className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-transparent outline-none min-w-0"
-                        />
+                      <div className="col-span-2 flex items-center gap-1.5 p-1.5 whitespace-nowrap overflow-hidden" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
+                        <span className="whitespace-nowrap flex-shrink-0 font-extrabold text-slate-900">तालुका :-</span>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={gridData.taluka}
+                            onChange={(e) => handleHeaderChange("taluka", e.target.value)}
+                            style={{ ...cellInputStyle, textAlign: 'left' }}
+                            className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0"
+                            placeholder="तालुका"
+                          />
+                        ) : (
+                          <span
+                            onClick={() => setIsSchoolModalOpen(true)}
+                            className="font-bold text-slate-900 px-1 py-0.5 truncate text-[11px] font-extrabold cursor-pointer hover:text-indigo-600 transition-colors"
+                            title="शाळेची माहिती बदलण्यासाठी येथे क्लिक करा"
+                          >
+                            {gridData.taluka || "-"}
+                          </span>
+                        )}
                       </div>
-                      <div className="col-span-3 flex items-center gap-1 p-1.5 whitespace-nowrap" style={{ backgroundColor: '#F2DCDB' }}>
-                        <span className="whitespace-nowrap flex-shrink-0">जिल्हा :-</span>
-                        <input
-                          type="text"
-                          value={gridData.district}
-                          onChange={(e) => handleHeaderChange("district", e.target.value)}
-                          style={{ ...cellInputStyle, textAlign: 'left' }}
-                          className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-transparent outline-none min-w-0"
-                        />
+                      <div className="col-span-3 flex items-center gap-1.5 p-1.5 whitespace-nowrap overflow-hidden" style={{ backgroundColor: '#F2DCDB' }}>
+                        <span className="whitespace-nowrap flex-shrink-0 font-extrabold text-slate-900">जिल्हा :-</span>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={gridData.district}
+                            onChange={(e) => handleHeaderChange("district", e.target.value)}
+                            style={{ ...cellInputStyle, textAlign: 'left' }}
+                            className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0"
+                            placeholder="जिल्हा"
+                          />
+                        ) : (
+                          <span
+                            onClick={() => setIsSchoolModalOpen(true)}
+                            className="font-bold text-slate-900 px-1 py-0.5 truncate text-[11px] font-extrabold cursor-pointer hover:text-indigo-600 transition-colors"
+                            title="शाळेची माहिती बदलण्यासाठी येथे क्लिक करा"
+                          >
+                            {gridData.district || "-"}
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     <div className="w-full">
                       <table className="w-full text-center" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
                         <thead>
-                          <tr className="text-slate-800 font-bold text-[9px] h-8">
+                          <tr className="text-slate-800 font-black text-[11px] h-8">
                             <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
                             <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
                             <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>सोमवार</th>
@@ -1078,34 +1370,106 @@ function ClassTimetablePage() {
                             const isSatRecess = isRecessValue(row.saturday);
 
                             return (
-                              <tr key={idx} className="text-[9px] h-7">
+                              <tr key={idx} className="text-[11px] h-7">
                                 <td className="font-black py-0.5" style={{ backgroundColor: monThuPeriodBg, border: '1px solid black', width: '4%' }}>
-                                  <input type="text" value={row.monThuPeriod} onChange={(e) => handleCellChange(idx, "monThuPeriod", e.target.value)} style={cellInputStyle} className="font-black text-[9px] text-center outline-none bg-transparent" />
+                                  {isEditing ? (
+                                    <input type="text" value={row.monThuPeriod} onChange={(e) => handleCellChange(idx, "monThuPeriod", e.target.value)} style={cellInputStyle} className="font-black text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                  ) : (
+                                    <span className="font-black text-[11px] text-center block w-full">{row.monThuPeriod}</span>
+                                  )}
                                 </td>
                                 <td className="py-0.5" style={{ backgroundColor: monThuTimeBg, border: '1px solid black', width: '8%' }}>
-                                  <input type="text" value={row.monThuTime} onChange={(e) => handleCellChange(idx, "monThuTime", e.target.value)} style={cellInputStyle} className="font-semibold text-[9px] text-[#C00000] text-center outline-none bg-transparent" />
+                                  {isEditing ? (
+                                    <input type="text" value={row.monThuTime} onChange={(e) => handleCellChange(idx, "monThuTime", e.target.value)} style={cellInputStyle} className="font-bold text-[10.5px] text-[#C00000] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                  ) : (
+                                    <span className="font-bold text-[10.5px] text-[#C00000] text-center block w-full whitespace-nowrap">{row.monThuTime}</span>
+                                  )}
                                 </td>
                                 {isMonThuRecess ? (
                                   <td className="font-bold text-center py-0.5" style={{ ...getRecessStyle(monThuRecessVal || ""), border: '1px solid black' }} colSpan={4}>
-                                    <input type="text" value={monThuRecessVal || ""} onChange={(e) => handleCellChange(idx, "monday", e.target.value)} style={cellInputStyle} className="font-bold text-[9px] text-center outline-none bg-transparent" />
+                                    {isEditing ? (
+                                      <input type="text" value={monThuRecessVal || ""} onChange={(e) => handleCellChange(idx, "monday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                    ) : (
+                                      <span className="font-extrabold text-[11px] text-center block w-full">{monThuRecessVal || ""}</span>
+                                    )}
                                   </td>
                                 ) : (
                                   <>
-                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}><input type="text" value={row.monday} onChange={(e) => handleCellChange(idx, "monday", e.target.value)} style={cellInputStyle} className="font-bold text-[9px] text-center outline-none bg-transparent" /></td>
-                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}><input type="text" value={row.tuesday} onChange={(e) => handleCellChange(idx, "tuesday", e.target.value)} style={cellInputStyle} className="font-bold text-[9px] text-center outline-none bg-transparent" /></td>
-                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}><input type="text" value={row.wednesday} onChange={(e) => handleCellChange(idx, "wednesday", e.target.value)} style={cellInputStyle} className="font-bold text-[9px] text-center outline-none bg-transparent" /></td>
-                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}><input type="text" value={row.thursday} onChange={(e) => handleCellChange(idx, "thursday", e.target.value)} style={cellInputStyle} className="font-bold text-[9px] text-center outline-none bg-transparent" /></td>
+                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}>
+                                      {isEditing ? (
+                                        <input type="text" value={row.monday} onChange={(e) => handleCellChange(idx, "monday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                      ) : (
+                                        <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.monday}</span>
+                                      )}
+                                    </td>
+                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}>
+                                      {isEditing ? (
+                                        <input type="text" value={row.tuesday} onChange={(e) => handleCellChange(idx, "tuesday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                      ) : (
+                                        <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.tuesday}</span>
+                                      )}
+                                    </td>
+                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}>
+                                      {isEditing ? (
+                                        <input type="text" value={row.wednesday} onChange={(e) => handleCellChange(idx, "wednesday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                      ) : (
+                                        <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.wednesday}</span>
+                                      )}
+                                    </td>
+                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}>
+                                      {isEditing ? (
+                                        <input type="text" value={row.thursday} onChange={(e) => handleCellChange(idx, "thursday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                      ) : (
+                                        <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.thursday}</span>
+                                      )}
+                                    </td>
                                   </>
                                 )}
-                                <td className="font-black py-0.5" style={{ backgroundColor: friPeriodBg, border: '1px solid black', width: '4%' }}><input type="text" value={row.friPeriod} onChange={(e) => handleCellChange(idx, "friPeriod", e.target.value)} style={cellInputStyle} className="font-black text-[9px] text-center outline-none bg-transparent" /></td>
-                                <td className="py-0.5" style={{ backgroundColor: friTimeBg, border: '1px solid black', width: '8%' }}><input type="text" value={row.friTime} onChange={(e) => handleCellChange(idx, "friTime", e.target.value)} style={cellInputStyle} className="font-semibold text-[9px] text-[#C00000] text-center outline-none bg-transparent" /></td>
-                                <td className="py-0.5" style={{ ...(isFriRecess ? getRecessStyle(row.friday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%' }}><input type="text" value={row.friday} onChange={(e) => handleCellChange(idx, "friday", e.target.value)} style={cellInputStyle} className="font-bold text-[9px] text-center outline-none bg-transparent" /></td>
-                                <td className="font-black py-0.5" style={{ backgroundColor: satPeriodBg, border: '1px solid black', width: '4%' }}><input type="text" value={row.satPeriod} onChange={(e) => handleCellChange(idx, "satPeriod", e.target.value)} style={cellInputStyle} className="font-black text-[9px] text-center outline-none bg-transparent" /></td>
-                                <td className="py-0.5" style={{ backgroundColor: satTimeBg, border: '1px solid black', width: '8%' }}><input type="text" value={row.satTime} onChange={(e) => handleCellChange(idx, "satTime", e.target.value)} style={cellInputStyle} className="font-semibold text-[9px] text-[#C00000] text-center outline-none bg-transparent" /></td>
+                                <td className="font-black py-0.5" style={{ backgroundColor: friPeriodBg, border: '1px solid black', width: '4%' }}>
+                                  {isEditing ? (
+                                    <input type="text" value={row.friPeriod} onChange={(e) => handleCellChange(idx, "friPeriod", e.target.value)} style={cellInputStyle} className="font-black text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                  ) : (
+                                    <span className="font-black text-[11px] text-center block w-full">{row.friPeriod}</span>
+                                  )}
+                                </td>
+                                <td className="py-0.5" style={{ backgroundColor: friTimeBg, border: '1px solid black', width: '8%' }}>
+                                  {isEditing ? (
+                                    <input type="text" value={row.friTime} onChange={(e) => handleCellChange(idx, "friTime", e.target.value)} style={cellInputStyle} className="font-bold text-[10.5px] text-[#C00000] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                  ) : (
+                                    <span className="font-bold text-[10.5px] text-[#C00000] text-center block w-full whitespace-nowrap">{row.friTime}</span>
+                                  )}
+                                </td>
+                                <td className="py-0.5" style={{ ...(isFriRecess ? getRecessStyle(row.friday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%' }}>
+                                  {isEditing ? (
+                                    <input type="text" value={row.friday} onChange={(e) => handleCellChange(idx, "friday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                  ) : (
+                                    <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.friday}</span>
+                                  )}
+                                </td>
+                                <td className="font-black py-0.5" style={{ backgroundColor: satPeriodBg, border: '1px solid black', width: '4%' }}>
+                                  {isEditing ? (
+                                    <input type="text" value={row.satPeriod} onChange={(e) => handleCellChange(idx, "satPeriod", e.target.value)} style={cellInputStyle} className="font-black text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                  ) : (
+                                    <span className="font-black text-[11px] text-center block w-full">{row.satPeriod}</span>
+                                  )}
+                                </td>
+                                <td className="py-0.5" style={{ backgroundColor: satTimeBg, border: '1px solid black', width: '8%' }}>
+                                  {isEditing ? (
+                                    <input type="text" value={row.satTime} onChange={(e) => handleCellChange(idx, "satTime", e.target.value)} style={cellInputStyle} className="font-bold text-[10.5px] text-[#C00000] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                  ) : (
+                                    <span className="font-bold text-[10.5px] text-[#C00000] text-center block w-full whitespace-nowrap">{row.satTime}</span>
+                                  )}
+                                </td>
                                 {idx === 14 ? (
                                   <td className="py-0.5" style={{ backgroundColor: '#FF0000', border: '1px solid black', width: '10%' }}></td>
                                 ) : (
-                                  <td className="py-0.5" style={{ ...(isSatRecess ? getRecessStyle(row.saturday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%' }}><input type="text" value={row.saturday} onChange={(e) => handleCellChange(idx, "saturday", e.target.value)} style={cellInputStyle} className="font-bold text-[9px] text-center outline-none bg-transparent" /></td>
+                                  <td className="py-0.5" style={{ ...(isSatRecess ? getRecessStyle(row.saturday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%' }}>
+                                    {isEditing ? (
+                                      <input type="text" value={row.saturday} onChange={(e) => handleCellChange(idx, "saturday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                    ) : (
+                                      <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.saturday}</span>
+                                    )}
+                                  </td>
                                 )}
                               </tr>
                             );
@@ -1117,12 +1481,12 @@ function ClassTimetablePage() {
                     <div className="grid grid-cols-12 gap-4 items-end pt-2 border-t border-black">
                       <div className="col-span-7 space-y-1.5 text-left">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black text-slate-800 tracking-widest">तासिका विभागणी :</span>
+                          <span className="text-[11px] font-black text-slate-800 tracking-widest">तासिका विभागणी :</span>
                           <svg viewBox="0 0 100 40" className="w-12 h-5 select-none inline-block align-middle">
                             <path d="M 5,12 L 60,12 L 60,4 L 95,20 L 60,36 L 60,28 L 5,28 Z" fill="#2E75B6" stroke="black" strokeWidth="1.5" />
                           </svg>
                         </div>
-                        <table className="text-[9px] text-center w-full" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
+                        <table className="text-[10.5px] text-center w-full" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
                           <thead>
                             <tr className="font-bold">
                               {(CLASS_SUBJECTS_MAP[selectedClass] || CLASS_SUBJECTS_MAP["8th"]).map((subj) => (
@@ -1135,31 +1499,47 @@ function ClassTimetablePage() {
                             <tr style={{ backgroundColor: '#FFFF00' }}>
                               {(CLASS_SUBJECTS_MAP[selectedClass] || CLASS_SUBJECTS_MAP["8th"]).map((subj) => (
                                 <td key={subj.key} style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px' }}>
-                                  <input
-                                    type="text"
-                                    value={gridData.subjectDistribution?.[subj.key] || "0"}
-                                    onChange={(e) => handleSubjectDistChange(subj.key, e.target.value)}
-                                    style={cellInputStyle}
-                                    className="font-bold text-[9px] text-center bg-transparent outline-none"
-                                  />
+                                  {isEditing ? (
+                                    <input
+                                      type="text"
+                                      value={gridData.subjectDistribution?.[subj.key] || "0"}
+                                      onChange={(e) => handleSubjectDistChange(subj.key, e.target.value)}
+                                      style={cellInputStyle}
+                                      className="font-black text-[11px] text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none"
+                                    />
+                                  ) : (
+                                    <span className="font-extrabold text-[11px] text-center block w-full">{gridData.subjectDistribution?.[subj.key] || "0"}</span>
+                                  )}
                                 </td>
                               ))}
                               <td style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px' }} className="font-black">
-                                <input type="text" value={gridData.subjectDistribution?.total || "48"} onChange={(e) => handleSubjectDistChange("total", e.target.value)} style={cellInputStyle} className="font-black text-[9px] text-center bg-transparent outline-none" />
+                                {isEditing ? (
+                                  <input type="text" value={gridData.subjectDistribution?.total || "48"} onChange={(e) => handleSubjectDistChange("total", e.target.value)} style={cellInputStyle} className="font-black text-[11px] text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none" />
+                                ) : (
+                                  <span className="font-black text-[11px] text-center block w-full">{gridData.subjectDistribution?.total || "48"}</span>
+                                )}
                               </td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
                       <div className="col-span-5 p-3 flex justify-between items-center h-16 rounded-[1.8rem]" style={{ backgroundColor: '#FCE4D6', border: '1px solid black' }}>
-                        <div className="text-center flex-1 flex flex-col justify-between h-full px-2">
-                          <input type="text" value={gridData.teacherName} onChange={(e) => handleHeaderChange("teacherName", e.target.value)} style={{ ...cellInputStyle, fontSize: '9px' }} className="font-black text-slate-800 text-center bg-transparent outline-none w-full" />
-                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">वर्गशिक्षकाचे नाव व स्वाक्षरी</div>
+                        <div className="text-center flex-1 flex flex-col justify-between h-full px-2 overflow-hidden">
+                          {isEditing ? (
+                            <input type="text" value={gridData.teacherName} onChange={(e) => handleHeaderChange("teacherName", e.target.value)} style={{ ...cellInputStyle, fontSize: '11px' }} className="font-black text-slate-800 text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none w-full" />
+                          ) : (
+                            <div className="font-black text-slate-800 text-center text-[11px] truncate">{gridData.teacherName || "वर्गशिक्षक"}</div>
+                          )}
+                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[9.5px] font-black text-slate-700 text-center uppercase tracking-wider">वर्गशिक्षकाचे नाव व स्वाक्षरी</div>
                         </div>
                         <div className="h-full w-px bg-black/20 mx-4" />
-                        <div className="text-center flex-1 flex flex-col justify-between h-full px-2">
-                          <input type="text" value={gridData.headmasterName} onChange={(e) => handleHeaderChange("headmasterName", e.target.value)} style={{ ...cellInputStyle, fontSize: '9px' }} className="font-black text-slate-800 text-center bg-transparent outline-none w-full" />
-                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">मुख्याध्यापकांचे नाव व स्वाक्षरी</div>
+                        <div className="text-center flex-1 flex flex-col justify-between h-full px-2 overflow-hidden">
+                          {isEditing ? (
+                            <input type="text" value={gridData.headmasterName} onChange={(e) => handleHeaderChange("headmasterName", e.target.value)} style={{ ...cellInputStyle, fontSize: '11px' }} className="font-black text-slate-800 text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none w-full" />
+                          ) : (
+                            <div className="font-black text-slate-800 text-center text-[11px] truncate">{gridData.headmasterName || "मुख्याध्यापक"}</div>
+                          )}
+                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[9.5px] font-black text-slate-700 text-center uppercase tracking-wider">मुख्याध्यापकांचे नाव व स्वाक्षरी</div>
                         </div>
                       </div>
                     </div>
@@ -1179,6 +1559,165 @@ function ClassTimetablePage() {
               </div>
             )}
           </div>
+
+          {/* School Details Dedicated Modal Dialog */}
+          <AnimatePresence>
+            {isSchoolModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                  className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+                >
+                  {/* Modal Header */}
+                  <div className="px-5 py-4 bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 text-white flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-xs">
+                        <School className="size-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black">
+                          {lang === "mr" ? "शाळेची माहिती भरा (School Details)" : "Fill School Details"}
+                        </h3>
+                        <p className="text-[11px] text-violet-100 font-medium">
+                          {lang === "mr" ? "ही माहिती वेळापत्रकात आपोआप आणि योग्य जागी सेट होईल." : "This information fits directly into your timetable."}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setIsSchoolModalOpen(false)}
+                      className="size-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+
+                  {/* Modal Body Form */}
+                  <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 text-left">
+                    {/* School Name */}
+                    <div>
+                      <label className="block text-xs font-black text-slate-700 mb-1">
+                        {lang === "mr" ? "शाळेचे नाव (School Name) *" : "School Name *"}
+                      </label>
+                      <input
+                        type="text"
+                        value={schoolForm.schoolName}
+                        onChange={(e) => setSchoolForm({ ...schoolForm, schoolName: e.target.value })}
+                        placeholder={lang === "mr" ? "उदा. जि. प. प्राथमिक शाळा..." : "e.g. Z.P. Primary School..."}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Center */}
+                      <div>
+                        <label className="block text-xs font-black text-slate-700 mb-1">
+                          {lang === "mr" ? "केंद्र (Center)" : "Center"}
+                        </label>
+                        <input
+                          type="text"
+                          value={schoolForm.center}
+                          onChange={(e) => setSchoolForm({ ...schoolForm, center: e.target.value })}
+                          placeholder={lang === "mr" ? "उदा. नरसिंगपूर" : "Center"}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+                        />
+                      </div>
+
+                      {/* Taluka */}
+                      <div>
+                        <label className="block text-xs font-black text-slate-700 mb-1">
+                          {lang === "mr" ? "तालुका (Taluka)" : "Taluka"}
+                        </label>
+                        <input
+                          type="text"
+                          value={schoolForm.taluka}
+                          onChange={(e) => setSchoolForm({ ...schoolForm, taluka: e.target.value })}
+                          placeholder={lang === "mr" ? "उदा. तासगाव" : "Taluka"}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+                        />
+                      </div>
+
+                      {/* District */}
+                      <div>
+                        <label className="block text-xs font-black text-slate-700 mb-1">
+                          {lang === "mr" ? "जिल्हा (District)" : "District"}
+                        </label>
+                        <input
+                          type="text"
+                          value={schoolForm.district}
+                          onChange={(e) => setSchoolForm({ ...schoolForm, district: e.target.value })}
+                          placeholder={lang === "mr" ? "उदा. सांगली" : "District"}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Academic Year */}
+                      <div>
+                        <label className="block text-xs font-black text-slate-700 mb-1">
+                          {lang === "mr" ? "शैक्षणिक वर्ष (Year)" : "Academic Year"}
+                        </label>
+                        <input
+                          type="text"
+                          value={schoolForm.academicYear}
+                          onChange={(e) => setSchoolForm({ ...schoolForm, academicYear: e.target.value })}
+                          placeholder="2026-27"
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+                        />
+                      </div>
+
+                      {/* Class Teacher */}
+                      <div>
+                        <label className="block text-xs font-black text-slate-700 mb-1">
+                          {lang === "mr" ? "वर्गशिक्षक नाव" : "Class Teacher"}
+                        </label>
+                        <input
+                          type="text"
+                          value={schoolForm.teacherName}
+                          onChange={(e) => setSchoolForm({ ...schoolForm, teacherName: e.target.value })}
+                          placeholder={lang === "mr" ? "उदा. वर्गशिक्षक" : "Teacher Name"}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+                        />
+                      </div>
+
+                      {/* Headmaster */}
+                      <div>
+                        <label className="block text-xs font-black text-slate-700 mb-1">
+                          {lang === "mr" ? "मुख्याध्यापक नाव" : "Headmaster"}
+                        </label>
+                        <input
+                          type="text"
+                          value={schoolForm.headmasterName}
+                          onChange={(e) => setSchoolForm({ ...schoolForm, headmasterName: e.target.value })}
+                          placeholder={lang === "mr" ? "उदा. मुख्याध्यापक" : "Headmaster"}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="px-5 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+                    <button
+                      onClick={() => setIsSchoolModalOpen(false)}
+                      className="px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      {lang === "mr" ? "रद्द करा" : "Cancel"}
+                    </button>
+                    <button
+                      onClick={handleSaveSchoolDetails}
+                      className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black transition-all cursor-pointer shadow-md flex items-center gap-1.5 active:scale-95"
+                    >
+                      <Save className="size-4" />
+                      <span>{lang === "mr" ? "जतन करा आणि वेळापत्रकात जोडा" : "Save & Apply to Timetable"}</span>
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </main>
       </div>
     </div>

@@ -174,11 +174,12 @@ function LandingPage() {
           muted
           playsInline
           preload="auto"
-          className="absolute inset-0 w-full h-full object-cover object-[70%_center] sm:object-center md:object-[75%_center] lg:object-center pointer-events-none transition-opacity duration-700"
+          className="absolute inset-0 w-full h-full object-cover [object-position:60%_center] xs:[object-position:62%_center] sm:[object-position:center] md:[object-position:75%_center] lg:[object-position:center] pointer-events-none transition-opacity duration-700"
+        
         />
 
         {/* Gradient Overlay for crystal clear video visibility on right and text contrast on left */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/55 to-black/20 sm:from-black/80 sm:via-black/40 sm:to-transparent pointer-events-none z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 to-transparent sm:from-black/80 sm:via-black/40 sm:to-transparent pointer-events-none z-10" />
 
         {/* Subtle Ambient Radial Glow */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(99,102,241,0.12),transparent_60%)] pointer-events-none z-10" />
@@ -186,7 +187,7 @@ function LandingPage() {
         {/* Floating Cards Container on Left Side */}
         <div className="relative z-20 w-full px-3 xs:px-4 sm:px-6 md:px-8 lg:px-10 pt-3 xs:pt-4 sm:pt-28 md:pt-32 pb-4 sm:pb-8 flex flex-col sm:flex-row justify-start min-h-[460px] xs:min-h-[520px] sm:min-h-[620px] md:min-h-[680px] lg:min-h-[720px]">
           
-          {/* MOBILE VIEW: Fully Legible Vertical Stack on Upper Left (No Cutoffs) */}
+          {/* MOBILE VIEW: Classic Sleek Horizontal Capsule Pills positioned cleanly with Robot shifted safely right */}
           <motion.div
             initial="hidden"
             animate="show"
@@ -198,7 +199,7 @@ function LandingPage() {
                 transition: { staggerChildren: 0.08, delayChildren: 0.2 },
               },
             }}
-            className="flex flex-col gap-5 xs:gap-6 w-[215px] xs:w-[240px] max-w-[65%] mt-2 xs:mt-3 mb-auto sm:hidden"
+            className="flex flex-col gap-5 xs:gap-5.5 w-[142px] xs:w-[152px] max-w-[42%] mt-5 xs:mt-6 mb-auto sm:hidden z-20"
           >
             {landingCards.map((card, index) => {
               const Icon = card.icon;
@@ -226,28 +227,28 @@ function LandingPage() {
                       navigate({ to: card.to as any, search: (card as any).search });
                     }
                   }}
-                  className="relative group p-2 xs:p-2.5 rounded-2xl border border-white/25 bg-slate-950/85 backdrop-blur-xl shadow-xl active:bg-slate-900 flex items-center justify-between gap-2 overflow-hidden cursor-pointer"
+                  className="relative group py-1.5 px-2 xs:py-2 xs:px-2.5 rounded-full border border-white/25 bg-slate-950/85 backdrop-blur-xl shadow-xl active:bg-slate-900 flex items-center justify-between gap-1.5 overflow-hidden cursor-pointer"
                 >
                   {/* Subtle Glow Accent */}
-                  <div className={`absolute -inset-px rounded-2xl bg-gradient-to-r ${customStyles.gradient} opacity-25 blur-xs pointer-events-none`} />
+                  <div className={`absolute -inset-px rounded-full bg-gradient-to-r ${customStyles.gradient} opacity-25 blur-xs pointer-events-none`} />
 
-                  <div className="relative z-10 flex items-center gap-2 xs:gap-2.5 min-w-0 flex-1">
-                    <div className={`size-8 rounded-xl ${customStyles.iconBg} backdrop-blur-md flex items-center justify-center border shadow-xs text-white shrink-0`}>
-                      <Icon className="size-4 text-white" strokeWidth={2.2} />
+                  <div className="relative z-10 flex items-center gap-1.5 min-w-0 flex-1">
+                    <div className={`size-6.5 xs:size-7 rounded-full ${customStyles.iconBg} backdrop-blur-md flex items-center justify-center border shadow-xs text-white shrink-0`}>
+                      <Icon className="size-3.5 text-white" strokeWidth={2.2} />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-[11.5px] xs:text-xs font-black text-white tracking-tight leading-snug whitespace-normal break-words">
+                      <h3 className="text-[9.5px] xs:text-[10px] font-black text-white tracking-tight leading-tight line-clamp-2">
                         {card.title}
                       </h3>
-                      <span className={`text-[8.5px] xs:text-[9px] font-black uppercase tracking-wider ${customStyles.textAccent} block whitespace-normal leading-tight mt-0.5`}>
+                      <span className={`text-[6.2px] xs:text-[6.8px] font-black uppercase tracking-tight ${customStyles.textAccent} block whitespace-nowrap leading-tight mt-0.5`}>
                         {card.actionText}
                       </span>
                     </div>
                   </div>
 
-                  <div className="relative z-10 size-6 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 text-white shrink-0">
-                    <ArrowRight className="size-3" />
+                  <div className="relative z-10 size-5 xs:size-5.5 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 text-white shrink-0 group-hover:bg-white group-hover:text-slate-950 transition-colors">
+                    <ArrowRight className="size-2.5 text-white group-hover:text-slate-950" />
                   </div>
                 </motion.div>
               );

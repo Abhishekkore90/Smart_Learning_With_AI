@@ -403,7 +403,7 @@ function ModulePage() {
                   </Link>
                 </div>
               ) : moduleId === "annual-monthly-planning" ? (
-                <AcademicPlanningSystem mode="teacher" />
+                <AcademicPlanningSystem mode="teacher" onBack={() => navigate({ to: "/teacher" })} />
               ) : moduleId === "teaching-record-notebook" ? (
                 <TeachingDiaryManager
                   data={data}

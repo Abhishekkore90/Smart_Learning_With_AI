@@ -1,4 +1,5 @@
 import React from "react";
+import { useLanguage } from "@/hooks/use-language";
 import {
   CardBackgroundThemeLayer,
   RealisticPaperclipSVG,
@@ -323,33 +324,85 @@ export function CustomTemplateFrame({
   const theme = categoryList[themeIndex] || categoryList[0];
   const IconComponent = theme.icon || Sparkles;
 
+  const { lang } = useLanguage();
+  const isMr = lang === "mr";
+
+  const defaultTitlesMr: Record<string, string> = {
+    studentofmonth: "महिन्याचा सर्वोत्कृष्ट विद्यार्थी!",
+    birthday: "वाढदिवसाच्या हार्दिक शुभेच्छा!",
+    idcard: "अधिकृत विद्यार्थी ओळखपत्र",
+    achievement: "प्रशस्तीपत्रक व सन्मान गौरव",
+    result: "वार्षिक प्रगती व निकाल पत्रक",
+    profile: "विद्यार्थी प्रोफाईल डॉझियर",
+    admission: "शाळा प्रवेश स्वागत पत्रक",
+    annual: "वार्षिक स्नेहसंमेलन आमंत्रण",
+    sports: "क्रीडा स्पर्धा विजेते गौरव",
+    cultural: "सांस्कृतिक महोत्सव गौरव",
+  };
+
+  const defaultTitlesEn: Record<string, string> = {
+    studentofmonth: "STUDENT OF THE MONTH",
+    birthday: "HAPPY BIRTHDAY!",
+    idcard: "STUDENT IDENTITY PASS",
+    achievement: "CERTIFICATE OF MERIT",
+    result: "ANNUAL PROGRESS REPORT",
+    profile: "STUDENT SCHOLAR DOSSIER",
+    admission: "ADMISSION WELCOME PASS",
+    annual: "ANNUAL FUNCTION INVITATION",
+    sports: "SPORTS CHAMPION HONORS",
+    cultural: "CULTURAL GALA CELEBRATION",
+  };
+
+  const defaultQuotesMr: Record<string, string> = {
+    birthday: "तुमचे पुढील आयुष्य सुख, समृद्धी आणि यशाने भरलेले जावो! वाढदिवसाच्या मनःपूर्वक शुभेच्छा!",
+    studentofmonth: "आदर्श शिस्त, परिश्रम आणि शैक्षणिक उत्कृष्टतेबद्दल विशेष गौरव व हार्दिक अभिनंदन!",
+    achievement: "अद्वितीय कर्तृत्व, चिकाटी आणि यशाच्या उत्तुंग भरारीबद्दल विशेष सन्मानपत्र.",
+    result: "वार्षिक शैक्षणिक मूल्यमापनात उत्कृष्ट गुणवत्ता आणि विशेष प्राविण्याबद्दल अभिनंदन!",
+    profile: "सर्वसमावेशक शैक्षणिक, बौद्धिक, कला व क्रीडा कौशल्यांची अधिकृत नोंद.",
+    admission: "आमच्या शाळेच्या कुटुंबात आपले मनःपूर्वक स्वागत! उज्वल भविष्यासाठी शुभेच्छा.",
+    annual: "शाळेच्या वार्षिक स्नेहसंमेलनात आपले सहर्ष स्वागत व हार्दिक निमंत्रण.",
+    sports: "क्रीडांगणावरील अजोड पराक्रम, सांघिक निष्ठा आणि क्रीडा भावनांबद्दल हार्दिक गौरव!",
+    cultural: "कला, अभिनय व सांस्कृतिक मंचावरील अप्रतिम सादरीकरणाबद्दल मनःपूर्वक कौतुक!",
+  };
+
+  const defaultQuotesEn: Record<string, string> = {
+    birthday: "May your special day be filled with endless happiness, bright smiles, and magnificent triumphs!",
+    studentofmonth: "Honored for outstanding academic performance, exemplary character, and school leadership.",
+    achievement: "In recognition of exceptional achievement, continuous dedication, and scholastic excellence.",
+    result: "Exemplary scholastic performance and remarkable progress throughout the academic term.",
+    profile: "Dedicated to academic excellence, disciplined leadership, and lifelong learning.",
+    admission: "Welcome to our esteemed institution. A world of infinite knowledge awaits you.",
+    annual: "Cordially inviting you to celebrate the artistic talents and joys of our annual day.",
+    sports: "Saluting supreme athletic grit, indomitable spirit, and championship victory.",
+    cultural: "Commending brilliant stage performance, cultural artistic expression, and passion.",
+  };
+
   const displayTitle =
     cardTitle ||
-    (category === "studentofmonth"
-      ? "STUDENT OF THE MONTH"
-      : category === "birthday"
-        ? "HAPPY BIRTHDAY!"
-        : category === "idcard"
-          ? "STUDENT IDENTITY PASS"
-          : category === "achievement"
-            ? "CERTIFICATE OF MERIT"
-            : category === "result"
-              ? "ANNUAL PROGRESS REPORT"
-              : category === "profile"
-                ? "STUDENT SCHOLAR DOSSIER"
-                : "CELEBRATION OF EXCELLENCE");
+    (isMr
+      ? defaultTitlesMr[category] || "उत्कृष्टतेचा सन्मान सोहळा"
+      : defaultTitlesEn[category] || "CELEBRATION OF EXCELLENCE");
 
   const displayQuote =
     cardQuote ||
-    (category === "birthday"
-      ? "May your special day be filled with endless happiness, bright smiles, and magnificent triumphs!"
-      : category === "studentofmonth"
-        ? "Honored for outstanding academic performance, exemplary character, and school leadership."
-        : category === "achievement"
-          ? "In recognition of exceptional achievement, continuous dedication, and scholastic excellence."
-          : category === "result"
-            ? "Exemplary scholastic performance and remarkable progress throughout the academic term."
-            : "Dedicated to academic excellence, disciplined leadership, and lifelong learning.");
+    (isMr
+      ? defaultQuotesMr[category] || defaultQuotesMr.studentofmonth
+      : defaultQuotesEn[category] || defaultQuotesEn.studentofmonth);
+
+  const effectiveSchoolName =
+    schoolName === "Zilla Parishad Primary School" && isMr
+      ? "जिल्हा परिषद प्राथमिक शाळा"
+      : schoolName;
+
+  const effectiveStudentName =
+    studentName === "SATYAJIT PATIL" && isMr
+      ? "सत्यजित पाटील"
+      : studentName;
+
+  const effectiveStudentClass =
+    (studentClass === "5th" || studentClass === "CLASS 5-A") && isMr
+      ? "इयत्ता ५-वी"
+      : studentClass;
 
   return (
     <div
@@ -388,7 +441,7 @@ export function CustomTemplateFrame({
           </div>
           <div className="text-left">
             <p className="text-[10px] font-black tracking-widest uppercase text-white/75 truncate max-w-[190px]">
-              {schoolName}
+              {effectiveSchoolName}
             </p>
             <p className="text-xs font-black tracking-wider uppercase text-amber-300 drop-shadow-sm">
               {displayTitle}
@@ -420,10 +473,10 @@ export function CustomTemplateFrame({
                   <div className="w-32 h-40 sm:w-36 sm:h-44 bg-white p-2 pb-6 rounded-sm shadow-2xl rotate-[-2deg] relative border border-slate-100 group-hover:scale-105 transition-transform duration-300">
                     <RealisticPaperclipSVG className="absolute -top-3 -left-2 size-7 pointer-events-none z-20" color="#f59e0b" />
                     <div className="w-full h-full overflow-hidden bg-slate-900 border border-slate-200">
-                      <img src={studentPhoto} alt={studentName} className="size-full object-cover" />
+                      <img src={studentPhoto} alt={effectiveStudentName} className="size-full object-cover" />
                     </div>
                     <p className="text-[8px] font-black text-slate-800 tracking-wider uppercase text-center mt-1 truncate">
-                      ★ {studentName} ★
+                      ★ {effectiveStudentName} ★
                     </p>
                   </div>
                 );
@@ -433,7 +486,7 @@ export function CustomTemplateFrame({
                 return (
                   <div className="w-32 h-40 sm:w-36 sm:h-44 rounded-t-[5rem] rounded-b-xl p-1.5 bg-gradient-to-t from-amber-500 via-yellow-200 to-amber-400 shadow-2xl border border-white relative group-hover:scale-105 transition-transform duration-300">
                     <div className="w-full h-full rounded-t-[4.5rem] rounded-b-lg overflow-hidden bg-slate-900">
-                      <img src={studentPhoto} alt={studentName} className="size-full object-cover" />
+                      <img src={studentPhoto} alt={effectiveStudentName} className="size-full object-cover" />
                     </div>
                   </div>
                 );
@@ -444,7 +497,7 @@ export function CustomTemplateFrame({
                   <div className="size-full rounded-full overflow-hidden border border-amber-950/20 shadow-inner">
                     <img
                       src={studentPhoto}
-                      alt={studentName}
+                      alt={effectiveStudentName}
                       className="size-full object-cover"
                     />
                   </div>
@@ -453,7 +506,7 @@ export function CustomTemplateFrame({
                   {sticker === "crown" && (
                     <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 border border-white text-[8px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md whitespace-nowrap">
                       <Crown className="size-2.5 fill-amber-950" />
-                      <span>{category === "birthday" ? "BIRTHDAY STAR" : category === "studentofmonth" ? "TOP SCHOLAR" : "HONORED"}</span>
+                      <span>{category === "birthday" ? (isMr ? "वाढदिवस स्टार" : "BIRTHDAY STAR") : category === "studentofmonth" ? (isMr ? "सर्वोत्कृष्ट विद्यार्थी" : "TOP SCHOLAR") : (isMr ? "सन्मानित" : "HONORED")}</span>
                     </div>
                   )}
 
@@ -483,7 +536,7 @@ export function CustomTemplateFrame({
         />
 
         <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-white/60 mb-0.5">
-          Presented To
+          {isMr ? "सादर गौरव" : "Presented To"}
         </p>
 
         {/* Large Bold Student Name in Gradient Typography */}
@@ -504,11 +557,11 @@ export function CustomTemplateFrame({
           <div className="flex items-center gap-2 mt-1.5">
             <span className="text-[10px] font-extrabold bg-pink-500/20 text-pink-200 border border-pink-400/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
               <PartyPopper className="size-3 text-pink-300" />
-              Special Celebration
+              {isMr ? "विशेष सोहळा" : "Special Celebration"}
             </span>
             <span className="text-[10px] font-extrabold bg-amber-500/20 text-amber-200 border border-amber-400/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
               <Cake className="size-3 text-amber-300" />
-              Joy & Blessings
+              {isMr ? "आनंद व शुभाशीर्वाद" : "Joy & Blessings"}
             </span>
           </div>
         )}
@@ -519,7 +572,7 @@ export function CustomTemplateFrame({
               <Star key={i} className="size-3 fill-amber-300 text-amber-300" />
             ))}
             <span className="text-[10px] font-black tracking-wider text-white/90 ml-1">
-              STAR SCHOLAR
+              {isMr ? "स्टार स्कॉलर" : "STAR SCHOLAR"}
             </span>
           </div>
         )}
@@ -527,10 +580,10 @@ export function CustomTemplateFrame({
         {category === "idcard" && (
           <div className="flex items-center gap-2 mt-1.5">
             <span className="text-[10px] font-mono font-bold bg-white/10 px-2.5 py-0.5 rounded-md border border-white/20 text-cyan-200">
-              DOB: {dob}
+              {isMr ? "जन्मदिनांक: " : "DOB: "}{dob}
             </span>
             <span className="text-[10px] font-mono font-bold bg-white/10 px-2.5 py-0.5 rounded-md border border-white/20 text-amber-200">
-              ID: {barcodeNumber}
+              {isMr ? "आयडी: " : "ID: "}{barcodeNumber}
             </span>
           </div>
         )}
@@ -539,7 +592,7 @@ export function CustomTemplateFrame({
           <div className="flex items-center gap-2 mt-1.5">
             <span className="text-[10px] font-extrabold bg-amber-500/25 text-amber-200 border border-amber-400/40 px-3 py-0.5 rounded-full flex items-center gap-1">
               <Medal className="size-3 text-amber-300" />
-              Outstanding Distinction
+              {isMr ? "विशेष गुणवत्ता सन्मान" : "Outstanding Distinction"}
             </span>
           </div>
         )}
@@ -547,10 +600,10 @@ export function CustomTemplateFrame({
         {category === "result" && (
           <div className="flex items-center gap-2 mt-1.5">
             <span className="text-[10px] font-black bg-emerald-500/25 text-emerald-200 border border-emerald-400/40 px-2.5 py-0.5 rounded-full">
-              Grade: {grade}
+              {isMr ? "श्रेणी: " : "Grade: "}{grade}
             </span>
             <span className="text-[10px] font-black bg-purple-500/25 text-purple-200 border border-purple-400/40 px-2.5 py-0.5 rounded-full">
-              Score: {obtainedMarks}/{totalMarks} ({percentage})
+              {isMr ? "गुण: " : "Score: "}{obtainedMarks}/{totalMarks} ({percentage})
             </span>
           </div>
         )}
@@ -566,14 +619,14 @@ export function CustomTemplateFrame({
         <div className="flex items-center gap-2">
           <div className="px-3.5 py-1 rounded-full bg-white/12 backdrop-blur-md border border-white/20 shadow-sm">
             <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-300">
-              Class : {studentClass} {rollNo ? `| Roll : ${rollNo}` : ""}
+              {isMr ? "इयत्ता : " : "Class : "}{effectiveStudentClass} {rollNo ? `| ${isMr ? "हजेरी क्र. : " : "Roll : "}${rollNo}` : ""}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-white/70 bg-black/25 px-2.5 py-1 rounded-full border border-white/10">
           <CheckCircle2 className="size-3 text-emerald-400" />
-          <span>Official Award</span>
+          <span>{isMr ? "अधिकृत गौरव" : "Official Award"}</span>
         </div>
       </div>
 

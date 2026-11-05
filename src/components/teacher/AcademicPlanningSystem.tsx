@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Link } from "@tanstack/react-router";
 import { auth, db, storage } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, getDoc, setDoc, onSnapshot, collection, deleteDoc } from "firebase/firestore";
@@ -2753,17 +2754,33 @@ export function AcademicPlanningSystem({
 
   return (
     <div className="w-full min-h-screen bg-slate-50 text-slate-800 p-2 sm:p-4 md:p-6 font-sans">
+      {/* Back to Teacher Dashboard Breadcrumb Button */}
+      <div className="w-full flex items-center justify-between mb-3 px-1">
+        <Link
+          to={mode === "admin" ? "/admin" : "/teacher"}
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200/90 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+        >
+          <ArrowLeft className="size-4 text-amber-600" />
+          <span>{mode === "admin" ? "← अ‍ॅडमिन डॅशबोर्डवर जा (Admin Dashboard)" : "← मुख्य डॅशबोर्ड (Back to Teacher Dashboard)"}</span>
+        </Link>
+      </div>
+
       {/* Top Header Bar */}
       <div className="w-full max-w-full mx-auto mb-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white rounded-3xl p-6 shadow-xl border border-indigo-900/50 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="p-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer border border-white/10 active:scale-95"
-            >
-              <ArrowLeft className="size-5" />
-            </button>
-          )}
+          <Link
+            to={mode === "admin" ? "/admin" : "/teacher"}
+            onClick={(e) => {
+              if (onBack) {
+                e.preventDefault();
+                onBack();
+              }
+            }}
+            className="p-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer border border-white/10 active:scale-95 flex items-center justify-center shrink-0"
+            title="डॅशबोर्डवर परत जा (Back to Dashboard)"
+          >
+            <ArrowLeft className="size-5 text-amber-300" />
+          </Link>
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30 text-[10px] font-black uppercase tracking-wider">

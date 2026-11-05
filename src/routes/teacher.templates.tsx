@@ -31,6 +31,7 @@ const CATEGORIES = [
     titleHi: "स्कूल आईडी कार्ड",
     titleEn: "School ID Card",
     descMr: "बारकोड व गोल्ड फ्रेमसह डिजिटल आयडी",
+    descEn: "Digital ID with barcode, photo and gold frame",
     to: "/teacher/templates/idcard",
     icon: CreditCard,
     color: "from-amber-700 via-rose-800 to-amber-900",
@@ -40,6 +41,7 @@ const CATEGORIES = [
     border: "border-amber-400/30",
     textLight: "text-amber-200",
     badge: "3D Realistic",
+    badgeMr: "३D वास्तववादी",
   },
   {
     id: "studentofmonth",
@@ -47,6 +49,7 @@ const CATEGORIES = [
     titleHi: "महीने का छात्र",
     titleEn: "Student of the Month",
     descMr: "रॉयल मुकुट, ट्रॉफी व स्टेज लाईट्स",
+    descEn: "Royal crown, stage spotlights & gold trophy",
     to: "/teacher/templates/studentofmonth",
     icon: Crown,
     color: "from-indigo-900 via-blue-900 to-slate-950",
@@ -56,13 +59,15 @@ const CATEGORIES = [
     border: "border-indigo-400/30",
     textLight: "text-indigo-200",
     badge: "Royale Gold",
+    badgeMr: "रॉयल गोल्ड",
   },
   {
     id: "birthday",
     titleMr: "वाढदिवस शुभेच्छा (Birthday Wishes)",
     titleHi: "जन्मदिन शुभकामनाएं",
-    titleEn: "Happy Birthday",
+    titleEn: "Happy Birthday Wishes",
     descMr: "पोलारॉइड फोटो, ३D केक व फुगे",
+    descEn: "Polaroid photo, 3D cake & celebration balloons",
     to: "/teacher/templates/birthday",
     icon: Cake,
     color: "from-rose-500 via-pink-500 to-fuchsia-600",
@@ -72,6 +77,7 @@ const CATEGORIES = [
     border: "border-pink-300/30",
     textLight: "text-pink-100",
     badge: "3D Polaroid",
+    badgeMr: "३D पोलारॉइड",
   },
   {
     id: "achievement",
@@ -79,6 +85,7 @@ const CATEGORIES = [
     titleHi: "प्रशस्ति पत्र",
     titleEn: "Achievement Certificate",
     descMr: "गोल्ड मेडल, रिबन व क्लासिक फ्रेम",
+    descEn: "Gold medal, satin ribbon & classic border",
     to: "/teacher/templates/achievement",
     icon: Award,
     color: "from-slate-900 via-blue-950 to-amber-950",
@@ -88,13 +95,15 @@ const CATEGORIES = [
     border: "border-yellow-400/30",
     textLight: "text-amber-200",
     badge: "Gold Seal",
+    badgeMr: "गोल्ड सील",
   },
   {
     id: "profile",
     titleMr: "विद्यार्थी प्रोफाइल (Student Profile)",
     titleHi: "छात्र प्रोफ़ाइल",
-    titleEn: "Student Profile",
+    titleEn: "Student Profile Dossier",
     descMr: "माहिती व ३D छंद/क्रीडा कार्ड्स",
+    descEn: "Detailed bio, hobby badges & sports dossier",
     to: "/teacher/templates/profile",
     icon: User,
     color: "from-amber-600 via-orange-600 to-yellow-600",
@@ -104,13 +113,15 @@ const CATEGORIES = [
     border: "border-orange-300/30",
     textLight: "text-orange-100",
     badge: "Modern Bio",
+    badgeMr: "मॉडर्न बायो",
   },
   {
     id: "result",
     titleMr: "निकाल व प्रगती (Result Card)",
     titleHi: "रिजल्ट व प्रगति पत्र",
-    titleEn: "Result / Progress Card",
+    titleEn: "Result & Progress Card",
     descMr: "रॉयल शील्ड, ग्रेड व गुणतक्ता",
+    descEn: "Royal shield crest, subject marks & grade",
     to: "/teacher/templates/result",
     icon: Trophy,
     color: "from-purple-900 via-violet-900 to-indigo-950",
@@ -120,13 +131,15 @@ const CATEGORIES = [
     border: "border-purple-400/30",
     textLight: "text-purple-200",
     badge: "Shield Crest",
+    badgeMr: "शील्ड क्रेस्ट",
   },
   {
     id: "admission",
     titleMr: "प्रवेश स्वागत (Admission)",
     titleHi: "प्रवेश स्वागत",
-    titleEn: "Admission Welcome",
+    titleEn: "Admission Welcome Banner",
     descMr: "शाळा प्रवेश जाहिरात व स्वागत पत्रक",
+    descEn: "School enrollment greetings & welcome brochure",
     to: "/teacher/templates/admission",
     icon: GraduationCap,
     color: "from-blue-600 via-cyan-600 to-teal-700",
@@ -136,13 +149,15 @@ const CATEGORIES = [
     border: "border-cyan-300/30",
     textLight: "text-cyan-100",
     badge: "Welcome",
+    badgeMr: "स्वागत पत्रक",
   },
   {
     id: "sports",
     titleMr: "क्रीडा स्पर्धा (Sports Day)",
     titleHi: "खेलकूद दिवस",
-    titleEn: "Sports Day",
+    titleEn: "Sports Day Honors",
     descMr: "विजयी खेळाडू गौरव व आमंत्रण",
+    descEn: "Championship athlete victory & event invitation",
     to: "/teacher/templates/sports",
     icon: Flag,
     color: "from-red-600 via-orange-600 to-amber-700",
@@ -152,13 +167,15 @@ const CATEGORIES = [
     border: "border-red-400/30",
     textLight: "text-red-100",
     badge: "Victory",
+    badgeMr: "विजेता गौरव",
   },
   {
     id: "annual",
     titleMr: "वार्षिक स्नेहसंमेलन (Annual)",
     titleHi: "वार्षिक स्नेह सम्मेलन",
-    titleEn: "Annual Function",
+    titleEn: "Annual Function Invitation",
     descMr: "वार्षिक स्नेहसंमेलन आमंत्रण पत्रिका",
+    descEn: "Annual day grand stage invitation letter",
     to: "/teacher/templates/annual",
     icon: Sparkles,
     color: "from-teal-700 via-emerald-800 to-slate-900",
@@ -168,13 +185,15 @@ const CATEGORIES = [
     border: "border-teal-300/30",
     textLight: "text-teal-100",
     badge: "Grand Stage",
+    badgeMr: "भव्य स्टेज",
   },
   {
     id: "cultural",
     titleMr: "सांस्कृतिक महोत्सव (Cultural)",
     titleHi: "सांस्कृतिक कार्यक्रम",
-    titleEn: "Cultural Gathering",
+    titleEn: "Cultural Gathering Honors",
     descMr: "नाट्य, नृत्य व कला महोत्सव",
+    descEn: "Theatre, dance, music & fine arts celebration",
     to: "/teacher/templates/cultural",
     icon: Music,
     color: "from-fuchsia-700 via-pink-700 to-rose-900",
@@ -184,13 +203,14 @@ const CATEGORIES = [
     border: "border-fuchsia-300/30",
     textLight: "text-fuchsia-100",
     badge: "Festive",
+    badgeMr: "उत्सव",
   },
 ];
 
 function TemplatesLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { lang } = useLanguage();
+  const { lang, setLang } = useLanguage();
   // Per-card 3D tilt state: cardId → { rotX, rotY, shimmerX, shimmerY }
   const [tilts, setTilts] = useState<Record<string, { rx: number; ry: number; sx: number; sy: number }>>({});
 
@@ -229,15 +249,47 @@ function TemplatesLayout() {
             defaultTitle="शुभेच्छा व कार्यक्रम पत्रिका टेम्पलेट्स (Templates)"
           >
             <div className="p-4 md:p-8 w-full max-w-7xl mx-auto space-y-8 flex flex-col justify-center min-h-[calc(100vh-8rem)]">
-              <div className="flex items-center justify-between gap-4 w-full">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full bg-white/80 backdrop-blur-md p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm">
                 <Link
                   to="/teacher"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer self-start sm:self-auto"
                 >
-                  <ArrowLeft className="size-4" /> मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)
+                  <ArrowLeft className="size-4" /> {lang === "mr" ? "मुख्य डॅशबोर्डवर मागे जा" : "Back to Teacher Dashboard"}
                 </Link>
-                <span className="text-xs font-black px-3.5 py-1.5 bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 rounded-full shadow-md">
-                  ✨ 3D Ultra-Realistic Posters
+
+                {/* Prominent Language Selector */}
+                <div className="flex items-center gap-1.5 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+                  <span className="text-[11px] font-extrabold text-slate-500 uppercase px-2.5 hidden md:inline">
+                    {lang === "mr" ? "भाषा निवडा :" : "Language :"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setLang("mr")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      lang === "mr"
+                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/30 scale-[1.03]"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
+                    }`}
+                  >
+                    <span className="text-sm">🇮🇳</span>
+                    <span>मराठी (Marathi)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLang("en")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      lang === "en"
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/30 scale-[1.03]"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-white/80"
+                    }`}
+                  >
+                    <span className="text-sm">🇬🇧</span>
+                    <span>English</span>
+                  </button>
+                </div>
+
+                <span className="text-xs font-black px-3.5 py-1.5 bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 rounded-full shadow-md self-end sm:self-auto">
+                  {lang === "mr" ? "✨ ३D वास्तववादी पोस्टर्स" : "✨ 3D Ultra-Realistic Posters"}
                 </span>
               </div>
 
@@ -264,6 +316,8 @@ function TemplatesLayout() {
                       : lang === "hi"
                         ? cat.titleHi
                         : cat.titleEn;
+                  const desc = lang === "mr" ? cat.descMr : cat.descEn;
+                  const badgeText = lang === "mr" ? cat.badgeMr : cat.badge;
                   const tilt = tilts[cat.id] || { rx: 0, ry: 0, sx: 50, sy: 30 };
 
                   return (
@@ -353,7 +407,7 @@ function TemplatesLayout() {
                               backdropFilter: "blur(8px)",
                             }}
                           >
-                            {cat.badge}
+                            {badgeText}
                           </span>
                         </div>
 
@@ -363,7 +417,7 @@ function TemplatesLayout() {
                             {title}
                           </h3>
                           <p className={`text-[11px] ${cat.textLight} font-medium line-clamp-1 opacity-80`}>
-                            {cat.descMr}
+                            {desc}
                           </p>
                         </div>
 
