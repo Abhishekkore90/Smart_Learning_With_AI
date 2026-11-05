@@ -370,7 +370,7 @@ function LandingPage() {
       </div>
 
       {/* Main Container */}
-      <main className="relative z-10 pb-16 md:pb-24 px-4 md:px-8 max-w-[1380px] mx-auto">
+      <main className="relative z-10 pb-16 md:pb-24 px-3 xs:px-4 md:px-8 max-w-[1380px] mx-auto">
         {/* Feature Cards Grid (4 Columns) - Positioned below the Hero section */}
         <motion.div
           initial="hidden"
@@ -382,7 +382,7 @@ function LandingPage() {
               transition: { staggerChildren: 0.12, delayChildren: 0.4 },
             },
           }}
-          className="mt-12 sm:mt-16 md:mt-24 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7 sm:gap-8 w-full"
+          className="mt-8 sm:mt-16 md:mt-24 grid grid-cols-2 lg:grid-cols-4 gap-2.5 xs:gap-3.5 sm:gap-6 lg:gap-8 w-full"
         >
           {landingCards.map((card, index) => {
             const Icon = card.icon;
@@ -429,13 +429,13 @@ function LandingPage() {
                   scale: 1.02,
                   transition: { type: "spring", stiffness: 400, damping: 18 },
                 }}
-                className={`relative text-left group transition-all duration-500 flex flex-col justify-between h-full min-h-[220px] rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] overflow-hidden ${customStyles.glowBg} ${customStyles.glowBorder}`}
+                className={`relative text-left group transition-all duration-500 flex flex-col justify-between h-full min-h-[160px] sm:min-h-[220px] rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md sm:shadow-xl hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] overflow-hidden ${customStyles.glowBg} ${customStyles.glowBorder}`}
               >
                 {/* Moving Shimmer / Gloss Light Beam across card */}
                 <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-transparent via-white/40 dark:via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out z-10 pointer-events-none" />
 
                 {/* Glowing Neon Outline Border Effect */}
-                <div className={`absolute -inset-px rounded-3xl bg-gradient-to-r ${customStyles.gradient} opacity-0 group-hover:opacity-40 transition-opacity duration-500 blur-sm z-0`} />
+                <div className={`absolute -inset-px rounded-2xl sm:rounded-3xl bg-gradient-to-r ${customStyles.gradient} opacity-0 group-hover:opacity-40 transition-opacity duration-500 blur-sm z-0`} />
 
                 {/* Soft Background Fill on Hover */}
                 <div className={`absolute inset-0 ${card.softBg} opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0`} />
@@ -449,18 +449,18 @@ function LandingPage() {
                       navigate({ to: card.to as any, search: (card as any).search });
                     }
                   }}
-                  className="relative z-20 p-5 sm:p-7 flex flex-col gap-3.5 sm:gap-4 h-full w-full cursor-pointer"
+                  className="relative z-20 p-2.5 xs:p-3 sm:p-6 md:p-7 flex flex-col gap-2 xs:gap-2.5 sm:gap-4 h-full w-full cursor-pointer"
                 >
                   {/* 1. Top Header: Icon & Title & Mobile Expand Button */}
-                  <div className="flex items-start sm:items-center justify-between gap-2.5">
-                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1 xs:gap-1.5 sm:gap-2.5">
+                    <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 min-w-0 flex-1">
                       <div
-                        className={`size-10 sm:size-12 rounded-2xl ${card.softBg} ${card.iconColor} flex items-center justify-center shadow-md border border-white/50 transition-all duration-500 group-hover:bg-white group-hover:shadow-lg group-hover:scale-110 shrink-0`}
+                        className={`size-6 xs:size-7 sm:size-12 rounded-lg xs:rounded-xl sm:rounded-2xl ${card.softBg} ${card.iconColor} flex items-center justify-center shadow-xs sm:shadow-md border border-white/50 transition-all duration-500 group-hover:bg-white group-hover:shadow-lg group-hover:scale-110 shrink-0`}
                       >
-                        <Icon size={22} className="transition-transform duration-500" strokeWidth={2.2} />
+                        <Icon className="size-3 xs:size-3.5 sm:size-5.5 transition-transform duration-500" strokeWidth={2.2} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-snug group-hover:text-slate-950 dark:group-hover:text-white break-words">
+                        <h3 className="text-[11px] xs:text-xs sm:text-lg md:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight group-hover:text-slate-950 dark:group-hover:text-white break-words">
                           {card.title}
                         </h3>
                       </div>
@@ -472,27 +472,26 @@ function LandingPage() {
                         e.stopPropagation();
                         setGridExpandedIndex(isGridExpanded ? null : index);
                       }}
-                      className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900 px-2 sm:px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-800 flex items-center gap-1 transition-all shrink-0 self-start sm:self-center"
+                      className="text-[7.5px] xs:text-[8.5px] sm:text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 hover:bg-amber-100 dark:hover:bg-amber-900 px-1 xs:px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-amber-200/80 dark:border-amber-800 flex items-center gap-0.5 xs:gap-1 transition-all shrink-0"
                     >
-                      <span className="hidden xs:inline">{isGridExpanded ? "कमी करा" : "सविस्तर माहिती"}</span>
-                      <span className="xs:hidden">{isGridExpanded ? "कमी" : "माहिती"}</span>
-                      <ChevronDown className={`size-3 transition-transform ${isGridExpanded ? "rotate-180" : "animate-bounce"}`} />
+                      <span>{isGridExpanded ? "कमी करा" : "सविस्तर माहिती"}</span>
+                      <ChevronDown className={`size-2 xs:size-2.5 sm:size-3 transition-transform ${isGridExpanded ? "rotate-180" : ""}`} />
                     </button>
                   </div>
 
                   {/* 2. Entering Action Button shifted to UPSIDE (Below Title/Icon) */}
-                  <div className="py-2.5 px-3.5 sm:py-3 sm:px-4 rounded-xl sm:rounded-2xl bg-slate-900 dark:bg-slate-800 group-hover:bg-slate-950 dark:group-hover:bg-slate-700 text-white border border-slate-800 dark:border-slate-700 flex items-center justify-between gap-2 transition-all duration-300 shadow-sm">
-                    <span className="text-[11px] sm:text-[12px] font-black uppercase tracking-[0.12em] text-white">
+                  <div className="py-1.5 px-2 xs:py-1.5 xs:px-2.5 sm:py-3 sm:px-4 rounded-lg xs:rounded-xl sm:rounded-2xl bg-slate-900 dark:bg-slate-800 group-hover:bg-slate-950 dark:group-hover:bg-slate-700 text-white border border-slate-800 dark:border-slate-700 flex items-center justify-between gap-1 xs:gap-2 transition-all duration-300 shadow-xs sm:shadow-sm">
+                    <span className="text-[7.5px] xs:text-[8.5px] sm:text-[12px] font-black uppercase tracking-[0.06em] sm:tracking-[0.12em] text-white truncate">
                       {card.actionText}
                     </span>
-                    <div className="size-6 sm:size-7 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-sm text-white group-hover:bg-white group-hover:text-slate-900">
-                      <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform duration-300" strokeWidth={2.5} />
+                    <div className="size-4 xs:size-4.5 sm:size-7 shrink-0 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center transition-all duration-300 group-hover:scale-110 shadow-xs sm:shadow-sm text-white group-hover:bg-white group-hover:text-slate-900">
+                      <ArrowRight className="size-2 xs:size-2.5 sm:size-3.5 group-hover:translate-x-0.5 transition-transform duration-300" strokeWidth={2.5} />
                     </div>
                   </div>
 
                   {/* 3. Information / Description shown DOWN under the button */}
-                  <div className="pt-2 sm:pt-2.5 border-t border-slate-200/80 dark:border-slate-800 flex-1 flex flex-col justify-start">
-                    <p className={`text-slate-700 dark:text-slate-300 text-xs sm:text-[13px] font-medium leading-relaxed tracking-wide group-hover:text-slate-900 dark:group-hover:text-slate-100 transition-all duration-500 whitespace-pre-line ${isGridExpanded ? "line-clamp-none text-slate-950 dark:text-white font-semibold" : "line-clamp-3 group-hover:line-clamp-none"}`}>
+                  <div className="pt-1 sm:pt-2.5 border-t border-slate-200/80 dark:border-slate-800 flex-1 flex flex-col justify-start">
+                    <p className={`text-slate-700 dark:text-slate-300 text-[8.5px] xs:text-[9.5px] sm:text-[13px] font-medium leading-relaxed tracking-wide group-hover:text-slate-900 dark:group-hover:text-slate-100 transition-all duration-500 whitespace-pre-line ${isGridExpanded ? "line-clamp-none text-slate-950 dark:text-white font-semibold" : "line-clamp-2 group-hover:line-clamp-none"}`}>
                       {card.desc}
                     </p>
                   </div>
