@@ -451,31 +451,51 @@ function LandingPage() {
                   }}
                   className="relative z-20 p-2.5 xs:p-3 sm:p-6 md:p-7 flex flex-col gap-2 xs:gap-2.5 sm:gap-4 h-full w-full cursor-pointer"
                 >
-                  {/* 1. Top Header: Icon & Title & Mobile Expand Button */}
-                  <div className="flex items-center justify-between gap-1 xs:gap-1.5 sm:gap-2.5">
-                    <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 min-w-0 flex-1">
+                  {/* 1. Top Header: Option 1 Stacked on Mobile (Icon + Badge on row 1, Full Width Title on row 2), Inline on Desktop */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2.5">
+                    {/* Top row: Icon & (on mobile: Badge, on desktop: Title) */}
+                    <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 min-w-0 w-full sm:w-auto">
                       <div
-                        className={`size-6 xs:size-7 sm:size-12 rounded-lg xs:rounded-xl sm:rounded-2xl ${card.softBg} ${card.iconColor} flex items-center justify-center shadow-xs sm:shadow-md border border-white/50 transition-all duration-500 group-hover:bg-white group-hover:shadow-lg group-hover:scale-110 shrink-0`}
+                        className={`size-7 xs:size-8 sm:size-12 rounded-xl sm:rounded-2xl ${card.softBg} ${card.iconColor} flex items-center justify-center shadow-xs sm:shadow-md border border-white/50 transition-all duration-500 group-hover:bg-white group-hover:shadow-lg group-hover:scale-110 shrink-0`}
                       >
-                        <Icon className="size-3 xs:size-3.5 sm:size-5.5 transition-transform duration-500" strokeWidth={2.2} />
+                        <Icon className="size-3.5 xs:size-4 sm:size-5.5 transition-transform duration-500" strokeWidth={2.2} />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-[11px] xs:text-xs sm:text-lg md:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight group-hover:text-slate-950 dark:group-hover:text-white break-words">
-                          {card.title}
-                        </h3>
-                      </div>
+
+                      {/* Desktop Title (Inline beside icon) */}
+                      <h3 className="hidden sm:block text-base sm:text-lg md:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-snug group-hover:text-slate-950 dark:group-hover:text-white break-words">
+                        {card.title}
+                      </h3>
+
+                      {/* Mobile Badge (Aligned to top right on row 1) */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGridExpandedIndex(isGridExpanded ? null : index);
+                        }}
+                        className="sm:hidden text-[8px] xs:text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 hover:bg-amber-100 dark:hover:bg-amber-900 px-1.5 xs:px-2 py-0.5 rounded-full border border-amber-200/80 dark:border-amber-800 flex items-center gap-0.5 xs:gap-1 transition-all shrink-0"
+                      >
+                        <span>{isGridExpanded ? "कमी करा" : "सविस्तर माहिती"}</span>
+                        <ChevronDown className={`size-2.5 transition-transform ${isGridExpanded ? "rotate-180" : ""}`} />
+                      </button>
                     </div>
 
+                    {/* Mobile Title (Full width on row 2 without being squeezed by badge) */}
+                    <h3 className="sm:hidden text-[12px] xs:text-[13px] font-black text-slate-900 dark:text-white tracking-tight leading-tight group-hover:text-slate-950 dark:group-hover:text-white break-normal">
+                      {card.title}
+                    </h3>
+
+                    {/* Desktop Badge (Aligned to right) */}
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setGridExpandedIndex(isGridExpanded ? null : index);
                       }}
-                      className="text-[7.5px] xs:text-[8.5px] sm:text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 hover:bg-amber-100 dark:hover:bg-amber-900 px-1 xs:px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-amber-200/80 dark:border-amber-800 flex items-center gap-0.5 xs:gap-1 transition-all shrink-0"
+                      className="hidden sm:flex text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 hover:bg-amber-100 dark:hover:bg-amber-900 px-2.5 py-1 rounded-full border border-amber-200/80 dark:border-amber-800 items-center gap-1 transition-all shrink-0 self-center"
                     >
                       <span>{isGridExpanded ? "कमी करा" : "सविस्तर माहिती"}</span>
-                      <ChevronDown className={`size-2 xs:size-2.5 sm:size-3 transition-transform ${isGridExpanded ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`size-3 transition-transform ${isGridExpanded ? "rotate-180" : ""}`} />
                     </button>
                   </div>
 
