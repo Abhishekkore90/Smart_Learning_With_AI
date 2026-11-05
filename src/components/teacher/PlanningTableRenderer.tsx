@@ -3238,16 +3238,16 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                 : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">अध्ययन अनुभवाचे स्वरूप</span>';
             } else if (idx === 5) {
               th.style.width = "105px";
-              th.style.padding = "4px 1px";
+              th.style.padding = "6px 2px";
               th.innerHTML = isSecEng
-                ? '<span style="display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;font-size:13px;font-weight:900;color:#000000;"><span style="white-space:nowrap;">Tool &amp;</span><span style="white-space:nowrap;">Technique</span></span>'
-                : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;">साधन तंत्रे</span>';
+                ? '<span style="display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;font-size:14px;font-weight:900;color:#000000;"><span style="white-space:nowrap;">Tool &amp;</span><span style="white-space:nowrap;">Technique</span></span>'
+                : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;line-height:1.25;">साधन तंत्रे</span>';
             } else if (idx === 6) {
               th.style.width = "125px";
-              th.style.padding = "4px 1px";
+              th.style.padding = "6px 2px";
               th.innerHTML = isSecEng
-                ? '<span style="display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;font-size:13px;font-weight:900;color:#000000;"><span style="white-space:nowrap;">Educational</span><span style="white-space:nowrap;">Instrument</span></span>'
-                : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14px;font-weight:900;color:#000000;">शैक्षणिक साहित्य</span>';
+                ? '<span style="display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;font-size:14px;font-weight:900;color:#000000;"><span style="white-space:nowrap;">Educational</span><span style="white-space:nowrap;">Instrument</span></span>'
+                : '<span style="display:block;white-space:nowrap;word-break:keep-all;font-size:14.5px;font-weight:900;color:#000000;line-height:1.25;">शैक्षणिक साहित्य</span>';
             }
           });
 
@@ -3256,10 +3256,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             const cIdx = cIdxAttr !== null ? parseInt(cIdxAttr, 10) : -1;
             tdEl.style.wordBreak = "normal";
             tdEl.style.overflowWrap = "break-word";
-            tdEl.style.fontSize = isSecEng ? "11px" : "11.5px";
+            tdEl.style.fontSize = isSecEng ? "11.5px" : "12px";
             tdEl.style.fontWeight = "600";
             tdEl.style.color = "#000000";
             tdEl.style.lineHeight = isSecEng ? "1.25" : "1.3";
+            tdEl.style.fontFamily = isSecEng
+              ? "Inter, system-ui, -apple-system, sans-serif"
+              : "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
             tdEl.style.width = "";
             tdEl.style.minWidth = "";
             tdEl.style.maxWidth = "";
@@ -3269,12 +3272,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               tdEl.style.fontWeight = "900";
               tdEl.style.padding = isSecEng ? "2.5px 2px" : "3px 2px";
               tdEl.style.fontSize = "12px";
-            } else if (cIdx === 5) {
-              tdEl.style.textAlign = "center";
-              tdEl.style.fontWeight = "800";
-              tdEl.style.fontSize = "14px";
-              tdEl.style.padding = isSecEng ? "2px 2px" : "2px 2px";
-            } else if (cIdx === 1 || cIdx === 2 || cIdx === 3 || cIdx === 6) {
+            } else if (cIdx === 1 || cIdx === 2 || cIdx === 3 || cIdx === 5 || cIdx === 6) {
               tdEl.style.textAlign = "center";
               tdEl.style.padding = isSecEng ? "2.5px 3px" : "3px 3px";
             } else {
@@ -3289,52 +3287,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               el.style.fontWeight = "inherit";
               el.style.color = "#000000";
               el.style.lineHeight = "inherit";
+              el.style.fontFamily = "inherit";
             });
-
-            // For "साधन तंत्रे" / "Tool & Technique" (cIdx === 5): Uniform 14px bold styling for all cells
-            // so single-line (तोंडीकाम, वर्गकार्य) and multi-line (प्रात्यक्षिक, / कृती) look completely identical,
-            // fitting neatly into 2 lines with line-height 1.15 without increasing column width or row height.
-            if (cIdx === 5) {
-              const rawTxt = tdEl.textContent?.trim() || "";
-              if (rawTxt) {
-                if (rawTxt.includes(",")) {
-                  const parts = rawTxt.split(",").map((p: string) => p.trim()).filter(Boolean);
-                  if (parts.length > 1) {
-                    tdEl.innerHTML = parts
-                      .map((p: string, pIdx: number) => {
-                        const comma = pIdx < parts.length - 1 ? "," : "";
-                        return `<span style="display:block;white-space:nowrap;line-height:1.15;font-size:14px;font-weight:800;color:#000000;text-align:center;">${p}${comma}</span>`;
-                      })
-                      .join("");
-                  } else {
-                    tdEl.innerHTML = `<span style="display:block;white-space:nowrap;line-height:1.2;font-size:14px;font-weight:800;color:#000000;text-align:center;">${rawTxt}</span>`;
-                  }
-                } else if (rawTxt.includes("/")) {
-                  const parts = rawTxt.split("/").map((p: string) => p.trim()).filter(Boolean);
-                  if (parts.length > 1) {
-                    tdEl.innerHTML = parts
-                      .map((p: string, pIdx: number) => {
-                        const slash = pIdx < parts.length - 1 ? " /" : "";
-                        return `<span style="display:block;white-space:nowrap;line-height:1.15;font-size:14px;font-weight:800;color:#000000;text-align:center;">${p}${slash}</span>`;
-                      })
-                      .join("");
-                  } else {
-                    tdEl.innerHTML = `<span style="display:block;white-space:nowrap;line-height:1.2;font-size:14px;font-weight:800;color:#000000;text-align:center;">${rawTxt}</span>`;
-                  }
-                } else if (rawTxt.includes(" ") && rawTxt.length > 9) {
-                  const parts = rawTxt.split(/\s+/).map((p: string) => p.trim()).filter(Boolean);
-                  if (parts.length > 1) {
-                    tdEl.innerHTML = parts
-                      .map((p: string) => `<span style="display:block;white-space:nowrap;line-height:1.15;font-size:14px;font-weight:800;color:#000000;text-align:center;">${p}</span>`)
-                      .join("");
-                  } else {
-                    tdEl.innerHTML = `<span style="display:block;white-space:nowrap;line-height:1.2;font-size:14px;font-weight:800;color:#000000;text-align:center;">${rawTxt}</span>`;
-                  }
-                } else {
-                  tdEl.innerHTML = `<span style="display:block;white-space:nowrap;line-height:1.2;font-size:14px;font-weight:800;color:#000000;text-align:center;">${rawTxt}</span>`;
-                }
-              }
-            }
           });
                 } else {
           // Annual Planning: Enforce consistent desktop columns and font sizes in PDF across Web and WebView
@@ -3607,12 +3561,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             clonedTr.style.height = "auto";
             clonedTr.querySelectorAll("td").forEach((td) => {
               td.style.verticalAlign = "middle";
-              const cIdxAttr = td.getAttribute("data-cidx");
-              if (cIdxAttr === "5") {
-                td.style.padding = isSecEng ? "2px 2px" : "2px 3px";
-              } else {
-                td.style.padding = isSecEng ? "3px 4px" : "3.5px 5px";
-              }
+              td.style.padding = isSecEng ? "3px 4px" : "3.5px 5px";
             });
 
             // Append clonedTr to current page tbody
