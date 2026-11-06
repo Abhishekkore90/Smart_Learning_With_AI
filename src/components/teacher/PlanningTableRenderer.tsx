@@ -3289,6 +3289,17 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               el.style.lineHeight = "inherit";
               el.style.fontFamily = "inherit";
             });
+
+            // Specifically for "तोंडीकाम,प्रात्यक्षिक" in Column 5 ("साधन तंत्रे"): Stack into 2 clean lines
+            // without changing font size, weight, or structure for any other words
+            if (cIdx === 5) {
+              const rawTxt = tdEl.textContent?.trim() || "";
+              const compact = rawTxt.replace(/\s+/g, "");
+              if (compact.includes("तोंडीकाम,प्रात्यक्षिक") || compact.includes("तोंडीकाम/प्रात्यक्षिक")) {
+                const sep = compact.includes("तोंडीकाम/") ? " /" : ",";
+                tdEl.innerHTML = `<span style="display:block;white-space:nowrap;line-height:1.2;font-size:inherit;font-weight:inherit;color:inherit;text-align:center;">तोंडीकाम${sep}</span><span style="display:block;white-space:nowrap;line-height:1.2;font-size:inherit;font-weight:inherit;color:inherit;text-align:center;">प्रात्यक्षिक</span>`;
+              }
+            }
           });
                 } else {
           // Annual Planning: Enforce consistent desktop columns and font sizes in PDF across Web and WebView
@@ -3333,19 +3344,20 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
           const h2 = schoolHeader.querySelector("h2");
           if (h2) {
-            h2.style.fontSize = isMonthly ? "17px" : "20px";
+            h2.style.fontSize = isMonthly ? "26px" : "28px";
             h2.style.fontWeight = "900";
             h2.style.lineHeight = "1.25";
             h2.style.color = "#0f172a";
             h2.style.margin = "0";
-            h2.style.paddingBottom = isMonthly ? "2px" : "4px";
+            h2.style.paddingBottom = isMonthly ? "4px" : "6px";
           }
 
           const subline = schoolHeader.querySelector(".pdf-school-subline") as HTMLElement | null;
           if (subline) {
-            subline.style.fontSize = isMonthly ? "11.5px" : "13.5px";
+            subline.style.fontSize = isMonthly ? "16px" : "17px";
+            subline.style.fontWeight = "800";
             subline.style.lineHeight = "1.3";
-            subline.style.paddingTop = isMonthly ? "3px" : "5px";
+            subline.style.paddingTop = isMonthly ? "5px" : "7px";
             subline.style.display = "flex";
             subline.style.flexDirection = "row";
             subline.style.flexWrap = "nowrap";
@@ -3354,7 +3366,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             subline.style.width = "100%";
             subline.style.overflow = "visible";
             subline.querySelectorAll("*").forEach((el: any) => {
-              el.style.fontSize = isMonthly ? "11.5px" : "13.5px";
+              el.style.fontSize = isMonthly ? "16px" : "17px";
+              el.style.fontWeight = "800";
             });
           }
         }
@@ -4307,7 +4320,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               </h2>
                             </div>
 
-                            <div className="pdf-school-subline flex flex-nowrap items-center justify-between gap-1 sm:gap-3 text-[8.5px] min-[360px]:text-[9.5px] min-[400px]:text-[11px] sm:text-sm md:text-base font-bold text-slate-900 pt-1.5 whitespace-nowrap overflow-hidden">
+                            <div className="pdf-school-subline flex flex-nowrap items-center justify-between gap-1 sm:gap-3 text-[10px] min-[360px]:text-[11px] min-[400px]:text-xs sm:text-sm md:text-base font-bold text-slate-900 pt-1.5 whitespace-nowrap overflow-hidden">
                               <div className="text-left shrink-0"><span className="font-extrabold text-slate-950">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
                               <div className="text-center shrink-0"><span className="font-extrabold text-slate-950">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
                               <div className="text-center shrink-0"><span className="font-extrabold text-slate-950">जिल्हा:</span> <span className="font-extrabold text-slate-950">{schoolProfile.districtName || "—"}</span></div>
@@ -4514,7 +4527,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                             </h2>
                           </div>
 
-                          <div className="pdf-school-subline flex flex-nowrap items-center justify-between gap-1 sm:gap-3 text-[8.5px] min-[360px]:text-[9.5px] min-[400px]:text-[11px] sm:text-sm md:text-base font-bold text-slate-900 pt-1.5 whitespace-nowrap overflow-hidden">
+                          <div className="pdf-school-subline flex flex-nowrap items-center justify-between gap-1 sm:gap-3 text-[10px] min-[360px]:text-[11px] min-[400px]:text-xs sm:text-sm md:text-base font-bold text-slate-900 pt-1.5 whitespace-nowrap overflow-hidden">
                             <div className="text-left shrink-0"><span className="font-extrabold text-slate-950">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
                             <div className="text-center shrink-0"><span className="font-extrabold text-slate-950">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
                             <div className="text-center shrink-0"><span className="font-extrabold text-slate-950">जिल्हा:</span> <span className="font-extrabold text-slate-950">{schoolProfile.districtName || "—"}</span></div>
@@ -4859,12 +4872,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                       border: 2px solid #0f172a !important;
                     }
                     .pdf-school-header h2 {
-                      font-size: 18px !important;
+                      font-size: 26px !important;
                       font-weight: 900 !important;
                       color: #0f172a !important;
                     }
                     .pdf-school-subline {
-                      font-size: 13px !important;
+                      font-size: 16px !important;
+                      font-weight: 800 !important;
                       line-height: 1.4 !important;
                       display: flex !important;
                       flex-direction: row !important;
@@ -4873,7 +4887,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                       width: 100% !important;
                     }
                     .pdf-school-subline * {
-                      font-size: 13px !important;
+                      font-size: 16px !important;
+                      font-weight: 800 !important;
                       white-space: nowrap !important;
                     }
                   }
@@ -5147,17 +5162,18 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     margin-bottom: 8px !important;
                   }
                   .pdf-export-active .pdf-school-header h2 {
-                    font-size: 20px !important;
+                    font-size: 27px !important;
                     font-weight: 900 !important;
                     line-height: 1.3 !important;
                     color: #0f172a !important;
                     margin: 0 !important;
-                    padding-bottom: 4px !important;
+                    padding-bottom: 5px !important;
                   }
                   .pdf-export-active .pdf-school-subline {
-                    font-size: 13.5px !important;
+                    font-size: 16.5px !important;
+                    font-weight: 800 !important;
                     line-height: 1.4 !important;
-                    padding-top: 5px !important;
+                    padding-top: 6px !important;
                     display: flex !important;
                     flex-direction: row !important;
                     flex-wrap: nowrap !important;
@@ -5167,7 +5183,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     overflow: visible !important;
                   }
                   .pdf-export-active .pdf-school-subline * {
-                    font-size: 13.5px !important;
+                    font-size: 16.5px !important;
+                    font-weight: 800 !important;
                     white-space: nowrap !important;
                   }
                   .pdf-export-active .pdf-subject-banner {
@@ -5362,13 +5379,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               <span>बदला</span>
                             </button>
 
-                            <div className="text-center border-b-2 border-slate-900 pb-1 sm:pb-1.5 print:pb-0.5">
-                              <h2 className="text-sm sm:text-lg md:text-xl font-black text-indigo-950 uppercase tracking-wide print:text-slate-950">
+                            <div className="text-center border-b-2 border-slate-900 pb-2 sm:pb-2.5 print:pb-1">
+                              <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-indigo-950 uppercase tracking-wide print:text-slate-950">
                                 {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
                               </h2>
                             </div>
 
-                            <div className="pdf-school-subline flex flex-nowrap items-center justify-between gap-1 sm:gap-2 text-[8px] min-[360px]:text-[9px] min-[400px]:text-[10px] sm:text-xs md:text-[13px] font-bold text-slate-900 pt-0.5 whitespace-nowrap overflow-hidden">
+                            <div className="pdf-school-subline flex flex-nowrap items-center justify-between gap-1 sm:gap-2 text-xs sm:text-base md:text-lg font-extrabold text-slate-900 pt-1 whitespace-nowrap overflow-hidden">
                               <div className="text-left shrink-0"><span className="font-extrabold text-slate-950">केंद्र:</span> <span className="font-extrabold text-slate-950">{schoolProfile.kendraName || "—"}</span></div>
                               <div className="text-center shrink-0"><span className="font-extrabold text-slate-950">तालुका:</span> <span className="font-extrabold text-slate-950">{schoolProfile.talukaName || "—"}</span></div>
                               <div className="text-center shrink-0"><span className="font-extrabold text-slate-950">जिल्हा:</span> <span className="font-extrabold text-slate-950">{schoolProfile.districtName || "—"}</span></div>
@@ -6032,6 +6049,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                                     >
                                                       {cellText}
                                                     </span>
+                                                  </div>
+                                                ) : isMonthly && cIdx === 5 && (String(cellText).replace(/\s+/g, "").includes("तोंडीकाम,प्रात्यक्षिक") || String(cellText).replace(/\s+/g, "").includes("तोंडीकाम/प्रात्यक्षिक")) ? (
+                                                  <div className={`flex flex-col justify-center items-center text-center w-full min-h-full ${isSecEng ? 'py-0.5 px-0.5 sm:py-1 sm:px-1' : 'py-1 px-1'}`}>
+                                                    <span className="whitespace-nowrap leading-tight sm:leading-snug">{String(cellText).replace(/\s+/g, "").includes("तोंडीकाम/") ? "तोंडीकाम /" : "तोंडीकाम,"}</span>
+                                                    <span className="whitespace-nowrap leading-tight sm:leading-snug">प्रात्यक्षिक</span>
                                                   </div>
                                                 ) : isMonthly && (cIdx === 1 || cIdx === 2 || cIdx === 5 || cIdx === 6) ? (
                                                   <div className={`flex flex-col justify-center items-center text-center w-full min-h-full ${isSecEng ? 'py-0.5 px-0.5 sm:py-1 sm:px-1' : 'py-1 px-1'}`}>
