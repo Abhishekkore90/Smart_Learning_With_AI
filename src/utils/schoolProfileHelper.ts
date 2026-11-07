@@ -35,28 +35,66 @@ export const getUnifiedSchoolProfile = (targetUserId?: string): UnifiedSchoolPro
     };
   }
 
-  // 0. Check dedicated Question Paper / Unified School Profile keys for the specific user
+  // Auto-resolve current teacher ID if not explicitly passed
+  let activeUserId = targetUserId;
+  if (!activeUserId || activeUserId === "guest" || activeUserId === "guest_teacher") {
+    try {
+      activeUserId = localStorage.getItem("current_teacher_id") || localStorage.getItem("user_id") || undefined;
+    } catch (e) {}
+  }
+
+  const isCleanSchool = (val?: string | null): boolean => {
+    if (!val || typeof val !== "string") return false;
+    const s = val.trim();
+    if (!s || s.includes("___") || s.toLowerCase().includes("willingdon")) return false;
+    if (/[-_.~=—–•\.]{4,}/.test(s)) return false;
+    return true;
+  };
+
+  // 0. Check teacher's CCE general school settings in localStorage strictly for activeUserId
   try {
-    if (targetUserId && targetUserId !== "guest" && targetUserId !== "guest_teacher") {
-      const qpRaw = localStorage.getItem(`qp_school_info_${targetUserId}`);
-      if (qpRaw) {
-        const parsed = JSON.parse(qpRaw);
-        if (parsed && parsed.schoolName && !parsed.schoolName.includes("___")) {
-          profile = { ...parsed };
+    if (activeUserId && activeUserId !== "guest" && activeUserId !== "guest_teacher") {
+      const cceGen = localStorage.getItem(`cce_general_school_settings_${activeUserId}`);
+      if (cceGen) {
+        const parsed = JSON.parse(cceGen);
+        if (parsed && isCleanSchool(parsed.schoolName)) {
+          profile.schoolName = parsed.schoolName.trim();
+          if (parsed.udiseCode || parsed.udise) profile.udise = parsed.udiseCode || parsed.udise;
+          if (parsed.kendra) profile.kendra = parsed.kendra;
+          if (parsed.taluka) profile.taluka = parsed.taluka;
+          if (parsed.district || parsed.jilha) profile.jilha = parsed.district || parsed.jilha;
+          if (parsed.principalName || parsed.headmasterName || parsed.headmaster) {
+            profile.headmaster = parsed.principalName || parsed.headmasterName || parsed.headmaster;
+          }
+          if (parsed.teacherName) profile.teacherName = parsed.teacherName;
+          if (parsed.address) profile.address = parsed.address;
         }
       }
     }
   } catch (e) {}
 
-  // 1. Check user_planning_school_profile strictly for targetUserId
+  // 0b. Check dedicated Question Paper / Unified School Profile keys for the specific user
   try {
-    if (targetUserId && targetUserId !== "guest" && targetUserId !== "guest_teacher") {
-      const key = `user_planning_school_profile_${targetUserId}`;
+    if (activeUserId && activeUserId !== "guest" && activeUserId !== "guest_teacher") {
+      const qpRaw = localStorage.getItem(`qp_school_info_${activeUserId}`);
+      if (qpRaw) {
+        const parsed = JSON.parse(qpRaw);
+        if (parsed && isCleanSchool(parsed.schoolName)) {
+          profile = { ...profile, ...parsed, schoolName: parsed.schoolName.trim() };
+        }
+      }
+    }
+  } catch (e) {}
+
+  // 1. Check user_planning_school_profile strictly for activeUserId
+  try {
+    if (activeUserId && activeUserId !== "guest" && activeUserId !== "guest_teacher") {
+      const key = `user_planning_school_profile_${activeUserId}`;
       const raw = localStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.schoolName && !parsed.schoolName.includes("___")) {
-          if (!profile.schoolName) profile.schoolName = parsed.schoolName;
+        if (parsed && isCleanSchool(parsed.schoolName)) {
+          if (!profile.schoolName) profile.schoolName = parsed.schoolName.trim();
           if (!profile.kendra && (parsed.kendraName || parsed.kendra)) profile.kendra = parsed.kendraName || parsed.kendra;
           if (!profile.taluka && (parsed.talukaName || parsed.taluka)) profile.taluka = parsed.talukaName || parsed.taluka;
           if (!profile.jilha && (parsed.districtName || parsed.district || parsed.jilha)) profile.jilha = parsed.districtName || parsed.district || parsed.jilha;
@@ -68,12 +106,12 @@ export const getUnifiedSchoolProfile = (targetUserId?: string): UnifiedSchoolPro
     }
   } catch (e) {}
 
-  // 1b. Check homework v2 header keys strictly for targetUserId
+  // 1b. Check homework v2 header keys strictly for activeUserId
   try {
-    if (targetUserId && targetUserId !== "guest" && targetUserId !== "guest_teacher") {
-      const hwSchool = localStorage.getItem(`hw_v2_school_${targetUserId}`) || localStorage.getItem(`user_school_name_${targetUserId}`);
-      if (!profile.schoolName && hwSchool && !hwSchool.includes("___")) profile.schoolName = hwSchool;
-      const hwTeacher = localStorage.getItem(`hw_v2_teacher_${targetUserId}`);
+    if (activeUserId && activeUserId !== "guest" && activeUserId !== "guest_teacher") {
+      const hwSchool = localStorage.getItem(`hw_v2_school_${activeUserId}`) || localStorage.getItem(`user_school_name_${activeUserId}`);
+      if (!profile.schoolName && isCleanSchool(hwSchool)) profile.schoolName = hwSchool!.trim();
+      const hwTeacher = localStorage.getItem(`hw_v2_teacher_${activeUserId}`);
       if (!profile.teacherName && hwTeacher) profile.teacherName = hwTeacher;
     }
   } catch (e) {}
@@ -150,15 +188,23 @@ export const getUnifiedSchoolProfile = (targetUserId?: string): UnifiedSchoolPro
 
   // 6. Check simple localStorage fallbacks
   const fallbackSchoolName = localStorage.getItem("teacher_school_name");
-  if (!profile.schoolName && fallbackSchoolName && !fallbackSchoolName.includes("___")) profile.schoolName = fallbackSchoolName;
+  if (!profile.schoolName && fallbackSchoolName && !fallbackSchoolName.includes("___") && !fallbackSchoolName.toLowerCase().includes("willingdon")) {
+    profile.schoolName = fallbackSchoolName;
+  }
 
   const fallbackUdise = localStorage.getItem("teacher_udise");
   if (!profile.udise && fallbackUdise) profile.udise = fallbackUdise;
 
-  // Clean placeholder dashes if any slipped through
+  // Clean placeholder dashes if any slipped through and sanitize willingdon
   let schoolName = profile.schoolName || "";
+  if (schoolName.toLowerCase().includes("willingdon")) {
+    schoolName = "";
+  }
   if (schoolName.includes("___") || /[-_.~=—–•\.]{4,}/.test(schoolName)) {
     schoolName = schoolName.replace(/[-_.~=—–•\.]{2,}/g, "").trim();
+  }
+  if (schoolName.toLowerCase().includes("willingdon")) {
+    schoolName = "";
   }
 
   // Normalize aliases
@@ -190,22 +236,69 @@ export const getUnifiedSchoolProfile = (targetUserId?: string): UnifiedSchoolPro
  * Async helper to fetch user's school profile from Firestore and sync to local storage
  */
 export const fetchUnifiedSchoolProfile = async (userId?: string): Promise<UnifiedSchoolProfile> => {
-  const current = getUnifiedSchoolProfile(userId);
-  if (!userId || userId === "guest_teacher" || userId === "guest") return current;
+  let targetId = userId;
+  if (!targetId || targetId === "guest_teacher" || targetId === "guest") {
+    try {
+      targetId = localStorage.getItem("current_teacher_id") || localStorage.getItem("user_id") || undefined;
+    } catch (e) {}
+  }
+  const current = getUnifiedSchoolProfile(targetId);
+  if (!targetId || targetId === "guest_teacher" || targetId === "guest") return current;
 
   try {
     const { db } = await import("@/lib/firebase");
     const { doc, getDoc } = await import("firebase/firestore");
 
-    // 0. Check qp_school_profiles (Dedicated Question Paper Profile in backend for this user)
+    // 0. Check school_settings/${targetId}_general & school_settings/${targetId} (CCE Settings saved by teacher)
     try {
-      const qpRef = doc(db, "qp_school_profiles", userId);
+      const sGenRef = doc(db, "school_settings", `${targetId}_general`);
+      const sGenSnap = await getDoc(sGenRef);
+      if (sGenSnap.exists()) {
+        const sg = sGenSnap.data();
+        if (sg && sg.schoolName && !sg.schoolName.toLowerCase().includes("willingdon") && !sg.schoolName.includes("___")) {
+          const updated: Partial<UnifiedSchoolProfile> = {
+            schoolName: sg.schoolName.trim(),
+            kendra: sg.kendra || "",
+            taluka: sg.taluka || "",
+            jilha: sg.district || sg.jilha || "",
+            udise: sg.udiseCode || sg.udise || "",
+            headmaster: sg.principalName || sg.headmasterName || sg.headmaster || "",
+            teacherName: sg.teacherName || "",
+          };
+          saveUnifiedSchoolProfile(updated, targetId);
+          return getUnifiedSchoolProfile(targetId);
+        }
+      }
+
+      const sRef = doc(db, "school_settings", targetId);
+      const sSnap = await getDoc(sRef);
+      if (sSnap.exists()) {
+        const sg = sSnap.data();
+        if (sg && sg.schoolName && !sg.schoolName.toLowerCase().includes("willingdon") && !sg.schoolName.includes("___")) {
+          const updated: Partial<UnifiedSchoolProfile> = {
+            schoolName: sg.schoolName.trim(),
+            kendra: sg.kendra || "",
+            taluka: sg.taluka || "",
+            jilha: sg.district || sg.jilha || "",
+            udise: sg.udiseCode || sg.udise || "",
+            headmaster: sg.principalName || sg.headmasterName || sg.headmaster || "",
+            teacherName: sg.teacherName || "",
+          };
+          saveUnifiedSchoolProfile(updated, targetId);
+          return getUnifiedSchoolProfile(targetId);
+        }
+      }
+    } catch (e) {}
+
+    // 1. Check qp_school_profiles (Dedicated Question Paper Profile in backend for this user)
+    try {
+      const qpRef = doc(db, "qp_school_profiles", targetId);
       const qpSnap = await getDoc(qpRef);
       if (qpSnap.exists()) {
         const q = qpSnap.data();
-        if (q && q.schoolName && !q.schoolName.includes("___")) {
+        if (q && q.schoolName && !q.schoolName.toLowerCase().includes("willingdon") && !q.schoolName.includes("___")) {
           const updated: Partial<UnifiedSchoolProfile> = {
-            schoolName: q.schoolName,
+            schoolName: q.schoolName.trim(),
             kendra: q.kendraName || q.kendra || "",
             taluka: q.talukaName || q.taluka || "",
             jilha: q.districtName || q.district || q.jilha || "",
@@ -213,51 +306,56 @@ export const fetchUnifiedSchoolProfile = async (userId?: string): Promise<Unifie
             headmaster: q.headMasterName || q.headmaster || "",
             teacherName: q.teacherName || "",
           };
-          saveUnifiedSchoolProfile(updated, userId);
-          return getUnifiedSchoolProfile(userId);
+          saveUnifiedSchoolProfile(updated, targetId);
+          return getUnifiedSchoolProfile(targetId);
         }
       }
     } catch (e) {}
 
-    // 1. Check user_planning_school_profiles strictly for this user
-    const planRef = doc(db, "user_planning_school_profiles", userId);
-    const planSnap = await getDoc(planRef);
-    if (planSnap.exists()) {
-      const d = planSnap.data();
-      if (d && d.schoolName && !d.schoolName.includes("___")) {
-        const updated: Partial<UnifiedSchoolProfile> = {
-          schoolName: d.schoolName,
-          kendra: d.kendraName || d.kendra || "",
-          taluka: d.talukaName || d.taluka || "",
-          jilha: d.districtName || d.district || d.jilha || "",
-          udise: d.udiseNumber || d.udise || "",
-          headmaster: d.headMasterName || d.headmaster || "",
-          teacherName: d.teacherName || "",
-        };
-        saveUnifiedSchoolProfile(updated, userId);
-        return getUnifiedSchoolProfile(userId);
+    // 2. Check user_planning_school_profiles strictly for this user
+    try {
+      const planRef = doc(db, "user_planning_school_profiles", targetId);
+      const planSnap = await getDoc(planRef);
+      if (planSnap.exists()) {
+        const d = planSnap.data();
+        if (d && d.schoolName && !d.schoolName.toLowerCase().includes("willingdon") && !d.schoolName.includes("___")) {
+          const updated: Partial<UnifiedSchoolProfile> = {
+            schoolName: d.schoolName.trim(),
+            kendra: d.kendraName || d.kendra || "",
+            taluka: d.talukaName || d.taluka || "",
+            jilha: d.districtName || d.district || d.jilha || "",
+            udise: d.udiseNumber || d.udise || "",
+            headmaster: d.headMasterName || d.headmaster || "",
+            teacherName: d.teacherName || "",
+          };
+          saveUnifiedSchoolProfile(updated, targetId);
+          return getUnifiedSchoolProfile(targetId);
+        }
       }
-    }
+    } catch (e) {}
 
-    // 2. Check users collection strictly for this user
-    const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      const u = userSnap.data();
-      if (u && u.schoolName && !u.schoolName.includes("___")) {
-        const updated: Partial<UnifiedSchoolProfile> = {
-          schoolName: u.schoolName,
-          kendra: u.kendra || u.centerName || "",
-          taluka: u.taluka || "",
-          jilha: u.district || u.jilha || "",
-          udise: u.udise || u.udiseNumber || "",
-          headmaster: u.headmaster || "",
-          teacherName: u.teacherName || u.fullName || u.displayName || "",
-        };
-        saveUnifiedSchoolProfile(updated, userId);
-        return getUnifiedSchoolProfile(userId);
+    // 3. Check users collection strictly for this user (Account profile where user fills school name)
+    try {
+      const userRef = doc(db, "users", targetId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const u = userSnap.data();
+        const candSchool = u.schoolName || u.school || u.institutionName || u.schoolConnection?.schoolName;
+        if (candSchool && !candSchool.toLowerCase().includes("willingdon") && !candSchool.includes("___")) {
+          const updated: Partial<UnifiedSchoolProfile> = {
+            schoolName: candSchool.trim(),
+            kendra: u.kendra || u.centerName || "",
+            taluka: u.taluka || "",
+            jilha: u.district || u.jilha || "",
+            udise: u.udise || u.udiseNumber || "",
+            headmaster: u.headmaster || "",
+            teacherName: u.teacherName || u.fullName || u.displayName || "",
+          };
+          saveUnifiedSchoolProfile(updated, targetId);
+          return getUnifiedSchoolProfile(targetId);
+        }
       }
-    }
+    } catch (e) {}
   } catch (err) {
     console.warn("fetchUnifiedSchoolProfile notice:", err);
   }

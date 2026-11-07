@@ -285,25 +285,35 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       try {
         let globalSettings = null;
 
+        const isCleanSchool = (val) => {
+          if (!val || typeof val !== "string") return false;
+          const s = val.trim();
+          if (!s || s.includes("___") || s.toLowerCase().includes("willingdon")) return false;
+          return true;
+        };
+
         if (currentTeacherId) {
           try {
             const cachedTeacher = localStorage.getItem(`cce_general_school_settings_${currentTeacherId}`);
-            if (cachedTeacher) globalSettings = JSON.parse(cachedTeacher);
+            if (cachedTeacher) {
+              const parsed = JSON.parse(cachedTeacher);
+              if (parsed && (!parsed.schoolName || isCleanSchool(parsed.schoolName))) {
+                globalSettings = parsed;
+              }
+            }
           } catch (e) {}
 
           if (!globalSettings) {
             try {
               const teacherGenSnap = await getDoc(doc(db, "school_settings", `${currentTeacherId}_general`));
-              if (teacherGenSnap.exists()) globalSettings = teacherGenSnap.data();
+              if (teacherGenSnap.exists()) {
+                const data = teacherGenSnap.data();
+                if (!data.schoolName || isCleanSchool(data.schoolName)) {
+                  globalSettings = data;
+                }
+              }
             } catch (e) {}
           }
-        }
-
-        if (!globalSettings && !currentTeacherId) {
-          try {
-            const generalSnap = await getDoc(doc(db, "school_settings", "general"));
-            if (generalSnap.exists()) globalSettings = generalSnap.data();
-          } catch (e) { }
         }
 
         // 2. Try teacher-isolated class-specific settings first
@@ -312,13 +322,6 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}` : null,
           currentTeacherId ? `${currentTeacherId}_${selectedClass}_${localStorage.getItem("cce_selected_medium") || "marathi"}_${academicYear}` : null,
         ].filter(Boolean);
-
-        if (classDocIdsToTry.length === 0) {
-          classDocIdsToTry.push(
-            `${selectedClass}_${localStorage.getItem("cce_selected_medium") || "marathi"}_${academicYear}`,
-            docId
-          );
-        }
 
         for (const cDocId of classDocIdsToTry) {
           try {
@@ -330,19 +333,34 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           } catch (e) { }
         }
         const mergedSettings = { ...(globalSettings || {}), ...classSettings };
+        if (mergedSettings.schoolName && !isCleanSchool(mergedSettings.schoolName)) {
+          mergedSettings.schoolName = "";
+        }
 
         // 3. Unified local profile fallback (Guarantees logged in user's headmaster and school info)
         try {
           const { getUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
-          const uni = getUnifiedSchoolProfile();
+          const uni = getUnifiedSchoolProfile(currentTeacherId);
           if (uni) {
-            if (!mergedSettings.schoolName && uni.schoolName) mergedSettings.schoolName = uni.schoolName;
+            if (!mergedSettings.schoolName && isCleanSchool(uni.schoolName)) mergedSettings.schoolName = uni.schoolName.trim();
             if (!mergedSettings.principalName && uni.headmaster) mergedSettings.principalName = uni.headmaster;
             if (!mergedSettings.teacherName && uni.teacherName) mergedSettings.teacherName = uni.teacherName;
             if (!mergedSettings.udiseCode && uni.udise) mergedSettings.udiseCode = uni.udise;
             if (!mergedSettings.address && uni.address) mergedSettings.address = uni.address;
           }
         } catch (e) {}
+
+        // 4. Check user's own Firestore account profile (users collection)
+        if (!mergedSettings.schoolName && currentTeacherId && currentTeacherId !== "default_teacher" && currentTeacherId !== "guest") {
+          try {
+            const uSnap = await getDoc(doc(db, "users", currentTeacherId));
+            if (uSnap.exists()) {
+              const uData = uSnap.data();
+              const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName;
+              if (isCleanSchool(cand)) mergedSettings.schoolName = cand.trim();
+            }
+          } catch (e) { }
+        }
 
         const loadedDiv = mergedSettings.division || mergedSettings.section || mergedSettings.tukdi ||
           localStorage.getItem("cce_selected_division") || localStorage.getItem("teacher_division") || localStorage.getItem("division") || "";

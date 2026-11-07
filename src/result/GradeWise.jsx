@@ -57,11 +57,42 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
   const [selectedTerm, setSelectedTerm] = useState(
     initialTerm === "sem2" ? "द्वितीय सत्र" : "प्रथम सत्र"
   );
-  const [schoolName, setSchoolName] = useState(
-    localStorage.getItem("schoolName") ||
-    localStorage.getItem("teacher_school_name") ||
-    "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"
-  );
+  const [schoolName, setSchoolName] = useState(() => {
+    try {
+      const tid = getTeacherId();
+      const keys = [
+        `user_school_name_${tid}`,
+        `cce_general_school_settings_${tid}`,
+        `qp_school_info_${tid}`,
+        `user_planning_school_profile_${tid}`,
+        `hw_v2_school_${tid}`,
+      ];
+      for (const k of keys) {
+        const val = localStorage.getItem(k);
+        if (val) {
+          try {
+            const parsed = JSON.parse(val);
+            const cand = parsed?.schoolName || parsed?.school || parsed?.school_name;
+            if (cand && typeof cand === "string" && !cand.toLowerCase().includes("willingdon") && !cand.includes("___")) {
+              return cand.trim();
+            }
+          } catch {
+            if (typeof val === "string" && !val.toLowerCase().includes("willingdon") && !val.includes("___")) {
+              return val.trim();
+            }
+          }
+        }
+      }
+      const genericKeys = ["teacher_school_name", "schoolName"];
+      for (const k of genericKeys) {
+        const val = localStorage.getItem(k);
+        if (val && typeof val === "string" && !val.toLowerCase().includes("willingdon") && !val.includes("___")) {
+          return val.trim();
+        }
+      }
+    } catch {}
+    return "";
+  });
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
@@ -92,46 +123,90 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
     setLoading(true);
 
     try {
-      // 1. Fetch School Name from Settings / LocalStorage / Firebase
+      // 1. Fetch School Name strictly for the logged-in user (NO general doc fallback, NO willingdon)
+      const currentTeacherId = getTeacherId();
       let fetchedSchoolName = "";
+
+      // 1a. Check teacher's CCE general school settings in localStorage
       try {
-        const cachedGen = localStorage.getItem("cce_general_school_settings");
+        const cachedGen = localStorage.getItem(`cce_general_school_settings_${currentTeacherId}`);
         if (cachedGen) {
           const parsed = JSON.parse(cachedGen);
-          if (parsed.schoolName) fetchedSchoolName = parsed.schoolName;
+          if (parsed?.schoolName && !parsed.schoolName.toLowerCase().includes("willingdon") && !parsed.schoolName.includes("___")) {
+            fetchedSchoolName = parsed.schoolName.trim();
+          }
         }
       } catch (e) { }
 
-      if (!fetchedSchoolName) {
-        fetchedSchoolName =
-          localStorage.getItem("schoolName") ||
-          localStorage.getItem("teacher_school_name") ||
-          "";
-      }
-
+      // 1b. Check Unified School Profile
       if (!fetchedSchoolName) {
         try {
-          const genSnap = await getDoc(doc(db, "school_settings", "general"));
-          if (genSnap.exists() && genSnap.data().schoolName) {
-            fetchedSchoolName = genSnap.data().schoolName;
-          }
-        } catch (e) { }
-      }
-
-      if (!fetchedSchoolName) {
-        try {
-          const udise = localStorage.getItem("teacher_udise") || localStorage.getItem("udiseNumber");
-          if (udise) {
-            const sSnap = await getDoc(doc(db, "school_data", udise));
-            if (sSnap.exists() && sSnap.data().schoolName) {
-              fetchedSchoolName = sSnap.data().schoolName;
+          const { getUnifiedSchoolProfile, fetchUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
+          const uni = getUnifiedSchoolProfile(currentTeacherId);
+          if (uni?.schoolName && !uni.schoolName.toLowerCase().includes("willingdon") && !uni.schoolName.includes("___")) {
+            fetchedSchoolName = uni.schoolName.trim();
+          } else {
+            const asyncUni = await fetchUnifiedSchoolProfile(currentTeacherId);
+            if (asyncUni?.schoolName && !asyncUni.schoolName.toLowerCase().includes("willingdon") && !asyncUni.schoolName.includes("___")) {
+              fetchedSchoolName = asyncUni.schoolName.trim();
             }
           }
         } catch (e) { }
       }
 
+      // 1c. Check teacher-isolated school_settings in Firestore
+      if (!fetchedSchoolName && currentTeacherId && currentTeacherId !== "default_teacher" && currentTeacherId !== "guest") {
+        try {
+          const tGenSnap = await getDoc(doc(db, "school_settings", `${currentTeacherId}_general`));
+          if (tGenSnap.exists() && tGenSnap.data().schoolName) {
+            const sName = tGenSnap.data().schoolName;
+            if (sName && !sName.toLowerCase().includes("willingdon") && !sName.includes("___")) {
+              fetchedSchoolName = sName.trim();
+            }
+          }
+        } catch (e) { }
+
+        if (!fetchedSchoolName) {
+          try {
+            const tSnap = await getDoc(doc(db, "school_settings", currentTeacherId));
+            if (tSnap.exists() && tSnap.data().schoolName) {
+              const sName = tSnap.data().schoolName;
+              if (sName && !sName.toLowerCase().includes("willingdon") && !sName.includes("___")) {
+                fetchedSchoolName = sName.trim();
+              }
+            }
+          } catch (e) { }
+        }
+
+        // 1d. Check user's own profile doc in Firestore (where user fills school name in their account)
+        if (!fetchedSchoolName) {
+          try {
+            const uSnap = await getDoc(doc(db, "users", currentTeacherId));
+            if (uSnap.exists()) {
+              const uData = uSnap.data();
+              const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName;
+              if (cand && typeof cand === "string" && !cand.toLowerCase().includes("willingdon") && !cand.includes("___")) {
+                fetchedSchoolName = cand.trim();
+              }
+            }
+          } catch (e) { }
+        }
+      }
+
+      // 1e. Check user-specific localStorage keys
+      if (!fetchedSchoolName) {
+        const userSchool = localStorage.getItem(`user_school_name_${currentTeacherId}`) || localStorage.getItem(`hw_v2_school_${currentTeacherId}`);
+        if (userSchool && !userSchool.toLowerCase().includes("willingdon") && !userSchool.includes("___")) {
+          fetchedSchoolName = userSchool.trim();
+        }
+      }
+
       if (fetchedSchoolName) {
         setSchoolName(fetchedSchoolName);
+        try {
+          localStorage.setItem(`user_school_name_${currentTeacherId}`, fetchedSchoolName);
+          localStorage.setItem("schoolName", fetchedSchoolName);
+        } catch (e) { }
       }
 
       // 2. Initialize empty matrix structure
@@ -701,7 +776,16 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                   <input
                     type="text"
                     value={schoolName}
-                    onChange={(e) => setSchoolName(e.target.value)}
+                    placeholder="शाळेचे नाव प्रविष्ट करा"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSchoolName(val);
+                      try {
+                        const tid = getTeacherId();
+                        localStorage.setItem(`user_school_name_${tid}`, val);
+                        localStorage.setItem("schoolName", val);
+                      } catch (err) {}
+                    }}
                     className="font-bold text-slate-900 bg-transparent border-b border-dotted border-slate-400 focus:outline-none px-1 text-xs min-w-[320px]"
                   />
                 </div>

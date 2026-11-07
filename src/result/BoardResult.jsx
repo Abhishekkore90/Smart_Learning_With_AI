@@ -375,6 +375,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
   });
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
 
   useEffect(() => {
     if (initialMedium && initialMedium !== selectedMedium) {
@@ -458,6 +459,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         const uid = currentTeacherId;
         const medKey = selectedMedium.toLowerCase().includes("semi") ? "semi" : "marathi";
 
+        const isCleanSchoolName = (val) => {
+          if (!val || typeof val !== "string") return false;
+          const s = val.trim();
+          if (!s || s.includes("___") || s.toLowerCase().includes("willingdon")) return false;
+          return true;
+        };
+
         // 1a. Check cce_settings collection (Teacher Isolated FIRST)
         try {
           const cceDocIds = [
@@ -465,20 +473,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             uid ? `${uid}_${selectedClass}_${academicYear}` : null,
           ].filter(Boolean);
 
-          if (cceDocIds.length === 0) {
-            cceDocIds.push(
-              `${selectedClass}_${selectedMedium}_${academicYear}`,
-              `${selectedClass}_${medKey}_${academicYear}`,
-              docId
-            );
-          }
-
           for (const cId of cceDocIds) {
             const cRef = doc(db, "cce_settings", cId);
             const cSnap = await getDoc(cRef);
             if (cSnap.exists()) {
               const data = cSnap.data();
-              if (!schoolName) schoolName = data.schoolName || data.school_name || "";
+              const candSchool = data.schoolName || data.school_name || "";
+              if (!schoolName && isCleanSchoolName(candSchool)) schoolName = candSchool.trim();
               if (!udise) udise = data.udiseCode || data.udise || "";
               if (!teacherName && data.teacherName) teacherName = data.teacherName;
               if (!headmasterName && (data.principalName || data.headmasterName || data.hmName)) {
@@ -496,23 +497,20 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           }
         } catch (e) { }
 
-        // 1b. Check school_settings collection (Teacher Isolated FIRST)
+        // 1b. Check school_settings collection strictly for this user (NEVER pull global willingdon)
         try {
           const settingsDocIds = [
             uid ? `${uid}_general` : null,
             uid ? uid : null,
           ].filter(Boolean);
 
-          if (settingsDocIds.length === 0) {
-            settingsDocIds.push("general", "school_info", "school_settings");
-          }
-
           for (const dId of settingsDocIds) {
             const sRef = doc(db, "school_settings", dId);
             const sSnap = await getDoc(sRef);
             if (sSnap.exists()) {
               const data = sSnap.data();
-              if (!schoolName) schoolName = data.schoolName || data.school_name || data.school || "";
+              const candSchool = data.schoolName || data.school_name || data.school || "";
+              if (!schoolName && isCleanSchoolName(candSchool)) schoolName = candSchool.trim();
               if (!udise) udise = data.udiseCode || data.udise || data.udiseNo || "";
               if (!teacherName && (data.teacherName || data.fullName || data.name)) teacherName = data.teacherName || data.fullName || data.name;
               if (!headmasterName && (data.principalName || data.headmasterName || data.hmName)) {
@@ -530,17 +528,29 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         // 1c. Unified local profile fallback (Guarantees logged-in user's accurate school and headmaster info)
         try {
           const { getUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
-          const uni = getUnifiedSchoolProfile();
+          const uni = getUnifiedSchoolProfile(uid);
           if (uni) {
-            if (!schoolName && uni.schoolName) schoolName = uni.schoolName;
+            if (!schoolName && isCleanSchoolName(uni.schoolName)) schoolName = uni.schoolName.trim();
             if (!headmasterName && uni.headmaster) headmasterName = uni.headmaster;
             if (!teacherName && uni.teacherName) teacherName = uni.teacherName;
             if (!udise && uni.udise) udise = uni.udise;
             if (!address && uni.address) address = uni.address;
           }
-        } catch (e) {}
+        } catch (e) { }
 
-        // 1c. Check LocalStorage caches
+        // 1d. User's own Firestore account profile (users collection)
+        if (!schoolName && uid && uid !== "default_teacher" && uid !== "guest") {
+          try {
+            const uSnap = await getDoc(doc(db, "users", uid));
+            if (uSnap.exists()) {
+              const uData = uSnap.data();
+              const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName;
+              if (isCleanSchoolName(cand)) schoolName = cand.trim();
+            }
+          } catch (e) { }
+        }
+
+        // 1e. Check LocalStorage caches
         const cacheKeys = [
           uid ? `cce_general_school_settings_${uid}` : null,
           "cce_general_school_settings",
@@ -555,7 +565,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             const val = localStorage.getItem(k);
             if (val) {
               const p = JSON.parse(val);
-              if (!schoolName && (p.schoolName || p.school_name)) schoolName = p.schoolName || p.school_name;
+              const cand = p.schoolName || p.school_name;
+              if (!schoolName && isCleanSchoolName(cand)) schoolName = cand.trim();
               if (!udise && (p.udiseCode || p.udise)) udise = p.udiseCode || p.udise;
               if (!teacherName && (p.teacherName || p.fullName || p.name)) teacherName = p.teacherName || p.fullName || p.name;
               if (!headmasterName && (p.principalName || p.headmasterName || p.hmName)) {
@@ -1021,14 +1032,19 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
   const handleDownloadPdf = async () => {
     if (!printRef.current) return;
     setDownloading(true);
-    toast.info("PDF तयार होत आहे, थेट डाऊनलोड सुरू झाली आहे...");
+    toast.info("मूल्यांकन नोंदवही PDF तयार होत आहे, कृपया वाट पाहा...");
     const container = printRef.current;
 
     try {
-      container.classList.add("cce-downloading-pdf");
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      let html2canvas;
+      try {
+        const hModule = await import("html2canvas-pro");
+        html2canvas = hModule.default || hModule;
+      } catch (e) {
+        const hModule = await import("html2canvas");
+        html2canvas = hModule.default || hModule;
+      }
 
-      const { toJpeg } = await import("html-to-image");
       const { default: jsPDF } = await import("jspdf");
 
       if (document.fonts && document.fonts.ready) {
@@ -1054,78 +1070,129 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      const pdfPages = container.querySelectorAll(".pdf-page");
+      const pdfPages = Array.from(container.querySelectorAll(".pdf-page"));
       if (!pdfPages || pdfPages.length === 0) {
         toast.error("पेजेस सापडले नाहीत!");
         setDownloading(false);
-        container.classList.remove("cce-downloading-pdf");
         return;
       }
+
+      setDownloadProgress({ current: 0, total: pdfPages.length });
 
       let pdf = null;
 
       for (let i = 0; i < pdfPages.length; i++) {
+        setDownloadProgress({ current: i + 1, total: pdfPages.length });
         const pageEl = pdfPages[i];
         const isLandscape = pageEl.classList.contains("pdf-page-landscape") || pageEl.getAttribute("data-orientation") === "landscape";
 
-        const captureWidth = isLandscape
-          ? Math.max(pageEl.scrollWidth || 0, pageEl.offsetWidth || 0, 1123)
-          : 794;
-        const captureHeight = isLandscape
-          ? Math.max(pageEl.scrollHeight || 0, pageEl.offsetHeight || 0, 794)
-          : 1123;
+        const targetWidth = isLandscape ? 1123 : 794;
+        const targetHeight = isLandscape ? 794 : 1123;
 
-        const dataUrl = await toJpeg(pageEl, {
-          quality: 0.90,
-          pixelRatio: 2,
-          cacheBust: true,
-          backgroundColor: "#ffffff",
-          width: captureWidth,
-          height: captureHeight,
-          style: {
-            overflow: "visible",
-            width: `${captureWidth}px`,
-            minWidth: `${captureWidth}px`,
-            maxWidth: isLandscape ? "none" : `${captureWidth}px`,
-            scrollbarWidth: "none",
-          },
-        });
+        // Create an isolated fixed-size sandbox on document.body
+        // This ensures the render size is ALWAYS 100% full A4 resolution,
+        // completely unaffected by mobile screen width (360px), WebView scaling, or CSS zoom!
+        const sandbox = document.createElement("div");
+        sandbox.className = "cce-export-sandbox";
+        sandbox.style.position = "fixed";
+        sandbox.style.left = "0px";
+        sandbox.style.top = "0px";
+        sandbox.style.width = `${targetWidth}px`;
+        sandbox.style.minWidth = `${targetWidth}px`;
+        sandbox.style.maxWidth = `${targetWidth}px`;
+        sandbox.style.height = `${targetHeight}px`;
+        sandbox.style.minHeight = `${targetHeight}px`;
+        sandbox.style.maxHeight = `${targetHeight}px`;
+        sandbox.style.zIndex = "50";
+        sandbox.style.backgroundColor = "#ffffff";
+        sandbox.style.fontFamily = "'Noto Sans Devanagari', 'Inter', sans-serif";
+        sandbox.style.pointerEvents = "none";
+        sandbox.style.overflow = "hidden";
+        sandbox.style.transform = "none";
+        sandbox.style.zoom = "1";
 
-        // Load captured image to read exact natural aspect ratio
-        const img = new Image();
-        img.src = dataUrl;
-        await new Promise((resolve) => {
-          if (img.complete) resolve();
-          else img.onload = resolve;
-        });
-
-        const naturalWidth = img.naturalWidth || 1;
-        const naturalHeight = img.naturalHeight || 1;
+        const clone = pageEl.cloneNode(true);
+        clone.style.width = `${targetWidth}px`;
+        clone.style.minWidth = `${targetWidth}px`;
+        clone.style.maxWidth = `${targetWidth}px`;
+        clone.style.height = `${targetHeight}px`;
+        clone.style.minHeight = `${targetHeight}px`;
+        clone.style.maxHeight = `${targetHeight}px`;
+        clone.style.margin = "0px";
+        clone.style.boxSizing = "border-box";
+        clone.style.transform = "none";
+        clone.style.zoom = "1";
 
         if (isLandscape) {
-          // Page 3: Rotated Landscape Page with 100% natural proportional height!
-          const targetWidth = Math.max(297, Number(((naturalWidth / naturalHeight) * 210).toFixed(2))); // mm
-          const targetHeight = 210; // mm
-
-          if (i === 0) {
-            pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [targetWidth, targetHeight], compress: true });
-          } else {
-            pdf.addPage([targetWidth, targetHeight], "landscape");
+          const scrollContainer = clone.querySelector(".overflow-x-auto");
+          if (scrollContainer) {
+            scrollContainer.style.overflow = "visible";
+            scrollContainer.style.width = "100%";
           }
+          const tbl = clone.querySelector("table");
+          if (tbl) {
+            tbl.style.width = "100%";
+          }
+        }
 
-          pdf.addImage(dataUrl, "JPEG", 2, 2, targetWidth - 4, targetHeight - 4, undefined, "FAST");
+        sandbox.appendChild(clone);
+        document.body.appendChild(sandbox);
+
+        // Pre-convert any non-data images inside clone to data URLs for reliable offline/WebView canvas rendering
+        const cloneImgs = Array.from(clone.querySelectorAll("img"));
+        await Promise.all(
+          cloneImgs.map(async (img) => {
+            try {
+              if (img.src && !img.src.startsWith("data:")) {
+                const c = document.createElement("canvas");
+                c.width = img.naturalWidth || img.width || 80;
+                c.height = img.naturalHeight || img.height || 80;
+                const ctx = c.getContext("2d");
+                if (ctx) {
+                  ctx.drawImage(img, 0, 0, c.width, c.height);
+                  img.src = c.toDataURL("image/png");
+                }
+              }
+            } catch (e) {}
+          })
+        );
+
+        const canvas = await html2canvas(clone, {
+          scale: 1.5,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+          scrollX: 0,
+          scrollY: 0,
+          width: targetWidth,
+          height: targetHeight,
+          windowWidth: targetWidth,
+          windowHeight: targetHeight,
+          imageTimeout: 0,
+        });
+
+        // Immediately detach sandbox to free DOM & GPU memory
+        if (sandbox.parentNode) {
+          sandbox.parentNode.removeChild(sandbox);
+        }
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+        if (isLandscape) {
+          if (!pdf) {
+            pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
+          } else {
+            pdf.addPage("a4", "landscape");
+          }
+          pdf.addImage(imgData, "JPEG", 2, 2, 293, 206, undefined, "FAST");
         } else {
-          // Pages 1 & 2: Standard Portrait A4 (210mm x 297mm)
-          const targetWidth = 210; // mm
-          const targetHeight = 297; // mm
-
-          if (i === 0) {
+          if (!pdf) {
             pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
           } else {
             pdf.addPage("a4", "portrait");
           }
-
-          pdf.addImage(dataUrl, "JPEG", 2.5, 2.5, targetWidth - 5, targetHeight - 5, undefined, "FAST");
+          pdf.addImage(imgData, "JPEG", 2, 2, 206, 293, undefined, "FAST");
         }
       }
 
@@ -1137,8 +1204,11 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
     } catch (err) {
       console.error("PDF generation error:", err);
       toast.error("PDF निर्मितीत अडचण आली: " + err.message);
+    } finally {
+      const strays = document.querySelectorAll(".cce-export-sandbox");
+      strays.forEach((s) => s.parentNode && s.parentNode.removeChild(s));
+      setDownloading(false);
     }
-    setDownloading(false);
   };
 
   const handlePrint = () => {
@@ -1237,6 +1307,44 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           }
         }
       `}</style>
+
+      {/* Full-Screen PDF Downloading Progress Modal */}
+      {downloading && (
+        <div className="fixed inset-0 bg-slate-900/85 backdrop-blur-md z-[999999] flex flex-col items-center justify-center p-4 select-none animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl border border-slate-100 flex flex-col items-center animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 relative shadow-inner">
+              <Loader2 className="size-8 text-blue-600 animate-spin" />
+            </div>
+            <h3 className="text-base font-black text-slate-900 mb-1">मूल्यांकन नोंदवही PDF तयार होत आहे</h3>
+            <p className="text-xs text-slate-500 font-medium mb-5">
+              कृपया प्रतीक्षा करा, उच्च दर्जाची (HD) PDF तयार केली जात आहे...
+            </p>
+
+            {/* Progress Bar & Counter */}
+            {downloadProgress.total > 0 && (
+              <div className="w-full space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-700 px-1">
+                  <span>प्रगती</span>
+                  <span className="text-blue-600 font-black">
+                    पान {downloadProgress.current} / {downloadProgress.total}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden p-0.5 border border-slate-200">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-300 shadow-xs"
+                    style={{
+                      width: `${Math.max(5, Math.round((downloadProgress.current / downloadProgress.total) * 100))}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 font-bold text-right pt-0.5">
+                  {Math.round((downloadProgress.current / downloadProgress.total) * 100)}% पूर्ण
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Layout Selection Dialog Modal */}
       {showLayoutModal && (
@@ -1386,46 +1494,6 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
       {/* -------------------- 11-PAGE PRINT CONTAINER (USING USER'S AUTHENTIC DATA) -------------------- */}
       <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
-        <style>{`
-          .cce-downloading-pdf .a4-page-scale-wrapper {
-            height: auto !important;
-            overflow: visible !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            width: auto !important;
-          }
-          .cce-downloading-pdf .a4-page-scale-inner {
-            zoom: 1 !important;
-            transform: none !important;
-            margin-bottom: 0 !important;
-            width: auto !important;
-            min-width: 0 !important;
-            max-width: none !important;
-          }
-          .cce-downloading-pdf .pdf-page:not(.pdf-page-landscape) {
-            box-shadow: none !important;
-            width: 100% !important;
-            min-width: 210mm !important;
-            max-width: 210mm !important;
-          }
-          .cce-downloading-pdf .pdf-page-landscape {
-            box-shadow: none !important;
-            min-width: 297mm !important;
-            width: max-content !important;
-            max-width: none !important;
-            overflow: visible !important;
-          }
-          .cce-downloading-pdf .pdf-page-landscape .overflow-x-auto {
-            overflow: visible !important;
-            width: max-content !important;
-            max-width: none !important;
-          }
-          .cce-downloading-pdf .pdf-page-landscape table {
-            width: max-content !important;
-            max-width: none !important;
-          }
-        `}</style>
-        
         {/* -------------------- PAGE 1: COVER PAGE -------------------- */}
         <A4PageWrapper>
         <div

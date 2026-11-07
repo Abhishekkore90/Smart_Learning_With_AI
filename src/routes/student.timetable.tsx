@@ -274,23 +274,34 @@ function StudentTimetablePage() {
       tempWrapper.style.position = 'fixed';
       tempWrapper.style.top = '0px';
       tempWrapper.style.left = '0px';
-      tempWrapper.style.width = '1000px';
+      tempWrapper.style.width = '1220px';
       tempWrapper.style.background = '#ffffff';
       tempWrapper.style.zIndex = '-99999';
       tempWrapper.style.overflow = 'visible';
       tempWrapper.style.pointerEvents = 'none';
 
-      // 2. Clean, compact clone formatting
+      // 2. Clean, compact clone formatting, expanded horizontally to fill A4 landscape width
+      clone.classList.remove('w-[1000px]', 'min-w-[1000px]', 'mx-auto');
       clone.style.zoom = '1';
       (clone.style as any).WebkitZoom = '1';
-      clone.style.width = '1000px';
-      clone.style.minWidth = '1000px';
-      clone.style.maxWidth = '1000px';
+      clone.style.width = '1220px';
+      clone.style.minWidth = '1220px';
+      clone.style.maxWidth = '1220px';
       clone.style.margin = '0';
       clone.style.padding = '8px 12px 12px 12px';
       clone.style.boxSizing = 'border-box';
       clone.style.transform = 'none';
       clone.style.backgroundColor = '#ffffff';
+
+      // Ensure school header and other non-table elements never truncate text in PDF
+      clone.querySelectorAll('.truncate, [class*="overflow-hidden"], [class*="text-ellipsis"]').forEach((el: any) => {
+        if (!el.closest('table')) {
+          el.classList.remove('truncate', 'overflow-hidden', 'text-ellipsis');
+          el.style.overflow = 'visible';
+          el.style.textOverflow = 'clip';
+          el.style.whiteSpace = 'nowrap';
+        }
+      });
 
       tempWrapper.appendChild(clone);
       document.body.appendChild(tempWrapper);
@@ -455,11 +466,13 @@ function StudentTimetablePage() {
                             transform: `scale(${scale})`,
                             transformOrigin: 'top left',
                             width: '1000px',
-                            minWidth: '1000px'
+                            minWidth: '1000px',
+                            fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif"
                           }
                         : {
                             width: '1000px',
-                            minWidth: '1000px'
+                            minWidth: '1000px',
+                            fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif"
                           }
                     }
                   >
@@ -473,35 +486,35 @@ function StudentTimetablePage() {
 
                       <div className="flex-1 flex justify-center whitespace-nowrap overflow-visible mx-4">
                         <div className="px-6 py-1.5 text-center rounded-lg shadow-sm whitespace-nowrap flex items-center justify-center gap-1" style={{ background: 'linear-gradient(to bottom, #ffffff, #e6f7ff)', border: '1px solid black' }}>
-                          <span className="text-sm md:text-base font-black text-slate-800 tracking-wider whitespace-nowrap">
+                          <span className="text-[16px] font-black text-black tracking-wider whitespace-nowrap" style={{ fontWeight: 900 }}>
                             वेळापत्रक ( इयत्ता :- {gridData.classNameMr || selectedClassNameMr} )
                           </span>
                         </div>
                       </div>
                       <div className="px-4 py-1.5 text-center rounded-lg whitespace-nowrap flex-shrink-0" style={{ background: 'linear-gradient(to bottom, #ffffff, #e6f7ff)', border: '1px solid black' }}>
-                        <span className="text-xs font-black text-slate-800 whitespace-nowrap">
+                        <span className="text-[13.5px] font-black text-black whitespace-nowrap" style={{ fontWeight: 900 }}>
                           सन {gridData.academicYear}
                         </span>
                       </div>
                     </div>
 
                     {/* ZP Info bar */}
-                    <div className="border border-black text-[11px] font-bold grid grid-cols-12 bg-white">
-                      <div className="col-span-5 flex items-center gap-1 p-1.5 bg-white whitespace-nowrap" style={{ borderRight: '1px solid black' }}>
-                        <span className="whitespace-nowrap flex-shrink-0">शाळेचे नाव :</span>
-                        <span className="font-black text-slate-900 px-1 whitespace-nowrap overflow-hidden text-ellipsis text-[11.5px]">{gridData.schoolName}</span>
+                    <div className="border border-black text-[12.5px] font-black grid grid-cols-12 bg-white" style={{ fontWeight: 900 }}>
+                      <div className="col-span-6 flex items-center gap-1 p-1.5 bg-white whitespace-nowrap overflow-visible" style={{ borderRight: '1px solid black' }}>
+                        <span className="whitespace-nowrap flex-shrink-0 font-black text-black text-[12.5px]" style={{ fontWeight: 900 }}>शाळेचे नाव :</span>
+                        <span className="font-black text-black px-1 whitespace-nowrap text-[13px]" style={{ fontWeight: 900 }}>{gridData.schoolName}</span>
                       </div>
-                      <div className="col-span-2 flex items-center gap-1 p-1.5 whitespace-nowrap" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
-                        <span className="whitespace-nowrap flex-shrink-0">केंद्र :-</span>
-                        <span className="font-extrabold text-slate-900 px-1 whitespace-nowrap overflow-hidden text-ellipsis text-[11px]">{gridData.center}</span>
+                      <div className="col-span-2 flex items-center gap-1 p-1.5 whitespace-nowrap overflow-visible" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
+                        <span className="whitespace-nowrap flex-shrink-0 font-black text-black text-[12px]" style={{ fontWeight: 900 }}>केंद्र :-</span>
+                        <span className="font-black text-black px-1 whitespace-nowrap text-[12.5px]" style={{ fontWeight: 900 }}>{gridData.center}</span>
                       </div>
-                      <div className="col-span-2 flex items-center gap-1 p-1.5 whitespace-nowrap" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
-                        <span className="whitespace-nowrap flex-shrink-0">तालुका :-</span>
-                        <span className="font-extrabold text-slate-900 px-1 whitespace-nowrap overflow-hidden text-ellipsis text-[11px]">{gridData.taluka}</span>
+                      <div className="col-span-2 flex items-center gap-1 p-1.5 whitespace-nowrap overflow-visible" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
+                        <span className="whitespace-nowrap flex-shrink-0 font-black text-black text-[12px]" style={{ fontWeight: 900 }}>तालुका :-</span>
+                        <span className="font-black text-black px-1 whitespace-nowrap text-[12.5px]" style={{ fontWeight: 900 }}>{gridData.taluka}</span>
                       </div>
-                      <div className="col-span-3 flex items-center gap-1 p-1.5 whitespace-nowrap" style={{ backgroundColor: '#F2DCDB' }}>
-                        <span className="whitespace-nowrap flex-shrink-0">जिल्हा :-</span>
-                        <span className="font-extrabold text-slate-900 px-1 whitespace-nowrap overflow-hidden text-ellipsis text-[11px]">{gridData.district}</span>
+                      <div className="col-span-2 flex items-center gap-1 p-1.5 whitespace-nowrap overflow-visible" style={{ backgroundColor: '#F2DCDB' }}>
+                        <span className="whitespace-nowrap flex-shrink-0 font-black text-black text-[12px]" style={{ fontWeight: 900 }}>जिल्हा :-</span>
+                        <span className="font-black text-black px-1 whitespace-nowrap text-[12.5px]" style={{ fontWeight: 900 }}>{gridData.district}</span>
                       </div>
                     </div>
 
@@ -509,21 +522,21 @@ function StudentTimetablePage() {
                     <div className="w-full">
                       <table className="w-full text-center" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
                         <thead>
-                          <tr className="text-slate-800 font-black text-[11px] h-8">
-                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>सोमवार</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>मंगळवार</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>बुधवार</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>गुरुवार</th>
+                          <tr className="text-black font-black text-[12px] h-8">
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">सोमवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">मंगळवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">बुधवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">गुरुवार</th>
                             
-                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center' }}>शुक्रवार</th>
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">शुक्रवार</th>
                             
-                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center' }}>शनिवार</th>
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">शनिवार</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -564,28 +577,28 @@ function StudentTimetablePage() {
                             const isSatRecess = isRecessValue(row.saturday);
 
                             return (
-                              <tr key={idx} className="text-[11px] h-7">
-                                <td className="font-black py-0.5 text-[11px]" style={{ backgroundColor: monThuPeriodBg, border: '1px solid black', width: '4%' }}>{row.monThuPeriod}</td>
-                                <td className="py-0.5 font-bold text-[10.5px] whitespace-nowrap" style={{ backgroundColor: monThuTimeBg, border: '1px solid black', width: '8%', color: '#C00000' }}>{row.monThuTime}</td>
+                              <tr key={idx} className="text-[12px] h-7 font-black text-black" style={{ fontWeight: 900 }}>
+                                <td className="font-black py-0.5 text-[11px] text-black" style={{ backgroundColor: monThuPeriodBg, border: '1px solid black', width: '4%', fontWeight: 900 }}>{row.monThuPeriod}</td>
+                                <td className="py-0.5 font-black text-[11.5px] whitespace-nowrap" style={{ backgroundColor: monThuTimeBg, border: '1px solid black', width: '8%', color: '#C00000', fontWeight: 900 }}>{row.monThuTime}</td>
                                 {isMonThuRecess ? (
-                                  <td className="font-black text-center py-0.5 text-[11px]" style={{ ...getRecessStyle(monThuRecessVal || ""), border: '1px solid black' }} colSpan={4}>{monThuRecessVal}</td>
+                                  <td className="font-black text-center py-0.5 text-[12.5px] text-black" style={{ ...getRecessStyle(monThuRecessVal || ""), border: '1px solid black', fontWeight: 900 }} colSpan={4}>{monThuRecessVal}</td>
                                 ) : (
                                   <>
-                                    <td className="py-0.5 bg-white font-extrabold text-[11px]" style={{ border: '1px solid black', width: '9%' }}>{row.monday}</td>
-                                    <td className="py-0.5 bg-white font-extrabold text-[11px]" style={{ border: '1px solid black', width: '9%' }}>{row.tuesday}</td>
-                                    <td className="py-0.5 bg-white font-extrabold text-[11px]" style={{ border: '1px solid black', width: '9%' }}>{row.wednesday}</td>
-                                    <td className="py-0.5 bg-white font-extrabold text-[11px]" style={{ border: '1px solid black', width: '9%' }}>{row.thursday}</td>
+                                    <td className="py-0.5 bg-white font-black text-black text-[12.5px]" style={{ border: '1px solid black', width: '9%', fontWeight: 900 }}>{row.monday}</td>
+                                    <td className="py-0.5 bg-white font-black text-black text-[12.5px]" style={{ border: '1px solid black', width: '9%', fontWeight: 900 }}>{row.tuesday}</td>
+                                    <td className="py-0.5 bg-white font-black text-black text-[12.5px]" style={{ border: '1px solid black', width: '9%', fontWeight: 900 }}>{row.wednesday}</td>
+                                    <td className="py-0.5 bg-white font-black text-black text-[12.5px]" style={{ border: '1px solid black', width: '9%', fontWeight: 900 }}>{row.thursday}</td>
                                   </>
                                 )}
-                                <td className="font-black py-0.5 text-[11px]" style={{ backgroundColor: friPeriodBg, border: '1px solid black', width: '4%' }}>{row.friPeriod}</td>
-                                <td className="py-0.5 font-bold text-[10.5px] whitespace-nowrap" style={{ backgroundColor: friTimeBg, border: '1px solid black', width: '8%', color: '#C00000' }}>{row.friTime}</td>
-                                <td className="py-0.5 font-extrabold text-[11px]" style={{ ...(isFriRecess ? getRecessStyle(row.friday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%' }}>{row.friday}</td>
-                                <td className="font-black py-0.5 text-[11px]" style={{ backgroundColor: satPeriodBg, border: '1px solid black', width: '4%' }}>{row.satPeriod}</td>
-                                <td className="py-0.5 font-bold text-[10.5px] whitespace-nowrap" style={{ backgroundColor: satTimeBg, border: '1px solid black', width: '8%', color: '#C00000' }}>{row.satTime}</td>
+                                <td className="font-black py-0.5 text-[11px] text-black" style={{ backgroundColor: friPeriodBg, border: '1px solid black', width: '4%', fontWeight: 900 }}>{row.friPeriod}</td>
+                                <td className="py-0.5 font-black text-[11.5px] whitespace-nowrap" style={{ backgroundColor: friTimeBg, border: '1px solid black', width: '8%', color: '#C00000', fontWeight: 900 }}>{row.friTime}</td>
+                                <td className="py-0.5 font-black text-black text-[12.5px]" style={{ ...(isFriRecess ? getRecessStyle(row.friday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%', fontWeight: 900 }}>{row.friday}</td>
+                                <td className="font-black py-0.5 text-[11px] text-black" style={{ backgroundColor: satPeriodBg, border: '1px solid black', width: '4%', fontWeight: 900 }}>{row.satPeriod}</td>
+                                <td className="py-0.5 font-black text-[11.5px] whitespace-nowrap" style={{ backgroundColor: satTimeBg, border: '1px solid black', width: '8%', color: '#C00000', fontWeight: 900 }}>{row.satTime}</td>
                                 {idx === 14 ? (
                                   <td className="py-0.5" style={{ backgroundColor: '#FF0000', border: '1px solid black', width: '10%' }}></td>
                                 ) : (
-                                  <td className="py-0.5 font-extrabold text-[11px]" style={{ ...(isSatRecess ? getRecessStyle(row.saturday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%' }}>{row.saturday}</td>
+                                  <td className="py-0.5 font-black text-black text-[12.5px]" style={{ ...(isSatRecess ? getRecessStyle(row.saturday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%', fontWeight: 900 }}>{row.saturday}</td>
                                 )}
                               </tr>
                             );
@@ -598,28 +611,28 @@ function StudentTimetablePage() {
                     <div className="grid grid-cols-12 gap-4 items-end pt-2 border-t border-black">
                       <div className="col-span-7 space-y-1.5 text-left">
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-black text-slate-800 tracking-widest">तासिका विभागणी :</span>
+                          <span className="text-[12px] font-black text-black tracking-widest" style={{ fontWeight: 900 }}>तासिका विभागणी :</span>
                           <svg viewBox="0 0 100 40" className="w-12 h-5 select-none inline-block align-middle">
                             <path d="M 5,12 L 60,12 L 60,4 L 95,20 L 60,36 L 60,28 L 5,28 Z" fill="#2E75B6" stroke="black" strokeWidth="1.5" />
                           </svg>
                         </div>
-                        <table className="text-[10.5px] text-center w-full" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
+                        <table className="text-[11.5px] text-center w-full" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
                           <thead>
-                            <tr className="font-bold">
+                            <tr className="font-black text-black" style={{ fontWeight: 900 }}>
                               {(CLASS_SUBJECTS_MAP[selectedClass] || CLASS_SUBJECTS_MAP["8th"]).map((subj) => (
-                                <th key={subj.key} style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px', textAlign: 'center' }}>{subj.label}</th>
+                                <th key={subj.key} style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[11.5px]">{subj.label}</th>
                               ))}
-                              <th style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px', textAlign: 'center' }} className="font-black">एकूण</th>
+                              <th style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[11.5px]">एकूण</th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr style={{ backgroundColor: '#FFFF00' }}>
+                            <tr style={{ backgroundColor: '#FFFF00', fontWeight: 900 }} className="font-black text-black">
                               {(CLASS_SUBJECTS_MAP[selectedClass] || CLASS_SUBJECTS_MAP["8th"]).map((subj) => (
-                                <td key={subj.key} style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px', fontWeight: '900', fontSize: '11px' }}>
+                                <td key={subj.key} style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px', fontWeight: 900, fontSize: '12px' }} className="font-black text-black">
                                   {gridData.subjectDistribution?.[subj.key] || "0"}
                                 </td>
                               ))}
-                              <td style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px', fontSize: '11px' }} className="font-black">
+                              <td style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px', fontSize: '12px', fontWeight: 900 }} className="font-black text-black">
                                 {gridData.subjectDistribution?.total || "48"}
                               </td>
                             </tr>
@@ -628,13 +641,13 @@ function StudentTimetablePage() {
                       </div>
                       <div className="col-span-5 p-3 flex justify-between items-center h-16 rounded-lg" style={{ backgroundColor: '#FCE4D6', border: '1px solid black' }}>
                         <div className="text-center flex-1 flex flex-col justify-between h-full">
-                          <span className="font-black text-slate-800 text-[11px]">{gridData.teacherName}</span>
-                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[9.5px] font-black text-slate-700 text-center uppercase tracking-wider">वर्गशिक्षक</div>
+                          <span className="font-black text-black text-[12px]" style={{ fontWeight: 900 }}>{gridData.teacherName}</span>
+                          <div style={{ fontWeight: 900 }} className="border-t border-dashed border-black mt-1 pt-1 text-[10.5px] font-black text-black text-center uppercase tracking-wider">वर्गशिक्षक</div>
                         </div>
                         <div className="h-full w-px bg-black/20 mx-4" />
                         <div className="text-center flex-1 flex flex-col justify-between h-full">
-                          <span className="font-black text-slate-800 text-[11px]">{gridData.headmasterName}</span>
-                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[9.5px] font-black text-slate-700 text-center uppercase tracking-wider">मुख्याध्यापक</div>
+                          <span className="font-black text-black text-[12px]" style={{ fontWeight: 900 }}>{gridData.headmasterName}</span>
+                          <div style={{ fontWeight: 900 }} className="border-t border-dashed border-black mt-1 pt-1 text-[10.5px] font-black text-black text-center uppercase tracking-wider">मुख्याध्यापक</div>
                         </div>
                       </div>
                     </div>

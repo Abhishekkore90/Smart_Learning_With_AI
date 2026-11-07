@@ -909,23 +909,34 @@ function ClassTimetablePage() {
       tempWrapper.style.position = 'fixed';
       tempWrapper.style.top = '0px';
       tempWrapper.style.left = '0px';
-      tempWrapper.style.width = '1000px';
+      tempWrapper.style.width = '1220px';
       tempWrapper.style.background = '#ffffff';
       tempWrapper.style.zIndex = '-99999';
       tempWrapper.style.overflow = 'visible';
       tempWrapper.style.pointerEvents = 'none';
 
-      // 2. Format clone: clean, compact padding with zero top whitespace
+      // 2. Format clone: clean, compact padding with zero top whitespace, expanded horizontally to fill A4 landscape width
+      clone.classList.remove('w-[1000px]', 'min-w-[1000px]', 'mx-auto');
       clone.style.zoom = '1';
       (clone.style as any).WebkitZoom = '1';
-      clone.style.width = '1000px';
-      clone.style.minWidth = '1000px';
-      clone.style.maxWidth = '1000px';
+      clone.style.width = '1220px';
+      clone.style.minWidth = '1220px';
+      clone.style.maxWidth = '1220px';
       clone.style.margin = '0';
       clone.style.padding = '8px 12px 12px 12px';
       clone.style.boxSizing = 'border-box';
       clone.style.transform = 'none';
       clone.style.backgroundColor = '#ffffff';
+
+      // Ensure school header and other non-table elements never truncate text in PDF
+      clone.querySelectorAll('.truncate, [class*="overflow-hidden"]').forEach((el: any) => {
+        if (!el.closest('table')) {
+          el.classList.remove('truncate', 'overflow-hidden');
+          el.style.overflow = 'visible';
+          el.style.textOverflow = 'clip';
+          el.style.whiteSpace = 'nowrap';
+        }
+      });
 
       tempWrapper.appendChild(clone);
       document.body.appendChild(tempWrapper);
@@ -1171,11 +1182,13 @@ function ClassTimetablePage() {
                             transform: `scale(${scale})`,
                             transformOrigin: 'top left',
                             width: '1000px',
-                            minWidth: '1000px'
+                            minWidth: '1000px',
+                            fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif"
                           }
                         : {
                             width: '1000px',
-                            minWidth: '1000px'
+                            minWidth: '1000px',
+                            fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif"
                           }
                     }
                   >
@@ -1188,17 +1201,17 @@ function ClassTimetablePage() {
 
                       <div className="flex-1 flex justify-center whitespace-nowrap overflow-visible mx-4">
                         <div className="px-6 py-1.5 text-center rounded-lg shadow-sm whitespace-nowrap flex items-center justify-center gap-1" style={{ background: 'linear-gradient(to bottom, #ffffff, #e6f7ff)', border: '1px solid black' }}>
-                          <span className="text-sm md:text-base font-black text-slate-800 tracking-wider whitespace-nowrap">
+                          <span className="text-[16px] font-black text-black tracking-wider whitespace-nowrap" style={{ fontWeight: 900 }}>
                             वेळापत्रक ( इयत्ता :- {isEditing ? (
                               <input
                                 type="text"
                                 value={gridData.classNameMr || selectedClass}
                                 onChange={(e) => handleHeaderChange("classNameMr", e.target.value)}
-                                style={{ ...cellInputStyle, width: getDynamicWidth(gridData.classNameMr || selectedClass, 5) }}
-                                className="font-black text-center text-slate-800 text-sm md:text-base bg-amber-50/70 border-b border-amber-400 inline-block outline-none"
+                                style={{ ...cellInputStyle, width: getDynamicWidth(gridData.classNameMr || selectedClass, 5), fontSize: '16px' }}
+                                className="font-black text-center text-slate-800 text-[16px] bg-amber-50/70 border-b border-amber-400 inline-block outline-none"
                               />
                             ) : (
-                              <span className="font-black text-slate-800 underline decoration-indigo-400 decoration-2">
+                              <span className="font-black text-slate-800 underline decoration-indigo-400 decoration-2 text-[16px]">
                                 {gridData.classNameMr || selectedClass}
                               </span>
                             )} )
@@ -1206,17 +1219,17 @@ function ClassTimetablePage() {
                         </div>
                       </div>
                       <div className="px-4 py-1.5 text-center rounded-lg whitespace-nowrap flex-shrink-0" style={{ background: 'linear-gradient(to bottom, #ffffff, #e6f7ff)', border: '1px solid black' }}>
-                        <span className="text-xs font-black text-slate-800 whitespace-nowrap">
+                        <span className="text-[13.5px] font-black text-black whitespace-nowrap" style={{ fontWeight: 900 }}>
                           सन {isEditing ? (
                             <input
                               type="text"
                               value={gridData.academicYear}
                               onChange={(e) => handleHeaderChange("academicYear", e.target.value)}
-                              style={{ ...cellInputStyle, width: getDynamicWidth(gridData.academicYear, 7) }}
-                              className="font-black text-center text-slate-800 text-xs bg-amber-50/70 border-b border-amber-400 inline-block outline-none"
+                              style={{ ...cellInputStyle, width: getDynamicWidth(gridData.academicYear, 7), fontSize: '13.5px' }}
+                              className="font-black text-center text-slate-800 text-[13.5px] bg-amber-50/70 border-b border-amber-400 inline-block outline-none"
                             />
                           ) : (
-                            <span className="font-black text-slate-800">
+                            <span className="font-black text-slate-800 text-[13.5px]">
                               {gridData.academicYear}
                             </span>
                           )}
@@ -1225,22 +1238,23 @@ function ClassTimetablePage() {
                     </div>
 
                     {/* School Details Header Bar */}
-                    <div className="border border-black text-[11px] font-bold grid grid-cols-12 bg-white">
-                      <div className="col-span-5 flex items-center gap-1.5 p-1.5 bg-white whitespace-nowrap overflow-hidden" style={{ borderRight: '1px solid black' }}>
-                        <span className="whitespace-nowrap flex-shrink-0 font-extrabold text-slate-900">शाळेचे नाव :</span>
+                    <div className="border border-black text-[12.5px] font-black grid grid-cols-12 bg-white" style={{ fontWeight: 900 }}>
+                      <div className="col-span-6 flex items-center gap-1.5 p-1.5 bg-white whitespace-nowrap overflow-visible" style={{ borderRight: '1px solid black' }}>
+                        <span className="whitespace-nowrap flex-shrink-0 font-black text-black text-[12.5px]" style={{ fontWeight: 900 }}>शाळेचे नाव :</span>
                         {isEditing ? (
                           <input
                             type="text"
                             value={gridData.schoolName}
                             onChange={(e) => handleHeaderChange("schoolName", e.target.value)}
-                            style={{ ...cellInputStyle, textAlign: 'left' }}
-                            className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0"
+                            style={{ ...cellInputStyle, textAlign: 'left', fontWeight: 900, fontSize: '13px' }}
+                            className="flex-1 font-black text-black px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0 text-[13px]"
                             placeholder="शाळेचे नाव टाका"
                           />
                         ) : (
                           <span
                             onClick={() => setIsSchoolModalOpen(true)}
-                            className="font-black text-slate-900 px-1 py-0.5 truncate text-[11.5px] font-black cursor-pointer hover:text-indigo-600 transition-colors"
+                            className="font-black text-black px-1 py-0.5 whitespace-nowrap text-[13px] cursor-pointer hover:text-indigo-600 transition-colors"
+                            style={{ fontWeight: 900 }}
                             title="शाळेची माहिती बदलण्यासाठी येथे क्लिक करा"
                           >
                             {gridData.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
@@ -1248,20 +1262,21 @@ function ClassTimetablePage() {
                         )}
                       </div>
                       <div className="col-span-2 flex items-center gap-1.5 p-1.5 whitespace-nowrap overflow-hidden" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
-                        <span className="whitespace-nowrap flex-shrink-0 font-extrabold text-slate-900">केंद्र :-</span>
+                        <span className="whitespace-nowrap flex-shrink-0 font-black text-black text-[12px]" style={{ fontWeight: 900 }}>केंद्र :-</span>
                         {isEditing ? (
                           <input
                             type="text"
                             value={gridData.center}
                             onChange={(e) => handleHeaderChange("center", e.target.value)}
-                            style={{ ...cellInputStyle, textAlign: 'left' }}
-                            className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0"
+                            style={{ ...cellInputStyle, textAlign: 'left', fontWeight: 900, fontSize: '12.5px' }}
+                            className="flex-1 font-black text-black px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0 text-[12.5px]"
                             placeholder="केंद्र"
                           />
                         ) : (
                           <span
                             onClick={() => setIsSchoolModalOpen(true)}
-                            className="font-bold text-slate-900 px-1 py-0.5 truncate text-[11px] font-extrabold cursor-pointer hover:text-indigo-600 transition-colors"
+                            className="font-black text-black px-1 py-0.5 truncate text-[12.5px] cursor-pointer hover:text-indigo-600 transition-colors"
+                            style={{ fontWeight: 900 }}
                             title="शाळेची माहिती बदलण्यासाठी येथे क्लिक करा"
                           >
                             {gridData.center || "-"}
@@ -1269,41 +1284,43 @@ function ClassTimetablePage() {
                         )}
                       </div>
                       <div className="col-span-2 flex items-center gap-1.5 p-1.5 whitespace-nowrap overflow-hidden" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
-                        <span className="whitespace-nowrap flex-shrink-0 font-extrabold text-slate-900">तालुका :-</span>
+                        <span className="whitespace-nowrap flex-shrink-0 font-black text-black text-[12px]" style={{ fontWeight: 900 }}>तालुका :-</span>
                         {isEditing ? (
                           <input
                             type="text"
                             value={gridData.taluka}
                             onChange={(e) => handleHeaderChange("taluka", e.target.value)}
-                            style={{ ...cellInputStyle, textAlign: 'left' }}
-                            className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0"
+                            style={{ ...cellInputStyle, textAlign: 'left', fontWeight: 900, fontSize: '12.5px' }}
+                            className="flex-1 font-black text-black px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0 text-[12.5px]"
                             placeholder="तालुका"
                           />
                         ) : (
                           <span
                             onClick={() => setIsSchoolModalOpen(true)}
-                            className="font-bold text-slate-900 px-1 py-0.5 truncate text-[11px] font-extrabold cursor-pointer hover:text-indigo-600 transition-colors"
+                            className="font-black text-black px-1 py-0.5 truncate text-[12.5px] cursor-pointer hover:text-indigo-600 transition-colors"
+                            style={{ fontWeight: 900 }}
                             title="शाळेची माहिती बदलण्यासाठी येथे क्लिक करा"
                           >
                             {gridData.taluka || "-"}
                           </span>
                         )}
                       </div>
-                      <div className="col-span-3 flex items-center gap-1.5 p-1.5 whitespace-nowrap overflow-hidden" style={{ backgroundColor: '#F2DCDB' }}>
-                        <span className="whitespace-nowrap flex-shrink-0 font-extrabold text-slate-900">जिल्हा :-</span>
+                      <div className="col-span-2 flex items-center gap-1.5 p-1.5 whitespace-nowrap overflow-hidden" style={{ backgroundColor: '#F2DCDB' }}>
+                        <span className="whitespace-nowrap flex-shrink-0 font-black text-black text-[12px]" style={{ fontWeight: 900 }}>जिल्हा :-</span>
                         {isEditing ? (
                           <input
                             type="text"
                             value={gridData.district}
                             onChange={(e) => handleHeaderChange("district", e.target.value)}
-                            style={{ ...cellInputStyle, textAlign: 'left' }}
-                            className="flex-1 font-bold text-slate-800 px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0"
+                            style={{ ...cellInputStyle, textAlign: 'left', fontWeight: 900, fontSize: '12.5px' }}
+                            className="flex-1 font-black text-black px-1 py-0.5 bg-amber-50/80 border border-amber-300 rounded-xs outline-none min-w-0 text-[12.5px]"
                             placeholder="जिल्हा"
                           />
                         ) : (
                           <span
                             onClick={() => setIsSchoolModalOpen(true)}
-                            className="font-bold text-slate-900 px-1 py-0.5 truncate text-[11px] font-extrabold cursor-pointer hover:text-indigo-600 transition-colors"
+                            className="font-black text-black px-1 py-0.5 truncate text-[12.5px] cursor-pointer hover:text-indigo-600 transition-colors"
+                            style={{ fontWeight: 900 }}
                             title="शाळेची माहिती बदलण्यासाठी येथे क्लिक करा"
                           >
                             {gridData.district || "-"}
@@ -1315,21 +1332,21 @@ function ClassTimetablePage() {
                     <div className="w-full">
                       <table className="w-full text-center" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
                         <thead>
-                          <tr className="text-slate-800 font-black text-[11px] h-8">
-                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>सोमवार</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>मंगळवार</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>बुधवार</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>गुरुवार</th>
+                          <tr className="text-black font-black text-[12px] h-8">
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">सोमवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">मंगळवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">बुधवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">गुरुवार</th>
 
-                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center' }}>शुक्रवार</th>
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">शुक्रवार</th>
 
-                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center' }}>शनिवार</th>
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[12px]">शनिवार</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1370,104 +1387,104 @@ function ClassTimetablePage() {
                             const isSatRecess = isRecessValue(row.saturday);
 
                             return (
-                              <tr key={idx} className="text-[11px] h-7">
-                                <td className="font-black py-0.5" style={{ backgroundColor: monThuPeriodBg, border: '1px solid black', width: '4%' }}>
+                              <tr key={idx} className="text-[12px] h-7 font-black text-black" style={{ fontWeight: 900 }}>
+                                <td className="font-black py-0.5 text-black" style={{ backgroundColor: monThuPeriodBg, border: '1px solid black', width: '4%', fontWeight: 900 }}>
                                   {isEditing ? (
-                                    <input type="text" value={row.monThuPeriod} onChange={(e) => handleCellChange(idx, "monThuPeriod", e.target.value)} style={cellInputStyle} className="font-black text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                    <input type="text" value={row.monThuPeriod} onChange={(e) => handleCellChange(idx, "monThuPeriod", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '11px' }} className="font-black text-[11px] text-black text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                   ) : (
-                                    <span className="font-black text-[11px] text-center block w-full">{row.monThuPeriod}</span>
+                                    <span style={{ fontWeight: 900 }} className="font-black text-[11px] text-black text-center block w-full">{row.monThuPeriod}</span>
                                   )}
                                 </td>
-                                <td className="py-0.5" style={{ backgroundColor: monThuTimeBg, border: '1px solid black', width: '8%' }}>
+                                <td className="py-0.5" style={{ backgroundColor: monThuTimeBg, border: '1px solid black', width: '8%', fontWeight: 900 }}>
                                   {isEditing ? (
-                                    <input type="text" value={row.monThuTime} onChange={(e) => handleCellChange(idx, "monThuTime", e.target.value)} style={cellInputStyle} className="font-bold text-[10.5px] text-[#C00000] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                    <input type="text" value={row.monThuTime} onChange={(e) => handleCellChange(idx, "monThuTime", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '11.5px' }} className="font-black text-[11.5px] text-[#C00000] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                   ) : (
-                                    <span className="font-bold text-[10.5px] text-[#C00000] text-center block w-full whitespace-nowrap">{row.monThuTime}</span>
+                                    <span style={{ fontWeight: 900 }} className="font-black text-[11.5px] text-[#C00000] text-center block w-full whitespace-nowrap">{row.monThuTime}</span>
                                   )}
                                 </td>
                                 {isMonThuRecess ? (
-                                  <td className="font-bold text-center py-0.5" style={{ ...getRecessStyle(monThuRecessVal || ""), border: '1px solid black' }} colSpan={4}>
+                                  <td className="font-black text-center py-0.5 text-black text-[12.5px]" style={{ ...getRecessStyle(monThuRecessVal || ""), border: '1px solid black', fontWeight: 900 }} colSpan={4}>
                                     {isEditing ? (
-                                      <input type="text" value={monThuRecessVal || ""} onChange={(e) => handleCellChange(idx, "monday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                      <input type="text" value={monThuRecessVal || ""} onChange={(e) => handleCellChange(idx, "monday", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '12.5px' }} className="font-black text-[12.5px] text-black text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                     ) : (
-                                      <span className="font-extrabold text-[11px] text-center block w-full">{monThuRecessVal || ""}</span>
+                                      <span style={{ fontWeight: 900 }} className="font-black text-[12.5px] text-black text-center block w-full">{monThuRecessVal || ""}</span>
                                     )}
                                   </td>
                                 ) : (
                                   <>
-                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}>
+                                    <td className="py-0.5 bg-white font-black text-black" style={{ border: '1px solid black', width: '9%', fontWeight: 900 }}>
                                       {isEditing ? (
-                                        <input type="text" value={row.monday} onChange={(e) => handleCellChange(idx, "monday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                        <input type="text" value={row.monday} onChange={(e) => handleCellChange(idx, "monday", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '12.5px' }} className="font-black text-[12.5px] text-black text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                       ) : (
-                                        <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.monday}</span>
+                                        <span style={{ fontWeight: 900 }} className="font-black text-[12.5px] text-black text-center block w-full truncate">{row.monday}</span>
                                       )}
                                     </td>
-                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}>
+                                    <td className="py-0.5 bg-white font-black text-black" style={{ border: '1px solid black', width: '9%', fontWeight: 900 }}>
                                       {isEditing ? (
-                                        <input type="text" value={row.tuesday} onChange={(e) => handleCellChange(idx, "tuesday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                        <input type="text" value={row.tuesday} onChange={(e) => handleCellChange(idx, "tuesday", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '12.5px' }} className="font-black text-[12.5px] text-black text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                       ) : (
-                                        <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.tuesday}</span>
+                                        <span style={{ fontWeight: 900 }} className="font-black text-[12.5px] text-black text-center block w-full truncate">{row.tuesday}</span>
                                       )}
                                     </td>
-                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}>
+                                    <td className="py-0.5 bg-white font-black text-black" style={{ border: '1px solid black', width: '9%', fontWeight: 900 }}>
                                       {isEditing ? (
-                                        <input type="text" value={row.wednesday} onChange={(e) => handleCellChange(idx, "wednesday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                        <input type="text" value={row.wednesday} onChange={(e) => handleCellChange(idx, "wednesday", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '12.5px' }} className="font-black text-[12.5px] text-black text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                       ) : (
-                                        <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.wednesday}</span>
+                                        <span style={{ fontWeight: 900 }} className="font-black text-[12.5px] text-black text-center block w-full truncate">{row.wednesday}</span>
                                       )}
                                     </td>
-                                    <td className="py-0.5 bg-white" style={{ border: '1px solid black', width: '9%' }}>
+                                    <td className="py-0.5 bg-white font-black text-black" style={{ border: '1px solid black', width: '9%', fontWeight: 900 }}>
                                       {isEditing ? (
-                                        <input type="text" value={row.thursday} onChange={(e) => handleCellChange(idx, "thursday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                        <input type="text" value={row.thursday} onChange={(e) => handleCellChange(idx, "thursday", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '12.5px' }} className="font-black text-[12.5px] text-black text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                       ) : (
-                                        <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.thursday}</span>
+                                        <span style={{ fontWeight: 900 }} className="font-black text-[12.5px] text-black text-center block w-full truncate">{row.thursday}</span>
                                       )}
                                     </td>
                                   </>
                                 )}
-                                <td className="font-black py-0.5" style={{ backgroundColor: friPeriodBg, border: '1px solid black', width: '4%' }}>
+                                <td className="font-black py-0.5 text-black" style={{ backgroundColor: friPeriodBg, border: '1px solid black', width: '4%', fontWeight: 900 }}>
                                   {isEditing ? (
-                                    <input type="text" value={row.friPeriod} onChange={(e) => handleCellChange(idx, "friPeriod", e.target.value)} style={cellInputStyle} className="font-black text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                    <input type="text" value={row.friPeriod} onChange={(e) => handleCellChange(idx, "friPeriod", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '11px' }} className="font-black text-[11px] text-black text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                   ) : (
-                                    <span className="font-black text-[11px] text-center block w-full">{row.friPeriod}</span>
+                                    <span style={{ fontWeight: 900 }} className="font-black text-[11px] text-black text-center block w-full">{row.friPeriod}</span>
                                   )}
                                 </td>
-                                <td className="py-0.5" style={{ backgroundColor: friTimeBg, border: '1px solid black', width: '8%' }}>
+                                <td className="py-0.5" style={{ backgroundColor: friTimeBg, border: '1px solid black', width: '8%', fontWeight: 900 }}>
                                   {isEditing ? (
-                                    <input type="text" value={row.friTime} onChange={(e) => handleCellChange(idx, "friTime", e.target.value)} style={cellInputStyle} className="font-bold text-[10.5px] text-[#C00000] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                    <input type="text" value={row.friTime} onChange={(e) => handleCellChange(idx, "friTime", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '11.5px' }} className="font-black text-[11.5px] text-[#C00000] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                   ) : (
-                                    <span className="font-bold text-[10.5px] text-[#C00000] text-center block w-full whitespace-nowrap">{row.friTime}</span>
+                                    <span style={{ fontWeight: 900 }} className="font-black text-[11.5px] text-[#C00000] text-center block w-full whitespace-nowrap">{row.friTime}</span>
                                   )}
                                 </td>
-                                <td className="py-0.5" style={{ ...(isFriRecess ? getRecessStyle(row.friday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%' }}>
+                                <td className="py-0.5 font-black text-black" style={{ ...(isFriRecess ? getRecessStyle(row.friday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%', fontWeight: 900 }}>
                                   {isEditing ? (
-                                    <input type="text" value={row.friday} onChange={(e) => handleCellChange(idx, "friday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                    <input type="text" value={row.friday} onChange={(e) => handleCellChange(idx, "friday", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '12.5px' }} className="font-black text-[12.5px] text-black text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                   ) : (
-                                    <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.friday}</span>
+                                    <span style={{ fontWeight: 900 }} className="font-black text-[12.5px] text-black text-center block w-full truncate">{row.friday}</span>
                                   )}
                                 </td>
-                                <td className="font-black py-0.5" style={{ backgroundColor: satPeriodBg, border: '1px solid black', width: '4%' }}>
+                                <td className="font-black py-0.5 text-black" style={{ backgroundColor: satPeriodBg, border: '1px solid black', width: '4%', fontWeight: 900 }}>
                                   {isEditing ? (
-                                    <input type="text" value={row.satPeriod} onChange={(e) => handleCellChange(idx, "satPeriod", e.target.value)} style={cellInputStyle} className="font-black text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                    <input type="text" value={row.satPeriod} onChange={(e) => handleCellChange(idx, "satPeriod", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '11px' }} className="font-black text-[11px] text-black text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                   ) : (
-                                    <span className="font-black text-[11px] text-center block w-full">{row.satPeriod}</span>
+                                    <span style={{ fontWeight: 900 }} className="font-black text-[11px] text-black text-center block w-full">{row.satPeriod}</span>
                                   )}
                                 </td>
-                                <td className="py-0.5" style={{ backgroundColor: satTimeBg, border: '1px solid black', width: '8%' }}>
+                                <td className="py-0.5" style={{ backgroundColor: satTimeBg, border: '1px solid black', width: '8%', fontWeight: 900 }}>
                                   {isEditing ? (
-                                    <input type="text" value={row.satTime} onChange={(e) => handleCellChange(idx, "satTime", e.target.value)} style={cellInputStyle} className="font-bold text-[10.5px] text-[#C00000] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                    <input type="text" value={row.satTime} onChange={(e) => handleCellChange(idx, "satTime", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '11.5px' }} className="font-black text-[11.5px] text-[#C00000] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                   ) : (
-                                    <span className="font-bold text-[10.5px] text-[#C00000] text-center block w-full whitespace-nowrap">{row.satTime}</span>
+                                    <span style={{ fontWeight: 900 }} className="font-black text-[11.5px] text-[#C00000] text-center block w-full whitespace-nowrap">{row.satTime}</span>
                                   )}
                                 </td>
                                 {idx === 14 ? (
                                   <td className="py-0.5" style={{ backgroundColor: '#FF0000', border: '1px solid black', width: '10%' }}></td>
                                 ) : (
-                                  <td className="py-0.5" style={{ ...(isSatRecess ? getRecessStyle(row.saturday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%' }}>
+                                  <td className="py-0.5 font-black text-black" style={{ ...(isSatRecess ? getRecessStyle(row.saturday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%', fontWeight: 900 }}>
                                     {isEditing ? (
-                                      <input type="text" value={row.saturday} onChange={(e) => handleCellChange(idx, "saturday", e.target.value)} style={cellInputStyle} className="font-extrabold text-[11px] text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
+                                      <input type="text" value={row.saturday} onChange={(e) => handleCellChange(idx, "saturday", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '12.5px' }} className="font-black text-[12.5px] text-black text-center outline-none bg-amber-50/50 hover:bg-amber-100/70 focus:bg-white rounded-xs" />
                                     ) : (
-                                      <span className="font-extrabold text-[11px] text-center block w-full truncate">{row.saturday}</span>
+                                      <span style={{ fontWeight: 900 }} className="font-black text-[12.5px] text-black text-center block w-full truncate">{row.saturday}</span>
                                     )}
                                   </td>
                                 )}
@@ -1481,42 +1498,42 @@ function ClassTimetablePage() {
                     <div className="grid grid-cols-12 gap-4 items-end pt-2 border-t border-black">
                       <div className="col-span-7 space-y-1.5 text-left">
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-black text-slate-800 tracking-widest">तासिका विभागणी :</span>
+                          <span className="text-[12px] font-black text-black tracking-widest" style={{ fontWeight: 900 }}>तासिका विभागणी :</span>
                           <svg viewBox="0 0 100 40" className="w-12 h-5 select-none inline-block align-middle">
                             <path d="M 5,12 L 60,12 L 60,4 L 95,20 L 60,36 L 60,28 L 5,28 Z" fill="#2E75B6" stroke="black" strokeWidth="1.5" />
                           </svg>
                         </div>
-                        <table className="text-[10.5px] text-center w-full" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
+                        <table className="text-[11.5px] text-center w-full" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
                           <thead>
-                            <tr className="font-bold">
+                            <tr className="font-black text-black" style={{ fontWeight: 900 }}>
                               {(CLASS_SUBJECTS_MAP[selectedClass] || CLASS_SUBJECTS_MAP["8th"]).map((subj) => (
-                                <th key={subj.key} style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px', textAlign: 'center' }}>{subj.label}</th>
+                                <th key={subj.key} style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[11.5px]">{subj.label}</th>
                               ))}
-                              <th style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px', textAlign: 'center' }} className="font-black">एकूण</th>
+                              <th style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px', textAlign: 'center', fontWeight: 900 }} className="font-black text-black text-[11.5px]">एकूण</th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr style={{ backgroundColor: '#FFFF00' }}>
+                            <tr style={{ backgroundColor: '#FFFF00', fontWeight: 900 }} className="font-black text-black">
                               {(CLASS_SUBJECTS_MAP[selectedClass] || CLASS_SUBJECTS_MAP["8th"]).map((subj) => (
-                                <td key={subj.key} style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px' }}>
+                                <td key={subj.key} style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px', fontWeight: 900 }} className="font-black text-black">
                                   {isEditing ? (
                                     <input
                                       type="text"
                                       value={gridData.subjectDistribution?.[subj.key] || "0"}
                                       onChange={(e) => handleSubjectDistChange(subj.key, e.target.value)}
-                                      style={cellInputStyle}
-                                      className="font-black text-[11px] text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none"
+                                      style={{ ...cellInputStyle, fontWeight: 900, fontSize: '12px' }}
+                                      className="font-black text-[12px] text-black text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none"
                                     />
                                   ) : (
-                                    <span className="font-extrabold text-[11px] text-center block w-full">{gridData.subjectDistribution?.[subj.key] || "0"}</span>
+                                    <span style={{ fontWeight: 900 }} className="font-black text-[12px] text-black text-center block w-full">{gridData.subjectDistribution?.[subj.key] || "0"}</span>
                                   )}
                                 </td>
                               ))}
-                              <td style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px' }} className="font-black">
+                              <td style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px', fontWeight: 900 }} className="font-black text-black">
                                 {isEditing ? (
-                                  <input type="text" value={gridData.subjectDistribution?.total || "48"} onChange={(e) => handleSubjectDistChange("total", e.target.value)} style={cellInputStyle} className="font-black text-[11px] text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none" />
+                                  <input type="text" value={gridData.subjectDistribution?.total || "48"} onChange={(e) => handleSubjectDistChange("total", e.target.value)} style={{ ...cellInputStyle, fontWeight: 900, fontSize: '12px' }} className="font-black text-[12px] text-black text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none" />
                                 ) : (
-                                  <span className="font-black text-[11px] text-center block w-full">{gridData.subjectDistribution?.total || "48"}</span>
+                                  <span style={{ fontWeight: 900 }} className="font-black text-[12px] text-black text-center block w-full">{gridData.subjectDistribution?.total || "48"}</span>
                                 )}
                               </td>
                             </tr>
@@ -1526,20 +1543,20 @@ function ClassTimetablePage() {
                       <div className="col-span-5 p-3 flex justify-between items-center h-16 rounded-[1.8rem]" style={{ backgroundColor: '#FCE4D6', border: '1px solid black' }}>
                         <div className="text-center flex-1 flex flex-col justify-between h-full px-2 overflow-hidden">
                           {isEditing ? (
-                            <input type="text" value={gridData.teacherName} onChange={(e) => handleHeaderChange("teacherName", e.target.value)} style={{ ...cellInputStyle, fontSize: '11px' }} className="font-black text-slate-800 text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none w-full" />
+                            <input type="text" value={gridData.teacherName} onChange={(e) => handleHeaderChange("teacherName", e.target.value)} style={{ ...cellInputStyle, fontSize: '12px', fontWeight: 900 }} className="font-black text-black text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none w-full" />
                           ) : (
-                            <div className="font-black text-slate-800 text-center text-[11px] truncate">{gridData.teacherName || "वर्गशिक्षक"}</div>
+                            <div style={{ fontWeight: 900 }} className="font-black text-black text-center text-[12px] truncate">{gridData.teacherName || "वर्गशिक्षक"}</div>
                           )}
-                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[9.5px] font-black text-slate-700 text-center uppercase tracking-wider">वर्गशिक्षकाचे नाव व स्वाक्षरी</div>
+                          <div style={{ fontWeight: 900 }} className="border-t border-dashed border-black mt-1 pt-1 text-[10.5px] font-black text-black text-center uppercase tracking-wider">वर्गशिक्षकाचे नाव व स्वाक्षरी</div>
                         </div>
                         <div className="h-full w-px bg-black/20 mx-4" />
                         <div className="text-center flex-1 flex flex-col justify-between h-full px-2 overflow-hidden">
                           {isEditing ? (
-                            <input type="text" value={gridData.headmasterName} onChange={(e) => handleHeaderChange("headmasterName", e.target.value)} style={{ ...cellInputStyle, fontSize: '11px' }} className="font-black text-slate-800 text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none w-full" />
+                            <input type="text" value={gridData.headmasterName} onChange={(e) => handleHeaderChange("headmasterName", e.target.value)} style={{ ...cellInputStyle, fontSize: '12px', fontWeight: 900 }} className="font-black text-black text-center bg-amber-50/70 border border-amber-300 rounded-xs outline-none w-full" />
                           ) : (
-                            <div className="font-black text-slate-800 text-center text-[11px] truncate">{gridData.headmasterName || "मुख्याध्यापक"}</div>
+                            <div style={{ fontWeight: 900 }} className="font-black text-black text-center text-[12px] truncate">{gridData.headmasterName || "मुख्याध्यापक"}</div>
                           )}
-                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[9.5px] font-black text-slate-700 text-center uppercase tracking-wider">मुख्याध्यापकांचे नाव व स्वाक्षरी</div>
+                          <div style={{ fontWeight: 900 }} className="border-t border-dashed border-black mt-1 pt-1 text-[10.5px] font-black text-black text-center uppercase tracking-wider">मुख्याध्यापकांचे नाव व स्वाक्षरी</div>
                         </div>
                       </div>
                     </div>

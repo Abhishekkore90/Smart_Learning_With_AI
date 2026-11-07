@@ -2337,7 +2337,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           infoBanner.style.marginBottom = "14px";
           infoBanner.innerHTML = `
             <span style="font-size: 14px; font-weight: 900; color: #000000;">📋 अभ्यासक्रम व प्रश्नपेढी मार्गदर्शक सूचना (Curriculum Specifications)</span>
-            <span style="font-size: 12px; font-weight: 700; color: #475569;">NEP 2020 / SCF-FS 2024</span>
           `;
           infoPage.appendChild(infoBanner);
 
@@ -2616,17 +2615,28 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             banner.style.backgroundColor = "#ffffff";
             banner.style.color = "#000000";
             banner.style.border = "1.5px solid #000000";
-            banner.style.padding = "3.5px 10px";
+            banner.style.padding = "3.5px 12px";
             banner.style.borderRadius = "6px";
             banner.style.display = "flex";
             banner.style.justifyContent = "space-between";
             banner.style.alignItems = "center";
+            banner.style.width = "100%";
+            banner.style.boxSizing = "border-box";
             banner.innerHTML = `
               <span style="font-size: 12.5px; font-weight: 900; color: #000000;">
-                📚 इयत्ता: ${classNameMr} | विषय: ${subjectNameMr} | शैक्षणिक वर्ष: २०२६-२७ | संपूर्ण प्रश्नपेढी
+                📚 इयत्ता: ${classNameMr}
               </span>
-              <span style="font-size: 10.5px; font-weight: 700; color: #475569;">
-                NEP 2020 / SCF-FS 2024 संलग्नीत
+              <span style="font-size: 12px; font-weight: 700; color: #64748b;">|</span>
+              <span style="font-size: 12.5px; font-weight: 900; color: #000000;">
+                विषय: ${subjectNameMr}
+              </span>
+              <span style="font-size: 12px; font-weight: 700; color: #64748b;">|</span>
+              <span style="font-size: 12.5px; font-weight: 900; color: #000000;">
+                शैक्षणिक वर्ष: २०२६-२७
+              </span>
+              <span style="font-size: 12px; font-weight: 700; color: #64748b;">|</span>
+              <span style="font-size: 12.5px; font-weight: 900; color: #000000;">
+                संपूर्ण प्रश्नपेढी
               </span>
             `;
             topContent.appendChild(banner);
@@ -2759,8 +2769,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                 : "";
 
               const outcomeCellHtml = outcomeSpans[qIdx].isStart
-                ? `<td rowspan="${outcomeSpans[qIdx].span}" style="border: 1.5px solid #000000; border-right: 1.5px solid #000000; ${qIdx + outcomeSpans[qIdx].span === questions.length ? "border-bottom: 2px solid #000000;" : ""} padding: ${cellPadding}; font-size: ${qFontSize}; font-weight: 600; color: #000000; background-color: #ffffff; vertical-align: middle; text-align: center; word-break: break-word;">
-                    <div style="font-weight: 600; color: #000000; text-align: center; line-height: ${qLineHeight}; padding: 4px 2px; font-size: ${qFontSize}; word-break: break-word;">${q.outcome || "—"}</div>
+                ? `<td rowspan="${outcomeSpans[qIdx].span}" style="border: 1.5px solid #000000; border-right: 1.5px solid #000000; ${qIdx + outcomeSpans[qIdx].span === questions.length ? "border-bottom: 2px solid #000000;" : ""} padding: ${cellPadding}; font-size: ${qFontSize}; font-weight: 800; color: #000000; background-color: #ffffff; vertical-align: middle; text-align: center; word-break: break-word;">
+                    <div style="font-weight: 800; color: #000000; text-align: center; line-height: ${qLineHeight}; padding: 4px 2px; font-size: ${qFontSize}; word-break: break-word;">${q.outcome || "—"}</div>
                   </td>`
                 : "";
 
@@ -2778,7 +2788,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         ${q.question}
                       </td>
 
-                      <td class="qb-col-answer" style="border: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 3px 6px; font-size: ${qFontSize}; font-weight: 600; color: #000000; background-color: #ffffff; line-height: ${qLineHeight}; vertical-align: middle; word-break: break-word; overflow-wrap: break-word; text-align: left;">
+                      <td class="qb-col-answer" style="border: 1px solid #000000; border-bottom: ${standardRowBottomBorder}; padding: 3px 6px; font-size: ${qFontSize}; font-weight: 800; color: #000000; background-color: #ffffff; line-height: ${qLineHeight}; vertical-align: middle; word-break: break-word; overflow-wrap: break-word; text-align: left;">
                         ${q.answer}
                       </td>
 
@@ -2825,15 +2835,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                   <div style="font-size: 11.5px; font-weight: 700; color: #475569; margin-top: 2px;">(${schoolProfile.headMasterName || "मुख्याध्यापक नाव"})</div>
                 </div>
               </div>
-              <div style="display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 700; color: #64748b;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900; color: #000000;">
                 <span>महाराष्ट्र प्राथमिक शिक्षण परिषद | शैक्षणिक वर्ष २०२६-२७</span>
                 <span>अंतिम पान (${pageLessonGroups.length}/${pageLessonGroups.length})</span>
               </div>
             `;
           } else {
             bottomFooter.innerHTML = `
-              <div style="display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 700; color: #64748b;">
-                <span>महाराष्ट्र राज्य अभ्यासक्रम आराखडा (SCF-FS / NEP 2020)</span>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900; color: #000000;">
                 <span>${schoolProfile.schoolName || ""}</span>
                 <span>पान ${pIdx + 1} / ${pageLessonGroups.length}</span>
               </div>
@@ -3504,17 +3513,16 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             const pageDiv = document.createElement("div");
             pageDiv.className = "bg-white space-y-2";
             pageDiv.style.width = exportWidth; // 950px
-            pageDiv.style.minHeight = "1260px";
-            pageDiv.style.height = "1260px";
-            pageDiv.style.maxHeight = "1260px";
-            pageDiv.style.padding = "16px 20px";
+            pageDiv.style.minHeight = "auto";
+            pageDiv.style.height = "auto";
+            pageDiv.style.padding = "8px 20px 10px 20px";
             pageDiv.style.boxSizing = "border-box";
             pageDiv.style.backgroundColor = "#ffffff";
             pageDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
             pageDiv.style.display = "flex";
             pageDiv.style.flexDirection = "column";
             pageDiv.style.justifyContent = "flex-start"; // Natural top-to-bottom layout
-            pageDiv.style.overflow = "hidden";
+            pageDiv.style.overflow = "visible";
 
             const topHeaderWrap = document.createElement("div");
             topHeaderWrap.style.width = "100%";
@@ -3584,7 +3592,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             const isLastRow = (rIdx === N - 1);
             if (isLastRow && cleanSig) {
               const sigClone = cleanSig.cloneNode(true) as HTMLElement;
-              sigClone.style.marginTop = (currentPage.pageDiv.offsetHeight > 1100) ? "8px" : "16px";
+              sigClone.style.marginTop = "14px";
               currentPage.bottomWrap.innerHTML = "";
               currentPage.bottomWrap.appendChild(sigClone);
             }
@@ -3595,19 +3603,15 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               currentPage.tableWrap.offsetHeight +
               currentPage.bottomWrap.offsetHeight;
 
-            // Height limit: on continuation pages there are no headers, so available content fits up to 1240px inside 1260px container
-            const maxAllowedForPage = currentPage.pageDiv.querySelector(".pdf-school-header") ? 1220 : 1240;
+            // Height limit: A4 portrait printable budget at 950px width is ~1420px (284mm).
+            // Fit each page from top to the very end of the page (~1385px content height).
+            const maxAllowedForPage = 1385;
 
-            // Orphan Prevention: If only 1 or 2 rows remain in the entire month, keep them on the current page
-            // so an almost-blank 3rd page with 1 single row is NEVER generated!
-            const remainingRowsInMonth = N - 1 - rIdx;
-            const isNearMonthEnd = remainingRowsInMonth <= 2;
-            const threshold = isNearMonthEnd ? 1250 : maxAllowedForPage;
+            // If it is the last row of the month, allow up to 1415px so the month finishes on this page
+            // instead of pushing an orphan single row or signature onto an unnecessary continuation page!
+            const threshold = isLastRow ? 1415 : maxAllowedForPage;
 
-            const isSecondLast = (rIdx === N - 2);
-            const wouldLastFit = !isSecondLast || (totalContentHeight + 105 <= threshold);
-
-            if (totalContentHeight <= threshold && wouldLastFit) {
+            if (totalContentHeight <= threshold) {
               // Fits comfortably on currentPage!
               if (isLastRow) {
                 allPagesToRender.push(currentPage.pageDiv);
@@ -3690,7 +3694,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
               // If this was the last row, append signature and finalize new page
               if (isLastRow && cleanSig) {
-                currentPage.bottomWrap.appendChild(cleanSig.cloneNode(true));
+                const sigClone = cleanSig.cloneNode(true) as HTMLElement;
+                sigClone.style.marginTop = "16px";
+                currentPage.bottomWrap.innerHTML = "";
+                currentPage.bottomWrap.appendChild(sigClone);
                 allPagesToRender.push(currentPage.pageDiv);
               }
             }
@@ -3861,7 +3868,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             batchContainers.push(pageCont);
 
             const canvasWidth = pageDiv.offsetWidth || 950;
-            const canvasHeight = pageDiv.offsetHeight || 1260;
+            const canvasHeight = Math.ceil(pageDiv.getBoundingClientRect().height || pageDiv.offsetHeight || 1350);
 
             const c = await html2canvas(pageDiv, {
               scale: 1.1,
@@ -3907,7 +3914,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           if (isMonthly) {
             // For Monthly Planning: ALWAYS guarantee 100% full width (190mm) with exact 10mm margins on left & right
             actualRenderWidthMm = 190;
-            actualRenderHeightMm = Math.min(278, canvasAspectHeightMm);
+            actualRenderHeightMm = Math.min(285, canvasAspectHeightMm);
           } else {
             if (actualRenderHeightMm > maxPageHeightMm) {
               const fitRatio = maxPageHeightMm / actualRenderHeightMm;
@@ -3917,7 +3924,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           }
 
           const actualOffsetX = (210 - actualRenderWidthMm) / 2;
-          const actualOffsetY = isMonthly ? Math.max(6, (297 - actualRenderHeightMm) / 2) : 8;
+          const actualOffsetY = isMonthly ? 6 : 8;
 
           pdf.addImage(
             pageImgData,
@@ -4747,10 +4754,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                         {outcomeSpans[idx]?.isStart ? (
                                           <td
                                             rowSpan={outcomeSpans[idx].span}
-                                            className="border border-slate-400 p-2 font-semibold text-black bg-white align-middle text-center text-xs leading-snug break-words"
+                                            className="border border-slate-400 p-2 font-bold text-black bg-white align-middle text-center text-xs leading-snug break-words"
                                             style={{ verticalAlign: "middle", textAlign: "center", borderRight: "1.5px solid #000000" }}
                                           >
-                                            <div className="flex flex-col items-center justify-center text-center p-1 mx-auto font-semibold text-black break-words">
+                                            <div className="flex flex-col items-center justify-center text-center p-1 mx-auto font-bold text-black break-words">
                                               {q.outcome || "—"}
                                             </div>
                                           </td>
@@ -4762,7 +4769,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                         </td>
 
                                         {/* 5. उत्तर */}
-                                        <td className="border border-slate-300 p-2.5 text-black font-medium leading-relaxed bg-white align-top break-words text-xs sm:text-[13.5px]">
+                                        <td className="border border-slate-300 p-2.5 text-black font-bold leading-relaxed bg-white align-top break-words text-xs sm:text-[13.5px]">
                                           {q.answer}
                                         </td>
 
