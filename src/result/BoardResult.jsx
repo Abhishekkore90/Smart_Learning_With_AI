@@ -1106,6 +1106,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         sandbox.style.zIndex = "50";
         sandbox.style.backgroundColor = "#ffffff";
         sandbox.style.fontFamily = "'Noto Sans Devanagari', 'Inter', sans-serif";
+        sandbox.style.webkitFontSmoothing = "antialiased";
+        sandbox.style.textRendering = "geometricPrecision";
         sandbox.style.pointerEvents = "none";
         sandbox.style.overflow = "hidden";
         sandbox.style.transform = "none";
@@ -1158,7 +1160,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         );
 
         const canvas = await html2canvas(clone, {
-          scale: 1.5,
+          scale: 2.0,
           useCORS: true,
           allowTaint: true,
           logging: false,
@@ -1177,7 +1179,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           sandbox.parentNode.removeChild(sandbox);
         }
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        const imgData = canvas.toDataURL("image/jpeg", 0.94);
 
         if (isLandscape) {
           if (!pdf) {
@@ -1185,14 +1187,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           } else {
             pdf.addPage("a4", "landscape");
           }
-          pdf.addImage(imgData, "JPEG", 2, 2, 293, 206, undefined, "FAST");
+          pdf.addImage(imgData, "JPEG", 2, 2, 293, 206, undefined, "MEDIUM");
         } else {
           if (!pdf) {
             pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
           } else {
             pdf.addPage("a4", "portrait");
           }
-          pdf.addImage(imgData, "JPEG", 2, 2, 206, 293, undefined, "FAST");
+          pdf.addImage(imgData, "JPEG", 2, 2, 206, 293, undefined, "MEDIUM");
         }
       }
 
