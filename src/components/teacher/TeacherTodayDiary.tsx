@@ -34,6 +34,7 @@ interface PeriodItem {
   period: string;
   subject: string;
   topic: string;
+  subtopic?: string;
   experience: string;
   tools: string;
   materials?: string;
@@ -726,24 +727,36 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     if (rangeMasterRecord && getTabCategory(rangeMasterRecord.week || rangeMasterRecord.selectedWeek || rangeMasterRecord.range || "", rangeMasterRecord) === targetCategory) {
       return rangeMasterRecord;
     }
-    if (todayDiary && (todayDiary as any).pageUrl) {
+    if (todayDiary) {
       const todayCat = getTabCategory((todayDiary as any).week || (todayDiary as any).selectedWeek || (todayDiary as any).range || "", todayDiary);
-      if (todayCat === targetCategory) {
+      if (todayCat === targetCategory || !(todayDiary as any).week) {
+        const fallbackStructured = (todayDiary as any)?.structuredData || (todayDiary.periods && todayDiary.periods.length > 0 ? [{
+          date: isoDate,
+          displayDate: todayDiary.displayDate,
+          day: todayDiary.day,
+          thought: todayDiary.thought,
+          periods: todayDiary.periods,
+          school: activeProfile.schoolName,
+          teacher: activeProfile.teacherName,
+          std: activeProfile.className,
+          year: activeProfile.academicYear,
+        }] : []);
+
         return {
           id: (todayDiary as any)?.id || isoDate,
           diaryDate: isoDate,
           fileName: (todayDiary as any)?.fileName || "Teaching_Diary.docx",
-          pageUrl: (todayDiary as any)?.pageUrl,
+          pageUrl: (todayDiary as any)?.pageUrl || "",
           className: selectedClass,
           medium: selectedMedium,
-          structuredData: (todayDiary as any)?.structuredData,
-          week: (todayDiary as any)?.week,
-          month: (todayDiary as any)?.month,
+          structuredData: fallbackStructured,
+          week: (todayDiary as any)?.week || currentTabId,
+          month: (todayDiary as any)?.month || selectedMonth,
         };
       }
     }
     return null;
-  }, [rangeMasterRecord, todayDiary, currentTabId, isoDate, selectedClass, selectedMedium]);
+  }, [rangeMasterRecord, todayDiary, currentTabId, isoDate, selectedClass, selectedMedium, activeProfile, selectedMonth]);
 
   const resolveThoughtForDate = async (
     dateIso: string,
@@ -1200,9 +1213,11 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       .map(
         (item) =>
           `<tr style="background:#ffffff;">
-            <td style="text-align:center;font-weight:900;color:#4338ca;font-size:12px;padding:9px 4px;border:1.5px solid #334155;vertical-align:middle;">${item.period}</td>
-            <td style="text-align:center;font-weight:900;color:#0f172a;font-size:12px;padding:9px 4px;border:1.5px solid #334155;vertical-align:middle;">${item.subject}</td>
+            <td style="text-align:center;font-weight:900;color:#0f172a;font-size:12px;padding:9px 4px;border:1.5px solid #334155;vertical-align:middle;">
+              <span style="color:#ea580c;margin-right:2px;">${item.period}</span> ${item.subject}
+            </td>
             <td style="text-align:left;font-weight:800;color:#1e293b;font-size:11.5px;padding:9px 6px;border:1.5px solid #334155;vertical-align:middle;line-height:1.4;">${item.topic}</td>
+            <td style="text-align:left;font-weight:800;color:#1e293b;font-size:11.5px;padding:9px 6px;border:1.5px solid #334155;vertical-align:middle;line-height:1.4;">${item.subtopic || "-"}</td>
             <td style="text-align:left;color:#047857;font-weight:800;font-size:11.5px;padding:9px 8px;border:1.5px solid #334155;vertical-align:middle;line-height:1.4;">${item.outcome || "-"}</td>
             <td style="text-align:left;color:#334155;font-weight:700;font-size:11.5px;padding:9px 8px;border:1.5px solid #334155;vertical-align:middle;line-height:1.4;">${item.experience || "-"}</td>
             <td style="text-align:center;color:#334155;font-weight:700;font-size:11.5px;padding:9px 4px;border:1.5px solid #334155;vertical-align:middle;">${item.tools || "-"}</td>
@@ -1225,7 +1240,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
         <tr>
           <td style="width: 33.33%; padding: 10px 14px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
             <div style="font-size: 11px; font-weight: 800; color: #475569;">दिनांक</div>
-            <div style="font-size: 14px; font-weight: 900; color: #3730a3; margin-top: 2px;">${displayDateVal}</div>
+            <div style="font-size: 14px; font-weight: 900; color: #0f172a; margin-top: 2px;">${displayDateVal}</div>
           </td>
           <td style="width: 33.33%; padding: 10px 14px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
             <div style="font-size: 11px; font-weight: 800; color: #475569;">वार</div>
@@ -1254,20 +1269,20 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
       <!-- Suvichar Box -->
       ${cleanThoughtText(todayDiary.thought) ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 8px; padding: 10px 16px; margin-bottom: 14px; font-size: 13.5px; color: #78350f; text-align: center;">
-        <strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> "${cleanThoughtText(todayDiary.thought)}"
+        <strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #78350f;">"${cleanThoughtText(todayDiary.thought)}"</strong>
       </div>` : ''}
 
       <!-- Main Table -->
       <table style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 2px solid #0f172a; margin-bottom: 16px; background: #ffffff;">
         <thead>
           <tr>
-            <th style="width:6%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 2px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">तासिका</th>
-            <th style="width:9%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 2px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">विषय</th>
-            <th style="width:17%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 4px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">अध्यापन मुद्दा / पाठ्यघटक</th>
-            <th style="width:25.5%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 4px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">अध्ययन निष्पत्ती</th>
-            <th style="width:25.5%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 4px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">अध्ययन अनुभव</th>
-            <th style="width:8.5%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 2px; text-align:center; font-size:11px; font-weight:900; border:1.5px solid #1e293b;">साधन तंत्रे</th>
-            <th style="width:8.5%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 2px; text-align:center; font-size:11px; font-weight:900; border:1.5px solid #1e293b;">शैक्षणिक साहित्य</th>
+            <th style="width:11%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 2px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">तासिका/ विषय</th>
+            <th style="width:15%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 4px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">पाठ / घटक</th>
+            <th style="width:15%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 4px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">अध्ययन मुद्दा</th>
+            <th style="width:23%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 4px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">अध्ययन निष्पत्ती</th>
+            <th style="width:22%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 4px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">अध्ययन अनुभवाचे स्वरूप</th>
+            <th style="width:7%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 2px; text-align:center; font-size:11px; font-weight:900; border:1.5px solid #1e293b;">साधन तंत्रे</th>
+            <th style="width:7%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 2px; text-align:center; font-size:11px; font-weight:900; border:1.5px solid #1e293b;">शैक्षणिक साहित्य</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -1623,14 +1638,14 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
       {/* All Days Mode vs Daily View */}
       {isAllDaysMode ? (
-        <div className="bg-white border-2 border-slate-300 rounded-3xl p-5 sm:p-7 shadow-xl space-y-5">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-200 pb-4">
+        <div className="bg-white border-2 border-slate-300 rounded-2xl sm:rounded-3xl p-1.5 sm:p-6 md:p-8 shadow-xl space-y-4 sm:space-y-5 max-w-full">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-200 pb-3 px-1">
             <div className="flex items-center gap-3">
-              <div className="size-11 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black shadow-md">
+              <div className="size-11 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black shadow-md shrink-0">
                 <FileText className="size-6" />
               </div>
               <div>
-                <h3 className="font-black text-slate-900 text-lg">
+                <h3 className="font-black text-slate-900 text-base sm:text-lg">
                   संपूर्ण १० दिवसांची पाठ टाचण फाईल (All 10 Days Document View)
                 </h3>
                 <p className="text-xs text-slate-500 font-semibold">
@@ -1641,7 +1656,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setIsAllDaysMode(false)}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0"
             >
               <RotateCcw className="size-4" />
               <span>दिवस-निहाय व्ह्यू वर जा (Single Day View)</span>
@@ -1649,7 +1664,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           </div>
 
           {activeTabMasterRecord ? (
-            <div className="h-[750px] w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-inner">
+            <div className="w-full rounded-2xl overflow-visible sm:overflow-hidden min-h-[600px] h-auto sm:h-[800px] border border-slate-200 bg-slate-50 shadow-inner">
               <DocumentLivePreview
                 selectedFile={null}
                 savedRecord={activeTabMasterRecord}
@@ -1705,7 +1720,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
         <div className="bg-white border-2 border-slate-300 rounded-3xl p-2 sm:p-6 md:p-8 shadow-md space-y-4 sm:space-y-5">
           {/* Top Pill Badges Bar & Edit Tip */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-bold">
-            <span className="px-3.5 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full font-extrabold">
+            <span className="px-3.5 py-1.5 bg-slate-100 text-slate-900 border border-slate-200 rounded-full font-extrabold">
               दिनांक: {todayDiary.displayDate || (activeDate ? format(activeDate, "d/M/yyyy") : "-")}
             </span>
             <div className="flex items-center gap-2">
@@ -1730,7 +1745,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-center font-bold text-slate-900">
               <div>
                 <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">दिनांक</span>
-                <span className="text-indigo-700 font-black text-base block">
+                <span className="text-slate-900 font-black text-base block">
                   {todayDiary.displayDate && todayDiary.displayDate !== "-"
                     ? todayDiary.displayDate
                     : (activeDate ? format(activeDate, "d/M/yyyy") : "-")}
@@ -1802,7 +1817,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               contentEditable
               suppressContentEditableWarning
               onBlur={(e) => handleThoughtChange(e.currentTarget.innerText.trim())}
-              className="font-extrabold text-xs sm:text-sm text-amber-900 not-italic hover:bg-amber-100/80 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text max-w-full break-words"
+              className="font-black text-xs sm:text-sm text-amber-950 not-italic hover:bg-amber-100/80 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text max-w-full break-words"
               title="सुविचार बदलण्यासाठी येथे क्लिक करा"
             >
               {cleanThoughtText(todayDiary.thought)
@@ -1812,25 +1827,25 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           </div>
 
           {/* Mobile Scroll Indicator */}
-          {/* 7 Columns Table matching Image 2 */}
+          {/* 7 Columns Table matching Word Format */}
           <div className="w-full overflow-hidden rounded-xl border-2 border-slate-900 shadow-sm mt-2 sm:mt-4 max-w-full">
             <table className="w-full min-w-0 sm:min-w-[920px] text-xs sm:text-sm border-collapse border-2 border-slate-900 table-fixed">
               <colgroup>
-                <col className="w-[8%] sm:w-[55px]" />
-                <col className="w-[13%] sm:w-[95px]" />
-                <col className="w-[21%] sm:w-[150px]" />
-                <col className="w-[23%] sm:w-[230px]" />
-                <col className="w-[21%] sm:w-[200px]" />
-                <col className="w-[7%] sm:w-[95px]" />
-                <col className="w-[7%] sm:w-[95px]" />
+                <col className="w-[11%] sm:w-[90px]" />
+                <col className="w-[15%] sm:w-[130px]" />
+                <col className="w-[15%] sm:w-[130px]" />
+                <col className="w-[23%] sm:w-[220px]" />
+                <col className="w-[22%] sm:w-[200px]" />
+                <col className="w-[7%] sm:w-[80px]" />
+                <col className="w-[7%] sm:w-[80px]" />
               </colgroup>
               <thead className="bg-slate-200 text-slate-950 font-black text-[9px] sm:text-xs md:text-sm border-b-2 border-slate-900">
                 <tr>
-                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight">तासिका</th>
-                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight">विषय</th>
-                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्यापन मुद्दा / पाठ्यघटक</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight">तासिका/ विषय</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight">पाठ / घटक</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन मुद्दा</th>
                   <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन निष्पत्ती</th>
-                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन अनुभव</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन अनुभवाचे स्वरूप</th>
                   <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">साधन तंत्रे</th>
                   <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black break-words leading-tight sm:leading-snug">शैक्षणिक साहित्य</th>
                 </tr>
@@ -1839,37 +1854,50 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 {todayDiary.periods.map((item, idx) => (
                   <tr key={idx} className="hover:bg-indigo-50/40 transition-colors border-b-2 border-slate-400">
                     <td 
-                      contentEditable
-                      suppressContentEditableWarning
-                      onBlur={(e) => handlePeriodChange(idx, "period", e.currentTarget.innerText.trim())}
-                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-center font-black text-indigo-700 align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9.5px] sm:text-xs md:text-sm break-words"
-                      title="तासिका क्रमांक बदलण्यासाठी क्लिक करा"
+                      className="p-1 sm:p-2 border-r-2 border-slate-400 text-center font-black text-slate-900 align-middle hover:bg-amber-100/60 transition-all text-[9.5px] sm:text-xs md:text-sm break-words leading-tight"
                     >
-                      {item.period}
-                    </td>
-                    <td 
-                      contentEditable
-                      suppressContentEditableWarning
-                      onBlur={(e) => handlePeriodChange(idx, "subject", e.currentTarget.innerText.trim())}
-                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 font-black text-slate-900 text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9.5px] sm:text-xs md:text-sm break-words leading-tight"
-                      title="विषय बदलण्यासाठी क्लिक करा"
-                    >
-                      {item.subject}
+                      <span
+                        contentEditable
+                        suppressContentEditableWarning
+                        onBlur={(e) => handlePeriodChange(idx, "period", e.currentTarget.innerText.trim())}
+                        className="text-orange-600 font-black mr-1 outline-none hover:bg-amber-200/60 rounded px-0.5 cursor-text"
+                        title="तासिका क्रमांक"
+                      >
+                        {item.period}
+                      </span>
+                      <span
+                        contentEditable
+                        suppressContentEditableWarning
+                        onBlur={(e) => handlePeriodChange(idx, "subject", e.currentTarget.innerText.trim())}
+                        className="text-slate-900 font-black outline-none hover:bg-amber-200/60 rounded px-0.5 cursor-text block sm:inline mt-0.5 sm:mt-0"
+                        title="विषय"
+                      >
+                        {item.subject}
+                      </span>
                     </td>
                     <td 
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "topic", e.currentTarget.innerText.trim())}
-                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-slate-900 font-extrabold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words leading-tight sm:leading-normal"
-                      title="पाठ्यघटक बदलण्यासाठी क्लिक करा"
+                      className="p-1 sm:p-2 border-r-2 border-slate-400 text-slate-900 font-extrabold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words leading-tight sm:leading-normal"
+                      title="पाठ / घटक बदलण्यासाठी क्लिक करा"
                     >
                       {item.topic}
                     </td>
                     <td 
                       contentEditable
                       suppressContentEditableWarning
+                      onBlur={(e) => handlePeriodChange(idx, "subtopic" as any, e.currentTarget.innerText.trim())}
+                      className="p-1 sm:p-2 border-r-2 border-slate-400 text-slate-900 font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words leading-tight sm:leading-normal"
+                      title="अध्ययन मुद्दा बदलण्यासाठी क्लिक करा"
+                    >
+                      {item.subtopic || "-"}
+                    </td>
+                    <td 
+                      contentEditable
+                      suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "outcome", e.currentTarget.innerText.trim())}
-                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-emerald-600 font-extrabold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
+                      className="p-1 sm:p-2 border-r-2 border-slate-400 text-emerald-600 font-extrabold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
                       title="अध्ययन निष्पत्ती बदलण्यासाठी क्लिक करा"
                     >
                       {item.outcome || "-"}
@@ -1878,8 +1906,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "experience", e.currentTarget.innerText.trim())}
-                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-slate-800 font-bold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
-                      title="अध्ययन अनुभव बदलण्यासाठी क्लिक करा"
+                      className="p-1 sm:p-2 border-r-2 border-slate-400 text-slate-800 font-bold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
+                      title="अध्ययन अनुभवाचे स्वरूप बदलण्यासाठी क्लिक करा"
                     >
                       {item.experience || "-"}
                     </td>
@@ -1887,7 +1915,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "tools", e.currentTarget.innerText.trim())}
-                      className="p-1 sm:p-2.5 border-r-2 border-slate-400 text-slate-800 text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
+                      className="p-1 sm:p-2 border-r-2 border-slate-400 text-slate-800 text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
                       title="साधन तंत्रे बदलण्यासाठी क्लिक करा"
                     >
                       {item.tools || "-"}
@@ -1896,7 +1924,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handlePeriodChange(idx, "materials", e.currentTarget.innerText.trim())}
-                      className="p-1 sm:p-2.5 text-slate-800 text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
+                      className="p-1 sm:p-2 text-slate-800 text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
                       title="शैक्षणिक साहित्य बदलण्यासाठी क्लिक करा"
                     >
                       {item.materials || "-"}
