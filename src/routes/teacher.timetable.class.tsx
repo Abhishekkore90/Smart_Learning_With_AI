@@ -903,25 +903,30 @@ function ClassTimetablePage() {
       });
 
       // 1. Create a clean off-screen staging container placed at (0, 0)
-      // with zIndex -99999 so WebViews render the layout inside the viewport
+      // with fixed 1200px desktop width so mobile screens and WebViews render the exact full desktop layout
+      const targetWidth = 1200;
       tempWrapper = document.createElement('div');
       tempWrapper.setAttribute('data-pdf-temp', 'true');
       tempWrapper.style.position = 'fixed';
       tempWrapper.style.top = '0px';
       tempWrapper.style.left = '0px';
-      tempWrapper.style.width = '1220px';
+      tempWrapper.style.width = `${targetWidth}px`;
+      tempWrapper.style.minWidth = `${targetWidth}px`;
+      tempWrapper.style.maxWidth = `${targetWidth}px`;
       tempWrapper.style.background = '#ffffff';
-      tempWrapper.style.zIndex = '-99999';
+      tempWrapper.style.zIndex = '99999';
       tempWrapper.style.overflow = 'visible';
       tempWrapper.style.pointerEvents = 'none';
+      tempWrapper.style.transform = 'none';
+      tempWrapper.style.fontFamily = "'Noto Sans Devanagari', 'Inter', sans-serif";
 
       // 2. Format clone: clean, compact padding with zero top whitespace, expanded horizontally to fill A4 landscape width
       clone.classList.remove('w-[1000px]', 'min-w-[1000px]', 'mx-auto');
       clone.style.zoom = '1';
       (clone.style as any).WebkitZoom = '1';
-      clone.style.width = '1220px';
-      clone.style.minWidth = '1220px';
-      clone.style.maxWidth = '1220px';
+      clone.style.width = `${targetWidth}px`;
+      clone.style.minWidth = `${targetWidth}px`;
+      clone.style.maxWidth = `${targetWidth}px`;
       clone.style.margin = '0';
       clone.style.padding = '8px 12px 12px 12px';
       clone.style.boxSizing = 'border-box';
@@ -929,28 +934,189 @@ function ClassTimetablePage() {
       clone.style.backgroundColor = '#ffffff';
 
       // Ensure school header and other non-table elements never truncate text in PDF
-      clone.querySelectorAll('.truncate, [class*="overflow-hidden"]').forEach((el: any) => {
+      clone.querySelectorAll('.truncate, [class*="overflow-hidden"], [class*="text-ellipsis"]').forEach((el: any) => {
         if (!el.closest('table')) {
-          el.classList.remove('truncate', 'overflow-hidden');
+          el.classList.remove('truncate', 'overflow-hidden', 'text-ellipsis');
           el.style.overflow = 'visible';
           el.style.textOverflow = 'clip';
           el.style.whiteSpace = 'nowrap';
         }
       });
 
+      // Force explicit Flex layouts on clone sections so mobile viewports / CSS Grid never collapse:
+      // Section 1: Header Banner (वेळापत्रक & सन)
+      const headerBanner = clone.children[0] as HTMLElement;
+      if (headerBanner) {
+        headerBanner.style.display = 'flex';
+        headerBanner.style.flexDirection = 'row';
+        headerBanner.style.alignItems = 'center';
+        headerBanner.style.justifyContent = 'space-between';
+        headerBanner.style.width = '100%';
+        headerBanner.style.boxSizing = 'border-box';
+        headerBanner.style.background = 'linear-gradient(to right, #00d2ff, #0072ff)';
+        headerBanner.style.borderRadius = '8px';
+        headerBanner.style.border = '1px solid black';
+        headerBanner.style.padding = '8px';
+
+        const bChildren = Array.from(headerBanner.children) as HTMLElement[];
+        if (bChildren.length >= 2) {
+          bChildren[0].style.flex = '1';
+          bChildren[0].style.display = 'flex';
+          bChildren[0].style.justifyContent = 'center';
+          bChildren[0].style.alignItems = 'center';
+          bChildren[0].style.whiteSpace = 'nowrap';
+          bChildren[0].style.margin = '0 16px';
+          bChildren[1].style.flexShrink = '0';
+          bChildren[1].style.whiteSpace = 'nowrap';
+        }
+      }
+
+      // Section 2: School Details Bar (शाळेचे नाव, केंद्र, तालुका, जिल्हा)
+      const schoolBar = clone.children[1] as HTMLElement;
+      if (schoolBar) {
+        schoolBar.classList.remove('grid', 'grid-cols-12');
+        schoolBar.style.display = 'flex';
+        schoolBar.style.flexDirection = 'row';
+        schoolBar.style.width = '100%';
+        schoolBar.style.boxSizing = 'border-box';
+        schoolBar.style.border = '1px solid black';
+        schoolBar.style.fontWeight = '900';
+
+        const sChildren = Array.from(schoolBar.children) as HTMLElement[];
+        if (sChildren.length >= 4) {
+          // शाळेचे नाव: 50%
+          sChildren[0].style.width = '50%';
+          sChildren[0].style.flex = '0 0 50%';
+          sChildren[0].style.boxSizing = 'border-box';
+          sChildren[0].style.borderRight = '1px solid black';
+          sChildren[0].style.display = 'flex';
+          sChildren[0].style.alignItems = 'center';
+          sChildren[0].style.whiteSpace = 'nowrap';
+
+          // केंद्र: 16.666%
+          sChildren[1].style.width = '16.666%';
+          sChildren[1].style.flex = '0 0 16.666%';
+          sChildren[1].style.boxSizing = 'border-box';
+          sChildren[1].style.borderRight = '1px solid black';
+          sChildren[1].style.display = 'flex';
+          sChildren[1].style.alignItems = 'center';
+          sChildren[1].style.backgroundColor = '#C6E0B4';
+          sChildren[1].style.whiteSpace = 'nowrap';
+
+          // तालुका: 16.666%
+          sChildren[2].style.width = '16.666%';
+          sChildren[2].style.flex = '0 0 16.666%';
+          sChildren[2].style.boxSizing = 'border-box';
+          sChildren[2].style.borderRight = '1px solid black';
+          sChildren[2].style.display = 'flex';
+          sChildren[2].style.alignItems = 'center';
+          sChildren[2].style.backgroundColor = '#C6E0B4';
+          sChildren[2].style.whiteSpace = 'nowrap';
+
+          // जिल्हा: 16.668%
+          sChildren[3].style.width = '16.668%';
+          sChildren[3].style.flex = '0 0 16.668%';
+          sChildren[3].style.boxSizing = 'border-box';
+          sChildren[3].style.display = 'flex';
+          sChildren[3].style.alignItems = 'center';
+          sChildren[3].style.backgroundColor = '#F2DCDB';
+          sChildren[3].style.whiteSpace = 'nowrap';
+        }
+      }
+
+      // Section 3: Timetable Table
+      const tableWrapper = clone.children[2] as HTMLElement;
+      if (tableWrapper) {
+        tableWrapper.style.width = '100%';
+        const tbl = tableWrapper.querySelector('table');
+        if (tbl) {
+          tbl.style.width = '100%';
+          tbl.style.borderCollapse = 'collapse';
+          tbl.style.tableLayout = 'fixed';
+        }
+      }
+
+      // Section 4: Bottom Bar (तासिका विभागणी & स्वाक्षरी बॉक्स)
+      const bottomBar = clone.children[3] as HTMLElement;
+      if (bottomBar) {
+        bottomBar.classList.remove('grid', 'grid-cols-12');
+        bottomBar.style.display = 'flex';
+        bottomBar.style.flexDirection = 'row';
+        bottomBar.style.alignItems = 'flex-end';
+        bottomBar.style.justifyContent = 'space-between';
+        bottomBar.style.width = '100%';
+        bottomBar.style.boxSizing = 'border-box';
+        bottomBar.style.borderTop = '1px solid black';
+        bottomBar.style.paddingTop = '8px';
+
+        const bChildren = Array.from(bottomBar.children) as HTMLElement[];
+        if (bChildren.length >= 2) {
+          // Left: तासिका विभागणी
+          bChildren[0].style.width = '58%';
+          bChildren[0].style.flex = '0 0 58%';
+          bChildren[0].style.boxSizing = 'border-box';
+          const subTbl = bChildren[0].querySelector('table');
+          if (subTbl) {
+            subTbl.style.width = '100%';
+            subTbl.style.borderCollapse = 'collapse';
+          }
+
+          // Right: स्वाक्षरी Rounded Box
+          bChildren[1].style.width = '40%';
+          bChildren[1].style.flex = '0 0 40%';
+          bChildren[1].style.boxSizing = 'border-box';
+          bChildren[1].style.display = 'flex';
+          bChildren[1].style.flexDirection = 'row';
+          bChildren[1].style.justifyContent = 'space-between';
+          bChildren[1].style.alignItems = 'center';
+          bChildren[1].style.backgroundColor = '#FCE4D6';
+          bChildren[1].style.border = '1px solid black';
+          bChildren[1].style.borderRadius = '1.8rem';
+          bChildren[1].style.padding = '8px 12px';
+        }
+      }
+
       tempWrapper.appendChild(clone);
       document.body.appendChild(tempWrapper);
 
       // Allow browser / WebView layout and fonts to settle
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // 3. Capture with html2canvas-pro at high resolution (scale: 3 for crystal clear print)
-      const { default: html2canvas } = await import("html2canvas-pro");
+      // 3. Capture with html2canvas-pro with explicit desktop windowWidth
+      let html2canvas: any;
+      try {
+        const hModule = await import("html2canvas-pro");
+        html2canvas = hModule.default || hModule;
+      } catch (e) {
+        const hModule = await import("html2canvas");
+        html2canvas = hModule.default || hModule;
+      }
+
+      const cloneHeight = clone.offsetHeight || 800;
       const canvas = await html2canvas(clone, {
-        scale: 3,
+        scale: 2.5,
         useCORS: true,
+        allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
+        width: targetWidth,
+        windowWidth: targetWidth,
+        windowHeight: cloneHeight,
+        scrollX: 0,
+        scrollY: 0,
+        onclone: (clonedDoc: Document) => {
+          try {
+            const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'));
+            styles.forEach((st) => {
+              clonedDoc.head.appendChild(st.cloneNode(true));
+            });
+          } catch (e) {}
+        }
       });
 
       // 4. Generate 1-page A4 Landscape PDF using jsPDF

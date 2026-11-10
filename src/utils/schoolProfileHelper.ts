@@ -116,65 +116,15 @@ export const getUnifiedSchoolProfile = (targetUserId?: string): UnifiedSchoolPro
     }
   } catch (e) {}
 
-  // 2. Check sqaaf_teacher_profile
-  try {
-    const sqaafRaw = localStorage.getItem("sqaaf_teacher_profile");
-    if (sqaafRaw) {
-      const parsed = JSON.parse(sqaafRaw);
-      if (parsed) {
-        if (!profile.schoolName && parsed.schoolName && !parsed.schoolName.includes("___")) profile.schoolName = parsed.schoolName;
-        if (!profile.schoolName && parsed.infoSchoolName && !parsed.infoSchoolName.includes("___")) profile.schoolName = parsed.infoSchoolName;
-        profile.udise = profile.udise || parsed.udise || parsed.infoUdise;
-        profile.kendra = profile.kendra || parsed.kendra || parsed.centerName || parsed.infoCenterName;
-        profile.taluka = profile.taluka || parsed.taluka || parsed.infoTaluka;
-        profile.jilha = profile.jilha || parsed.jilha || parsed.district || parsed.infoDistrict;
-        profile.headmaster = profile.headmaster || parsed.headmaster || parsed.infoHeadmaster;
-        profile.teacherName = profile.teacherName || parsed.teacherName || parsed.fullName;
-        profile.address = profile.address || parsed.address || parsed.infoAddress;
-        profile.phone = profile.phone || parsed.phone || parsed.mobile;
-      }
-    }
-  } catch (e) {}
-
-  // 3. Check paripathSchoolInfo
-  try {
-    const paripathRaw = localStorage.getItem("paripathSchoolInfo");
-    if (paripathRaw) {
-      const parsed = JSON.parse(paripathRaw);
-      if (parsed) {
-        if (!profile.schoolName && parsed.schoolName && !parsed.schoolName.includes("___")) profile.schoolName = parsed.schoolName;
-        if (!profile.udise && parsed.udise) profile.udise = parsed.udise;
-        if (!profile.kendra && parsed.kendra) profile.kendra = parsed.kendra;
-        if (!profile.taluka && parsed.taluka) profile.taluka = parsed.taluka;
-        if (!profile.jilha && parsed.jilha) profile.jilha = parsed.jilha;
-      }
-    }
-  } catch (e) {}
-
-  // 4. Check sqaaf_school_info / sqaf_school_info
-  try {
-    const sqInfoRaw = localStorage.getItem("sqaaf_school_info") || localStorage.getItem("sqaf_school_info");
-    if (sqInfoRaw) {
-      const parsed = JSON.parse(sqInfoRaw);
-      if (parsed) {
-        if (!profile.schoolName && parsed.schoolName && !parsed.schoolName.includes("___")) profile.schoolName = parsed.schoolName;
-        if (!profile.udise && parsed.udise) profile.udise = parsed.udise;
-        if (!profile.kendra && (parsed.centerName || parsed.kendra)) profile.kendra = parsed.centerName || parsed.kendra;
-        if (!profile.taluka && parsed.taluka) profile.taluka = parsed.taluka;
-        if (!profile.jilha && (parsed.district || parsed.jilha)) profile.jilha = parsed.district || parsed.jilha;
-        if (!profile.headmaster && parsed.headmaster) profile.headmaster = parsed.headmaster;
-        if (!profile.address && parsed.address) profile.address = parsed.address;
-      }
-    }
-  } catch (e) {}
-
-  // 5. Check user_profile / auth_user
+  // 2. Check user-specific profile in localStorage
   try {
     const userRaw = localStorage.getItem("user_profile") || localStorage.getItem("auth_profile");
     if (userRaw) {
       const parsed = JSON.parse(userRaw);
       if (parsed) {
-        if (!profile.schoolName && parsed.schoolName && !parsed.schoolName.includes("___")) profile.schoolName = parsed.schoolName;
+        if (!profile.schoolName && isCleanSchool(parsed.schoolName)) profile.schoolName = parsed.schoolName.trim();
+        if (!profile.schoolName && isCleanSchool(parsed.school)) profile.schoolName = parsed.school.trim();
+        if (!profile.schoolName && isCleanSchool(parsed.institutionName)) profile.schoolName = parsed.institutionName.trim();
         if (!profile.kendra && (parsed.kendra || parsed.centerName)) profile.kendra = parsed.kendra || parsed.centerName;
         if (!profile.taluka && parsed.taluka) profile.taluka = parsed.taluka;
         if (!profile.jilha && (parsed.district || parsed.jilha)) profile.jilha = parsed.district || parsed.jilha;
@@ -186,13 +136,18 @@ export const getUnifiedSchoolProfile = (targetUserId?: string): UnifiedSchoolPro
     }
   } catch (e) {}
 
-  // 6. Check simple localStorage fallbacks
-  const fallbackSchoolName = localStorage.getItem("teacher_school_name");
-  if (!profile.schoolName && fallbackSchoolName && !fallbackSchoolName.includes("___") && !fallbackSchoolName.toLowerCase().includes("willingdon")) {
-    profile.schoolName = fallbackSchoolName;
-  }
+  // 3. Check auth.currentUser displayName if user account was created with school name
+  try {
+    const { auth } = require("@/lib/firebase");
+    if (!profile.schoolName && auth?.currentUser?.displayName) {
+      const dName = auth.currentUser.displayName.trim();
+      if (isCleanSchool(dName) && dName !== "Educator" && dName !== "Teacher") {
+        profile.schoolName = dName;
+      }
+    }
+  } catch (e) {}
 
-  const fallbackUdise = localStorage.getItem("teacher_udise");
+  const fallbackUdise = activeUserId ? localStorage.getItem(`teacher_udise_${activeUserId}`) : null;
   if (!profile.udise && fallbackUdise) profile.udise = fallbackUdise;
 
   // Clean placeholder dashes if any slipped through and sanitize willingdon
@@ -249,7 +204,55 @@ export const fetchUnifiedSchoolProfile = async (userId?: string): Promise<Unifie
     const { db } = await import("@/lib/firebase");
     const { doc, getDoc } = await import("firebase/firestore");
 
-    // 0. Check school_settings/${targetId}_general & school_settings/${targetId} (CCE Settings saved by teacher)
+    // 0. Check users collection strictly for this user (Account profile where user filled school name)
+    try {
+      const userRef = doc(db, "users", targetId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const u = userSnap.data();
+        const candSchool = u.schoolName || u.school || u.institutionName || u.schoolConnection?.schoolName ||
+          (u.displayName && u.displayName !== "Educator" && u.displayName !== "Teacher" ? u.displayName : null) ||
+          (u.fullName && u.fullName !== "Educator" && u.fullName !== "Teacher" ? u.fullName : null);
+        if (candSchool && typeof candSchool === "string" && !candSchool.toLowerCase().includes("willingdon") && !candSchool.includes("___")) {
+          const updated: Partial<UnifiedSchoolProfile> = {
+            schoolName: candSchool.trim(),
+            kendra: u.kendra || u.centerName || "",
+            taluka: u.taluka || "",
+            jilha: u.district || u.jilha || "",
+            udise: u.udise || u.udiseNumber || "",
+            headmaster: u.headmaster || u.principalName || "",
+            teacherName: u.teacherName || u.fullName || u.displayName || "",
+          };
+          saveUnifiedSchoolProfile(updated, targetId);
+          return getUnifiedSchoolProfile(targetId);
+        }
+      }
+    } catch (e) {}
+
+    // 0b. Check teachers collection
+    try {
+      const tRef = doc(db, "teachers", targetId);
+      const tSnap = await getDoc(tRef);
+      if (tSnap.exists()) {
+        const t = tSnap.data();
+        const candSchool = t.schoolName || t.school || t.displayName || t.fullName;
+        if (candSchool && typeof candSchool === "string" && !candSchool.toLowerCase().includes("willingdon") && !candSchool.includes("___")) {
+          const updated: Partial<UnifiedSchoolProfile> = {
+            schoolName: candSchool.trim(),
+            kendra: t.kendra || t.centerName || "",
+            taluka: t.taluka || "",
+            jilha: t.district || t.jilha || "",
+            udise: t.udise || t.udiseNumber || "",
+            headmaster: t.headmaster || t.principalName || "",
+            teacherName: t.teacherName || t.fullName || t.displayName || "",
+          };
+          saveUnifiedSchoolProfile(updated, targetId);
+          return getUnifiedSchoolProfile(targetId);
+        }
+      }
+    } catch (e) {}
+
+    // 1. Check school_settings/${targetId}_general & school_settings/${targetId} (CCE Settings saved by teacher)
     try {
       const sGenRef = doc(db, "school_settings", `${targetId}_general`);
       const sGenSnap = await getDoc(sGenRef);

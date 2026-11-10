@@ -60,34 +60,25 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
   const [schoolName, setSchoolName] = useState(() => {
     try {
       const tid = getTeacherId();
-      const keys = [
-        `user_school_name_${tid}`,
-        `cce_general_school_settings_${tid}`,
-        `qp_school_info_${tid}`,
-        `user_planning_school_profile_${tid}`,
-        `hw_v2_school_${tid}`,
-      ];
-      for (const k of keys) {
-        const val = localStorage.getItem(k);
-        if (val) {
-          try {
-            const parsed = JSON.parse(val);
-            const cand = parsed?.schoolName || parsed?.school || parsed?.school_name;
-            if (cand && typeof cand === "string" && !cand.toLowerCase().includes("willingdon") && !cand.includes("___")) {
-              return cand.trim();
-            }
-          } catch {
-            if (typeof val === "string" && !val.toLowerCase().includes("willingdon") && !val.includes("___")) {
-              return val.trim();
-            }
-          }
-        }
+      // Check strictly for this user's account
+      const userSchool = localStorage.getItem(`user_school_name_${tid}`);
+      if (userSchool && !userSchool.toLowerCase().includes("willingdon") && !userSchool.includes("___")) {
+        return userSchool.trim();
       }
-      const genericKeys = ["teacher_school_name", "schoolName"];
-      for (const k of genericKeys) {
-        const val = localStorage.getItem(k);
-        if (val && typeof val === "string" && !val.toLowerCase().includes("willingdon") && !val.includes("___")) {
-          return val.trim();
+      const cceGen = localStorage.getItem(`cce_general_school_settings_${tid}`);
+      if (cceGen) {
+        try {
+          const parsed = JSON.parse(cceGen);
+          if (parsed?.schoolName && !parsed.schoolName.toLowerCase().includes("willingdon") && !parsed.schoolName.includes("___")) {
+            return parsed.schoolName.trim();
+          }
+        } catch {}
+      }
+      // Check if logged-in user account has displayName (e.g. "School Dhondewadi")
+      if (auth?.currentUser?.displayName) {
+        const dName = auth.currentUser.displayName.trim();
+        if (dName && !dName.toLowerCase().includes("willingdon") && dName !== "Educator" && dName !== "Teacher") {
+          return dName;
         }
       }
     } catch {}
@@ -123,77 +114,61 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
     setLoading(true);
 
     try {
-      // 1. Fetch School Name strictly for the logged-in user (NO general doc fallback, NO willingdon)
+      // 1. Fetch School Name strictly for the logged-in user's account
       const currentTeacherId = getTeacherId();
       let fetchedSchoolName = "";
 
-      // 1a. Check teacher's CCE general school settings in localStorage
-      try {
-        const cachedGen = localStorage.getItem(`cce_general_school_settings_${currentTeacherId}`);
-        if (cachedGen) {
-          const parsed = JSON.parse(cachedGen);
-          if (parsed?.schoolName && !parsed.schoolName.toLowerCase().includes("willingdon") && !parsed.schoolName.includes("___")) {
-            fetchedSchoolName = parsed.schoolName.trim();
-          }
-        }
-      } catch (e) { }
-
-      // 1b. Check Unified School Profile
-      if (!fetchedSchoolName) {
+      // 1a. Check user's own account document in Firestore (where user filled school name in their account)
+      if (currentTeacherId && currentTeacherId !== "default_teacher" && currentTeacherId !== "guest") {
         try {
-          const { getUnifiedSchoolProfile, fetchUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
-          const uni = getUnifiedSchoolProfile(currentTeacherId);
-          if (uni?.schoolName && !uni.schoolName.toLowerCase().includes("willingdon") && !uni.schoolName.includes("___")) {
-            fetchedSchoolName = uni.schoolName.trim();
-          } else {
-            const asyncUni = await fetchUnifiedSchoolProfile(currentTeacherId);
-            if (asyncUni?.schoolName && !asyncUni.schoolName.toLowerCase().includes("willingdon") && !asyncUni.schoolName.includes("___")) {
-              fetchedSchoolName = asyncUni.schoolName.trim();
-            }
-          }
-        } catch (e) { }
-      }
-
-      // 1c. Check teacher-isolated school_settings in Firestore
-      if (!fetchedSchoolName && currentTeacherId && currentTeacherId !== "default_teacher" && currentTeacherId !== "guest") {
-        try {
-          const tGenSnap = await getDoc(doc(db, "school_settings", `${currentTeacherId}_general`));
-          if (tGenSnap.exists() && tGenSnap.data().schoolName) {
-            const sName = tGenSnap.data().schoolName;
-            if (sName && !sName.toLowerCase().includes("willingdon") && !sName.includes("___")) {
-              fetchedSchoolName = sName.trim();
+          const uSnap = await getDoc(doc(db, "users", currentTeacherId));
+          if (uSnap.exists()) {
+            const uData = uSnap.data();
+            const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName ||
+              (uData.displayName && uData.displayName !== "Educator" && uData.displayName !== "Teacher" ? uData.displayName : null) ||
+              (uData.fullName && uData.fullName !== "Educator" && uData.fullName !== "Teacher" ? uData.fullName : null);
+            if (cand && typeof cand === "string" && !cand.toLowerCase().includes("willingdon") && !cand.includes("___")) {
+              fetchedSchoolName = cand.trim();
             }
           }
         } catch (e) { }
 
         if (!fetchedSchoolName) {
           try {
-            const tSnap = await getDoc(doc(db, "school_settings", currentTeacherId));
-            if (tSnap.exists() && tSnap.data().schoolName) {
-              const sName = tSnap.data().schoolName;
-              if (sName && !sName.toLowerCase().includes("willingdon") && !sName.includes("___")) {
-                fetchedSchoolName = sName.trim();
-              }
-            }
-          } catch (e) { }
-        }
-
-        // 1d. Check user's own profile doc in Firestore (where user fills school name in their account)
-        if (!fetchedSchoolName) {
-          try {
-            const uSnap = await getDoc(doc(db, "users", currentTeacherId));
-            if (uSnap.exists()) {
-              const uData = uSnap.data();
-              const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName;
+            const tSnap = await getDoc(doc(db, "teachers", currentTeacherId));
+            if (tSnap.exists()) {
+              const tData = tSnap.data();
+              const cand = tData.schoolName || tData.school || tData.displayName || tData.fullName;
               if (cand && typeof cand === "string" && !cand.toLowerCase().includes("willingdon") && !cand.includes("___")) {
                 fetchedSchoolName = cand.trim();
               }
             }
           } catch (e) { }
         }
+
+        // 1b. Check teacher-isolated school_settings in Firestore
+        if (!fetchedSchoolName) {
+          try {
+            const tGenSnap = await getDoc(doc(db, "school_settings", `${currentTeacherId}_general`));
+            if (tGenSnap.exists() && tGenSnap.data().schoolName) {
+              const sName = tGenSnap.data().schoolName;
+              if (sName && !sName.toLowerCase().includes("willingdon") && !sName.includes("___")) {
+                fetchedSchoolName = sName.trim();
+              }
+            }
+          } catch (e) { }
+        }
       }
 
-      // 1e. Check user-specific localStorage keys
+      // 1c. Check if auth.currentUser has displayName (e.g., "School Dhondewadi")
+      if (!fetchedSchoolName && auth?.currentUser?.displayName) {
+        const dName = auth.currentUser.displayName.trim();
+        if (dName && !dName.toLowerCase().includes("willingdon") && dName !== "Educator" && dName !== "Teacher") {
+          fetchedSchoolName = dName;
+        }
+      }
+
+      // 1d. Check user-specific localStorage keys
       if (!fetchedSchoolName) {
         const userSchool = localStorage.getItem(`user_school_name_${currentTeacherId}`) || localStorage.getItem(`hw_v2_school_${currentTeacherId}`);
         if (userSchool && !userSchool.toLowerCase().includes("willingdon") && !userSchool.includes("___")) {
@@ -201,11 +176,22 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
         }
       }
 
+      if (!fetchedSchoolName) {
+        try {
+          const cachedGen = localStorage.getItem(`cce_general_school_settings_${currentTeacherId}`);
+          if (cachedGen) {
+            const parsed = JSON.parse(cachedGen);
+            if (parsed?.schoolName && !parsed.schoolName.toLowerCase().includes("willingdon") && !parsed.schoolName.includes("___")) {
+              fetchedSchoolName = parsed.schoolName.trim();
+            }
+          }
+        } catch (e) { }
+      }
+
       if (fetchedSchoolName) {
         setSchoolName(fetchedSchoolName);
         try {
           localStorage.setItem(`user_school_name_${currentTeacherId}`, fetchedSchoolName);
-          localStorage.setItem("schoolName", fetchedSchoolName);
         } catch (e) { }
       }
 
@@ -782,8 +768,13 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                       setSchoolName(val);
                       try {
                         const tid = getTeacherId();
-                        localStorage.setItem(`user_school_name_${tid}`, val);
-                        localStorage.setItem("schoolName", val);
+                        if (tid && tid !== "default_teacher" && tid !== "guest") {
+                          localStorage.setItem(`user_school_name_${tid}`, val);
+                          import("firebase/firestore").then(({ setDoc, doc }) => {
+                            setDoc(doc(db, "school_settings", `${tid}_general`), { schoolName: val }, { merge: true });
+                            setDoc(doc(db, "users", tid), { schoolName: val }, { merge: true });
+                          });
+                        }
                       } catch (err) {}
                     }}
                     className="font-bold text-slate-900 bg-transparent border-b border-dotted border-slate-400 focus:outline-none px-1 text-xs min-w-[320px]"

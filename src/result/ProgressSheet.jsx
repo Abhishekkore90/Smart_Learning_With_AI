@@ -298,7 +298,45 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             return true;
           };
 
-          // 2. Check school_settings collection strictly for this user (NEVER pull global willingdon)
+          // 2a. Check user's own Firestore account profile (users & teachers collections)
+          if (uid && uid !== "default_teacher" && uid !== "guest") {
+            try {
+              const uSnap = await getDoc(doc(db, "users", uid));
+              if (uSnap.exists()) {
+                const uData = uSnap.data();
+                const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName ||
+                  (uData.displayName && uData.displayName !== "Educator" && uData.displayName !== "Teacher" ? uData.displayName : null) ||
+                  (uData.fullName && uData.fullName !== "Educator" && uData.fullName !== "Teacher" ? uData.fullName : null);
+                if (isCleanSchoolName(cand)) schoolName = cand.trim();
+                if (!teacherName && (uData.fullName || uData.displayName || uData.teacherName)) {
+                  teacherName = uData.fullName || uData.displayName || uData.teacherName;
+                }
+                if (!udise && (uData.udise || uData.udiseNumber)) udise = uData.udise || uData.udiseNumber;
+                if (!address && uData.address) address = uData.address;
+              }
+            } catch (e) { }
+
+            if (!schoolName) {
+              try {
+                const tSnap = await getDoc(doc(db, "teachers", uid));
+                if (tSnap.exists()) {
+                  const tData = tSnap.data();
+                  const cand = tData.schoolName || tData.school || tData.displayName || tData.fullName;
+                  if (isCleanSchoolName(cand)) schoolName = cand.trim();
+                }
+              } catch (e) { }
+            }
+          }
+
+          // 2b. Check auth.currentUser displayName (e.g., "School Dhondewadi")
+          if (!schoolName && auth?.currentUser?.displayName) {
+            const dName = auth.currentUser.displayName.trim();
+            if (isCleanSchoolName(dName) && dName !== "Educator" && dName !== "Teacher") {
+              schoolName = dName;
+            }
+          }
+
+          // 2c. Check school_settings collection strictly for this user (NEVER pull global willingdon)
           try {
             const settingsDocIds = [
               uid ? `${uid}_general` : null,
@@ -323,7 +361,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             }
           } catch (e) { }
 
-          // 2b. Unified local profile fallback (Guarantees logged in user's own headmaster and school info)
+          // 2d. Unified local profile fallback (Guarantees logged in user's own headmaster and school info)
           try {
             const { getUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
             const uni = getUnifiedSchoolProfile(uid);
@@ -336,37 +374,29 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             }
           } catch (e) { }
 
-          // 2c. Check users Firestore profile for logged in teacher
-          if (!schoolName && uid && uid !== "default_teacher" && uid !== "guest") {
-            try {
-              const uSnap = await getDoc(doc(db, "users", uid));
-              if (uSnap.exists()) {
-                const uData = uSnap.data();
-                const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName;
-                if (isCleanSchoolName(cand)) schoolName = cand.trim();
-              }
-            } catch (e) { }
-          }
-
-          // 3. Check LocalStorage (cce_general_school_settings & CCESettings caches)
+          // 3. Check LocalStorage strictly for this user
           const cacheKeys = [
+            uid ? `user_school_name_${uid}` : null,
             uid ? `cce_general_school_settings_${uid}` : null,
-            "cce_general_school_settings",
-            "sqaaf_teacher_profile",
-            "teacher_profile",
-            "school_profile",
           ].filter(Boolean);
 
           cacheKeys.forEach(k => {
             try {
               const val = localStorage.getItem(k);
               if (val) {
-                const p = JSON.parse(val);
-                if (!schoolName && (p.schoolName || p.school_name)) schoolName = p.schoolName || p.school_name;
-                if (!udise && (p.udiseCode || p.udise)) udise = p.udiseCode || p.udise;
-                if (!teacherName && p.teacherName) teacherName = p.teacherName;
-                if (!headmasterName && (p.principalName || p.headmasterName || p.hmName)) {
-                  headmasterName = p.principalName || p.headmasterName || p.hmName;
+                try {
+                  const p = JSON.parse(val);
+                  const cand = p.schoolName || p.school_name;
+                  if (!schoolName && isCleanSchoolName(cand)) schoolName = cand.trim();
+                  if (!udise && (p.udiseCode || p.udise)) udise = p.udiseCode || p.udise;
+                  if (!teacherName && p.teacherName) teacherName = p.teacherName;
+                  if (!headmasterName && (p.principalName || p.headmasterName || p.hmName)) {
+                    headmasterName = p.principalName || p.headmasterName || p.hmName;
+                  }
+                } catch {
+                  if (typeof val === "string" && !schoolName && isCleanSchoolName(val)) {
+                    schoolName = val.trim();
+                  }
                 }
               }
             } catch (e) { }
@@ -790,6 +820,25 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
 
         sandbox.appendChild(clone);
         document.body.appendChild(sandbox);
+
+        // Fix html2canvas table rendering bug:
+        // Push <tr> background-color down to child <th>/<td> and set <tr> to transparent
+        // to prevent colored rectangles from painting over rowSpan cells
+        clone.querySelectorAll("tr").forEach((tr) => {
+          const comp = window.getComputedStyle(tr);
+          const bg = comp.backgroundColor;
+          if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
+            tr.querySelectorAll("th, td").forEach((cell) => {
+              const cellComp = window.getComputedStyle(cell);
+              const cellBg = cellComp.backgroundColor;
+              if (!cellBg || cellBg === "rgba(0, 0, 0, 0)" || cellBg === "transparent") {
+                cell.style.backgroundColor = bg;
+              }
+            });
+            tr.style.backgroundColor = "transparent";
+            tr.style.background = "transparent";
+          }
+        });
 
         // Pre-convert any non-data images inside clone to data URLs for reliable offline/WebView canvas rendering
         const cloneImgs = Array.from(clone.querySelectorAll("img"));

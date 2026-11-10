@@ -356,10 +356,30 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             const uSnap = await getDoc(doc(db, "users", currentTeacherId));
             if (uSnap.exists()) {
               const uData = uSnap.data();
-              const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName;
+              const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName ||
+                (uData.displayName && uData.displayName !== "Educator" && uData.displayName !== "Teacher" ? uData.displayName : null) ||
+                (uData.fullName && uData.fullName !== "Educator" && uData.fullName !== "Teacher" ? uData.fullName : null);
               if (isCleanSchool(cand)) mergedSettings.schoolName = cand.trim();
             }
           } catch (e) { }
+
+          if (!mergedSettings.schoolName) {
+            try {
+              const tSnap = await getDoc(doc(db, "teachers", currentTeacherId));
+              if (tSnap.exists()) {
+                const tData = tSnap.data();
+                const cand = tData.schoolName || tData.school || tData.displayName || tData.fullName;
+                if (isCleanSchool(cand)) mergedSettings.schoolName = cand.trim();
+              }
+            } catch (e) { }
+          }
+        }
+
+        if (!mergedSettings.schoolName && auth?.currentUser?.displayName) {
+          const dName = auth.currentUser.displayName.trim();
+          if (isCleanSchool(dName) && dName !== "Educator" && dName !== "Teacher") {
+            mergedSettings.schoolName = dName;
+          }
         }
 
         const loadedDiv = mergedSettings.division || mergedSettings.section || mergedSettings.tukdi ||

@@ -466,7 +466,45 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           return true;
         };
 
-        // 1a. Check cce_settings collection (Teacher Isolated FIRST)
+        // 1a. User's own Firestore account profile (users & teachers collections where user filled school name)
+        if (uid && uid !== "default_teacher" && uid !== "guest") {
+          try {
+            const uSnap = await getDoc(doc(db, "users", uid));
+            if (uSnap.exists()) {
+              const uData = uSnap.data();
+              const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName ||
+                (uData.displayName && uData.displayName !== "Educator" && uData.displayName !== "Teacher" ? uData.displayName : null) ||
+                (uData.fullName && uData.fullName !== "Educator" && uData.fullName !== "Teacher" ? uData.fullName : null);
+              if (isCleanSchoolName(cand)) schoolName = cand.trim();
+              if (!teacherName && (uData.fullName || uData.displayName || uData.teacherName)) {
+                teacherName = uData.fullName || uData.displayName || uData.teacherName;
+              }
+              if (!udise && (uData.udise || uData.udiseNumber)) udise = uData.udise || uData.udiseNumber;
+              if (!address && uData.address) address = uData.address;
+            }
+          } catch (e) { }
+
+          if (!schoolName) {
+            try {
+              const tSnap = await getDoc(doc(db, "teachers", uid));
+              if (tSnap.exists()) {
+                const tData = tSnap.data();
+                const cand = tData.schoolName || tData.school || tData.displayName || tData.fullName;
+                if (isCleanSchoolName(cand)) schoolName = cand.trim();
+              }
+            } catch (e) { }
+          }
+        }
+
+        // 1b. Check auth.currentUser displayName (e.g. "School Dhondewadi")
+        if (!schoolName && auth?.currentUser?.displayName) {
+          const dName = auth.currentUser.displayName.trim();
+          if (isCleanSchoolName(dName) && dName !== "Educator" && dName !== "Teacher") {
+            schoolName = dName;
+          }
+        }
+
+        // 1c. Check cce_settings collection (Teacher Isolated)
         try {
           const cceDocIds = [
             uid ? `${uid}_${selectedClass}_${medKey}_${academicYear}` : null,
@@ -497,7 +535,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           }
         } catch (e) { }
 
-        // 1b. Check school_settings collection strictly for this user (NEVER pull global willingdon)
+        // 1d. Check school_settings collection strictly for this user (NEVER pull global willingdon)
         try {
           const settingsDocIds = [
             uid ? `${uid}_general` : null,
@@ -525,7 +563,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           }
         } catch (e) { }
 
-        // 1c. Unified local profile fallback (Guarantees logged-in user's accurate school and headmaster info)
+        // 1e. Unified local profile fallback (Guarantees logged-in user's accurate school and headmaster info)
         try {
           const { getUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
           const uni = getUnifiedSchoolProfile(uid);
@@ -538,39 +576,29 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           }
         } catch (e) { }
 
-        // 1d. User's own Firestore account profile (users collection)
-        if (!schoolName && uid && uid !== "default_teacher" && uid !== "guest") {
-          try {
-            const uSnap = await getDoc(doc(db, "users", uid));
-            if (uSnap.exists()) {
-              const uData = uSnap.data();
-              const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName;
-              if (isCleanSchoolName(cand)) schoolName = cand.trim();
-            }
-          } catch (e) { }
-        }
-
-        // 1e. Check LocalStorage caches
+        // 1f. Check LocalStorage caches strictly for this user
         const cacheKeys = [
+          uid ? `user_school_name_${uid}` : null,
           uid ? `cce_general_school_settings_${uid}` : null,
-          "cce_general_school_settings",
-          "sqaaf_teacher_profile",
-          "teacher_profile",
-          "school_profile",
-          "user_profile",
         ].filter(Boolean);
 
         cacheKeys.forEach(k => {
           try {
             const val = localStorage.getItem(k);
             if (val) {
-              const p = JSON.parse(val);
-              const cand = p.schoolName || p.school_name;
-              if (!schoolName && isCleanSchoolName(cand)) schoolName = cand.trim();
-              if (!udise && (p.udiseCode || p.udise)) udise = p.udiseCode || p.udise;
-              if (!teacherName && (p.teacherName || p.fullName || p.name)) teacherName = p.teacherName || p.fullName || p.name;
-              if (!headmasterName && (p.principalName || p.headmasterName || p.hmName)) {
-                headmasterName = p.principalName || p.headmasterName || p.hmName;
+              try {
+                const p = JSON.parse(val);
+                const cand = p.schoolName || p.school_name;
+                if (!schoolName && isCleanSchoolName(cand)) schoolName = cand.trim();
+                if (!udise && (p.udiseCode || p.udise)) udise = p.udiseCode || p.udise;
+                if (!teacherName && (p.teacherName || p.fullName || p.name)) teacherName = p.teacherName || p.fullName || p.name;
+                if (!headmasterName && (p.principalName || p.headmasterName || p.hmName)) {
+                  headmasterName = p.principalName || p.headmasterName || p.hmName;
+                }
+              } catch {
+                if (typeof val === "string" && !schoolName && isCleanSchoolName(val)) {
+                  schoolName = val.trim();
+                }
               }
             }
           } catch (e) { }
@@ -1125,20 +1153,39 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         clone.style.transform = "none";
         clone.style.zoom = "1";
 
-        if (isLandscape) {
-          const scrollContainer = clone.querySelector(".overflow-x-auto");
-          if (scrollContainer) {
-            scrollContainer.style.overflow = "visible";
-            scrollContainer.style.width = "100%";
-          }
-          const tbl = clone.querySelector("table");
-          if (tbl) {
-            tbl.style.width = "100%";
-          }
-        }
+        // Ensure overflow is visible and tables have full width on ALL pages (portrait and landscape)
+        clone.querySelectorAll(".overflow-x-auto").forEach((scrollContainer) => {
+          scrollContainer.style.overflow = "visible";
+          scrollContainer.style.width = "100%";
+        });
+        clone.querySelectorAll("table").forEach((tbl) => {
+          tbl.style.width = "100%";
+        });
 
         sandbox.appendChild(clone);
         document.body.appendChild(sandbox);
+
+        // Fix html2canvas table rendering bug:
+        // When a <tr> has a background-color, html2canvas fills a rectangle across the ENTIRE row width.
+        // For any cells spanning from previous rows (via rowSpan), this <tr> color rectangle is painted
+        // ON TOP of those cells, hiding their text with an unwanted colored bar (yellow, green, etc.).
+        // Solution: Push the background color down to the individual <th> and <td> cells,
+        // and make the <tr> itself background transparent!
+        clone.querySelectorAll("tr").forEach((tr) => {
+          const comp = window.getComputedStyle(tr);
+          const bg = comp.backgroundColor;
+          if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") {
+            tr.querySelectorAll("th, td").forEach((cell) => {
+              const cellComp = window.getComputedStyle(cell);
+              const cellBg = cellComp.backgroundColor;
+              if (!cellBg || cellBg === "rgba(0, 0, 0, 0)" || cellBg === "transparent") {
+                cell.style.backgroundColor = bg;
+              }
+            });
+            tr.style.backgroundColor = "transparent";
+            tr.style.background = "transparent";
+          }
+        });
 
         // Pre-convert any non-data images inside clone to data URLs for reliable offline/WebView canvas rendering
         const cloneImgs = Array.from(clone.querySelectorAll("img"));
@@ -1701,31 +1748,31 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   <div className="overflow-x-auto">
                     <table className={`w-full border-collapse border-2 border-[#0080ff] text-center font-medium table-fixed text-xs`}>
                       <colgroup>
-                        <col style={{ width: "1.8%" }} />
-                        <col style={{ width: "19.2%" }} />
+                        <col style={{ width: "3.2%" }} />
+                        <col style={{ width: "18.0%" }} />
+                        <col style={{ width: "5.8%" }} />
+                        <col style={{ width: "5.0%" }} />
+                        <col style={{ width: "5.0%" }} />
+                        <col style={{ width: "5.0%" }} />
+                        <col style={{ width: "5.0%" }} />
+                        <col style={{ width: "5.0%" }} />
+                        <col style={{ width: "5.0%" }} />
+                        <col style={{ width: "5.0%" }} />
+                        <col style={{ width: "5.5%" }} />
+                        <col style={{ width: "5.0%" }} />
+                        <col style={{ width: "5.0%" }} />
+                        <col style={{ width: "5.0%" }} />
+                        <col style={{ width: "5.5%" }} />
                         <col style={{ width: "6.0%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "5.4%" }} />
-                        <col style={{ width: "2.8%" }} />
+                        <col style={{ width: "6.0%" }} />
                       </colgroup>
                       <thead>
                         {/* Header Row 1 */}
-                        <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold border-b border-[#0080ff]">
-                          <th rowSpan={3} className="border border-[#0080ff] bg-[#bfe5ff] p-0.5 text-center align-top pt-2 font-black text-[10.5px] leading-tight">
-                            अ.<br />क्र.
+                        <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold" style={{ height: "26px" }}>
+                          <th className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-0.5 text-center font-black text-[10px] leading-tight">
+                            अ. क्र.
                           </th>
-                          <th colSpan={2} rowSpan={2} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center align-top pt-2 font-black text-xs">
+                          <th colSpan={2} className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black text-xs">
                             तपशील
                           </th>
                           <th colSpan={8} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black text-xs">
@@ -1734,77 +1781,87 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           <th colSpan={4} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black text-xs">
                             (ब) संकलित मूल्यांकन
                           </th>
-                          <th rowSpan={2} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center align-top pt-2 font-black text-xs">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>
-                              अ + ब
+                          <th className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black text-xs">
+                            अ + ब
+                          </th>
+                          <th className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black text-xs">
+                            श्रेणी
+                          </th>
+                        </tr>
+
+                        {/* Header Row 2: Vertical Labels */}
+                        <tr className="bg-[#bfe5ff] text-[#002b66] font-bold" style={{ height: pageMode === "1page" ? "88px" : "105px" }}>
+                          <th className="border-x border-y-0 border-[#0080ff] bg-[#bfe5ff] p-0"></th>
+                          <th colSpan={2} className="border-x border-y-0 border-[#0080ff] bg-[#bfe5ff] p-0"></th>
+                          {/* Formative Vertical Labels */}
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>तोंडीकाम</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>प्रात्यक्षिक / प्रयोग</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>उपक्रम / कृती</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>प्रकल्प</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>चाचणी (लेखी)</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>स्वाध्याय / वर्गकार्य</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>इतर</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-black">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>एकूण</div>
+                          </th>
+                          {/* Summative Vertical Labels */}
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>तोंडी</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>प्रात्यक्षिक</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>लेखी</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-black">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>एकूण</div>
+                          </th>
+                          <th className="border-x border-y-0 border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-black">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9.5px" : "11px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>
+                              एकूण
                             </div>
                           </th>
-                          <th rowSpan={3} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center align-top pt-2 font-black text-xs">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>
+                          <th className="border-x border-y-0 border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-black">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9.5px" : "11px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>
                               श्रेणी
                             </div>
                           </th>
                         </tr>
 
-                        {/* Header Row 2: Vertical Labels */}
-                        <tr className={`bg-[#bfe5ff] text-[#002b66] font-bold border-b border-[#0080ff] ${pageMode === "1page" ? "h-13" : "h-28"}`}>
-                          {/* Formative Vertical Labels */}
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>तोंडीकाम</div>
-                          </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>प्रात्यक्षिक / प्रयोग</div>
-                          </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>उपक्रम / कृती</div>
-                          </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>प्रकल्प</div>
-                          </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>चाचणी (लेखी)</div>
-                          </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>स्वाध्याय / वर्गकार्य</div>
-                          </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>इतर</div>
-                          </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2 font-black">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>एकूण</div>
-                          </th>
-                          {/* Summative Vertical Labels */}
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>तोंडी</div>
-                          </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>प्रात्यक्षिक</div>
-                          </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>लेखी</div>
-                          </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2 font-black">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>एकूण</div>
-                          </th>
-                        </tr>
-
                         {/* Header Row 3: Numbers */}
-                        <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold border-b-2 border-[#0080ff]">
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">विषय</th>
+                        <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold border-b-2 border-[#0080ff]" style={{ height: "24px" }}>
+                          <th className="border-x border-b border-t-0 border-[#0080ff] bg-[#bfe5ff] p-0.5"></th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 font-black text-xs text-center">विषय</th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] py-1 px-0.5 text-center font-extrabold text-[11px] whitespace-nowrap">गुण</th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">1</th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">2</th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">3</th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">4</th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">5</th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">6</th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">7</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">1</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">2</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">3</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">4</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">5</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">6</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">7</th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 font-black"></th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">1</th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">2</th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">3</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">1</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">2</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">3</th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 font-black"></th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 font-black">एकूण</th>
+                          <th className="border-x border-b border-t-0 border-[#0080ff] bg-[#bfe5ff] p-1 font-black text-center text-xs"></th>
+                          <th className="border-x border-b border-t-0 border-[#0080ff] bg-[#bfe5ff] p-1 font-black text-center text-xs"></th>
                         </tr>
                       </thead>
 
@@ -1980,65 +2037,74 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           const grade = grandTotalObt !== "" ? getGrade((Number(grandTotalObt) / 100) * 100) : "";
 
                           const isCompact = pageMode === "1page";
-                          const cellPad = isCompact ? "py-0.5 px-0.5 text-[9.5px] font-bold" : "p-1.5 text-xs font-bold";
+                          const cellTextSize = isCompact ? "text-[10px]" : "text-[11.5px]";
+                          const markTextSize = isCompact ? "text-[9.5px]" : "text-[10.5px]";
+
+                          const renderCellPair = (maxVal, obtVal, isBold = false) => (
+                            <td className="border border-[#0080ff] bg-white p-0 align-middle">
+                              <div className={`border-b border-[#0080ff] py-0.5 text-center ${markTextSize} ${isBold ? "font-extrabold" : "font-bold"} leading-tight`}>
+                                {maxVal !== "" && maxVal !== undefined && maxVal !== null ? maxVal : "\u00A0"}
+                              </div>
+                              <div className={`py-0.5 text-center ${markTextSize} ${isBold ? "font-extrabold" : "font-bold"} leading-tight`}>
+                                {obtVal !== "" && obtVal !== undefined && obtVal !== null ? obtVal : "\u00A0"}
+                              </div>
+                            </td>
+                          );
 
                           return (
-                            <React.Fragment key={subjectName}>
-                              {/* Row 1: पैकी */}
-                              <tr className="bg-white text-slate-900 font-bold border-t border-[#0080ff]">
-                                <td rowSpan={2} className={`border border-[#0080ff] bg-white p-0.5 text-center align-middle font-extrabold text-slate-900 ${isCompact ? "text-[10px]" : "text-[11px] pt-3.5"}`}>
-                                  {subIdx + 1}
-                                </td>
-                                <td rowSpan={2} className={`border border-[#0080ff] bg-white p-0.5 text-center align-middle text-[#002b66] font-extrabold ${isCompact ? "text-[10px] leading-tight" : "text-[11px] leading-tight pt-3"} whitespace-normal break-words`}>
-                                  {subjectName}
-                                </td>
-                                <td className={`border border-[#0080ff] py-1 px-0.5 text-slate-800 font-bold bg-white align-middle text-center whitespace-nowrap ${isCompact ? "text-[9.5px]" : "text-[11px]"}`}>पैकी</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{tondiKaamMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{pratyakshikPrayogMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{upakramKritiMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{prakalpaMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{chaachaniLekhiMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{swadhyayVargakaryaMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{itarMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{formTotalMax}</td>
-                                {isPracticalSub ? (
-                                  <td colSpan={4} rowSpan={2} className="border border-[#0080ff] bg-slate-100/80 align-middle text-center"></td>
-                                ) : (
-                                  <>
-                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitTondiMax}</td>
-                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitPratyakshikMax}</td>
-                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitLekhiMax}</td>
-                                    <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{semTotalMax}</td>
-                                  </>
-                                )}
-                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{grandMax}</td>
-                                <td rowSpan={2} className={`border border-[#0080ff] bg-white p-0.5 text-center align-middle font-extrabold text-slate-900 ${isCompact ? "text-[10px]" : "text-xs pt-3.5"}`}>
-                                  {grade || "-"}
-                                </td>
-                              </tr>
+                            <tr key={subjectName} className="bg-white text-slate-900 border-b-2 border-[#0080ff]">
+                              {/* Col 1: Serial No */}
+                              <td className={`border border-[#0080ff] bg-white p-0.5 text-center align-middle font-extrabold text-slate-900 ${cellTextSize}`}>
+                                {subIdx + 1}
+                              </td>
 
-                              {/* Row 2: प्राप्त */}
-                              <tr className="bg-white text-slate-900 font-bold border-b-2 border-[#0080ff]">
-                                <td className={`border border-[#0080ff] py-1 px-0.5 text-slate-800 font-bold bg-white align-middle text-center whitespace-nowrap ${isCompact ? "text-[9.5px]" : "text-[11px]"}`}>प्राप्त</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{tondiKaamObt !== "" ? tondiKaamObt : ""}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{pratyakshikPrayogObt !== "" ? pratyakshikPrayogObt : ""}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{upakramKritiObt !== "" ? upakramKritiObt : ""}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{prakalpaObt !== "" ? prakalpaObt : ""}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{chaachaniLekhiObt !== "" ? chaachaniLekhiObt : ""}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{swadhyayVargakaryaObt !== "" ? swadhyayVargakaryaObt : ""}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{itarObt !== "" ? itarObt : ""}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{formTotalObt !== "" ? formTotalObt : ""}</td>
-                                {!isPracticalSub && (
-                                  <>
-                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitTondiObt !== "" ? sankalitTondiObt : ""}</td>
-                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitPratyakshikObt !== "" ? sankalitPratyakshikObt : ""}</td>
-                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitLekhiObt !== "" ? sankalitLekhiObt : ""}</td>
-                                    <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{semTotalObt !== "" ? semTotalObt : ""}</td>
-                                  </>
-                                )}
-                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{grandTotalObt !== "" ? grandTotalObt : ""}</td>
-                              </tr>
-                            </React.Fragment>
+                              {/* Col 2: Subject Name */}
+                              <td className={`border border-[#0080ff] bg-white p-1 text-center align-middle text-[#002b66] font-extrabold ${cellTextSize} whitespace-normal break-words`} style={{ lineHeight: "1.25" }}>
+                                {subjectName}
+                              </td>
+
+                              {/* Col 3: पैकी / प्राप्त */}
+                              <td className="border border-[#0080ff] bg-white p-0 align-middle">
+                                <div className={`border-b border-[#0080ff] py-0.5 px-0.5 text-slate-800 font-extrabold text-center whitespace-nowrap ${markTextSize} leading-tight`}>
+                                  पैकी
+                                </div>
+                                <div className={`py-0.5 px-0.5 text-slate-800 font-extrabold text-center whitespace-nowrap ${markTextSize} leading-tight`}>
+                                  प्राप्त
+                                </div>
+                              </td>
+
+                              {/* Col 4-10: Formative Tools 1-7 */}
+                              {renderCellPair(tondiKaamMax, tondiKaamObt)}
+                              {renderCellPair(pratyakshikPrayogMax, pratyakshikPrayogObt)}
+                              {renderCellPair(upakramKritiMax, upakramKritiObt)}
+                              {renderCellPair(prakalpaMax, prakalpaObt)}
+                              {renderCellPair(chaachaniLekhiMax, chaachaniLekhiObt)}
+                              {renderCellPair(swadhyayVargakaryaMax, swadhyayVargakaryaObt)}
+                              {renderCellPair(itarMax, itarObt)}
+
+                              {/* Col 11: Formative Total */}
+                              {renderCellPair(formTotalMax, formTotalObt, true)}
+
+                              {/* Col 12-15: Summative Tools 1-3 + Total */}
+                              {isPracticalSub ? (
+                                <td colSpan={4} className="border border-[#0080ff] bg-slate-100/80 align-middle text-center"></td>
+                              ) : (
+                                <>
+                                  {renderCellPair(sankalitTondiMax, sankalitTondiObt)}
+                                  {renderCellPair(sankalitPratyakshikMax, sankalitPratyakshikObt)}
+                                  {renderCellPair(sankalitLekhiMax, sankalitLekhiObt)}
+                                  {renderCellPair(semTotalMax, semTotalObt, true)}
+                                </>
+                              )}
+
+                              {/* Col 16: Grand Total (अ + ब) */}
+                              {renderCellPair(grandMax, grandTotalObt, true)}
+
+                              {/* Col 17: Grade */}
+                              <td className={`border border-[#0080ff] bg-white p-0.5 text-center align-middle font-extrabold text-slate-900 ${cellTextSize}`}>
+                                {grade || "-"}
+                              </td>
+                            </tr>
                           );
                         })}
                       </tbody>
@@ -2511,7 +2577,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 <div>
                   <h2 className="text-xl font-black text-slate-900 text-center mb-4 tracking-tight">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</h2>
                   <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-300 pb-2 mb-4">
-                    <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
+                    <span>शाळा: <b>{schoolData.schoolName || ""}</b></span>
                     <span>इयत्ता: <b>{selectedClass}</b></span>
                     <span>तुकडी: <b>{division}</b></span>
                     <span>{selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
@@ -2522,13 +2588,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   <div className="mb-6">
                     <table className="w-full table-fixed border-collapse border border-amber-500 text-xs text-center font-medium">
                       <thead>
-                        <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
-                          <th className="border border-amber-500 p-1.5 w-10 min-w-[32px]">अ. क्र.</th>
-                          <th className="border border-amber-500 p-1.5 text-left w-44 min-w-[140px]">विषय</th>
-                          <th className="border border-amber-500 p-1.5 w-12 min-w-[40px]">संख्या</th>
-                          <th className="border border-amber-500 p-1.5 w-12 min-w-[40px]">उपस्थिती</th>
+                        <tr className="text-slate-900 font-bold border-b border-amber-500">
+                          <th className="border border-amber-500 bg-amber-100 p-1.5 w-10 min-w-[32px]">अ. क्र.</th>
+                          <th className="border border-amber-500 bg-amber-100 p-1.5 text-left w-44 min-w-[140px]">विषय</th>
+                          <th className="border border-amber-500 bg-amber-100 p-1.5 w-12 min-w-[40px]">संख्या</th>
+                          <th className="border border-amber-500 bg-amber-100 p-1.5 w-12 min-w-[40px]">उपस्थिती</th>
                           {GRADE_KEYS.map((g) => (
-                            <th key={g} className="border border-amber-500 p-1.5 text-center w-12 min-w-[44px]">{GRADE_LABELS[g]}</th>
+                            <th key={g} className="border border-amber-500 bg-amber-100 p-1.5 text-center w-12 min-w-[44px]">{GRADE_LABELS[g]}</th>
                           ))}
                         </tr>
                       </thead>
@@ -2571,21 +2637,33 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   {/* Table 2: Gender-wise Grade Counts */}
                   <div>
                     <table className="w-full table-fixed border-collapse border border-amber-500 text-xs text-center font-medium">
+                      <colgroup>
+                        <col style={{ width: "3.5%" }} />
+                        <col style={{ width: "19.0%" }} />
+                        <col style={{ width: "4.5%" }} />
+                        <col style={{ width: "4.5%" }} />
+                        {GRADE_KEYS.map((g) => (
+                          <React.Fragment key={g}>
+                            <col style={{ width: "3.8%" }} />
+                            <col style={{ width: "3.8%" }} />
+                          </React.Fragment>
+                        ))}
+                      </colgroup>
                       <thead>
-                        <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
-                          <th className="border border-amber-500 p-1 w-8 min-w-[28px]" rowSpan={2}>अ. क्र.</th>
-                          <th className="border border-amber-500 p-1.5 text-left w-40 min-w-[130px]" rowSpan={2}>विषय</th>
-                          <th className="border border-amber-500 p-1 w-10 min-w-[32px]" rowSpan={2}>संख्या</th>
-                          <th className="border border-amber-500 p-1 w-10 min-w-[32px]" rowSpan={2}>उपस्थिती</th>
+                        <tr className="text-slate-900 font-bold border-b border-amber-500">
+                          <th className="border border-amber-500 bg-amber-100 p-1 text-[10px] text-center" rowSpan={2}>अ. क्र.</th>
+                          <th className="border border-amber-500 bg-amber-100 p-1 text-left text-[11px]" rowSpan={2}>विषय</th>
+                          <th className="border border-amber-500 bg-amber-100 p-0.5 text-[10px] text-center" rowSpan={2}>संख्या</th>
+                          <th className="border border-amber-500 bg-amber-100 p-0.5 text-[10px] text-center" rowSpan={2}>उपस्थिती</th>
                           {GRADE_KEYS.map((g) => (
-                            <th key={g} className="border border-amber-500 p-1 text-center" colSpan={2}>{GRADE_LABELS[g]}</th>
+                            <th key={g} className="border border-amber-500 bg-amber-100 p-0.5 text-[10px] text-center" colSpan={2}>{GRADE_LABELS[g]}</th>
                           ))}
                         </tr>
-                        <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
+                        <tr className="text-slate-900 font-bold border-b border-amber-500">
                           {GRADE_KEYS.map((g) => (
                             <React.Fragment key={g}>
-                              <th className="border border-amber-500 p-0.5 text-[10px] text-center w-8 min-w-[28px]">मुले</th>
-                              <th className="border border-amber-500 p-0.5 text-[10px] text-center w-8 min-w-[28px]">मुली</th>
+                              <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center">मुले</th>
+                              <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center">मुली</th>
                             </React.Fragment>
                           ))}
                         </tr>
@@ -2669,7 +2747,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                         जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक {subjectChunks.length > 1 ? `(भाग ${pageIdx + 1})` : ""}
                       </h2>
                       <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-300 pb-2 mb-4">
-                        <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
+                        <span>शाळा: <b>{schoolData.schoolName || ""}</b></span>
                         <span>इयत्ता: <b>{selectedClass}</b></span>
                         <span>तुकडी: <b>{formatDivision(division)}</b></span>
                         <span>{selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
@@ -2678,23 +2756,23 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                       <table className="w-full table-fixed border-collapse border border-amber-500 text-[11px] text-center font-medium">
                         <thead>
-                          <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
-                            <th className="border border-amber-500 p-1 w-24 min-w-[80px]" rowSpan={2}>विषय</th>
-                            <th className="border border-amber-500 p-1 w-24 min-w-[80px]" rowSpan={2}>जात संवर्ग</th>
-                            <th className="border border-amber-500 p-0.5 text-center" colSpan={3}>संख्या</th>
+                          <tr className="text-slate-900 font-bold border-b border-amber-500">
+                            <th className="border border-amber-500 bg-amber-100 p-1 w-24 min-w-[80px]" rowSpan={2}>विषय</th>
+                            <th className="border border-amber-500 bg-amber-100 p-1 w-24 min-w-[80px]" rowSpan={2}>जात संवर्ग</th>
+                            <th className="border border-amber-500 bg-amber-100 p-0.5 text-center" colSpan={3}>संख्या</th>
                             {GRADE_KEYS.map((g) => (
-                              <th key={g} className="border border-amber-500 p-0.5 text-center" colSpan={3}>{GRADE_LABELS[g]}</th>
+                              <th key={g} className="border border-amber-500 bg-amber-100 p-0.5 text-center" colSpan={3}>{GRADE_LABELS[g]}</th>
                             ))}
                           </tr>
-                          <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
-                            <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुले</th>
-                            <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुली</th>
-                            <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">एकूण</th>
+                          <tr className="text-slate-900 font-bold border-b border-amber-500">
+                            <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुले</th>
+                            <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुली</th>
+                            <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">एकूण</th>
                             {GRADE_KEYS.map((g) => (
                               <React.Fragment key={g}>
-                                <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुले</th>
-                                <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुली</th>
-                                <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">एकूण</th>
+                                <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुले</th>
+                                <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुली</th>
+                                <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">एकूण</th>
                               </React.Fragment>
                             ))}
                           </tr>
@@ -2743,7 +2821,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                 {CASTE_CATEGORIES.map((cat, cIdx) => {
                                   const rowData = categoryData[cat.key];
                                   return (
-                                    <tr key={cat.key} className="border-b border-amber-300 hover:bg-amber-50/30">
+                                    <tr key={cat.key} className="border-b border-amber-300">
                                       {cIdx === 0 && (
                                         <td rowSpan={6} className="border border-amber-500 p-1 font-bold text-slate-900 align-middle text-center bg-amber-50/50 w-24 text-[10px] leading-tight">{getSubjectDisplayName(sub)}</td>
                                       )}
@@ -2762,16 +2840,16 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                   );
                                 })}
                                 {/* Total Row for Subject */}
-                                <tr className="bg-amber-100/70 font-black border-b-2 border-amber-600">
-                                  <td className="border border-amber-500 p-1 text-left font-black text-slate-900 w-24">एकूण</td>
-                                  <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.countBoys}</td>
-                                  <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.countGirls}</td>
-                                  <td className="border border-amber-500 p-0.5 font-black text-blue-900 text-center w-7 min-w-[24px]">{totalCategoryData.countTotal}</td>
+                                <tr className="font-black border-b-2 border-amber-600">
+                                  <td className="border border-amber-500 bg-amber-100/70 p-1 text-left font-black text-slate-900 w-24">एकूण</td>
+                                  <td className="border border-amber-500 bg-amber-100/70 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.countBoys}</td>
+                                  <td className="border border-amber-500 bg-amber-100/70 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.countGirls}</td>
+                                  <td className="border border-amber-500 bg-amber-100/70 p-0.5 font-black text-blue-900 text-center w-7 min-w-[24px]">{totalCategoryData.countTotal}</td>
                                   {GRADE_KEYS.map((g) => (
                                     <React.Fragment key={g}>
-                                      <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].b}</td>
-                                      <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].g}</td>
-                                      <td className="border border-amber-500 p-0.5 font-black text-slate-900 text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].t}</td>
+                                      <td className="border border-amber-500 bg-amber-100/70 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].b}</td>
+                                      <td className="border border-amber-500 bg-amber-100/70 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].g}</td>
+                                      <td className="border border-amber-500 bg-amber-100/70 p-0.5 font-black text-slate-900 text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].t}</td>
                                     </React.Fragment>
                                   ))}
                                 </tr>
@@ -2811,7 +2889,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 <div>
                   <h2 className="text-xl font-black text-lime-900 text-center mb-2 tracking-tight">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</h2>
                   <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-lime-300 pb-2 mb-4">
-                    <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
+                    <span>शाळा: <b>{schoolData.schoolName || ""}</b></span>
                     <span>इयत्ता: <b>{selectedClass}</b></span>
                     <span>तुकडी: <b>{division}</b></span>
                     <span>{selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
@@ -2821,56 +2899,44 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse border border-lime-600 text-center font-medium table-auto">
                       <thead>
-                        <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                          <th className="border border-lime-600 p-0.5 w-5 text-[9px] leading-tight" rowSpan={3}>अ.क्र.</th>
-                          <th className="border border-lime-600 p-0.5 text-left text-[10px] min-w-[110px] max-w-[140px] truncate" rowSpan={3}>विद्यार्थ्याचे नाव</th>
+                        <tr className="text-slate-900 font-extrabold border-b border-lime-600">
+                          <th className="border border-lime-600 bg-lime-200 p-0.5 w-5 text-[9px] leading-tight" rowSpan={2}>अ.क्र.</th>
+                          <th className="border border-lime-600 bg-lime-200 p-0.5 text-left text-[10px] min-w-[110px] max-w-[140px] truncate" rowSpan={2}>विद्यार्थ्याचे नाव</th>
                           {subjects.map((sub) => {
                             return (
-                              <th key={sub} className="border border-lime-600 p-0.5 text-[9.5px] leading-tight" colSpan={4}>
+                              <th key={sub} className="border border-lime-600 bg-lime-200 p-0.5 text-[9.5px] leading-tight" colSpan={4}>
                                 {sub}
                               </th>
                             );
                           })}
-                          <th className="border border-lime-600 p-0.5 text-[8.5px] w-7 leading-tight" rowSpan={3}>उपस्थिती</th>
-                          <th className="border border-lime-600 p-0.5 text-[8.5px] w-8 leading-tight" rowSpan={3}>एकूण गुण</th>
-                          <th className="border border-lime-600 p-0.5 text-[8.5px] w-9 leading-tight" rowSpan={3}>टक्केवारी</th>
-                          <th className="border border-lime-600 p-0.5 text-[8.5px] w-8 leading-tight" rowSpan={3}>अंतिम श्रेणी</th>
+                          <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] w-7 leading-tight" rowSpan={2}>उपस्थिती</th>
+                          <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] w-8 leading-tight" rowSpan={2}>एकूण गुण</th>
+                          <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] w-9 leading-tight" rowSpan={2}>टक्केवारी</th>
+                          <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] w-8 leading-tight" rowSpan={2}>अंतिम श्रेणी</th>
                         </tr>
-                        <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
+                        <tr className="text-slate-900 font-extrabold border-b border-lime-600">
                           {subjects.map((sub) => {
                             const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("शारीरिक");
                             return isPractical ? (
                               <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-0.5 text-[9px] leading-tight font-bold" colSpan={2} rowSpan={2}>अ<br/><span className="text-[7px] font-normal">आकारिक</span></th>
-                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1" rowSpan={2}>एकूण</th>
-                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1" rowSpan={2}>श्रेणी</th>
+                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] leading-tight font-bold" colSpan={2}>आकारिक (अ)</th>
+                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] font-bold px-1">एकूण</th>
+                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] font-bold px-1">श्रेणी</th>
                               </React.Fragment>
                             ) : (
                               <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1">अ</th>
-                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1">ब</th>
-                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1" rowSpan={2}>एकूण</th>
-                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1" rowSpan={2}>श्रेणी</th>
-                              </React.Fragment>
-                            );
-                          })}
-                        </tr>
-                        <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                          {subjects.map((sub) => {
-                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("शारीरिक");
-                            if (isPractical) return null;
-                            return (
-                              <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-0.5 text-[7px] font-normal">आकारिक</th>
-                                <th className="border border-lime-600 p-0.5 text-[7px] font-normal">संकलित</th>
+                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8px] leading-tight font-bold">आकारिक<br/><span className="text-[7.5px] font-medium">(अ)</span></th>
+                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8px] leading-tight font-bold">संकलित<br/><span className="text-[7.5px] font-medium">(ब)</span></th>
+                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] font-bold px-1">एकूण</th>
+                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] font-bold px-1">श्रेणी</th>
                               </React.Fragment>
                             );
                           })}
                         </tr>
                         {/* Sub-Header Row: Max Marks (पैकी) */}
-                        <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[9px]">
-                          <td className="border border-lime-600 p-0 w-5"></td>
-                          <td className="border border-lime-600 p-0.5 text-left font-black">पैकी</td>
+                        <tr className="text-slate-900 font-black border-b border-lime-600 text-[9px]">
+                          <td className="border border-lime-600 bg-lime-100 p-0 w-5"></td>
+                          <td className="border border-lime-600 bg-lime-100 p-0.5 text-left font-black">पैकी</td>
                           {subjects.map((sub) => {
                             const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("शारीरिक");
                             const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
@@ -2878,23 +2944,23 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                             return isPractical ? (
                               <React.Fragment key={sub}>
-                                <td className="border border-lime-600 p-0.5" colSpan={2}>100</td>
-                                <td className="border border-lime-600 p-0.5">100</td>
-                                <td className="border border-lime-600 p-0.5"></td>
+                                <td className="border border-lime-600 bg-lime-100 p-0.5" colSpan={2}>100</td>
+                                <td className="border border-lime-600 bg-lime-100 p-0.5">100</td>
+                                <td className="border border-lime-600 bg-lime-100 p-0.5"></td>
                               </React.Fragment>
                             ) : (
                               <React.Fragment key={sub}>
-                                <td className="border border-lime-600 p-0.5">{formMax}</td>
-                                <td className="border border-lime-600 p-0.5">{semMax}</td>
-                                <td className="border border-lime-600 p-0.5">100</td>
-                                <td className="border border-lime-600 p-0.5"></td>
+                                <td className="border border-lime-600 bg-lime-100 p-0.5">{formMax}</td>
+                                <td className="border border-lime-600 bg-lime-100 p-0.5">{semMax}</td>
+                                <td className="border border-lime-600 bg-lime-100 p-0.5">100</td>
+                                <td className="border border-lime-600 bg-lime-100 p-0.5"></td>
                               </React.Fragment>
                             );
                           })}
-                          <td className="border border-lime-600 p-0 text-[8.5px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
-                          <td className="border border-lime-600 p-0 text-[8.5px]">{subjects.length * 100}</td>
-                          <td className="border border-lime-600 p-0 text-[8.5px]">100%</td>
-                          <td className="border border-lime-600 p-0"></td>
+                          <td className="border border-lime-600 bg-lime-100 p-0 text-[8.5px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
+                          <td className="border border-lime-600 bg-lime-100 p-0 text-[8.5px]">{subjects.length * 100}</td>
+                          <td className="border border-lime-600 bg-lime-100 p-0 text-[8.5px]">100%</td>
+                          <td className="border border-lime-600 bg-lime-100 p-0"></td>
                         </tr>
                       </thead>
                       <tbody>

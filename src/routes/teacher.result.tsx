@@ -346,7 +346,7 @@ function TeacherResultsPage() {
         const { getUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
 
         let data: any = {};
-        const uni = getUnifiedSchoolProfile();
+        const uni = getUnifiedSchoolProfile(teacherId);
         if (uni && (uni.schoolName || uni.headmaster)) {
           data = {
             schoolName: uni.schoolName,
@@ -357,8 +357,29 @@ function TeacherResultsPage() {
             address: uni.address,
           };
         }
+
+        // 1. Check user's own account document in Firestore
+        if (teacherId && teacherId !== "default_teacher" && teacherId !== "guest") {
+          try {
+            const uSnap = await getDoc(doc(db, "users", teacherId));
+            if (uSnap.exists()) {
+              const uData = uSnap.data();
+              const cand = uData.schoolName || uData.school || uData.institutionName || uData.schoolConnection?.schoolName ||
+                (uData.displayName && uData.displayName !== "Educator" && uData.displayName !== "Teacher" ? uData.displayName : null) ||
+                (uData.fullName && uData.fullName !== "Educator" && uData.fullName !== "Teacher" ? uData.fullName : null);
+              if (cand && typeof cand === "string" && !cand.toLowerCase().includes("willingdon") && !cand.includes("___")) {
+                data.schoolName = cand.trim();
+              }
+              if (!data.teacherName && (uData.fullName || uData.displayName || uData.teacherName)) {
+                data.teacherName = uData.fullName || uData.displayName || uData.teacherName;
+              }
+              if (!data.udiseCode && (uData.udise || uData.udiseNumber)) data.udiseCode = uData.udise || uData.udiseNumber;
+              if (!data.address && uData.address) data.address = uData.address;
+            }
+          } catch (e) { }
+        }
         
-        // 2. Try teacher-isolated docs first
+        // 2. Try teacher-isolated docs
         if (teacherId) {
           const docIds = [
             `${teacherId}_${selectedClass}_${selectedMedium}_${academicYear}`,
@@ -367,19 +388,21 @@ function TeacherResultsPage() {
           for (const dId of docIds) {
             const snap = await getDoc(doc(db, "cce_settings", dId));
             if (snap.exists()) {
-              data = { ...data, ...snap.data() };
+              const d = snap.data();
+              if (d.schoolName && !d.schoolName.toLowerCase().includes("willingdon")) {
+                data.schoolName = d.schoolName;
+              }
+              data = { ...data, ...d };
               break;
             }
           }
           const schoolSnap = await getDoc(doc(db, "school_settings", `${teacherId}_general`));
           if (schoolSnap.exists()) {
-            data = { ...data, ...schoolSnap.data() };
-          }
-        } else {
-          let docRef = doc(db, "cce_settings", `${selectedClass}_${academicYear}`);
-          let snap = await getDoc(docRef);
-          if (snap.exists()) {
-            data = { ...data, ...snap.data() };
+            const sd = schoolSnap.data();
+            if (sd.schoolName && !sd.schoolName.toLowerCase().includes("willingdon")) {
+              data.schoolName = sd.schoolName;
+            }
+            data = { ...data, ...sd };
           }
         }
 
@@ -387,33 +410,6 @@ function TeacherResultsPage() {
           setCceInfo(data);
           localStorage.setItem(`cce_info_${teacherId}_${selectedClass}_${academicYear}`, JSON.stringify(data));
           return;
-        }
-
-        // 3. Fallback to RTDB schoolData if still empty
-        const udise = localStorage.getItem("udiseNumber");
-        if (udise) {
-          const dbUrl = 
-            (typeof window !== "undefined" && (window as any).env?.REACT_APP_FIREBASE_DATABASE_URL) ||
-            (import.meta as any).env?.REACT_APP_FIREBASE_DATABASE_URL ||
-            (typeof process !== "undefined" && process?.env?.REACT_APP_FIREBASE_DATABASE_URL);
-          if (dbUrl) {
-            const res = await fetch(`${dbUrl}/schoolRegister/${udise}/schoolData.json`);
-            if (res.ok) {
-              const rtdbData = await res.json();
-              if (rtdbData) {
-                const info = {
-                  schoolName: rtdbData.schoolName || "",
-                  headmasterName: rtdbData.headmasterName || rtdbData.hmName || "",
-                  principalName: rtdbData.headmasterName || rtdbData.hmName || "",
-                  schoolLogo: rtdbData.schoolLogo || "",
-                  udiseCode: udise,
-                };
-                setCceInfo(info);
-                localStorage.setItem(`cce_info_${teacherId}_${selectedClass}_${academicYear}`, JSON.stringify(info));
-                return;
-              }
-            }
-          }
         }
       } catch (e) {
         console.error("Error loading cce info:", e);
