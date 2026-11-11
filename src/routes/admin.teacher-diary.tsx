@@ -22,6 +22,9 @@ import {
   PlusCircle,
   FileCheck,
   GraduationCap,
+  CalendarOff,
+  Edit3,
+  X,
 } from "lucide-react";
 import { collection, doc, setDoc, getDocs, deleteDoc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -35,6 +38,13 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
 import { parseAndSaveYearlyDiary, generateSampleYearlyCsv } from "@/lib/yearly-diary-parser";
 import { DocumentLivePreview } from "@/components/DocumentLivePreview";
+import {
+  subscribeTeachingDiaryHolidays,
+  saveTeachingDiaryHoliday,
+  deleteTeachingDiaryHoliday,
+  type TeachingDiaryHoliday,
+  type HolidayScope,
+} from "@/lib/teaching-diary-holidays";
 
 export const Route = createFileRoute("/admin/teacher-diary")({
   head: () => ({ meta: [{ title: "Teaching Diary Management — Super Admin" }] }),
@@ -167,6 +177,121 @@ function TeacherDiaryAdmin() {
   // Authenticated PDF URL for active preview
   const previewUrlToFetch = selectedRecordForPreview?.pageUrl || null;
   const { pdfBlobUrl: authenticatedPreviewUrl, loading: loadingPreview } = useAuthenticatedPdf(previewUrlToFetch);
+
+  // Custom Holidays state & real-time listener
+  const [customHolidays, setCustomHolidays] = useState<TeachingDiaryHoliday[]>([]);
+  const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
+  const [holidayDateInput, setHolidayDateInput] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  const [holidayReasonInput, setHolidayReasonInput] = useState<string>("");
+  const [holidayScopeInput, setHolidayScopeInput] = useState<HolidayScope>("ALL");
+  const [editingHolidayId, setEditingHolidayId] = useState<string | null>(null);
+  const [savingHoliday, setSavingHoliday] = useState(false);
+
+  useEffect(() => {
+    const unsub = subscribeTeachingDiaryHolidays(
+      (list) => setCustomHolidays(list),
+      () => toast.error("सुट्ट्यांची यादी लोड करताना त्रुटी आली.")
+    );
+    return () => unsub();
+  }, []);
+
+  const getDefaultHolidayDate = (): string => {
+    if (selectedMonth) {
+      let startDay = 1;
+      if (selectedWeek === "11 to 20") startDay = 11;
+      else if (selectedWeek === "21 to 31") startDay = 21;
+      return `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-${String(startDay).padStart(2, "0")}`;
+    }
+    return format(new Date(), "yyyy-MM-dd");
+  };
+
+  const openHolidayManager = (holidayToEdit?: TeachingDiaryHoliday) => {
+    if (holidayToEdit) {
+      setEditingHolidayId(holidayToEdit.id);
+      setHolidayDateInput(holidayToEdit.date);
+      setHolidayReasonInput(holidayToEdit.reason);
+      setHolidayScopeInput(holidayToEdit.scope);
+    } else {
+      setEditingHolidayId(null);
+      setHolidayDateInput(getDefaultHolidayDate());
+      setHolidayReasonInput("");
+      setHolidayScopeInput("ALL");
+    }
+    setIsHolidayModalOpen(true);
+  };
+
+  const handleSaveCustomHoliday = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!holidayDateInput) {
+      toast.error("कृपया सुट्टीची तारीख निवडा.");
+      return;
+    }
+    if (!holidayReasonInput.trim()) {
+      toast.error("कृपया सुट्टीचे कारण लिहा.");
+      return;
+    }
+    setSavingHoliday(true);
+    try {
+      const useSpecificScope =
+        holidayScopeInput === "SPECIFIC" && Boolean(selectedClass) && Boolean(selectedMedium);
+      await saveTeachingDiaryHoliday({
+        date: holidayDateInput,
+        reason: holidayReasonInput.trim(),
+        scope: useSpecificScope ? "SPECIFIC" : "ALL",
+        className: useSpecificScope ? selectedClass || undefined : undefined,
+        medium: useSpecificScope ? selectedMedium || undefined : undefined,
+        existingId: editingHolidayId || undefined,
+      });
+      toast.success(
+        editingHolidayId
+          ? "सुट्टीची नोंद यशस्वीरित्या अद्ययावत झाली!"
+          : `${holidayDateInput} ला कस्टम सुट्टी यशस्वीरित्या जोडली!`
+      );
+      setEditingHolidayId(null);
+      setHolidayReasonInput("");
+    } catch (err: any) {
+      console.error("Error saving custom holiday:", err);
+      toast.error(err?.message || "सुट्टी सेव्ह करताना त्रुटी आली.");
+    } finally {
+      setSavingHoliday(false);
+    }
+  };
+
+  const handleDeleteCustomHoliday = async (holiday: TeachingDiaryHoliday) => {
+    if (!confirm(`"${holiday.date}" (${holiday.reason}) ही कस्टम सुट्टी डिलीट करायची का?`)) {
+      return;
+    }
+    try {
+      await deleteTeachingDiaryHoliday(holiday.id);
+      if (editingHolidayId === holiday.id) {
+        setEditingHolidayId(null);
+        setHolidayReasonInput("");
+      }
+      toast.success("कस्टम सुट्टी यशस्वीरित्या काढून टाकली!");
+    } catch (err: any) {
+      console.error("Error deleting custom holiday:", err);
+      toast.error("सुट्टी डिलीट करताना त्रुटी आली.");
+    }
+  };
+
+  const formatHolidayDateDisplay = (isoDate: string): string => {
+    const parts = isoDate.split("-");
+    if (parts.length !== 3) return isoDate;
+    const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    const dayNames = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+    const dayName = !isNaN(dObj.getTime()) ? dayNames[dObj.getDay()] : "";
+    return `${parts[2]}/${parts[1]}/${parts[0]}${dayName ? ` (${dayName})` : ""}`;
+  };
+
+  const matchingMonthHolidays = customHolidays.filter((h) => {
+    if (selectedMonth && h.date.split("-")[1] !== String(selectedMonth).padStart(2, "0")) {
+      return false;
+    }
+    if (h.scope === "SPECIFIC" && selectedClass && selectedMedium) {
+      return h.className === selectedClass && h.medium === selectedMedium;
+    }
+    return true;
+  });
 
   const classes = [
     { id: "Class 1", badge: "1ST", mr: "इयत्ता पहिली" },
@@ -680,12 +805,27 @@ function TeacherDiaryAdmin() {
                 Select Medium, Class, and Date to upload or manage official Teaching Diaries (PDF format).
               </p>
             </div>
-            <Link
-              to="/teacher/teaching-record"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-indigo-100"
-            >
-              <Eye className="size-4" /> View User Portal View
-            </Link>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => openHolidayManager()}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-rose-200 shadow-sm"
+              >
+                <CalendarOff className="size-4" />
+                <span>कस्टम सुट्टी जोडा (Custom Holidays)</span>
+                {customHolidays.length > 0 && (
+                  <span className="px-1.5 py-0.5 bg-rose-600 text-white rounded-full text-[10px] font-black leading-none">
+                    {customHolidays.length}
+                  </span>
+                )}
+              </button>
+              <Link
+                to="/teacher/teaching-record"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-indigo-100"
+              >
+                <Eye className="size-4" /> View User Portal View
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -1144,6 +1284,71 @@ function TeacherDiaryAdmin() {
                   </div>
                 )}
               </div>
+
+              {/* Custom Holidays Summary Card for Active Month */}
+              <div className="bg-white border border-rose-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-rose-100">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-rose-800 flex items-center gap-2">
+                    <CalendarOff className="size-4 text-rose-600" />
+                    कस्टम सुट्ट्या ({months.find(m => m.id === selectedMonth)?.mr} महिना)
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => openHolidayManager()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black transition-all cursor-pointer shadow-sm"
+                  >
+                    <PlusCircle className="size-3.5" />
+                    <span>नवीन सुट्टी जोडा</span>
+                  </button>
+                </div>
+
+                {matchingMonthHolidays.length > 0 ? (
+                  <div className="space-y-2">
+                    {matchingMonthHolidays.map((h) => (
+                      <div
+                        key={h.id}
+                        className="p-3 rounded-2xl border bg-rose-50/50 border-rose-200/70 flex items-center justify-between gap-3"
+                      >
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-black text-rose-900">
+                              {formatHolidayDateDisplay(h.date)}
+                            </span>
+                            <span className="px-2 py-0.5 bg-white border border-rose-200 text-rose-700 rounded-full text-[10px] font-black">
+                              {h.scope === "ALL" ? "सर्व इयत्ता व माध्यम" : `${h.className} • ${h.medium}`}
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-700">
+                            कारण: <span className="text-rose-700 font-black">{h.reason}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => openHolidayManager(h)}
+                            className="p-1.5 bg-white border border-slate-200 hover:bg-indigo-50 text-indigo-600 rounded-lg cursor-pointer"
+                            title="सुट्टी बदला (Edit Holiday)"
+                          >
+                            <Edit3 className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomHoliday(h)}
+                            className="p-1.5 bg-white border border-slate-200 hover:bg-rose-50 text-rose-600 rounded-lg cursor-pointer"
+                            title="सुट्टी डिलीट करा (Delete Holiday)"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs font-bold text-slate-500 text-center py-3">
+                    या महिन्यासाठी अद्याप कोणतीही कस्टम सुट्टी जोडलेली नाही.
+                  </p>
+                )}
+              </div>
             </motion.div>
           )}
 
@@ -1169,6 +1374,179 @@ function TeacherDiaryAdmin() {
           )}
 
         </AnimatePresence>
+
+        {/* Custom Holiday Manager Modal */}
+        {isHolidayModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-rose-600 to-amber-600 text-white">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-2xl bg-white/15 flex items-center justify-center">
+                    <CalendarOff className="size-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black">
+                      {editingHolidayId ? "कस्टम सुट्टी बदला (Edit Holiday)" : "कस्टम सुट्टी जोडा (Custom Holiday)"}
+                    </h3>
+                    <p className="text-[11px] font-bold text-rose-100">
+                      येथे जोडलेली सुट्टी व तिचे कारण संबंधित तारखेस पाठ टाचण डॅशबोर्डवर दिसेल
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsHolidayModalOpen(false)}
+                  className="p-2 hover:bg-white/20 rounded-xl transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto space-y-6">
+                <form onSubmit={handleSaveCustomHoliday} className="space-y-4 bg-rose-50/50 border border-rose-200/80 rounded-2xl p-4 sm:p-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-slate-700 block">
+                        सुट्टीची तारीख (Holiday Date) *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={holidayDateInput}
+                        onChange={(e) => setHolidayDateInput(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 rounded-xl text-sm font-bold text-slate-900 outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-slate-700 block">
+                        लागू व्याप्ती (Apply To)
+                      </label>
+                      <select
+                        value={holidayScopeInput}
+                        onChange={(e) => setHolidayScopeInput(e.target.value as HolidayScope)}
+                        className="w-full px-3.5 py-2.5 bg-white border border-slate-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 rounded-xl text-xs sm:text-sm font-bold text-slate-900 outline-none"
+                      >
+                        <option value="ALL">सर्व इयत्ता व माध्यम (All Classes & Mediums)</option>
+                        {selectedClass && selectedMedium && (
+                          <option value="SPECIFIC">
+                            फक्त {selectedClass} ({selectedMedium})
+                          </option>
+                        )}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-black text-slate-700 block">
+                      सुट्टीचे कारण (Holiday Reason) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={holidayReasonInput}
+                      onChange={(e) => setHolidayReasonInput(e.target.value)}
+                      placeholder="उदा. दिवाळी सुट्टी, प्रजासत्ताक दिन, महाशिवरात्री सुट्टी..."
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 rounded-xl text-sm font-bold text-slate-900 outline-none"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={savingHoliday}
+                      className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-md"
+                    >
+                      {savingHoliday ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" />
+                          <span>जतन होत आहे...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="size-4" />
+                          <span>{editingHolidayId ? "सुट्टी अपडेट करा (Update)" : "सुट्टी जतन करा (Save Holiday)"}</span>
+                        </>
+                      )}
+                    </button>
+                    {editingHolidayId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingHolidayId(null);
+                          setHolidayReasonInput("");
+                          setHolidayScopeInput("ALL");
+                        }}
+                        className="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                      >
+                        रद्द करा (Cancel Edit)
+                      </button>
+                    )}
+                  </div>
+                </form>
+
+                {/* Saved Custom Holidays List */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-700">
+                      जतन केलेल्या कस्टम सुट्ट्या ({customHolidays.length})
+                    </h4>
+                  </div>
+
+                  {customHolidays.length === 0 ? (
+                    <div className="text-center py-8 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-bold text-slate-500">
+                      अद्याप कोणतीही कस्टम सुट्टी जोडलेली नाही. वर तारीख आणि कारण टाकून सुट्टी जोडा.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                      {customHolidays.map((h) => (
+                        <div
+                          key={h.id}
+                          className="p-3.5 rounded-2xl border bg-white border-slate-200 hover:border-rose-300 flex items-center justify-between gap-3 shadow-xs"
+                        >
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-black text-slate-900">
+                                {formatHolidayDateDisplay(h.date)}
+                              </span>
+                              <span className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-full text-[10px] font-black">
+                                {h.scope === "ALL" ? "सर्व इयत्ता व माध्यम" : `${h.className} • ${h.medium}`}
+                              </span>
+                            </div>
+                            <p className="text-xs font-bold text-rose-700 break-words">
+                              कारण: {h.reason}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => openHolidayManager(h)}
+                              className="p-1.5 bg-slate-50 border border-slate-200 hover:bg-indigo-50 text-indigo-600 rounded-lg cursor-pointer"
+                              title="सुट्टी बदला"
+                            >
+                              <Edit3 className="size-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCustomHoliday(h)}
+                              className="p-1.5 bg-slate-50 border border-slate-200 hover:bg-rose-50 text-rose-600 rounded-lg cursor-pointer"
+                              title="सुट्टी डिलीट करा"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
       <Footer />
     </div>

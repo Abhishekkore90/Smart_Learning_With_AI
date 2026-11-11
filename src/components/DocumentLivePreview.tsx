@@ -20,6 +20,11 @@ import { showToast as toast } from "@/lib/custom-toast";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
 import { cleanThoughtText, getDefaultSuvicharForDate, isDefaultFallbackThought } from "@/lib/parse-diary-file";
+import {
+  subscribeTeachingDiaryHolidays,
+  findHolidayForDate,
+  type TeachingDiaryHoliday,
+} from "@/lib/teaching-diary-holidays";
 
 const MARATHI_DIGITS = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
 
@@ -934,6 +939,8 @@ export interface GroupedDayRecord {
   rawText: string;
   pageUrl?: string;
   scannedPageUrl?: string;
+  isHoliday?: boolean;
+  holidayReason?: string;
 }
 
 export function splitLargePagesIntoDayChunks(pages: StructuredDayPage[]): StructuredDayPage[] {
@@ -1111,6 +1118,8 @@ export function groupStructuredPagesByDay(pages: StructuredDayPage[], defaultBas
       rawText: p.rawText,
       pageUrl: (p as any).pageUrl || (p as any).scannedPageUrl || (p as any).pageURL || "",
       scannedPageUrl: (p as any).scannedPageUrl || (p as any).pageUrl || "",
+      isHoliday: Boolean((p as any).isHoliday),
+      holidayReason: (p as any).holidayReason || "",
     });
   });
 
@@ -1290,8 +1299,14 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
               <span className="px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-[11px] font-black flex items-center gap-1.5 shadow-sm">
                 <span>कोणत्याही मजकुरावर क्लिक करून थेट एडिट करा (Live Edit Enabled)</span>
               </span>
-              <span className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-xl font-extrabold">
-                {p.periods.length > 0 ? `${p.periods.length} तासिका (Periods)` : "विवरण मजकूर"}
+              <span className={`px-3 py-1.5 rounded-xl font-extrabold ${
+                p.isHoliday ? "bg-rose-100 text-rose-700 border border-rose-200" : "bg-slate-100 text-slate-700"
+              }`}>
+                {p.isHoliday
+                  ? "सुट्टी (Holiday)"
+                  : p.periods.length > 0
+                  ? `${p.periods.length} तासिका (Periods)`
+                  : "विवरण मजकूर"}
               </span>
             </div>
           </div>
@@ -1348,8 +1363,20 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
             </div>
           </div>
 
+          {/* Custom Holiday Card (when admin added a custom holiday for this date) */}
+          {p.isHoliday ? (
+            <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-b from-rose-50 to-white border-2 border-rose-200 text-center space-y-2.5 my-3">
+              <span className="inline-block px-3 py-1 bg-rose-100 text-rose-700 rounded-full text-xs font-black uppercase tracking-wider">
+                शाळा सुट्टी (School Holiday)
+              </span>
+              <p className="text-base sm:text-lg font-black text-rose-900 break-words">
+                सुट्टीचे कारण: {p.holidayReason || "शासकीय / कस्टम सुट्टी"}
+              </p>
+            </div>
+          ) : null}
+
           {/* Display Scanned Page Image ONLY if valid image format AND periods table missing */}
-          {isImageUrl(p.scannedPageUrl || p.pageUrl) && p.periods.length === 0 && (
+          {!p.isHoliday && isImageUrl(p.scannedPageUrl || p.pageUrl) && p.periods.length === 0 && (
             <div className="w-full rounded-2xl overflow-hidden border-2 border-slate-300 shadow-sm bg-slate-50 p-3 my-3">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-extrabold text-indigo-900 flex items-center gap-1.5">
@@ -1365,7 +1392,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
             </div>
           )}
 
-          {p.periods.length > 0 ? (
+          {!p.isHoliday && (p.periods.length > 0 ? (
             <div className="w-full overflow-hidden rounded-xl border-2 border-slate-900 shadow-sm mt-2 sm:mt-4 max-w-full">
               <table className="w-full text-xs sm:text-sm border-collapse border-2 border-slate-900 table-fixed">
                 <colgroup>
@@ -1483,7 +1510,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
             <pre className="whitespace-pre-wrap font-sans text-xs text-slate-700 p-4 bg-slate-50 rounded-2xl border border-slate-200 leading-relaxed text-center">
               {p.rawText}
             </pre>
-          )}
+          ))}
 
           <div 
             className="pt-4 border-t-2 border-slate-400 space-y-2 signature-section"
@@ -1588,6 +1615,14 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   const [viewMode, setViewMode] = useState<"original" | "structured">("original");
   const [isInnerDownloading, setIsInnerDownloading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [customHolidays, setCustomHolidays] = useState<TeachingDiaryHoliday[]>([]);
+
+  useEffect(() => {
+    const unsub = subscribeTeachingDiaryHolidays((list) => {
+      setCustomHolidays(list);
+    });
+    return () => unsub();
+  }, []);
 
   const cleanFirestoreData = (data: any): any => {
     if (data === undefined || data === null) return "";
@@ -2259,8 +2294,23 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       }
     }
 
-    return filtered;
-  }, [structuredPages, savedRecord?.structuredData, selectedMonth, savedRecord?.week, savedRecord?.selectedWeek, selectedDateIso]);
+    return filtered.map((p: any) => {
+      const h = findHolidayForDate(
+        customHolidays,
+        p?.date || p?.displayDate,
+        savedRecord?.className || p?.std,
+        savedRecord?.medium
+      );
+      if (h) {
+        return {
+          ...p,
+          isHoliday: true,
+          holidayReason: h.reason,
+        };
+      }
+      return p;
+    });
+  }, [structuredPages, savedRecord?.structuredData, savedRecord?.className, savedRecord?.medium, selectedMonth, savedRecord?.week, savedRecord?.selectedWeek, selectedDateIso, customHolidays]);
 
   const hasStructuredView = pagesToDisplay && pagesToDisplay.length > 0;
   const downloadUrl = savedRecord?.pageUrl || (selectedFile ? localPdfBlobUrl : null);
@@ -2499,6 +2549,16 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       const validPages = pagesToUse.filter((p: any) => {
         if (!p) return false;
         if (p.isSunday || p.isHoliday) return false;
+        if (
+          findHolidayForDate(
+            customHolidays,
+            p.date || p.displayDate,
+            savedRecord?.className || p.std,
+            savedRecord?.medium
+          )
+        ) {
+          return false;
+        }
         if (isSundayDate(p.day, p.date)) return false;
         const validPeriods = (p.periods || []).filter((r: any) => 
           r && (r.subject || r.topic || r.outcome || r.experience || r.period)

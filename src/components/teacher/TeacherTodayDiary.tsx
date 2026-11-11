@@ -38,6 +38,11 @@ import {
 import { getBunnyStorageUrl } from "@/lib/bunny-auth-pdf";
 import { useAuth } from "@/hooks/use-auth";
 import { cleanThoughtText, getDefaultSuvicharForDate, isDefaultFallbackThought } from "@/lib/parse-diary-file";
+import {
+  subscribeTeachingDiaryHolidays,
+  findHolidayForDate,
+  type TeachingDiaryHoliday,
+} from "@/lib/teaching-diary-holidays";
 
 interface PeriodItem {
   period: string;
@@ -426,8 +431,16 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   const [isAllDaysMode, setIsAllDaysMode] = useState<boolean>(false);
   const [rangeMasterRecord, setRangeMasterRecord] = useState<any>(null);
   const [availableDates, setAvailableDates] = useState<{ dateStr: string; day: string }[]>([]);
+  const [customHolidays, setCustomHolidays] = useState<TeachingDiaryHoliday[]>([]);
   const { user, profile } = useAuth();
   const printRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unsub = subscribeTeachingDiaryHolidays((list) => {
+      setCustomHolidays(list);
+    });
+    return () => unsub();
+  }, []);
   const [localProfile, setLocalProfile] = useState<{
     udiseCode?: string;
     schoolName?: string;
@@ -859,6 +872,30 @@ export const TeacherTodayDiary: React.FC<Props> = ({
         return;
       }
 
+      // Admin Custom Holiday Check: If Admin declared a custom holiday for this date, show holiday + reason
+      const matchedCustomHoliday = findHolidayForDate(
+        customHolidays,
+        isoDate,
+        selectedClass,
+        selectedMedium
+      );
+      if (matchedCustomHoliday) {
+        setTodayDiary({
+          date: isoDate,
+          displayDate: displayFormattedDate,
+          day: getMarathiDayName(isoDate),
+          thought: "",
+          dinvishesh: "",
+          className: selectedClass,
+          medium: selectedMedium,
+          isHoliday: true,
+          holidayReason: matchedCustomHoliday.reason,
+          periods: [],
+        });
+        setLoading(false);
+        return;
+      }
+
       try {
         const targetMonthStr = isoDate.split("-")[1]; // e.g. "08" for August, "06" for June
 
@@ -1084,7 +1121,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     }
 
     fetchDiaryForDate();
-  }, [selectedClass, selectedMedium, isoDate, rangeMasterRecord, currentTabId]);
+  }, [selectedClass, selectedMedium, isoDate, rangeMasterRecord, currentTabId, customHolidays]);
 
   const handlePrevDay = () => setActiveDate((prev) => subDays(prev ?? new Date(), 1));
   const handleNextDay = () => setActiveDate((prev) => addDays(prev ?? new Date(), 1));
@@ -1537,7 +1574,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 <Trash2 className="size-4" />
               </button>
             )}
-            {todayDiary && (
+            {todayDiary && !todayDiary.isHoliday && (
               <>
                 <button
                   type="button"
@@ -1619,7 +1656,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 <span>१० दिवसांची फाईल पहा (All Days File)</span>
               </button>
               <span className="text-[11px] font-black text-rose-500 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
-                (रविवार शासकीय सुट्टी)
+                (रविवार व कस्टम सुट्टी)
               </span>
             </div>
           </div>
@@ -1646,6 +1683,13 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             {rangeDays.map((dObj) => {
               const isSelected = !isAllDaysMode && activeDate && format(activeDate, "yyyy-MM-dd") === dObj.dateIso;
               const isSunday = dObj.dayOfWeek === 0;
+              const customHoliday = findHolidayForDate(
+                customHolidays,
+                dObj.dateIso,
+                selectedClass,
+                selectedMedium
+              );
+              const isHolidayPill = isSunday || Boolean(customHoliday);
 
               return (
                 <button
@@ -1658,15 +1702,19 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                   className={`py-2.5 px-2 rounded-2xl text-xs font-black transition-all flex flex-col items-center justify-center cursor-pointer shadow-sm ${
                     isSelected
                       ? "bg-slate-950 text-amber-300 shadow-xl ring-4 ring-orange-500/40 scale-105 border-2 border-amber-400"
-                      : isSunday
+                      : isHolidayPill
                       ? "bg-rose-50 text-rose-600 border-2 border-rose-200 hover:bg-rose-100"
                       : "bg-slate-100/90 text-slate-800 hover:bg-orange-500 hover:text-white border-2 border-slate-200/80 hover:border-orange-500"
                   }`}
-                  title={`${dObj.displayDate} (${dObj.dayName})`}
+                  title={
+                    customHoliday
+                      ? `${dObj.displayDate} (${dObj.dayName}) — सुट्टी: ${customHoliday.reason}`
+                      : `${dObj.displayDate} (${dObj.dayName})`
+                  }
                 >
                   <span className="text-base font-black leading-none">{dObj.dayNum}</span>
-                  <span className={`text-[10px] font-extrabold mt-1 uppercase ${isSelected ? "text-amber-300" : isSunday ? "text-rose-600" : "opacity-80"}`}>
-                    {dObj.dayShort}
+                  <span className={`text-[10px] font-extrabold mt-1 uppercase ${isSelected ? "text-amber-300" : isHolidayPill ? "text-rose-600" : "opacity-80"}`}>
+                    {customHoliday ? "सुट्टी" : dObj.dayShort}
                   </span>
                 </button>
               );
@@ -1731,27 +1779,50 @@ export const TeacherTodayDiary: React.FC<Props> = ({
         </div>
       ) : !todayDiary || todayDiary.isHoliday || (!((todayDiary as any)?.pageUrl || (todayDiary as any)?.pageURL || (todayDiary as any)?.masterPdfUrl) && !(todayDiary.periods && todayDiary.periods.length > 0)) ? (
         /* FALLBACK UI: Holiday or Missing Data */
-        <div className="p-10 rounded-3xl bg-white border border-slate-200/80 text-slate-800 shadow-sm text-center space-y-4">
-          <div className="w-16 h-16 bg-amber-50 border border-amber-200 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-2">
+        <div className={`p-8 sm:p-10 rounded-3xl border text-slate-800 shadow-sm text-center space-y-4 ${
+          todayDiary?.isHoliday || activeDate?.getDay() === 0
+            ? "bg-gradient-to-b from-rose-50/80 to-white border-rose-200"
+            : "bg-white border-slate-200/80"
+        }`}>
+          <div className={`w-16 h-16 border rounded-full flex items-center justify-center mx-auto mb-2 ${
+            todayDiary?.isHoliday || activeDate?.getDay() === 0
+              ? "bg-rose-100 border-rose-300 text-rose-600"
+              : "bg-amber-50 border-amber-200 text-amber-600"
+          }`}>
             <CalendarOff className="w-8 h-8" />
           </div>
           <h3 className="text-xl font-extrabold text-slate-900">
-            {activeDate?.getDay() === 0 
+            {activeDate?.getDay() === 0
               ? "रविवार — शासकीय सुट्टी (Sunday School Holiday)"
+              : todayDiary?.isHoliday
+              ? `शाळा सुट्टी — ${formatMarathiDate(isoDate)} (${getMarathiDayName(isoDate)})`
               : "या तारखेस टाचण नोंद उपलब्ध नाही (No Teaching Diary Found)"}
           </h3>
-          <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">
-            {activeDate?.getDay() === 0
-              ? "रविवार या दिवशी शासकीय शाळा व महाविद्यालयांना सुट्टी असल्यामुळे कोणतीही टाचण नोंद उपलब्ध नसते."
-              : todayDiary?.holidayReason 
-                ? todayDiary.holidayReason 
-                : `${displayFormattedDate} या दिवसासाठी कोणतीही टाचण नोंद उपलब्ध नाही. दुसरं दिनांक निवडा किंवा टाचण अपलोड करा.`}
-          </p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 font-bold">
+          {activeDate?.getDay() === 0 ? (
+            <p className="text-slate-600 max-w-md mx-auto text-sm leading-relaxed font-semibold">
+              रविवार या दिवशी शासकीय शाळा व महाविद्यालयांना सुट्टी असल्यामुळे कोणतीही टाचण नोंद उपलब्ध नसते.
+            </p>
+          ) : todayDiary?.isHoliday ? (
+            <div className="max-w-lg mx-auto bg-white border-2 border-rose-200 rounded-2xl p-4 shadow-xs space-y-1.5">
+              <span className="inline-block px-3 py-0.5 bg-rose-100 text-rose-700 rounded-full text-[11px] font-black uppercase tracking-wider">
+                सुट्टीचे कारण (Holiday Reason)
+              </span>
+              <p className="text-base sm:text-lg font-black text-rose-900 break-words">
+                {todayDiary.holidayReason || "शासकीय / कस्टम सुट्टी"}
+              </p>
+            </div>
+          ) : (
+            <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">
+              {`${formatMarathiDate(isoDate) || displayFormattedDate} या दिवसासाठी कोणतीही टाचण नोंद उपलब्ध नाही. दुसरं दिनांक निवडा किंवा टाचण अपलोड करा.`}
+            </p>
+          )}
+          <div className="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 font-bold shadow-xs">
             <CalendarIcon className="w-4 h-4 text-orange-500" />
-            <span>Selected Date: {displayFormattedDate}</span>
+            <span>दिनांक: {formatMarathiDate(isoDate) || displayFormattedDate}</span>
             <span className="mx-1">•</span>
-            <span className="text-orange-600 font-extrabold">{selectedClass} ({selectedMedium})</span>
+            <span className="text-orange-600 font-extrabold">
+              {toMarathiClassName(selectedClass)} ({selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"})
+            </span>
           </div>
         </div>
       ) : (todayDiary.periods && todayDiary.periods.length > 0) ? (
