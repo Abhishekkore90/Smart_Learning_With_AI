@@ -174,4 +174,3 @@ function ProfileTemplatesPage() {
     </div>
   );
 }
-export default ProfileTemplatesPage;

@@ -174,4 +174,3 @@ function StudentOfMonthTemplatesPage() {
     </div>
   );
 }
-export default StudentOfMonthTemplatesPage;

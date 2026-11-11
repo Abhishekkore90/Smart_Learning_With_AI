@@ -57,11 +57,11 @@ const getGradeKeyFromScore = (score, max = 100) => {
 };
 
 // A4 Page Mobile Scale Wrapper to show authentic A4 proportions on mobile without horizontal scrollbar
-function A4PageWrapper({ children, isLandscape = false }) {
+function A4PageWrapper({ children, isLandscape = false, isLegal = false }) {
   const containerRef = useRef(null);
   const [scale, setScale] = useState(1);
 
-  const targetWidth = isLandscape ? 1123 : 794;
+  const targetWidth = isLegal ? 1344 : isLandscape ? 1123 : 794;
 
   useEffect(() => {
     const updateScale = () => {
@@ -109,7 +109,7 @@ function A4PageWrapper({ children, isLandscape = false }) {
                   width: `${targetWidth}px`,
                   minWidth: `${targetWidth}px`,
                   maxWidth: `${targetWidth}px`,
-                  marginBottom: `-${Math.round((1 - scale) * (isLandscape ? 794 : 1123))}px`,
+                  marginBottom: `-${Math.round((1 - scale) * (isLegal ? 816 : isLandscape ? 794 : 1123))}px`,
                 }
             : {
                 width: `${targetWidth}px`,
@@ -1113,9 +1113,10 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         setDownloadProgress({ current: i + 1, total: pdfPages.length });
         const pageEl = pdfPages[i];
         const isLandscape = pageEl.classList.contains("pdf-page-landscape") || pageEl.getAttribute("data-orientation") === "landscape";
+        const isLegal = pageEl.classList.contains("pdf-page-legal") || pageEl.getAttribute("data-paper") === "legal";
 
-        const targetWidth = isLandscape ? 1123 : 794;
-        const targetHeight = isLandscape ? 794 : 1123;
+        const targetWidth = isLegal ? 1344 : (isLandscape ? 1123 : 794);
+        const targetHeight = isLegal ? 816 : (isLandscape ? 794 : 1123);
 
         // Create an isolated fixed-size sandbox on document.body
         // This ensures the render size is ALWAYS 100% full A4 resolution,
@@ -1133,7 +1134,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         sandbox.style.maxHeight = `${targetHeight}px`;
         sandbox.style.zIndex = "50";
         sandbox.style.backgroundColor = "#ffffff";
-        sandbox.style.fontFamily = "'Noto Sans Devanagari', 'Inter', sans-serif";
+        sandbox.style.fontFamily = "'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif";
+        sandbox.style.letterSpacing = "0px";
         sandbox.style.webkitFontSmoothing = "antialiased";
         sandbox.style.textRendering = "geometricPrecision";
         sandbox.style.pointerEvents = "none";
@@ -1207,7 +1209,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         );
 
         const canvas = await html2canvas(clone, {
-          scale: 2.0,
+          scale: 3.0,
           useCORS: true,
           allowTaint: true,
           logging: false,
@@ -1226,22 +1228,29 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           sandbox.parentNode.removeChild(sandbox);
         }
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.94);
+        const imgData = canvas.toDataURL("image/png");
 
-        if (isLandscape) {
+        if (isLegal) {
+          if (!pdf) {
+            pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "legal", compress: true });
+          } else {
+            pdf.addPage("legal", "landscape");
+          }
+          pdf.addImage(imgData, "PNG", 2, 2, 351.6, 211.9, undefined, "FAST");
+        } else if (isLandscape) {
           if (!pdf) {
             pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
           } else {
             pdf.addPage("a4", "landscape");
           }
-          pdf.addImage(imgData, "JPEG", 2, 2, 293, 206, undefined, "MEDIUM");
+          pdf.addImage(imgData, "PNG", 2, 2, 293, 206, undefined, "FAST");
         } else {
           if (!pdf) {
             pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
           } else {
             pdf.addPage("a4", "portrait");
           }
-          pdf.addImage(imgData, "JPEG", 2, 2, 206, 293, undefined, "MEDIUM");
+          pdf.addImage(imgData, "PNG", 2, 2, 206, 293, undefined, "FAST");
         }
       }
 
@@ -1274,11 +1283,22 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
   }
 
   return (
-    <div className="font-sans text-slate-800">
+    <div className="text-black" style={{ fontFamily: "'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif", letterSpacing: 0 }}>
       <style>{`
         .pdf-page, .pdf-page * {
+          font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif;
+          font-weight: 700 !important;
+          letter-spacing: 0 !important;
+          -webkit-font-smoothing: antialiased;
+          text-rendering: geometricPrecision;
           scrollbar-width: none !important;
           -ms-overflow-style: none !important;
+        }
+        .pdf-page .font-extrabold, .pdf-page b, .pdf-page strong, .pdf-page th, .pdf-page h1, .pdf-page h2, .pdf-page h3 {
+          font-weight: 800 !important;
+        }
+        .pdf-page .font-black {
+          font-weight: 900 !important;
         }
         .pdf-page::-webkit-scrollbar, .pdf-page *::-webkit-scrollbar {
           display: none !important;
@@ -1296,6 +1316,17 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           min-width: 1123px !important;
           max-width: 1123px !important;
           min-height: 794px !important;
+        }
+        .pdf-page-landscape.pdf-page-legal {
+          width: 1344px !important;
+          min-width: 1344px !important;
+          max-width: 1344px !important;
+          min-height: 816px !important;
+        }
+        table.consolidated-legal-table th,
+        table.consolidated-legal-table td {
+          padding: 2px 1.5px !important;
+          width: auto !important;
         }
         @media print {
           .a4-page-scale-wrapper {
@@ -1352,6 +1383,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             height: 210mm !important;
             max-height: 210mm !important;
             padding: 10mm !important;
+            overflow: visible !important;
+          }
+          .pdf-page-landscape.pdf-page-legal {
+            width: 355.6mm !important;
+            height: 215.9mm !important;
+            max-height: 215.9mm !important;
+            padding: 7mm !important;
             overflow: visible !important;
           }
         }
@@ -1554,35 +1592,35 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
             {/* Top School Header Section */}
             <div className="space-y-2 w-full">
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight leading-snug">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-black leading-snug">
                 {schoolData.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
               </h2>
-              <p className="text-base sm:text-lg font-extrabold text-slate-700 font-mono tracking-wider uppercase mt-2">
-                UDISE : <span className="text-lg sm:text-xl font-black text-slate-950">{schoolData.udise || "s1"}</span>
+              <p className="text-base sm:text-lg font-extrabold text-slate-900 font-mono uppercase mt-2">
+                UDISE : <span className="text-lg sm:text-xl font-black text-black">{schoolData.udise || "s1"}</span>
               </p>
 
               {/* Horizontal Line with Diamond Node */}
               <div className="flex items-center justify-center gap-3 my-4 max-w-xs mx-auto">
-                <div className="h-[1.5px] bg-slate-300 w-24" />
-                <div className="size-1.5 bg-slate-400 rotate-45 shrink-0" />
-                <div className="h-[1.5px] bg-slate-300 w-24" />
+                <div className="h-[1.5px] bg-slate-400 w-24" />
+                <div className="size-1.5 bg-slate-600 rotate-45 shrink-0" />
+                <div className="h-[1.5px] bg-slate-400 w-24" />
               </div>
             </div>
 
             {/* Main Title & Academic Year Section */}
             <div className="space-y-2.5 w-full">
-              <h1 className="text-3xl sm:text-4xl font-black text-[#881337] tracking-tight">
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-[#881337]">
                 सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही
               </h1>
-              <p className="text-lg sm:text-xl font-bold text-[#1e3a8a]">
+              <p className="text-xl sm:text-2xl font-extrabold text-[#1e3a8a]">
                 सन {academicYear}
               </p>
             </div>
 
             {/* Class & Division Box */}
             <div className="w-full">
-              <div className="inline-block bg-[#e0f2fe] border border-[#93c5fd] rounded-lg px-8 py-3.5 shadow-xs">
-                <h3 className="text-lg sm:text-xl font-black text-[#0f172a] tracking-wide">
+              <div className="inline-block bg-[#e0f2fe] border border-[#60a5fa] rounded-lg px-8 py-3.5 shadow-xs">
+                <h3 className="text-xl sm:text-2xl font-extrabold text-black">
                   इयत्ता : {getMarathiClassName(selectedClass)} {formatDivision(division) ? `  तुकडी : ${formatDivision(division)}` : "  तुकडी : अ"}
                 </h3>
               </div>
@@ -1590,16 +1628,16 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
             {/* Teacher Section */}
             <div className="space-y-1 w-full">
-              <p className="text-xs font-semibold text-slate-500">वर्गशिक्षक</p>
-              <p className="text-lg sm:text-xl font-bold text-slate-800">
+              <p className="text-sm font-bold text-slate-900">वर्गशिक्षक</p>
+              <p className="text-xl sm:text-2xl font-extrabold text-black">
                 {schoolData.teacherName ? (schoolData.teacherName.startsWith("श्री") || schoolData.teacherName.startsWith("श्रीमती") ? schoolData.teacherName : `श्री. ${schoolData.teacherName}`) : "श्री. शिवकुमार"}
               </p>
             </div>
 
             {/* Bottom Slogan & Footer Line */}
             <div className="space-y-3 w-full">
-              <div className="w-28 h-[1px] bg-slate-300 mx-auto" />
-              <p className="text-xs font-medium text-slate-600 tracking-wider">
+              <div className="w-28 h-[1px] bg-slate-400 mx-auto" />
+              <p className="text-sm font-bold text-slate-900">
                 {schoolData.slogan || "ज्ञान, संस्कार आणि प्रगतीसाठी"}
               </p>
             </div>
@@ -1616,46 +1654,46 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         >
           <div className="border-2 border-slate-700 rounded-none p-6 md:p-8 h-full w-full flex flex-col justify-between relative z-10" style={{ boxSizing: "border-box" }}>
             <div>
-              <h2 className="text-2xl font-black text-slate-900 mb-6 tracking-tight border-b-2 border-slate-800 pb-2">अनुक्रमणिका</h2>
-              <table className="w-full border-collapse border border-amber-900/60 text-sm font-medium">
+              <h2 className="text-2xl font-extrabold text-black mb-6 border-b-2 border-slate-800 pb-2">अनुक्रमणिका</h2>
+              <table className="w-full border-collapse border border-amber-900/70 text-[15px] font-semibold text-black">
                 <thead>
-                  <tr className="bg-amber-50/80 text-amber-950 font-bold border-b border-amber-900/60">
-                    <th className="p-3 text-left border-r border-amber-900/60 w-3/4">विद्यार्थ्याचे नाव / तपशील</th>
+                  <tr className="bg-amber-50/90 text-amber-950 font-extrabold border-b border-amber-900/70">
+                    <th className="p-3 text-left border-r border-amber-900/70 w-3/4">विद्यार्थ्याचे नाव / तपशील</th>
                     <th className="p-3 text-center w-1/4">पान क्रमांक</th>
                   </tr>
                 </thead>
                 <tbody>
                   {students.length === 0 ? (
                     <tr>
-                      <td colSpan={2} className="p-4 text-center text-slate-400 font-bold">कोणतेही विद्यार्थी जोडलेले नाहीत.</td>
+                      <td colSpan={2} className="p-4 text-center text-slate-700 font-bold">कोणतेही विद्यार्थी जोडलेले नाहीत.</td>
                     </tr>
                   ) : (
                     students.map((student, idx) => (
                       <tr key={student.id} className="border-b border-amber-900/40 hover:bg-slate-50">
-                        <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">
+                        <td className="p-3 border-r border-amber-900/40 text-blue-900 font-extrabold">
                           {idx + 1}. {student.name}
                         </td>
-                        <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                        <td className="p-3 text-center text-black font-mono font-bold">
                           {pageMode === "1page" ? (idx + 3) : `${idx * 2 + 3} - ${idx * 2 + 4}`}
                         </td>
                       </tr>
                     ))
                   )}
                   <tr className="border-b border-amber-900/40 bg-slate-50">
-                    <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</td>
-                    <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                    <td className="p-3 border-r border-amber-900/40 text-blue-900 font-extrabold">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</td>
+                    <td className="p-3 text-center text-black font-mono font-bold">
                       {pageMode === "1page" ? (students.length + 3) : (students.length * 2 + 3)}
                     </td>
                   </tr>
                   <tr className="border-b border-amber-900/40 bg-slate-50">
-                    <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक</td>
-                    <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                    <td className="p-3 border-r border-amber-900/40 text-blue-900 font-extrabold">जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक</td>
+                    <td className="p-3 text-center text-black font-mono font-bold">
                       {pageMode === "1page" ? (students.length + 4) : (students.length * 2 + 4)}
                     </td>
                   </tr>
                   <tr className="bg-slate-50">
-                    <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</td>
-                    <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                    <td className="p-3 border-r border-amber-900/40 text-blue-900 font-extrabold">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</td>
+                    <td className="p-3 text-center text-black font-mono font-bold">
                       {pageMode === "1page" ? (students.length + 5) : (students.length * 2 + 5)}
                     </td>
                   </tr>
@@ -1664,14 +1702,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             </div>
 
             {/* Signatures */}
-            <div className="flex items-center justify-between pt-6 border-t border-slate-200 text-xs font-bold text-slate-800">
+            <div className="flex items-center justify-between pt-6 border-t border-slate-300 text-[13px] font-bold text-black">
               <div className="text-center">
                 <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                <p className="text-xs text-slate-900 font-bold">वर्गशिक्षक</p>
               </div>
               <div className="text-center">
                 <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                <p className="text-xs text-slate-900 font-bold">मुख्याध्यापक</p>
               </div>
             </div>
           </div>
@@ -1733,11 +1771,11 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   style={{ boxSizing: "border-box" }}
                 >
                 <div>
-                  <h2 className={`font-black text-[#004080] text-center tracking-tight ${pageMode === "1page" ? "text-base sm:text-lg mb-1" : "text-2xl mb-4"}`}>सातत्यपूर्ण सर्वंकष मूल्यांकन</h2>
+                  <h2 className={`font-extrabold text-[#004080] text-center ${pageMode === "1page" ? "text-[18px] mb-1" : "text-[25px] mb-4"}`}>सातत्यपूर्ण सर्वंकष मूल्यांकन</h2>
 
                   {/* Student Meta Header */}
-                  <div className={`flex items-center justify-between font-bold text-slate-900 border-b-2 border-sky-100 ${pageMode === "1page" ? "text-[11px] font-extrabold pb-1 mb-1.5" : "text-sm font-extrabold pb-3 mb-4"}`}>
-                    <span>विद्यार्थ्याचे नाव - <b className="text-slate-900">{student.name}</b></span>
+                  <div className={`flex items-center justify-between font-bold text-black border-b-2 border-sky-200 ${pageMode === "1page" ? "text-[12px] font-extrabold pb-1 mb-1.5" : "text-[15px] font-extrabold pb-3 mb-4"}`}>
+                    <span>विद्यार्थ्याचे नाव - <b className="text-black">{student.name}</b></span>
                     <span>इयत्ता - <b>{selectedClass}</b></span>
                     <span>तुकडी - <b>{division}</b></span>
                     <span>हजेरी क्र. <b>{student.rollNo}</b></span>
@@ -1768,86 +1806,86 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                       </colgroup>
                       <thead>
                         {/* Header Row 1 */}
-                        <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold" style={{ height: "26px" }}>
-                          <th className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-0.5 text-center font-black text-[10px] leading-tight">
+                        <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold" style={{ height: "28px" }}>
+                          <th className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-0.5 text-center font-extrabold text-[11px] leading-tight">
                             अ. क्र.
                           </th>
-                          <th colSpan={2} className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black text-xs">
+                          <th colSpan={2} className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-extrabold text-[13px]">
                             तपशील
                           </th>
-                          <th colSpan={8} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black text-xs">
+                          <th colSpan={8} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-extrabold text-[13px]">
                             (अ) आकारिक मूल्यांकन
                           </th>
-                          <th colSpan={4} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black text-xs">
+                          <th colSpan={4} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-extrabold text-[13px]">
                             (ब) संकलित मूल्यांकन
                           </th>
-                          <th className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black text-xs">
+                          <th className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-extrabold text-[13px]">
                             अ + ब
                           </th>
-                          <th className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black text-xs">
+                          <th className="border-x border-t border-b-0 border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-extrabold text-[13px]">
                             श्रेणी
                           </th>
                         </tr>
 
                         {/* Header Row 2: Vertical Labels */}
-                        <tr className="bg-[#bfe5ff] text-[#002b66] font-bold" style={{ height: pageMode === "1page" ? "88px" : "105px" }}>
+                        <tr className="bg-[#bfe5ff] text-[#002b66] font-bold" style={{ height: pageMode === "1page" ? "92px" : "110px" }}>
                           <th className="border-x border-y-0 border-[#0080ff] bg-[#bfe5ff] p-0"></th>
                           <th colSpan={2} className="border-x border-y-0 border-[#0080ff] bg-[#bfe5ff] p-0"></th>
                           {/* Formative Vertical Labels */}
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>तोंडीकाम</div>
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>तोंडीकाम</div>
                           </th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>प्रात्यक्षिक / प्रयोग</div>
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>प्रात्यक्षिक / प्रयोग</div>
                           </th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>उपक्रम / कृती</div>
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>उपक्रम / कृती</div>
                           </th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>प्रकल्प</div>
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>प्रकल्प</div>
                           </th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>चाचणी (लेखी)</div>
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>चाचणी (लेखी)</div>
                           </th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>स्वाध्याय / वर्गकार्य</div>
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>स्वाध्याय / वर्गकार्य</div>
                           </th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>इतर</div>
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>इतर</div>
                           </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-black">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>एकूण</div>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-extrabold">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>एकूण</div>
                           </th>
                           {/* Summative Vertical Labels */}
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>तोंडी</div>
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>तोंडी</div>
                           </th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>प्रात्यक्षिक</div>
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>प्रात्यक्षिक</div>
                           </th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>लेखी</div>
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>लेखी</div>
                           </th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-black">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9px" : "10.5px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>एकूण</div>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-extrabold">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "10.5px" : "12px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>एकूण</div>
                           </th>
-                          <th className="border-x border-y-0 border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-black">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9.5px" : "11px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>
+                          <th className="border-x border-y-0 border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-extrabold">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "11px" : "12.5px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>
                               एकूण
                             </div>
                           </th>
-                          <th className="border-x border-y-0 border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-black">
-                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "9.5px" : "11px", lineHeight: "1.1", height: pageMode === "1page" ? "80px" : "95px", display: "inline-block" }}>
+                          <th className="border-x border-y-0 border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-1.5 font-extrabold">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap", fontSize: pageMode === "1page" ? "11px" : "12.5px", lineHeight: "1.1", height: pageMode === "1page" ? "84px" : "100px", display: "inline-block" }}>
                               श्रेणी
                             </div>
                           </th>
                         </tr>
 
                         {/* Header Row 3: Numbers */}
-                        <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold border-b-2 border-[#0080ff]" style={{ height: "24px" }}>
+                        <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold border-b-2 border-[#0080ff] text-[12px]" style={{ height: "24px" }}>
                           <th className="border-x border-b border-t-0 border-[#0080ff] bg-[#bfe5ff] p-0.5"></th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 font-black text-xs text-center">विषय</th>
-                          <th className="border border-[#0080ff] bg-[#bfe5ff] py-1 px-0.5 text-center font-extrabold text-[11px] whitespace-nowrap">गुण</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 font-extrabold text-[13px] text-center">विषय</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] py-1 px-0.5 text-center font-extrabold text-[12px] whitespace-nowrap">गुण</th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">1</th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">2</th>
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center">3</th>
@@ -2037,15 +2075,18 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           const grade = grandTotalObt !== "" ? getGrade((Number(grandTotalObt) / 100) * 100) : "";
 
                           const isCompact = pageMode === "1page";
-                          const cellTextSize = isCompact ? "text-[10px]" : "text-[11.5px]";
-                          const markTextSize = isCompact ? "text-[9.5px]" : "text-[10.5px]";
+                          const cellTextSize = isCompact ? "text-[11px]" : "text-[13px]";
+                          const markTextSize = isCompact ? "text-[10.5px]" : "text-[12px]";
 
                           const renderCellPair = (maxVal, obtVal, isBold = false) => (
-                            <td className="border border-[#0080ff] bg-white p-0 align-middle">
-                              <div className={`border-b border-[#0080ff] py-0.5 text-center ${markTextSize} ${isBold ? "font-extrabold" : "font-bold"} leading-tight`}>
+                            <td className="border border-[#0080ff] bg-white p-0 align-middle" style={{ padding: 0 }}>
+                              <div
+                                className={`${isCompact ? "py-1" : "py-1.5"} px-0.5 text-center ${markTextSize} ${isBold ? "font-extrabold" : "font-bold"} leading-tight`}
+                                style={{ borderBottom: "1px solid #ccc" }}
+                              >
                                 {maxVal !== "" && maxVal !== undefined && maxVal !== null ? maxVal : "\u00A0"}
                               </div>
-                              <div className={`py-0.5 text-center ${markTextSize} ${isBold ? "font-extrabold" : "font-bold"} leading-tight`}>
+                              <div className={`${isCompact ? "py-1" : "py-1.5"} px-0.5 text-center ${markTextSize} ${isBold ? "font-extrabold" : "font-bold"} leading-tight`}>
                                 {obtVal !== "" && obtVal !== undefined && obtVal !== null ? obtVal : "\u00A0"}
                               </div>
                             </td>
@@ -2064,11 +2105,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                               </td>
 
                               {/* Col 3: पैकी / प्राप्त */}
-                              <td className="border border-[#0080ff] bg-white p-0 align-middle">
-                                <div className={`border-b border-[#0080ff] py-0.5 px-0.5 text-slate-800 font-extrabold text-center whitespace-nowrap ${markTextSize} leading-tight`}>
+                              <td className="border border-[#0080ff] bg-white p-0 align-middle" style={{ padding: 0 }}>
+                                <div
+                                  className={`${isCompact ? "py-1" : "py-1.5"} px-0.5 text-slate-800 font-extrabold text-center whitespace-nowrap ${markTextSize} leading-tight`}
+                                  style={{ borderBottom: "1px solid #ccc" }}
+                                >
                                   पैकी
                                 </div>
-                                <div className={`py-0.5 px-0.5 text-slate-800 font-extrabold text-center whitespace-nowrap ${markTextSize} leading-tight`}>
+                                <div className={`${isCompact ? "py-1" : "py-1.5"} px-0.5 text-slate-800 font-extrabold text-center whitespace-nowrap ${markTextSize} leading-tight`}>
                                   प्राप्त
                                 </div>
                               </td>
@@ -2114,7 +2158,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   {/* Inline Compact Remarks — ONLY in 1-page mode */}
                   {pageMode === "1page" && (
                     <div className={pageMode === "1page" ? "mt-1" : "mt-2"}>
-                      <h3 className={`font-black text-sky-800 text-center border-b border-sky-200 ${pageMode === "1page" ? "text-[11px] mb-0.5 pb-0.5" : "text-xs mb-1 pb-1"}`}>वर्णनात्मक नोंदी</h3>
+                      <h3 className={`font-extrabold text-sky-900 text-center border-b border-sky-300 ${pageMode === "1page" ? "text-[12.5px] mb-0.5 pb-0.5" : "text-sm mb-1 pb-1"}`}>वर्णनात्मक नोंदी</h3>
                       {(() => {
                             const getFormattedRemark = (remarksObj, labelOrKey) => {
                               if (!remarksObj || typeof remarksObj !== "object") return "-";
@@ -2201,22 +2245,22 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                               const col2 = allRemarksItems.slice(half);
 
                               const renderSubTable = (itemsList) => (
-                                <table className="w-full border-collapse border border-sky-400 text-[10px] font-medium table-fixed">
+                                <table className="w-full border-collapse border border-sky-500 text-[11px] font-semibold table-fixed">
                                   <colgroup>
                                     <col style={{ width: "35%" }} />
                                     <col style={{ width: "65%" }} />
                                   </colgroup>
                                   <thead>
-                                    <tr className="bg-sky-100 text-sky-950 font-bold">
-                                      <th className="border border-sky-400 p-0.5 text-left">विषय / घटक</th>
-                                      <th className="border border-sky-400 p-0.5 text-left">वर्णनात्मक नोंदी</th>
+                                    <tr className="bg-sky-100 text-sky-950 font-extrabold">
+                                      <th className="border border-sky-500 p-0.5 text-left">विषय / घटक</th>
+                                      <th className="border border-sky-500 p-0.5 text-left">वर्णनात्मक नोंदी</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {itemsList.map((item) => (
-                                      <tr key={item} className="border-b border-sky-300">
-                                        <td className="border border-sky-400 p-0.5 font-bold text-slate-900 bg-sky-50/50 leading-tight whitespace-normal break-words align-top">{item}</td>
-                                        <td className="border border-sky-400 p-0.5 text-slate-800 leading-tight text-[9.5px] whitespace-normal break-words align-top">{getR(studentRemarks, item)}</td>
+                                      <tr key={item} className="border-b border-sky-400">
+                                        <td className="border border-sky-500 p-0.5 font-bold text-black bg-sky-50/50 leading-tight whitespace-normal break-words align-top">{item}</td>
+                                        <td className="border border-sky-500 p-0.5 text-black leading-snug text-[10.5px] whitespace-normal break-words align-top">{getR(studentRemarks, item)}</td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -2232,22 +2276,22 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             }
 
                             return (
-                              <table className="w-full border-collapse border border-sky-400 text-xs font-medium table-fixed">
+                              <table className="w-full border-collapse border border-sky-500 text-xs font-semibold table-fixed">
                                 <colgroup>
                                   <col style={{ width: "22%" }} />
                                   <col style={{ width: "78%" }} />
                                 </colgroup>
                                 <thead>
-                                  <tr className="bg-sky-100 text-sky-950 font-bold">
-                                    <th className="border border-sky-400 py-0.5 px-1.5 text-left text-[10px]">विषय / घटक</th>
-                                    <th className="border border-sky-400 py-0.5 px-1.5 text-left text-[10px]">वर्णनात्मक नोंदी</th>
+                                  <tr className="bg-sky-100 text-sky-950 font-extrabold">
+                                    <th className="border border-sky-500 py-0.5 px-1.5 text-left text-[11.5px]">विषय / घटक</th>
+                                    <th className="border border-sky-500 py-0.5 px-1.5 text-left text-[11.5px]">वर्णनात्मक नोंदी</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {allRemarksItems.map((item) => (
-                                    <tr key={item} className="border-b border-sky-300">
-                                      <td className="border border-sky-400 py-0.5 px-1.5 font-bold text-slate-900 bg-sky-50/50 text-[9.5px] leading-tight whitespace-normal break-words">{item}</td>
-                                      <td className="border border-sky-400 py-0.5 px-1.5 text-slate-800 text-[9.5px] leading-tight whitespace-normal break-words">{getR(studentRemarks, item)}</td>
+                                    <tr key={item} className="border-b border-sky-400">
+                                      <td className="border border-sky-500 py-0.5 px-1.5 font-bold text-black bg-sky-50/50 text-[11px] leading-snug whitespace-normal break-words">{item}</td>
+                                      <td className="border border-sky-500 py-0.5 px-1.5 text-black text-[11px] leading-snug whitespace-normal break-words">{getR(studentRemarks, item)}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2259,14 +2303,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 </div>
 
                 {/* Footer Signatures */}
-                <div className={`flex items-center justify-between border-t border-slate-200 font-bold text-slate-900 ${pageMode === "1page" ? "pt-1 mt-1 text-[11px]" : "pt-4 mt-3 text-xs"}`}>
+                <div className={`flex items-center justify-between border-t border-slate-300 font-bold text-black ${pageMode === "1page" ? "pt-1 mt-1 text-[12px]" : "pt-4 mt-3 text-[13px]"}`}>
                   <div className="text-center">
-                    <p className={pageMode === "1page" ? "font-extrabold text-xs" : "font-extrabold text-sm"}>{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                    <p className={pageMode === "1page" ? "text-[10px] text-slate-500 font-medium" : "text-[11px] text-slate-600 font-medium"}>वर्गशिक्षक</p>
+                    <p className={pageMode === "1page" ? "font-extrabold text-[13px]" : "font-extrabold text-[15px]"}>{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                    <p className={pageMode === "1page" ? "text-[11px] text-slate-900 font-bold" : "text-xs text-slate-900 font-bold"}>वर्गशिक्षक</p>
                   </div>
                   <div className="text-center">
-                    <p className={pageMode === "1page" ? "font-extrabold text-xs" : "font-extrabold text-sm"}>{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                    <p className={pageMode === "1page" ? "text-[10px] text-slate-500 font-medium" : "text-[11px] text-slate-600 font-medium"}>मुख्याध्यापक</p>
+                    <p className={pageMode === "1page" ? "font-extrabold text-[13px]" : "font-extrabold text-[15px]"}>{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                    <p className={pageMode === "1page" ? "text-[11px] text-slate-900 font-bold" : "text-xs text-slate-900 font-bold"}>मुख्याध्यापक</p>
                   </div>
                 </div>
               </div>
@@ -2282,11 +2326,11 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               >
                 <div className="border-2 border-slate-700 rounded-none p-6 h-full w-full flex flex-col justify-between relative z-10" style={{ boxSizing: "border-box" }}>
                 <div>
-                  <h2 className="text-xl font-black text-sky-800 text-center mb-4 border-b border-sky-200 pb-2">वर्णनात्मक नोंदी</h2>
+                  <h2 className="text-2xl font-extrabold text-sky-900 text-center mb-4 border-b border-sky-300 pb-2">वर्णनात्मक नोंदी</h2>
 
                   {/* Student Meta Header */}
-                  <div className="flex items-center justify-between text-xs font-extrabold text-slate-800 bg-sky-50/80 p-3 rounded-xl border border-sky-100 mb-4">
-                    <span>विद्यार्थ्याचे नाव - <b className="text-blue-700">{student.name}</b></span>
+                  <div className="flex items-center justify-between text-sm font-extrabold text-black bg-sky-50/90 p-3 rounded-xl border border-sky-200 mb-4">
+                    <span>विद्यार्थ्याचे नाव - <b className="text-blue-900">{student.name}</b></span>
                     <span>इयत्ता - <b>{selectedClass}</b></span>
                     <span>तुकडी - <b>{division}</b></span>
                     <span>हजेरी क्र. <b>{student.rollNo}</b></span>
@@ -2294,11 +2338,11 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   </div>
 
                   {/* Descriptive Remarks Table */}
-                  <table className="w-full border-collapse border border-sky-400 text-xs font-medium">
+                  <table className="w-full border-collapse border border-sky-500 text-sm font-semibold text-black">
                     <thead>
-                      <tr className="bg-sky-100 text-sky-950 font-bold">
-                        <th className="border border-sky-400 p-2.5 text-left w-1/3">विषय / घटक</th>
-                        <th className="border border-sky-400 p-2.5 text-left w-2/3">वर्णनात्मक नोंदी</th>
+                      <tr className="bg-sky-100 text-sky-950 font-extrabold">
+                        <th className="border border-sky-500 p-2.5 text-left w-1/3">विषय / घटक</th>
+                        <th className="border border-sky-500 p-2.5 text-left w-2/3">वर्णनात्मक नोंदी</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2376,14 +2420,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 </div>
 
                 {/* Signatures */}
-                <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+                <div className="flex items-center justify-between pt-6 border-t border-slate-300 mt-6 text-[13px] font-bold text-black">
                   <div className="text-center">
                     <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                    <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                    <p className="text-xs text-slate-900 font-bold">वर्गशिक्षक</p>
                   </div>
                   <div className="text-center">
                     <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                    <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                    <p className="text-xs text-slate-900 font-bold">मुख्याध्यापक</p>
                   </div>
                 </div>
               </div>
@@ -2575,8 +2619,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               >
                 <div className="border-2 border-slate-700 rounded-none p-6 h-full w-full flex flex-col justify-between relative z-10" style={{ boxSizing: "border-box" }}>
                 <div>
-                  <h2 className="text-xl font-black text-slate-900 text-center mb-4 tracking-tight">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</h2>
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-300 pb-2 mb-4">
+                  <h2 className="text-2xl font-extrabold text-black text-center mb-4">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</h2>
+                  <div className="flex items-center justify-between text-[13px] font-bold text-black border-b border-slate-400 pb-2 mb-4">
                     <span>शाळा: <b>{schoolData.schoolName || ""}</b></span>
                     <span>इयत्ता: <b>{selectedClass}</b></span>
                     <span>तुकडी: <b>{division}</b></span>
@@ -2586,15 +2630,15 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                   {/* Table 1: Overall Grade Counts */}
                   <div className="mb-6">
-                    <table className="w-full table-fixed border-collapse border border-amber-500 text-xs text-center font-medium">
+                    <table className="w-full table-fixed border-collapse border border-amber-600 text-[13px] text-center font-semibold text-black">
                       <thead>
-                        <tr className="text-slate-900 font-bold border-b border-amber-500">
-                          <th className="border border-amber-500 bg-amber-100 p-1.5 w-10 min-w-[32px]">अ. क्र.</th>
-                          <th className="border border-amber-500 bg-amber-100 p-1.5 text-left w-44 min-w-[140px]">विषय</th>
-                          <th className="border border-amber-500 bg-amber-100 p-1.5 w-12 min-w-[40px]">संख्या</th>
-                          <th className="border border-amber-500 bg-amber-100 p-1.5 w-12 min-w-[40px]">उपस्थिती</th>
+                        <tr className="text-black font-extrabold border-b border-amber-600">
+                          <th className="border border-amber-600 bg-amber-100 p-1.5 w-10 min-w-[32px]">अ. क्र.</th>
+                          <th className="border border-amber-600 bg-amber-100 p-1.5 text-left w-44 min-w-[140px]">विषय</th>
+                          <th className="border border-amber-600 bg-amber-100 p-1.5 w-12 min-w-[40px]">संख्या</th>
+                          <th className="border border-amber-600 bg-amber-100 p-1.5 w-12 min-w-[40px]">उपस्थिती</th>
                           {GRADE_KEYS.map((g) => (
-                            <th key={g} className="border border-amber-500 bg-amber-100 p-1.5 text-center w-12 min-w-[44px]">{GRADE_LABELS[g]}</th>
+                            <th key={g} className="border border-amber-600 bg-amber-100 p-1.5 text-center w-12 min-w-[44px]">{GRADE_LABELS[g]}</th>
                           ))}
                         </tr>
                       </thead>
@@ -2616,13 +2660,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             });
 
                             return (
-                              <tr key={sub} className="border-b border-amber-400 hover:bg-amber-50/40">
-                                <td className="border border-amber-500 p-1.5 font-bold w-10">{idx + 1}</td>
-                                <td className="border border-amber-500 p-1 text-left font-bold text-slate-900 text-[11px] leading-tight w-44">{getSubjectDisplayName(sub)}</td>
-                                <td className="border border-amber-500 p-1.5 font-bold w-12">{students.length}</td>
-                                <td className="border border-amber-500 p-1.5 font-bold w-12">{displayPresent}</td>
+                              <tr key={sub} className="border-b border-amber-500 hover:bg-amber-50/40">
+                                <td className="border border-amber-600 p-1.5 font-bold w-10">{idx + 1}</td>
+                                <td className="border border-amber-600 p-1 text-left font-bold text-black text-[12.5px] leading-tight w-44">{getSubjectDisplayName(sub)}</td>
+                                <td className="border border-amber-600 p-1.5 font-bold w-12">{students.length}</td>
+                                <td className="border border-amber-600 p-1.5 font-bold w-12">{displayPresent}</td>
                                 {GRADE_KEYS.map((g) => (
-                                  <td key={g} className="border border-amber-500 p-1.5 font-bold text-center w-12 min-w-[44px]">
+                                  <td key={g} className="border border-amber-600 p-1.5 font-bold text-center w-12 min-w-[44px]">
                                     {gradeCounts[g]}
                                   </td>
                                 ))}
@@ -2636,7 +2680,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                   {/* Table 2: Gender-wise Grade Counts */}
                   <div>
-                    <table className="w-full table-fixed border-collapse border border-amber-500 text-xs text-center font-medium">
+                    <table className="w-full table-fixed border-collapse border border-amber-600 text-[12.5px] text-center font-semibold text-black">
                       <colgroup>
                         <col style={{ width: "3.5%" }} />
                         <col style={{ width: "19.0%" }} />
@@ -2650,20 +2694,20 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                         ))}
                       </colgroup>
                       <thead>
-                        <tr className="text-slate-900 font-bold border-b border-amber-500">
-                          <th className="border border-amber-500 bg-amber-100 p-1 text-[10px] text-center" rowSpan={2}>अ. क्र.</th>
-                          <th className="border border-amber-500 bg-amber-100 p-1 text-left text-[11px]" rowSpan={2}>विषय</th>
-                          <th className="border border-amber-500 bg-amber-100 p-0.5 text-[10px] text-center" rowSpan={2}>संख्या</th>
-                          <th className="border border-amber-500 bg-amber-100 p-0.5 text-[10px] text-center" rowSpan={2}>उपस्थिती</th>
+                        <tr className="text-black font-extrabold border-b border-amber-600">
+                          <th className="border border-amber-600 bg-amber-100 p-1 text-[11px] text-center" rowSpan={2}>अ. क्र.</th>
+                          <th className="border border-amber-600 bg-amber-100 p-1 text-left text-[12.5px]" rowSpan={2}>विषय</th>
+                          <th className="border border-amber-600 bg-amber-100 p-0.5 text-[11px] text-center" rowSpan={2}>संख्या</th>
+                          <th className="border border-amber-600 bg-amber-100 p-0.5 text-[11px] text-center" rowSpan={2}>उपस्थिती</th>
                           {GRADE_KEYS.map((g) => (
-                            <th key={g} className="border border-amber-500 bg-amber-100 p-0.5 text-[10px] text-center" colSpan={2}>{GRADE_LABELS[g]}</th>
+                            <th key={g} className="border border-amber-600 bg-amber-100 p-0.5 text-[11px] text-center" colSpan={2}>{GRADE_LABELS[g]}</th>
                           ))}
                         </tr>
-                        <tr className="text-slate-900 font-bold border-b border-amber-500">
+                        <tr className="text-black font-extrabold border-b border-amber-600">
                           {GRADE_KEYS.map((g) => (
                             <React.Fragment key={g}>
-                              <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center">मुले</th>
-                              <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center">मुली</th>
+                              <th className="border border-amber-600 bg-amber-100 p-0.5 text-[10.5px] text-center">मुले</th>
+                              <th className="border border-amber-600 bg-amber-100 p-0.5 text-[10.5px] text-center">मुली</th>
                             </React.Fragment>
                           ))}
                         </tr>
@@ -2691,15 +2735,15 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             });
 
                             return (
-                              <tr key={sub} className="border-b border-amber-400 hover:bg-amber-50/40">
-                                <td className="border border-amber-500 p-1 font-bold w-8">{idx + 1}</td>
-                                <td className="border border-amber-500 p-1 text-left font-bold text-slate-900 text-[10px] leading-tight w-40">{getSubjectDisplayName(sub)}</td>
-                                <td className="border border-amber-500 p-1 font-bold w-10">{students.length}</td>
-                                <td className="border border-amber-500 p-1 font-bold w-10">{displayPresent2}</td>
+                              <tr key={sub} className="border-b border-amber-500 hover:bg-amber-50/40">
+                                <td className="border border-amber-600 p-1 font-bold w-8">{idx + 1}</td>
+                                <td className="border border-amber-600 p-1 text-left font-bold text-black text-[11.5px] leading-tight w-40">{getSubjectDisplayName(sub)}</td>
+                                <td className="border border-amber-600 p-1 font-bold w-10">{students.length}</td>
+                                <td className="border border-amber-600 p-1 font-bold w-10">{displayPresent2}</td>
                                 {GRADE_KEYS.map((g) => (
                                   <React.Fragment key={g}>
-                                    <td className="border border-amber-500 p-0.5 font-bold text-center w-8 min-w-[28px]">{boyCounts[g]}</td>
-                                    <td className="border border-amber-500 p-0.5 font-bold text-center w-8 min-w-[28px]">{girlCounts[g]}</td>
+                                    <td className="border border-amber-600 p-0.5 font-bold text-center w-8 min-w-[28px]">{boyCounts[g]}</td>
+                                    <td className="border border-amber-600 p-0.5 font-bold text-center w-8 min-w-[28px]">{girlCounts[g]}</td>
                                   </React.Fragment>
                                 ))}
                               </tr>
@@ -2711,14 +2755,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+                <div className="flex items-center justify-between pt-6 border-t border-slate-300 mt-6 text-[13px] font-bold text-black">
                   <div className="text-center">
                     <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                    <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                    <p className="text-xs text-slate-900 font-bold">वर्गशिक्षक</p>
                   </div>
                   <div className="text-center">
                     <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                    <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                    <p className="text-xs text-slate-900 font-bold">मुख्याध्यापक</p>
                   </div>
                 </div>
               </div>
@@ -2743,10 +2787,10 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   >
                     <div className="border-2 border-slate-700 rounded-none p-6 h-full w-full flex flex-col justify-between relative z-10" style={{ boxSizing: "border-box" }}>
                     <div>
-                      <h2 className="text-xl font-black text-slate-900 text-center mb-4 tracking-tight">
+                      <h2 className="text-2xl font-extrabold text-black text-center mb-4">
                         जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक {subjectChunks.length > 1 ? `(भाग ${pageIdx + 1})` : ""}
                       </h2>
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-300 pb-2 mb-4">
+                      <div className="flex items-center justify-between text-[13px] font-bold text-black border-b border-slate-400 pb-2 mb-4">
                         <span>शाळा: <b>{schoolData.schoolName || ""}</b></span>
                         <span>इयत्ता: <b>{selectedClass}</b></span>
                         <span>तुकडी: <b>{formatDivision(division)}</b></span>
@@ -2754,25 +2798,25 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                         <span>सन: <b>{academicYear}</b></span>
                       </div>
 
-                      <table className="w-full table-fixed border-collapse border border-amber-500 text-[11px] text-center font-medium">
+                      <table className="w-full table-fixed border-collapse border border-amber-600 text-[12px] text-center font-semibold text-black">
                         <thead>
-                          <tr className="text-slate-900 font-bold border-b border-amber-500">
-                            <th className="border border-amber-500 bg-amber-100 p-1 w-24 min-w-[80px]" rowSpan={2}>विषय</th>
-                            <th className="border border-amber-500 bg-amber-100 p-1 w-24 min-w-[80px]" rowSpan={2}>जात संवर्ग</th>
-                            <th className="border border-amber-500 bg-amber-100 p-0.5 text-center" colSpan={3}>संख्या</th>
+                          <tr className="text-black font-extrabold border-b border-amber-600">
+                            <th className="border border-amber-600 bg-amber-100 p-1 w-24 min-w-[80px]" rowSpan={2}>विषय</th>
+                            <th className="border border-amber-600 bg-amber-100 p-1 w-24 min-w-[80px]" rowSpan={2}>जात संवर्ग</th>
+                            <th className="border border-amber-600 bg-amber-100 p-0.5 text-center" colSpan={3}>संख्या</th>
                             {GRADE_KEYS.map((g) => (
-                              <th key={g} className="border border-amber-500 bg-amber-100 p-0.5 text-center" colSpan={3}>{GRADE_LABELS[g]}</th>
+                              <th key={g} className="border border-amber-600 bg-amber-100 p-0.5 text-center" colSpan={3}>{GRADE_LABELS[g]}</th>
                             ))}
                           </tr>
-                          <tr className="text-slate-900 font-bold border-b border-amber-500">
-                            <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुले</th>
-                            <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुली</th>
-                            <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">एकूण</th>
+                          <tr className="text-black font-extrabold border-b border-amber-600">
+                            <th className="border border-amber-600 bg-amber-100 p-0.5 text-[10px] text-center w-7 min-w-[24px]">मुले</th>
+                            <th className="border border-amber-600 bg-amber-100 p-0.5 text-[10px] text-center w-7 min-w-[24px]">मुली</th>
+                            <th className="border border-amber-600 bg-amber-100 p-0.5 text-[10px] text-center w-7 min-w-[24px]">एकूण</th>
                             {GRADE_KEYS.map((g) => (
                               <React.Fragment key={g}>
-                                <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुले</th>
-                                <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुली</th>
-                                <th className="border border-amber-500 bg-amber-100 p-0.5 text-[9px] text-center w-7 min-w-[24px]">एकूण</th>
+                                <th className="border border-amber-600 bg-amber-100 p-0.5 text-[10px] text-center w-7 min-w-[24px]">मुले</th>
+                                <th className="border border-amber-600 bg-amber-100 p-0.5 text-[10px] text-center w-7 min-w-[24px]">मुली</th>
+                                <th className="border border-amber-600 bg-amber-100 p-0.5 text-[10px] text-center w-7 min-w-[24px]">एकूण</th>
                               </React.Fragment>
                             ))}
                           </tr>
@@ -2823,9 +2867,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                   return (
                                     <tr key={cat.key} className="border-b border-amber-300">
                                       {cIdx === 0 && (
-                                        <td rowSpan={6} className="border border-amber-500 p-1 font-bold text-slate-900 align-middle text-center bg-amber-50/50 w-24 text-[10px] leading-tight">{getSubjectDisplayName(sub)}</td>
+                                        <td rowSpan={6} className="border border-amber-600 p-1 font-bold text-black align-middle text-center bg-amber-50/50 w-24 text-[11.5px] leading-tight">{getSubjectDisplayName(sub)}</td>
                                       )}
-                                      <td className="border border-amber-500 p-1 text-left font-bold text-slate-800 w-24">{cat.label}</td>
+                                      <td className="border border-amber-600 p-1 text-left font-bold text-black w-24">{cat.label}</td>
                                       <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.countBoys}</td>
                                       <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.countGirls}</td>
                                       <td className="border border-amber-500 p-0.5 font-extrabold text-blue-800 text-center w-7 min-w-[24px]">{rowData.countTotal}</td>
@@ -2860,14 +2904,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                       </table>
                     </div>
 
-                    <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+                    <div className="flex items-center justify-between pt-6 border-t border-slate-300 mt-6 text-[13px] font-bold text-black">
                       <div className="text-center">
                         <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                        <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                        <p className="text-xs text-slate-900 font-bold">वर्गशिक्षक</p>
                       </div>
                       <div className="text-center">
                         <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                        <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                        <p className="text-xs text-slate-900 font-bold">मुख्याध्यापक</p>
                       </div>
                     </div>
                   </div>
@@ -2879,16 +2923,17 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               {/* ========================================================================= */}
               {/* PAGE 3: सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक (एकत्रित लँडस्केप टेबल)    */}
               {/* ========================================================================= */}
-              <A4PageWrapper isLandscape={true}>
+              <A4PageWrapper isLandscape={true} isLegal={true}>
               <div
-                className="pdf-page pdf-page-landscape bg-white border-none relative overflow-hidden flex flex-col justify-between h-[190mm] min-w-[297mm] shadow-sm mb-4"
+                className="pdf-page pdf-page-landscape pdf-page-legal bg-white border-none relative overflow-hidden flex flex-col justify-between min-h-[215.9mm] min-w-[355.6mm] shadow-sm mb-4"
                 data-orientation="landscape"
-                style={{ padding: "10mm", boxSizing: "border-box", pageBreakBefore: "always", breakBefore: "page" }}
+                data-paper="legal"
+                style={{ padding: "7mm", boxSizing: "border-box", pageBreakBefore: "always", breakBefore: "page" }}
               >
-                <div className="border-2 border-slate-700 rounded-none p-6 h-full w-full flex flex-col justify-between relative z-10" style={{ boxSizing: "border-box" }}>
+                <div className="border-2 border-slate-700 rounded-none p-3.5 h-full w-full flex flex-col justify-between relative z-10" style={{ boxSizing: "border-box" }}>
                 <div>
-                  <h2 className="text-xl font-black text-lime-900 text-center mb-2 tracking-tight">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</h2>
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-lime-300 pb-2 mb-4">
+                  <h2 className="text-2xl font-extrabold text-lime-950 text-center mb-2">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</h2>
+                  <div className="flex items-center justify-between text-[13.5px] font-bold text-black border-b border-lime-400 pb-2 mb-3">
                     <span>शाळा: <b>{schoolData.schoolName || ""}</b></span>
                     <span>इयत्ता: <b>{selectedClass}</b></span>
                     <span>तुकडी: <b>{division}</b></span>
@@ -2897,46 +2942,46 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-lime-600 text-center font-medium table-auto">
+                    <table className="w-full border-collapse border border-lime-700 text-center font-semibold text-black table-auto consolidated-legal-table">
                       <thead>
-                        <tr className="text-slate-900 font-extrabold border-b border-lime-600">
-                          <th className="border border-lime-600 bg-lime-200 p-0.5 w-5 text-[9px] leading-tight" rowSpan={2}>अ.क्र.</th>
-                          <th className="border border-lime-600 bg-lime-200 p-0.5 text-left text-[10px] min-w-[110px] max-w-[140px] truncate" rowSpan={2}>विद्यार्थ्याचे नाव</th>
+                        <tr className="text-black font-extrabold border-b border-lime-700">
+                          <th className="border border-lime-700 bg-lime-200 p-0.5 w-5 text-[10px] leading-tight" rowSpan={2}>अ.क्र.</th>
+                          <th className="border border-lime-700 bg-lime-200 p-0.5 text-left text-[11.5px] min-w-[110px] max-w-[140px] truncate" rowSpan={2}>विद्यार्थ्याचे नाव</th>
                           {subjects.map((sub) => {
                             return (
-                              <th key={sub} className="border border-lime-600 bg-lime-200 p-0.5 text-[9.5px] leading-tight" colSpan={4}>
+                              <th key={sub} className="border border-lime-700 bg-lime-200 p-0.5 text-[11px] leading-tight" colSpan={4}>
                                 {sub}
                               </th>
                             );
                           })}
-                          <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] w-7 leading-tight" rowSpan={2}>उपस्थिती</th>
-                          <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] w-8 leading-tight" rowSpan={2}>एकूण गुण</th>
-                          <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] w-9 leading-tight" rowSpan={2}>टक्केवारी</th>
-                          <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] w-8 leading-tight" rowSpan={2}>अंतिम श्रेणी</th>
+                          <th className="border border-lime-700 bg-lime-200 p-0.5 text-[10px] leading-tight" rowSpan={2}>उपस्थिती</th>
+                          <th className="border border-lime-700 bg-lime-200 p-0.5 text-[10px] leading-tight" rowSpan={2}>एकूण<br />गुण</th>
+                          <th className="border border-lime-700 bg-lime-200 p-0.5 text-[10px] leading-tight" rowSpan={2}>टक्केवारी</th>
+                          <th className="border border-lime-700 bg-lime-200 p-0.5 text-[10px] leading-tight" rowSpan={2}>अंतिम<br />श्रेणी</th>
                         </tr>
-                        <tr className="text-slate-900 font-extrabold border-b border-lime-600">
+                        <tr className="text-black font-extrabold border-b border-lime-700">
                           {subjects.map((sub) => {
                             const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("शारीरिक");
                             return isPractical ? (
                               <React.Fragment key={sub}>
-                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] leading-tight font-bold" colSpan={2}>आकारिक (अ)</th>
-                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] font-bold px-1">एकूण</th>
-                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] font-bold px-1">श्रेणी</th>
+                                <th className="border border-lime-700 bg-lime-200 p-0.5 text-[9.5px] leading-tight font-extrabold" colSpan={2}>आकारिक (अ)</th>
+                                <th className="border border-lime-700 bg-lime-200 p-0.5 text-[9.5px] font-extrabold px-1">एकूण</th>
+                                <th className="border border-lime-700 bg-lime-200 p-0.5 text-[9.5px] font-extrabold px-1">श्रेणी</th>
                               </React.Fragment>
                             ) : (
                               <React.Fragment key={sub}>
-                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8px] leading-tight font-bold">आकारिक<br/><span className="text-[7.5px] font-medium">(अ)</span></th>
-                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8px] leading-tight font-bold">संकलित<br/><span className="text-[7.5px] font-medium">(ब)</span></th>
-                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] font-bold px-1">एकूण</th>
-                                <th className="border border-lime-600 bg-lime-200 p-0.5 text-[8.5px] font-bold px-1">श्रेणी</th>
+                                <th className="border border-lime-700 bg-lime-200 p-0.5 text-[9.5px] leading-tight font-extrabold">आकारिक<br/><span className="text-[9px] font-bold">(अ)</span></th>
+                                <th className="border border-lime-700 bg-lime-200 p-0.5 text-[9.5px] leading-tight font-extrabold">संकलित<br/><span className="text-[9px] font-bold">(ब)</span></th>
+                                <th className="border border-lime-700 bg-lime-200 p-0.5 text-[9.5px] font-extrabold px-1">एकूण</th>
+                                <th className="border border-lime-700 bg-lime-200 p-0.5 text-[9.5px] font-extrabold px-1">श्रेणी</th>
                               </React.Fragment>
                             );
                           })}
                         </tr>
                         {/* Sub-Header Row: Max Marks (पैकी) */}
-                        <tr className="text-slate-900 font-black border-b border-lime-600 text-[9px]">
-                          <td className="border border-lime-600 bg-lime-100 p-0 w-5"></td>
-                          <td className="border border-lime-600 bg-lime-100 p-0.5 text-left font-black">पैकी</td>
+                        <tr className="text-black font-extrabold border-b border-lime-700 text-[10.5px]">
+                          <td className="border border-lime-700 bg-lime-100 p-0 w-5"></td>
+                          <td className="border border-lime-700 bg-lime-100 p-0.5 text-left font-extrabold">पैकी</td>
                           {subjects.map((sub) => {
                             const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("शारीरिक");
                             const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
@@ -2944,23 +2989,23 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                             return isPractical ? (
                               <React.Fragment key={sub}>
-                                <td className="border border-lime-600 bg-lime-100 p-0.5" colSpan={2}>100</td>
-                                <td className="border border-lime-600 bg-lime-100 p-0.5">100</td>
-                                <td className="border border-lime-600 bg-lime-100 p-0.5"></td>
+                                <td className="border border-lime-700 bg-lime-100 p-0.5" colSpan={2}>100</td>
+                                <td className="border border-lime-700 bg-lime-100 p-0.5">100</td>
+                                <td className="border border-lime-700 bg-lime-100 p-0.5"></td>
                               </React.Fragment>
                             ) : (
                               <React.Fragment key={sub}>
-                                <td className="border border-lime-600 bg-lime-100 p-0.5">{formMax}</td>
-                                <td className="border border-lime-600 bg-lime-100 p-0.5">{semMax}</td>
-                                <td className="border border-lime-600 bg-lime-100 p-0.5">100</td>
-                                <td className="border border-lime-600 bg-lime-100 p-0.5"></td>
+                                <td className="border border-lime-700 bg-lime-100 p-0.5">{formMax}</td>
+                                <td className="border border-lime-700 bg-lime-100 p-0.5">{semMax}</td>
+                                <td className="border border-lime-700 bg-lime-100 p-0.5">100</td>
+                                <td className="border border-lime-700 bg-lime-100 p-0.5"></td>
                               </React.Fragment>
                             );
                           })}
-                          <td className="border border-lime-600 bg-lime-100 p-0 text-[8.5px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
-                          <td className="border border-lime-600 bg-lime-100 p-0 text-[8.5px]">{subjects.length * 100}</td>
-                          <td className="border border-lime-600 bg-lime-100 p-0 text-[8.5px]">100%</td>
-                          <td className="border border-lime-600 bg-lime-100 p-0"></td>
+                          <td className="border border-lime-700 bg-lime-100 p-0 text-[10px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
+                          <td className="border border-lime-700 bg-lime-100 p-0 text-[10px]">{subjects.length * 100}</td>
+                          <td className="border border-lime-700 bg-lime-100 p-0 text-[10px]">100%</td>
+                          <td className="border border-lime-700 bg-lime-100 p-0"></td>
                         </tr>
                       </thead>
                       <tbody>
@@ -2977,30 +3022,30 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           const overallGrade = getGrade(pctVal);
 
                           return (
-                            <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40 text-[9px]">
-                              <td className="border border-lime-600 p-0 font-bold w-5 text-center text-[8.5px]">{idx + 1}</td>
-                              <td className="border border-lime-600 p-0.5 text-left font-bold text-slate-900 text-[9.5px] min-w-[110px] max-w-[140px] truncate" title={student.name}>{student.name}</td>
+                            <tr key={student.id} className="border-b border-lime-400 hover:bg-lime-50/40 text-[10.5px]">
+                              <td className="border border-lime-700 p-0 font-bold w-5 text-center text-[10px]">{idx + 1}</td>
+                              <td className="border border-lime-700 p-0.5 text-left font-bold text-black text-[11px] min-w-[110px] max-w-[140px] truncate" title={student.name}>{student.name}</td>
                               {subjects.map((sub) => {
                                 const stats = getStudentSubjectStats(student, sub);
                                 return stats.isPracticalSub ? (
                                   <React.Fragment key={sub}>
-                                    <td className="border border-lime-600 p-0.5 font-bold" colSpan={2}>{stats.formTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-0.5 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-0.5 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                    <td className="border border-lime-700 p-0.5 font-bold" colSpan={2}>{stats.formTotal || "-"}</td>
+                                    <td className="border border-lime-700 p-0.5 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
+                                    <td className="border border-lime-700 p-0.5 font-bold text-emerald-900">{stats.gradeStr}</td>
                                   </React.Fragment>
                                 ) : (
                                   <React.Fragment key={sub}>
-                                    <td className="border border-lime-600 p-0.5 font-bold">{stats.formTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-0.5 font-bold">{stats.semTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-0.5 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-0.5 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                    <td className="border border-lime-700 p-0.5 font-bold">{stats.formTotal || "-"}</td>
+                                    <td className="border border-lime-700 p-0.5 font-bold">{stats.semTotal || "-"}</td>
+                                    <td className="border border-lime-700 p-0.5 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
+                                    <td className="border border-lime-700 p-0.5 font-bold text-emerald-900">{stats.gradeStr}</td>
                                   </React.Fragment>
                                 );
                               })}
-                              <td className="border border-lime-600 p-0 font-bold text-[8.5px]">{attDays > 0 ? attDays : "-"}</td>
-                              <td className="border border-lime-600 p-0 font-black text-blue-900 text-[8.5px]">{grandObtainedTotal}</td>
-                              <td className="border border-lime-600 p-0 font-black text-blue-900 text-[8px]">{overallPct}</td>
-                              <td className="border border-lime-600 p-0 font-black text-emerald-900 text-[8.5px]">{overallGrade}</td>
+                              <td className="border border-lime-700 p-0 font-bold text-[10px]">{attDays > 0 ? attDays : "-"}</td>
+                              <td className="border border-lime-700 p-0 font-extrabold text-blue-950 text-[10px]">{grandObtainedTotal}</td>
+                              <td className="border border-lime-700 p-0 font-extrabold text-blue-950 text-[9.5px]">{overallPct}</td>
+                              <td className="border border-lime-700 p-0 font-extrabold text-emerald-950 text-[10px]">{overallGrade}</td>
                             </tr>
                           );
                         })}
@@ -3009,14 +3054,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+                <div className="flex items-center justify-between pt-6 border-t border-slate-300 mt-6 text-[13px] font-bold text-black">
                   <div className="text-center">
                     <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                    <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                    <p className="text-xs text-slate-900 font-bold">वर्गशिक्षक</p>
                   </div>
                   <div className="text-center">
                     <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                    <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                    <p className="text-xs text-slate-900 font-bold">मुख्याध्यापक</p>
                   </div>
                 </div>
               </div>

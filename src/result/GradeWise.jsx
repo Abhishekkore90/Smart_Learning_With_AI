@@ -514,6 +514,8 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
       clone.style.maxWidth = "none";
       clone.style.overflow = "visible";
       clone.style.background = "#ffffff";
+      clone.style.fontFamily = "'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif";
+      clone.style.letterSpacing = "0px";
 
       // Replace input elements with clean text spans in clone
       clone.querySelectorAll("input").forEach((inp) => {
@@ -525,8 +527,8 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
         if (parent) {
           const span = document.createElement("span");
           span.style.display = "inline-block";
-          span.style.fontWeight = "900";
-          span.style.fontSize = "13px";
+          span.style.fontWeight = "800";
+          span.style.fontSize = "14px";
           span.style.color = "#000000";
           if (isNumber) {
             span.style.width = "100%";
@@ -570,12 +572,14 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
       tempContainer.style.top = "0";
       tempContainer.style.width = `${cloneWidth + 40}px`;
       tempContainer.style.background = "#ffffff";
+      tempContainer.style.fontFamily = "'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif";
+      tempContainer.style.letterSpacing = "0px";
       tempContainer.style.zIndex = "-9999";
       tempContainer.appendChild(clone);
       document.body.appendChild(tempContainer);
 
       const canvas = await html2canvas(clone, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
@@ -599,19 +603,18 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
               } catch (e) {}
             });
 
-            if (cssText) {
-              const inlineStyle = clonedDoc.createElement("style");
-              inlineStyle.textContent = cssText;
-              clonedDoc.head.appendChild(inlineStyle);
-            }
+            const fontOverrideCss = `* { font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif !important; letter-spacing: 0 !important; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }\n.grade-pdf-area, .grade-pdf-area * { font-weight: 700 !important; }\n.grade-pdf-area .font-extrabold, .grade-pdf-area b, .grade-pdf-area strong, .grade-pdf-area th, .grade-pdf-area h1, .grade-pdf-area h2, .grade-pdf-area h3 { font-weight: 800 !important; }\n.grade-pdf-area .font-black { font-weight: 900 !important; }\n`;
+            const inlineStyle = clonedDoc.createElement("style");
+            inlineStyle.textContent = cssText + "\n" + fontOverrideCss;
+            clonedDoc.head.appendChild(inlineStyle);
           } catch (e) {}
         },
       });
 
       document.body.removeChild(tempContainer);
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.98);
-      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
       const pdfWidth = pdf.internal.pageSize.getWidth(); // 297 mm
       const pdfHeight = pdf.internal.pageSize.getHeight(); // 210 mm
       const marginX = 4; // 4mm side margin
@@ -622,7 +625,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
       const imgWidth = availWidth;
       const imgHeight = (canvas.height * availWidth) / canvas.width;
 
-      pdf.addImage(imgData, "JPEG", marginX, marginTop, imgWidth, Math.min(imgHeight, availHeight), undefined, "FAST");
+      pdf.addImage(imgData, "PNG", marginX, marginTop, imgWidth, Math.min(imgHeight, availHeight), undefined, "FAST");
       pdf.save(`श्रेणीनिहाय_निकाल_संकलन_प्रपत्र_${academicYear}.pdf`);
       toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
     } catch (err) {
@@ -747,16 +750,16 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
         <div className="max-w-[1400px] mx-auto overflow-x-auto">
           <div
             ref={printRef}
-            className="bg-white p-6 md:p-8 rounded-2xl border-2 border-black shadow-lg min-w-[1050px]"
-            style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
+            className="grade-pdf-area bg-white p-6 md:p-8 rounded-2xl border-2 border-black shadow-lg min-w-[1050px]"
+            style={{ fontFamily: "'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif", letterSpacing: 0 }}
           >
             {/* Header matching PDF structure */}
             <div className="text-center mb-5 space-y-2">
-              <h1 className="text-xl md:text-2xl font-black text-[#0a2540] tracking-wide block w-full text-center py-1">
+              <h1 className="text-2xl md:text-[26px] font-extrabold text-[#0a2540] block w-full text-center py-1">
                 सातत्यपूर्ण सर्वंकष मूल्यमापन श्रेणीनिहाय निकाल संकलन प्रपत्र - 1
               </h1>
 
-              <div className="flex flex-wrap items-center justify-between text-xs font-bold text-slate-900 border-b-2 border-black pb-2 px-1 gap-2">
+              <div className="flex flex-wrap items-center justify-between text-sm font-extrabold text-black border-b-2 border-black pb-2 px-1 gap-2">
                 <div className="flex items-center gap-1">
                   <span>शाळा:</span>
                   <input
@@ -777,53 +780,53 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                         }
                       } catch (err) {}
                     }}
-                    className="font-bold text-slate-900 bg-transparent border-b border-dotted border-slate-400 focus:outline-none px-1 text-xs min-w-[320px]"
+                    className="font-extrabold text-black bg-transparent border-b border-dotted border-slate-400 focus:outline-none px-1 text-sm min-w-[320px]"
                   />
                 </div>
                 <div>
-                  <span>सत्र:</span> <span className="font-extrabold text-[#1e40af]">{selectedTerm}</span>
+                  <span>सत्र:</span> <span className="font-extrabold text-[#1e3a8a]">{selectedTerm}</span>
                 </div>
                 <div>
-                  <span>सन:</span> <span className="font-extrabold text-[#1e40af]">{academicYear}</span>
+                  <span>सन:</span> <span className="font-extrabold text-[#1e3a8a]">{academicYear}</span>
                 </div>
               </div>
             </div>
             <style dangerouslySetInnerHTML={{ __html: ".grade-matrix-table, .grade-matrix-table tr, .grade-matrix-table th, .grade-matrix-table td { border: 1px solid #000000 !important; border-color: #000000 !important; } .grade-matrix-table { border: 2px solid #000000 !important; }" }} />
 
-            <table className="w-full border-collapse border-2 border-black text-center text-xs font-semibold text-slate-900 grade-matrix-table" style={{ tableLayout: "fixed" }}>
+            <table className="w-full border-collapse border-2 border-black text-center text-[13.5px] font-bold text-black grade-matrix-table" style={{ tableLayout: "fixed" }}>
               <colgroup><col style={{ width: "35px" }} /><col style={{ width: "70px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "38px" }} /><col style={{ width: "38px" }} /></colgroup>
               <thead>
-                <tr className="font-black text-slate-900">
-                  <th className="border border-black p-1 bg-[#bfdbfe] text-slate-900 font-black align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} rowSpan={3}>
-                    <span className="relative z-10 block text-center font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>अ. क्र.</span>
+                <tr className="font-extrabold text-black">
+                  <th className="border border-black p-1 bg-[#bfdbfe] text-black font-extrabold align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} rowSpan={3}>
+                    <span className="relative z-10 block text-center font-extrabold text-black text-[14px]" style={{ position: "relative", zIndex: 10, color: "#000000" }}>अ. क्र.</span>
                   </th>
-                  <th className="border border-black p-1 bg-[#bfdbfe] text-slate-900 font-black align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} rowSpan={3}>
-                    <span className="relative z-10 block text-center font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>इयत्ता</span>
+                  <th className="border border-black p-1 bg-[#bfdbfe] text-black font-extrabold align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} rowSpan={3}>
+                    <span className="relative z-10 block text-center font-extrabold text-black text-[14px]" style={{ position: "relative", zIndex: 10, color: "#000000" }}>इयत्ता</span>
                   </th>
-                  <th className="border border-black p-1 bg-[#bfdbfe] text-slate-900 font-black align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} colSpan={2} rowSpan={2}>
-                    <span className="relative z-10 block text-center font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>पट</span>
+                  <th className="border border-black p-1 bg-[#bfdbfe] text-black font-extrabold align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} colSpan={2} rowSpan={2}>
+                    <span className="relative z-10 block text-center font-extrabold text-black text-[14px]" style={{ position: "relative", zIndex: 10, color: "#000000" }}>पट</span>
                   </th>
-                  <th className="border border-black p-1 bg-[#bfdbfe] text-slate-900 font-black align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} colSpan={18}>
-                    <span className="relative z-10 block text-center font-black text-slate-900 text-sm" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>वर्गवार श्रेणी</span>
+                  <th className="border border-black p-1 bg-[#bfdbfe] text-black font-extrabold align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} colSpan={18}>
+                    <span className="relative z-10 block text-center font-extrabold text-black text-[15px]" style={{ position: "relative", zIndex: 10, color: "#000000" }}>वर्गवार श्रेणी</span>
                   </th>
-                  <th className="border border-black p-1 bg-[#bfdbfe] text-slate-900 font-black align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} colSpan={2} rowSpan={2}>
-                    <span className="relative z-10 block text-center font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>एकूण</span>
+                  <th className="border border-black p-1 bg-[#bfdbfe] text-black font-extrabold align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} colSpan={2} rowSpan={2}>
+                    <span className="relative z-10 block text-center font-extrabold text-black text-[14px]" style={{ position: "relative", zIndex: 10, color: "#000000" }}>एकूण</span>
                   </th>
                 </tr>
 
-                <tr className="font-black text-slate-900 text-xs">
-                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>अ-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(91 ते 100)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>अ-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(81 ते 90)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>ब-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(71 ते 80)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>ब-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(61 ते 70)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>क-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(51 ते 60)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>क-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(41 ते 50)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>ड<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(33 ते 40)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>इ-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(21 ते 32)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>इ-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(20 व कमी)</span></th>
+                <tr className="font-extrabold text-black text-[13px]">
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-black font-extrabold text-[13px]" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>अ-1<br /><span className="text-[10px] font-bold text-blue-950">(91 ते 100)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-black font-extrabold text-[13px]" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>अ-2<br /><span className="text-[10px] font-bold text-blue-950">(81 ते 90)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-black font-extrabold text-[13px]" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>ब-1<br /><span className="text-[10px] font-bold text-blue-950">(71 ते 80)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-black font-extrabold text-[13px]" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>ब-2<br /><span className="text-[10px] font-bold text-blue-950">(61 ते 70)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-black font-extrabold text-[13px]" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>क-1<br /><span className="text-[10px] font-bold text-blue-950">(51 ते 60)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-black font-extrabold text-[13px]" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>क-2<br /><span className="text-[10px] font-bold text-blue-950">(41 ते 50)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-black font-extrabold text-[13px]" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>ड<br /><span className="text-[10px] font-bold text-blue-950">(33 ते 40)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-black font-extrabold text-[13px]" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>इ-1<br /><span className="text-[10px] font-bold text-blue-950">(21 ते 32)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-black font-extrabold text-[13px]" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>इ-2<br /><span className="text-[10px] font-bold text-blue-950">(20 व कमी)</span></th>
                 </tr>
 
-                <tr className="font-black text-slate-900 text-[11px]">
+                <tr className="font-extrabold text-black text-[12px]">
                   <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
                   <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
                   <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
@@ -899,10 +902,10 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                     return (
                       <tr key={cls.id} className="border-b border-black hover:bg-blue-50/50 transition-colors">
                         {/* Sr No */}
-                        <td className="border border-black py-1.5 text-xs font-black text-slate-900">{displayIdx + 1}</td>
+                        <td className="border border-black py-1.5 text-[13.5px] font-extrabold text-black">{displayIdx + 1}</td>
 
                         {/* Class Name */}
-                        <td className="border border-black py-1.5 px-1 text-xs font-black text-slate-950 whitespace-nowrap overflow-hidden text-ellipsis">{cls.name}</td>
+                        <td className="border border-black py-1.5 px-1 text-[13px] font-extrabold text-black whitespace-nowrap overflow-hidden text-ellipsis">{cls.name}</td>
 
                         {/* Pat (Enrolled) */}
                         <td className="border border-black p-0">
@@ -910,7 +913,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                             type="number"
                             value={cls.pat.boys}
                             onChange={(e) => handleCellChange(targetIdx, "pat", "boys", e.target.value)}
-                            className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-black text-[13px] text-slate-950 focus:outline-none py-1.5"
+                            className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-extrabold text-[14px] text-black focus:outline-none py-1.5"
                           />
                         </td>
                         <td className="border border-black p-0">
@@ -918,7 +921,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                             type="number"
                             value={cls.pat.girls}
                             onChange={(e) => handleCellChange(targetIdx, "pat", "girls", e.target.value)}
-                            className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-black text-[13px] text-slate-950 focus:outline-none py-1.5"
+                            className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-extrabold text-[14px] text-black focus:outline-none py-1.5"
                           />
                         </td>
 
@@ -930,7 +933,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                                 type="number"
                                 value={cls[gKey]?.boys || 0}
                                 onChange={(e) => handleCellChange(targetIdx, gKey, "boys", e.target.value)}
-                                className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-extrabold text-[13px] text-slate-950 focus:outline-none py-1.5"
+                                className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-extrabold text-[14px] text-black focus:outline-none py-1.5"
                               />
                             </td>
                             <td className="border border-black p-0">
@@ -938,73 +941,73 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                                 type="number"
                                 value={cls[gKey]?.girls || 0}
                                 onChange={(e) => handleCellChange(targetIdx, gKey, "girls", e.target.value)}
-                                className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-extrabold text-[13px] text-slate-950 focus:outline-none py-1.5"
+                                className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-extrabold text-[14px] text-black focus:outline-none py-1.5"
                               />
                             </td>
                           </React.Fragment>
                         ))}
 
                         {/* Row Total */}
-                        <td className="border border-black py-1.5 text-[13px] font-black text-[#1e40af] bg-[#e3f2fd]">{rowTotalBoys}</td>
-                        <td className="border border-black py-1.5 text-[13px] font-black text-[#1e40af] bg-[#e3f2fd]">{rowTotalGirls}</td>
+                        <td className="border border-black py-1.5 text-[14px] font-extrabold text-[#1e3a8a] bg-[#e3f2fd]">{rowTotalBoys}</td>
+                        <td className="border border-black py-1.5 text-[14px] font-extrabold text-[#1e3a8a] bg-[#e3f2fd]">{rowTotalGirls}</td>
                       </tr>
                     );
                   });
                 })()}
 
                 {/* Bottom Total Row (एकूण) matching PDF */}
-                <tr className="bg-[#bbdefb] font-black text-[#0a2540] text-xs border-t-2 border-black">
-                  <td className="border border-black py-2.5 text-center text-xs font-black" colSpan={2}>
+                <tr className="bg-[#bbdefb] font-extrabold text-[#0a2540] text-[13.5px] border-t-2 border-black">
+                  <td className="border border-black py-2.5 text-center text-[14px] font-extrabold" colSpan={2}>
                     एकूण
                   </td>
 
                   {/* Pat Totals */}
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.pat.boys}</td>
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.pat.girls}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.pat.boys}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.pat.girls}</td>
 
                   {/* A1 Totals */}
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.a1.boys}</td>
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.a1.girls}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.a1.boys}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.a1.girls}</td>
 
                   {/* A2 Totals */}
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.a2.boys}</td>
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.a2.girls}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.a2.boys}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.a2.girls}</td>
 
                   {/* B1 Totals */}
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.b1.boys}</td>
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.b1.girls}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.b1.boys}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.b1.girls}</td>
 
                   {/* B2 Totals */}
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.b2.boys}</td>
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.b2.girls}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.b2.boys}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.b2.girls}</td>
 
                   {/* C1 Totals */}
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.c1.boys}</td>
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.c1.girls}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.c1.boys}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.c1.girls}</td>
 
                   {/* C2 Totals */}
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.c2.boys}</td>
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.c2.girls}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.c2.boys}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.c2.girls}</td>
 
                   {/* D Totals */}
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.d.boys}</td>
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.d.girls}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.d.boys}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.d.girls}</td>
 
                   {/* E1 Totals */}
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.e1.boys}</td>
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.e1.girls}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.e1.boys}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.e1.girls}</td>
 
                   {/* E2 Totals */}
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.e2.boys}</td>
-                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.e2.girls}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.e2.boys}</td>
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold">{columnTotals.e2.girls}</td>
 
                   {/* Total Sum Across All Grades */}
-                  <td className="border border-black py-2.5 text-[13px] font-black bg-[#90caf9] text-slate-950">
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold bg-[#90caf9] text-black">
                     {Object.keys(columnTotals)
                       .filter((k) => k !== "pat")
                       .reduce((acc, k) => acc + columnTotals[k].boys, 0)}
                   </td>
-                  <td className="border border-black py-2.5 text-[13px] font-black bg-[#90caf9] text-slate-950">
+                  <td className="border border-black py-2.5 text-[14px] font-extrabold bg-[#90caf9] text-black">
                     {Object.keys(columnTotals)
                       .filter((k) => k !== "pat")
                       .reduce((acc, k) => acc + columnTotals[k].girls, 0)}
@@ -1017,7 +1020,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
       )}
 
       {/* Styles for Table Layout & Print */}
-      <style dangerouslySetInnerHTML={{ __html: "table.grade-matrix-table th { background-color: #bfdbfe !important; color: #0f172a !important; font-weight: 800 !important; } table.grade-matrix-table input[type=number]::-webkit-inner-spin-button, table.grade-matrix-table input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; } table.grade-matrix-table input[type=number] { -moz-appearance: textfield; } @media print { @page { size: A4 landscape; margin: 4mm; } body { background: white !important; color: black !important; } button, select { display: none !important; } input { border: none !important; background: transparent !important; } }" }} />
+      <style dangerouslySetInnerHTML={{ __html: ".grade-pdf-area, .grade-pdf-area * { font-weight: 700 !important; } .grade-pdf-area .font-extrabold, .grade-pdf-area b, .grade-pdf-area strong, .grade-pdf-area th, .grade-pdf-area h1, .grade-pdf-area h2, .grade-pdf-area h3 { font-weight: 800 !important; } .grade-pdf-area .font-black { font-weight: 900 !important; } table.grade-matrix-table th { background-color: #bfdbfe !important; color: #000000 !important; font-weight: 800 !important; } table.grade-matrix-table input[type=number]::-webkit-inner-spin-button, table.grade-matrix-table input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; } table.grade-matrix-table input[type=number] { -moz-appearance: textfield; } @media print { @page { size: A4 landscape; margin: 4mm; } body { background: white !important; color: black !important; font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif !important; letter-spacing: 0 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } button, select { display: none !important; } input { border: none !important; background: transparent !important; } }" }} />
     </div>
   );
 }

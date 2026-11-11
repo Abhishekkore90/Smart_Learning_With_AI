@@ -174,4 +174,3 @@ function IdCardTemplatesPage() {
     </div>
   );
 }
-export default IdCardTemplatesPage;

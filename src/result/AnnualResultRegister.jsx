@@ -509,6 +509,8 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
       clone.style.maxWidth = "none";
       clone.style.overflow = "visible";
       clone.style.background = "#ffffff";
+      clone.style.fontFamily = "'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif";
+      clone.style.letterSpacing = "0px";
 
       clone.querySelectorAll("input").forEach((inp) => {
         const isNumber = inp.type === "number";
@@ -519,8 +521,8 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
         if (parent) {
           const span = document.createElement("span");
           span.style.display = "inline-block";
-          span.style.fontWeight = "900";
-          span.style.fontSize = "13px";
+          span.style.fontWeight = "800";
+          span.style.fontSize = "14px";
           span.style.color = "#000000";
           if (isNumber) {
             span.style.width = "100%";
@@ -559,12 +561,14 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
       tempContainer.style.top = "0";
       tempContainer.style.width = `${cloneWidth + 40}px`;
       tempContainer.style.background = "#ffffff";
+      tempContainer.style.fontFamily = "'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif";
+      tempContainer.style.letterSpacing = "0px";
       tempContainer.style.zIndex = "-9999";
       tempContainer.appendChild(clone);
       document.body.appendChild(tempContainer);
 
       const canvas = await html2canvas(clone, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
@@ -588,19 +592,18 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
               } catch (e) {}
             });
 
-            if (cssText) {
-              const inlineStyle = clonedDoc.createElement("style");
-              inlineStyle.textContent = cssText;
-              clonedDoc.head.appendChild(inlineStyle);
-            }
+            const fontOverrideCss = `* { font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif !important; letter-spacing: 0 !important; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }\n.print-area, .print-area * { font-weight: 700 !important; }\n.print-area .font-extrabold, .print-area b, .print-area strong, .print-area th, .print-area h1, .print-area h2, .print-area h3 { font-weight: 800 !important; }\n.print-area .font-black { font-weight: 900 !important; }\n`;
+            const inlineStyle = clonedDoc.createElement("style");
+            inlineStyle.textContent = cssText + "\n" + fontOverrideCss;
+            clonedDoc.head.appendChild(inlineStyle);
           } catch (e) {}
         },
       });
 
       document.body.removeChild(tempContainer);
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.98);
-      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const marginX = 4;
@@ -611,7 +614,7 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
       const imgWidth = availWidth;
       const imgHeight = (canvas.height * availWidth) / canvas.width;
 
-      pdf.addImage(imgData, "JPEG", marginX, marginTop, imgWidth, Math.min(imgHeight, availHeight), undefined, "FAST");
+      pdf.addImage(imgData, "PNG", marginX, marginTop, imgWidth, Math.min(imgHeight, availHeight), undefined, "FAST");
       pdf.save(`वार्षिक_निकाल_पत्रक_${selectedClass}_${academicYear}.pdf`);
       toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
     } catch (err) {
@@ -695,30 +698,30 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
         <div
           ref={printRef}
           className="print-area w-full max-w-[100%] mx-auto bg-white p-4 rounded-xl border-2 border-black shadow-md overflow-x-auto"
-          style={{ fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif" }}
+          style={{ fontFamily: "'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif", letterSpacing: 0 }}
         >
           {/* Main Document Header matching Image 2 */}
           <div className="text-center mb-4">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-black tracking-wide mb-3 text-center text-slate-950" style={{ color: "#000000" }}>
+            <h1 className="text-xl sm:text-2xl md:text-[26px] font-extrabold mb-3 text-center text-black" style={{ color: "#000000" }}>
               सातत्यपूर्ण सर्वंकष मूल्यमापन: वार्षिक निकाल पत्रक
             </h1>
 
             {/* School Metadata Bar matching Image 2 */}
             <div
-              className="flex flex-wrap items-center justify-between text-xs sm:text-sm font-extrabold px-3 py-1.5 border-b-2 border-black gap-2 text-slate-950"
+              className="flex flex-wrap items-center justify-between text-sm sm:text-[15px] font-extrabold px-3 py-1.5 border-b-2 border-black gap-2 text-black"
               style={{ borderColor: "#000000", color: "#000000" }}
             >
               <div>
-                <span>शाळा: </span> <span className="font-black text-black">{schoolName}</span>
+                <span>शाळा: </span> <span className="font-extrabold text-black">{schoolName}</span>
               </div>
               <div>
-                <span>इयत्ता: </span> <span className="font-black text-black">{formatClassName(selectedClass)}</span>
+                <span>इयत्ता: </span> <span className="font-extrabold text-black">{formatClassName(selectedClass)}</span>
               </div>
               <div>
-                <span>तुकडी: </span> <span className="font-black text-black">{division}</span>
+                <span>तुकडी: </span> <span className="font-extrabold text-black">{division}</span>
               </div>
               <div>
-                <span>सन: </span> <span className="font-black text-black">{academicYear}</span>
+                <span>सन: </span> <span className="font-extrabold text-black">{academicYear}</span>
               </div>
             </div>
           </div>
@@ -726,7 +729,7 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
           {/* Matrix Register Table matching Image 2 EXACTLY */}
           <style dangerouslySetInnerHTML={{ __html: ".annual-register-table, .annual-register-table tr, .annual-register-table th, .annual-register-table td { border: 1px solid #000000 !important; border-color: #000000 !important; } .annual-register-table { border: 2px solid #000000 !important; }" }} />
           <table
-            className="w-full text-center text-[13px] border-collapse annual-register-table"
+            className="w-full text-center text-[14px] border-collapse annual-register-table"
             style={{ tableLayout: "fixed", minWidth: `${360 + subjects.length * 144}px`, width: "100%", borderColor: "#000000", borderWidth: "2px", borderStyle: "solid" }}
           >
             <colgroup>
@@ -750,17 +753,17 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
               <tr style={{ backgroundColor: "transparent", color: "#0f172a" }}>
                 <th
                   rowSpan={3}
-                  className="border border-black px-1 py-2 font-black align-middle text-slate-900"
-                  style={{ width: "35px", borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", verticalAlign: "middle" }}
+                  className="border border-black px-1 py-2 font-extrabold align-middle text-black"
+                  style={{ width: "35px", borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", verticalAlign: "middle" }}
                 >
-                  <span className="relative z-10 block text-center font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>अ. क्र.</span>
+                  <span className="relative z-10 block text-center font-extrabold text-black text-[14px]" style={{ position: "relative", zIndex: 10, color: "#000000" }}>अ. क्र.</span>
                 </th>
                 <th
                   rowSpan={3}
-                  className="border border-black px-2 py-2 font-black text-left align-middle text-slate-900"
-                  style={{ width: "160px", borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", verticalAlign: "middle" }}
+                  className="border border-black px-2 py-2 font-extrabold text-left align-middle text-black"
+                  style={{ width: "160px", borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", verticalAlign: "middle" }}
                 >
-                  <span className="relative z-10 block font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>विद्यार्थ्याचे नाव</span>
+                  <span className="relative z-10 block font-extrabold text-black text-[14px]" style={{ position: "relative", zIndex: 10, color: "#000000" }}>विद्यार्थ्याचे नाव</span>
                 </th>
 
                 {/* Dynamic Subject Headers - Equal width for all subjects */}
@@ -768,8 +771,8 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
                   <th
                     key={sIdx}
                     colSpan={4}
-                    className="border border-black px-0.5 py-1.5 font-black text-[13px] align-middle whitespace-normal break-words overflow-hidden leading-tight text-slate-900"
-                    style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "144px" }}
+                    className="border border-black px-0.5 py-1.5 font-extrabold text-[14px] align-middle whitespace-normal break-words overflow-hidden leading-tight text-black"
+                    style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "144px" }}
                   >
                     {getSubjectDisplayLabel(sub)}
                   </th>
@@ -777,62 +780,62 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
 
                 <th
                   rowSpan={3}
-                  className="border border-black px-1 py-1 font-black align-middle text-slate-900"
-                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "40px", verticalAlign: "middle" }}
+                  className="border border-black px-1 py-1 font-extrabold align-middle text-black"
+                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "40px", verticalAlign: "middle" }}
                 >
-                  <div className="writing-vertical text-[13px]" style={{ color: "#0f172a" }}>उपस्थिती</div>
+                  <div className="writing-vertical text-[14px]" style={{ color: "#000000" }}>उपस्थिती</div>
                 </th>
                 <th
                   rowSpan={3}
-                  className="border border-black px-1 py-1 font-black align-middle text-slate-900"
-                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "40px", verticalAlign: "middle" }}
+                  className="border border-black px-1 py-1 font-extrabold align-middle text-black"
+                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "40px", verticalAlign: "middle" }}
                 >
-                  <div className="writing-vertical text-[13px]" style={{ color: "#0f172a" }}>एकूण</div>
+                  <div className="writing-vertical text-[14px]" style={{ color: "#000000" }}>एकूण</div>
                 </th>
                 <th
                   rowSpan={3}
-                  className="border border-black px-1 py-1 font-black align-middle text-slate-900"
-                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "45px", verticalAlign: "middle" }}
+                  className="border border-black px-1 py-1 font-extrabold align-middle text-black"
+                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "45px", verticalAlign: "middle" }}
                 >
-                  <div className="writing-vertical text-[13px]" style={{ color: "#0f172a" }}>टक्केवारी</div>
+                  <div className="writing-vertical text-[14px]" style={{ color: "#000000" }}>टक्केवारी</div>
                 </th>
                 <th
                   rowSpan={3}
-                  className="border border-black px-1 py-1 font-black align-middle text-slate-900"
-                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "40px", verticalAlign: "middle" }}
+                  className="border border-black px-1 py-1 font-extrabold align-middle text-black"
+                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "40px", verticalAlign: "middle" }}
                 >
-                  <div className="writing-vertical text-[13px]" style={{ color: "#0f172a" }}>श्रेणी</div>
+                  <div className="writing-vertical text-[14px]" style={{ color: "#000000" }}>श्रेणी</div>
                 </th>
               </tr>
 
               {/* Row 2: Sub Headers (Semester Breakdown) */}
-              <tr style={{ backgroundColor: "transparent", color: "#0f172a" }}>
+              <tr style={{ backgroundColor: "transparent", color: "#000000" }}>
                 {subjects.map((_, sIdx) => (
                   <React.Fragment key={sIdx}>
-                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>
-                      <div className="writing-vertical" style={{ color: "#0f172a" }}>प्रथम सत्र</div>
+                    <th className="border border-black p-0.5 font-extrabold align-middle text-[12.5px] text-black" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "36px" }}>
+                      <div className="writing-vertical" style={{ color: "#000000" }}>प्रथम सत्र</div>
                     </th>
-                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>
-                      <div className="writing-vertical" style={{ color: "#0f172a" }}>द्वितीय सत्र</div>
+                    <th className="border border-black p-0.5 font-extrabold align-middle text-[12.5px] text-black" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "36px" }}>
+                      <div className="writing-vertical" style={{ color: "#000000" }}>द्वितीय सत्र</div>
                     </th>
-                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>
-                      <div className="writing-vertical" style={{ color: "#0f172a" }}>एकूण</div>
+                    <th className="border border-black p-0.5 font-extrabold align-middle text-[12.5px] text-black" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "36px" }}>
+                      <div className="writing-vertical" style={{ color: "#000000" }}>एकूण</div>
                     </th>
-                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>
-                      <div className="writing-vertical" style={{ color: "#0f172a" }}>श्रेणी</div>
+                    <th className="border border-black p-0.5 font-extrabold align-middle text-[12.5px] text-black" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "36px" }}>
+                      <div className="writing-vertical" style={{ color: "#000000" }}>श्रेणी</div>
                     </th>
                   </React.Fragment>
                 ))}
               </tr>
 
               {/* Row 3: Max Marks Row (100, 100, 200, Grade) matching Image 2 */}
-              <tr style={{ backgroundColor: "transparent", color: "#0f172a" }}>
+              <tr style={{ backgroundColor: "transparent", color: "#000000" }}>
                 {subjects.map((_, sIdx) => (
                   <React.Fragment key={sIdx}>
-                    <th className="border border-black p-0.5 font-black text-[13px] align-middle text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>100</th>
-                    <th className="border border-black p-0.5 font-black text-[13px] align-middle text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>100</th>
-                    <th className="border border-black p-0.5 font-black text-[13px] align-middle text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>200</th>
-                    <th className="border border-black p-0.5 align-middle text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}></th>
+                    <th className="border border-black p-0.5 font-extrabold text-[14px] align-middle text-black" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "36px" }}>100</th>
+                    <th className="border border-black p-0.5 font-extrabold text-[14px] align-middle text-black" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "36px" }}>100</th>
+                    <th className="border border-black p-0.5 font-extrabold text-[14px] align-middle text-black" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "36px" }}>200</th>
+                    <th className="border border-black p-0.5 align-middle text-black" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "36px" }}></th>
                   </React.Fragment>
                 ))}
               </tr>
@@ -863,42 +866,42 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
 
                 return (
                   <tr key={st.id || idx} className="hover:bg-blue-50/50 transition-colors">
-                    <td className="border border-black px-1 py-2 text-[13px] font-black text-center text-slate-950 overflow-hidden" style={{ borderColor: "#000000", width: "35px" }}>
+                    <td className="border border-black px-1 py-2 text-[14px] font-extrabold text-center text-black overflow-hidden" style={{ borderColor: "#000000", width: "35px" }}>
                       {idx + 1}
                     </td>
-                    <td className="border border-black px-2 py-2 text-[13px] font-black text-left text-slate-950 whitespace-nowrap overflow-hidden text-ellipsis" style={{ borderColor: "#000000", width: "160px" }}>
+                    <td className="border border-black px-2 py-2 text-[14px] font-extrabold text-left text-black whitespace-nowrap overflow-hidden text-ellipsis" style={{ borderColor: "#000000", width: "160px" }}>
                       {st.fullName || st.name || `विद्यार्थी ${idx + 1}`}
                     </td>
 
                     {/* Subject Marks Columns - Identical equal widths */}
                     {subjectRows.map((subRes, sIdx) => (
                       <React.Fragment key={sIdx}>
-                        <td className="border border-black p-0.5 text-[13px] font-extrabold text-slate-950 text-center" style={{ borderColor: "#000000", width: "36px" }}>
+                        <td className="border border-black p-0.5 text-[14px] font-extrabold text-black text-center" style={{ borderColor: "#000000", width: "36px" }}>
                           {subRes.m1 > 0 ? subRes.m1 : "-"}
                         </td>
-                        <td className="border border-black p-0.5 text-[13px] font-extrabold text-slate-950 text-center" style={{ borderColor: "#000000", width: "36px" }}>
+                        <td className="border border-black p-0.5 text-[14px] font-extrabold text-black text-center" style={{ borderColor: "#000000", width: "36px" }}>
                           {subRes.m2 > 0 ? subRes.m2 : "-"}
                         </td>
-                        <td className="border border-black p-0.5 text-[13px] font-black text-[#1e40af] bg-blue-50/30 text-center" style={{ borderColor: "#000000", width: "36px" }}>
+                        <td className="border border-black p-0.5 text-[14px] font-extrabold text-[#1e3a8a] bg-blue-50/30 text-center" style={{ borderColor: "#000000", width: "36px" }}>
                           {subRes.subTotal > 0 ? subRes.subTotal : "-"}
                         </td>
-                        <td className="border border-black p-0.5 text-[13px] font-black text-[#1e40af] bg-blue-50/30 text-center" style={{ borderColor: "#000000", width: "36px" }}>
+                        <td className="border border-black p-0.5 text-[14px] font-extrabold text-[#1e3a8a] bg-blue-50/30 text-center" style={{ borderColor: "#000000", width: "36px" }}>
                           {subRes.subGrade}
                         </td>
                       </React.Fragment>
                     ))}
 
                     {/* Student Summary Columns */}
-                    <td className="border border-black p-0.5 text-[13px] font-extrabold text-slate-950 text-center" style={{ borderColor: "#000000", width: "40px" }}>
+                    <td className="border border-black p-0.5 text-[14px] font-extrabold text-black text-center" style={{ borderColor: "#000000", width: "40px" }}>
                       {attendance}
                     </td>
-                    <td className="border border-black p-0.5 text-[13px] font-black text-[#1e40af] bg-[#e3f2fd] text-center" style={{ borderColor: "#000000", width: "40px" }}>
+                    <td className="border border-black p-0.5 text-[14px] font-extrabold text-[#1e3a8a] bg-[#e3f2fd] text-center" style={{ borderColor: "#000000", width: "40px" }}>
                       {grandTotalObt > 0 ? grandTotalObt : "-"}
                     </td>
-                    <td className="border border-black p-0.5 text-[13px] font-black text-[#1e40af] bg-[#e3f2fd] text-center" style={{ borderColor: "#000000", width: "45px" }}>
+                    <td className="border border-black p-0.5 text-[14px] font-extrabold text-[#1e3a8a] bg-[#e3f2fd] text-center" style={{ borderColor: "#000000", width: "45px" }}>
                       {overallPercent > 0 ? overallPercent.toFixed(2) : "-"}
                     </td>
-                    <td className="border border-black p-0.5 text-[13px] font-black text-slate-950 bg-[#bbdefb] text-center" style={{ borderColor: "#000000", width: "40px" }}>
+                    <td className="border border-black p-0.5 text-[14px] font-extrabold text-black bg-[#bbdefb] text-center" style={{ borderColor: "#000000", width: "40px" }}>
                       {overallGrade}
                     </td>
                   </tr>
@@ -919,10 +922,20 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
           white-space: nowrap;
           margin: 0 auto;
           padding: 6px 2px;
-          height: 90px;
+          height: 96px;
           color: #000000 !important;
+          letter-spacing: 0 !important;
         }
 
+        .print-area, .print-area * {
+          font-weight: 700 !important;
+        }
+        .print-area .font-extrabold, .print-area b, .print-area strong, .print-area th, .print-area h1, .print-area h2, .print-area h3 {
+          font-weight: 800 !important;
+        }
+        .print-area .font-black {
+          font-weight: 900 !important;
+        }
         @media print {
           body * {
             visibility: hidden;
@@ -932,6 +945,10 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
           }
           .print-area, .print-area * {
             visibility: visible;
+            font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif !important;
+            letter-spacing: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .print-area {
             position: absolute;

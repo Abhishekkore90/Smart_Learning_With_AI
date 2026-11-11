@@ -175,4 +175,3 @@ function ResultTemplatesPage() {
     </div>
   );
 }
-export default ResultTemplatesPage;

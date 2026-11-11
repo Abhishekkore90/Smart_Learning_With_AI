@@ -73,14 +73,21 @@ export async function fetchJsonFromBunny<T = any>(filePath: string): Promise<T |
     const cdnUrl = `${PULL_ZONE_URL}/${cleanPath}?t=${Date.now()}`;
     const res = await fetch(cdnUrl);
     if (res.ok) {
-      const data = await res.json();
-      try {
-        localStorage.setItem(cacheKey, JSON.stringify(data));
-      } catch (e) {}
-      return data as T;
+      const contentType = (res.headers.get("content-type") || "").toLowerCase();
+      if (!contentType.includes("text/html")) {
+        const text = await res.text();
+        const trimmed = text.trim();
+        if (trimmed && !trimmed.startsWith("<")) {
+          const data = JSON.parse(trimmed);
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+          } catch (e) {}
+          return data as T;
+        }
+      }
     }
-  } catch (err) {
-    console.warn(`Could not fetch ${cleanPath} from Bunny CDN, trying cache...`, err);
+  } catch {
+    // Missing CDN file or offline error; fall back to local cache
   }
 
   // Fallback to local cache

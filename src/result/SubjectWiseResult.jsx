@@ -121,15 +121,15 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
     <div className="mb-3">
       {/* Subject Title Banner */}
       <h3
-        className="text-xs font-black text-slate-900 mb-2 text-center bg-amber-100 py-1.5 px-3 rounded-lg border-2 border-amber-300 shadow-sm"
+        className="text-[13px] font-extrabold text-black mb-2 text-center bg-amber-100 py-1.5 px-3 rounded-lg border-2 border-amber-400 shadow-sm"
         style={{ breakAfter: "avoid", pageBreakAfter: "avoid" }}
       >
         {title}
       </h3>
 
       {/* Semantic HTML Table for 100% html2canvas border rendering */}
-      <div className="w-full border-2 border-slate-400 rounded-lg overflow-hidden bg-white">
-        <table className="w-full border-collapse text-left text-slate-900" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+      <div className="w-full border-2 border-slate-500 rounded-lg overflow-hidden bg-white">
+        <table className="w-full border-collapse text-left text-black" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '10%' }} />
             <col style={{ width: '74%' }} />
@@ -139,22 +139,22 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
             <col style={{ width: '4%' }} />
           </colgroup>
           <thead>
-            <tr className="bg-slate-100 font-black text-[11px] border-b-2 border-slate-400">
-              <th className="border-r border-b border-slate-400 p-1 text-center leading-tight">
+            <tr className="bg-slate-100 font-extrabold text-[12px] text-black border-b-2 border-slate-500">
+              <th className="border-r border-b border-slate-500 p-1 text-center leading-tight">
                 अध्ययन<br />निष्पत्ती<br />क्र.
               </th>
-              <th className="border-r border-b border-slate-400 p-1.5 text-center align-middle">
+              <th className="border-r border-b border-slate-500 p-1.5 text-center align-middle">
                 अध्ययन निष्पत्ती
               </th>
-              <th colSpan={4} className="border-b border-slate-400 p-0 text-center">
-                <div className="border-b border-slate-400 py-1 font-black text-center text-[11px]">
+              <th colSpan={4} className="border-b border-slate-500 p-0 text-center">
+                <div className="border-b border-slate-500 py-1 font-extrabold text-center text-[12px]">
                   स्तर
                 </div>
-                <div className="grid grid-cols-4 text-[10.5px]">
-                  <div className="border-r border-slate-400 py-0.5 text-center font-bold">1</div>
-                  <div className="border-r border-slate-400 py-0.5 text-center font-bold">2</div>
-                  <div className="border-r border-slate-400 py-0.5 text-center font-bold">3</div>
-                  <div className="py-0.5 text-center font-bold">4</div>
+                <div className="grid grid-cols-4 text-[11.5px]">
+                  <div className="border-r border-slate-500 py-0.5 text-center font-extrabold">1</div>
+                  <div className="border-r border-slate-500 py-0.5 text-center font-extrabold">2</div>
+                  <div className="border-r border-slate-500 py-0.5 text-center font-extrabold">3</div>
+                  <div className="py-0.5 text-center font-extrabold">4</div>
                 </div>
               </th>
             </tr>
@@ -166,24 +166,24 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
               return (
                 <tr
                   key={`out_${item.code || item.id || "item"}_${idx}`}
-                  className={`text-[10.5px] ${!isLast ? "border-b border-slate-300" : ""}`}
+                  className={`text-[12.5px] text-black ${!isLast ? "border-b border-slate-400" : ""}`}
                 >
-                  <td className="border-r border-slate-300 p-1 text-center font-bold text-[9.5px] whitespace-nowrap bg-slate-50/50">
+                  <td className="border-r border-slate-400 p-1 text-center font-bold text-[10.5px] text-slate-900 whitespace-nowrap bg-slate-50/50">
                     {item.code}
                   </td>
-                  <td className="border-r border-slate-300 p-1.5 px-2 font-medium text-[11px] leading-snug">
+                  <td className="border-r border-slate-400 p-1.5 px-2 font-bold text-[12.5px] text-black leading-snug">
                     {item.text}
                   </td>
-                  <td className="border-r border-slate-300 p-1 text-center font-black text-blue-900 text-[13px]">
+                  <td className="border-r border-slate-400 p-1 text-center font-extrabold text-blue-900 text-[15px]">
                     {level === 1 ? "✓" : ""}
                   </td>
-                  <td className="border-r border-slate-300 p-1 text-center font-black text-blue-900 text-[13px]">
+                  <td className="border-r border-slate-400 p-1 text-center font-extrabold text-blue-900 text-[15px]">
                     {level === 2 ? "✓" : ""}
                   </td>
-                  <td className="border-r border-slate-300 p-1 text-center font-black text-blue-900 text-[13px]">
+                  <td className="border-r border-slate-400 p-1 text-center font-extrabold text-blue-900 text-[15px]">
                     {level === 3 ? "✓" : ""}
                   </td>
-                  <td className="p-1 text-center font-black text-blue-900 text-[13px]">
+                  <td className="p-1 text-center font-extrabold text-blue-900 text-[15px]">
                     {level === 4 ? "✓" : ""}
                   </td>
                 </tr>
@@ -689,23 +689,23 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             const level = getUserSelectedLevel(student, item.code, sec.subjectName);
             const isLast = idx === sec.outcomes.length - 1;
             return `
-              <tr style="font-size: 11px; ${!isLast ? "border-bottom: 1px solid #cbd5e1;" : ""}">
-                <td style="padding: 5px; text-align: center; font-weight: bold; font-size: 9.5px; width: 10%; background-color: #f8fafc; border-right: 1px solid #cbd5e1;">
+              <tr style="font-size: 12.5px; color: #000000; ${!isLast ? "border-bottom: 1px solid #94a3b8;" : ""}">
+                <td style="padding: 5px 4px; text-align: center; font-weight: 700; font-size: 10.5px; color: #0f172a; width: 10%; background-color: #f8fafc; border-right: 1px solid #94a3b8;">
                   ${item.code || ""}
                 </td>
-                <td style="padding: 6px; text-align: left; font-weight: 500; font-size: 11px; line-height: 1.3; width: 74%; border-right: 1px solid #cbd5e1;">
+                <td style="padding: 6px; text-align: left; font-weight: 700; font-size: 12.5px; line-height: 1.35; color: #000000; width: 74%; border-right: 1px solid #94a3b8;">
                   ${item.text || ""}
                 </td>
-                <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+                <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%; border-right: 1px solid #94a3b8;">
                   ${level === 1 ? "✓" : ""}
                 </td>
-                <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+                <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%; border-right: 1px solid #94a3b8;">
                   ${level === 2 ? "✓" : ""}
                 </td>
-                <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+                <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%; border-right: 1px solid #94a3b8;">
                   ${level === 3 ? "✓" : ""}
                 </td>
-                <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%;">
+                <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%;">
                   ${level === 4 ? "✓" : ""}
                 </td>
               </tr>
@@ -714,27 +714,27 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
           const measureEl = document.createElement("div");
           measureEl.className = "pdf-page bg-white flex flex-col justify-between";
-          measureEl.style.cssText = "width: 794px; min-height: 1122px; padding: 24px; box-sizing: border-box; background: #ffffff; position: absolute; top: 0; left: -10000px; visibility: hidden;";
+          measureEl.style.cssText = "width: 794px; min-height: 1122px; padding: 24px; box-sizing: border-box; background: #ffffff; position: absolute; top: 0; left: -10000px; visibility: hidden; font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif; letter-spacing: 0; text-rendering: geometricPrecision; -webkit-font-smoothing: antialiased;";
 
           measureEl.innerHTML = `
             <div>
-              <h1 id="m_title" style="font-size: 16px; font-weight: 900; color: #1e3a8a; text-align: center; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a; padding-bottom: 4px; letter-spacing: -0.025em; line-height: 1.2;">
+              <h1 id="m_title" style="font-size: 18px; font-weight: 800; color: #1e3a8a; text-align: center; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; letter-spacing: 0; line-height: 1.25;">
                 अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
               </h1>
-              <div id="m_student" style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 900; color: #1e293b; background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; margin-bottom: 8px;">
-                <span>विद्यार्थ्याचे नाव - <b style="color: #0f172a; font-weight: 900;">${student.fullName || student.name || ""}</b></span>
-                <span>इयत्ता - <b>${selectedClass}</b></span>
-                <span>तुकडी - <b>${student.division || student.section || student.tukdi || division}</b></span>
-                <span>हजेरी क्र. <b>${student.rollNo || ""}</b></span>
-                <span>${selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+              <div id="m_student" style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: #0f172a; background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #94a3b8; margin-bottom: 8px;">
+                <span>विद्यार्थ्याचे नाव - <b style="color: #000000; font-weight: 800;">${student.fullName || student.name || ""}</b></span>
+                <span>इयत्ता - <b style="color: #000000; font-weight: 800;">${selectedClass}</b></span>
+                <span>तुकडी - <b style="color: #000000; font-weight: 800;">${student.division || student.section || student.tukdi || division}</b></span>
+                <span>हजेरी क्र. <b style="color: #000000; font-weight: 800;">${student.rollNo || ""}</b></span>
+                <span style="font-weight: 800;">${selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
               </div>
               <div id="m_banner" style="margin-bottom: 8px;">
-                <h3 style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin: 0; text-align: center; background-color: #fef3c7; padding: 4px 10px; border-radius: 6px; border: 1.5px solid #fde68a;">
+                <h3 style="font-size: 13px; font-weight: 800; color: #000000; margin: 0; text-align: center; background-color: #fef3c7; padding: 5px 10px; border-radius: 6px; border: 1.5px solid #f59e0b;">
                   ${sec.title}
                 </h3>
               </div>
-              <div id="m_table_container" style="width: 100%; border: 1.5px solid #94a3b8; border-radius: 6px; overflow: hidden; background: #ffffff;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; color: #0f172a; table-layout: fixed;">
+              <div id="m_table_container" style="width: 100%; border: 1.5px solid #475569; border-radius: 6px; overflow: hidden; background: #ffffff;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; color: #000000; table-layout: fixed;">
                   <colgroup>
                     <col style="width: 10%;" />
                     <col style="width: 74%;" />
@@ -744,22 +744,22 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                     <col style="width: 4%;" />
                   </colgroup>
                   <thead>
-                    <tr id="m_thead_row" style="background-color: #f1f5f9; font-weight: 900; font-size: 10.5px; border-bottom: 1.5px solid #94a3b8;">
-                      <th style="border-right: 1px solid #94a3b8; padding: 4px; text-align: center; line-height: 1.2;">
+                    <tr id="m_thead_row" style="background-color: #f1f5f9; font-weight: 800; font-size: 12px; color: #000000; border-bottom: 1.5px solid #475569;">
+                      <th style="border-right: 1px solid #64748b; padding: 5px 4px; text-align: center; line-height: 1.25;">
                         अध्ययन<br />निष्पत्ती<br />क्र.
                       </th>
-                      <th style="border-right: 1px solid #94a3b8; padding: 4px 6px; text-align: center; vertical-align: middle;">
+                      <th style="border-right: 1px solid #64748b; padding: 5px 6px; text-align: center; vertical-align: middle;">
                         अध्ययन निष्पत्ती
                       </th>
                       <th colSpan="4" style="padding: 0; text-align: center;">
-                        <div style="border-bottom: 1px solid #94a3b8; padding: 2px 0; font-weight: 900; text-align: center; font-size: 10.5px;">
+                        <div style="border-bottom: 1px solid #64748b; padding: 3px 0; font-weight: 800; text-align: center; font-size: 12px;">
                           स्तर
                         </div>
-                        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 10px;">
-                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">1</div>
-                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">2</div>
-                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">3</div>
-                          <div style="padding: 2px 0; text-align: center; font-weight: bold;">4</div>
+                        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 11.5px;">
+                          <div style="border-right: 1px solid #64748b; padding: 2px 0; text-align: center; font-weight: 800;">1</div>
+                          <div style="border-right: 1px solid #64748b; padding: 2px 0; text-align: center; font-weight: 800;">2</div>
+                          <div style="border-right: 1px solid #64748b; padding: 2px 0; text-align: center; font-weight: 800;">3</div>
+                          <div style="padding: 2px 0; text-align: center; font-weight: 800;">4</div>
                         </div>
                       </th>
                     </tr>
@@ -768,14 +768,14 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                 </table>
               </div>
             </div>
-            <div id="m_footer" style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px; border-top: 1px solid #cbd5e1; margin-top: 6px; font-size: 10.5px; font-weight: bold; color: #1e293b;">
+            <div id="m_footer" style="display: flex; align-items: center; justify-content: space-between; padding-top: 7px; border-top: 1px solid #94a3b8; margin-top: 6px; font-size: 12px; font-weight: 700; color: #0f172a;">
               <div style="text-align: center;">
-                <p style="font-weight: 800; margin: 0;">${schoolData.teacherName || "वर्गशिक्षक"}</p>
-                <p style="font-size: 9.5px; color: #64748b; font-weight: 500; margin: 0;">वर्गशिक्षक</p>
+                <p style="font-weight: 800; margin: 0; color: #000000;">${schoolData.teacherName || "वर्गशिक्षक"}</p>
+                <p style="font-size: 11px; color: #1e293b; font-weight: 700; margin: 0;">वर्गशिक्षक</p>
               </div>
               <div style="text-align: center;">
-                <p style="font-weight: 800; margin: 0;">${schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                <p style="font-size: 9.5px; color: #64748b; font-weight: 500; margin: 0;">मुख्याध्यापक</p>
+                <p style="font-weight: 800; margin: 0; color: #000000;">${schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                <p style="font-size: 11px; color: #1e293b; font-weight: 700; margin: 0;">मुख्याध्यापक</p>
               </div>
             </div>
           `;
@@ -847,23 +847,23 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           const level = getUserSelectedLevel(student, item.code, pgData.subjectName);
           const isLast = idx === pgData.outcomesChunk.length - 1;
           return `
-            <tr style="font-size: 11px; ${!isLast ? "border-bottom: 1px solid #cbd5e1;" : ""}">
-              <td style="padding: 5px; text-align: center; font-weight: bold; font-size: 9.5px; width: 10%; background-color: #f8fafc; border-right: 1px solid #cbd5e1;">
+            <tr style="font-size: 12.5px; color: #000000; ${!isLast ? "border-bottom: 1px solid #94a3b8;" : ""}">
+              <td style="padding: 5px 4px; text-align: center; font-weight: 700; font-size: 10.5px; color: #0f172a; width: 10%; background-color: #f8fafc; border-right: 1px solid #94a3b8;">
                 ${item.code || ""}
               </td>
-              <td style="padding: 6px; text-align: left; font-weight: 500; font-size: 11px; line-height: 1.3; width: 74%; border-right: 1px solid #cbd5e1;">
+              <td style="padding: 6px; text-align: left; font-weight: 700; font-size: 12.5px; line-height: 1.35; color: #000000; width: 74%; border-right: 1px solid #94a3b8;">
                 ${item.text || ""}
               </td>
-              <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%; border-right: 1px solid #94a3b8;">
                 ${level === 1 ? "✓" : ""}
               </td>
-              <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%; border-right: 1px solid #94a3b8;">
                 ${level === 2 ? "✓" : ""}
               </td>
-              <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%; border-right: 1px solid #cbd5e1;">
+              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%; border-right: 1px solid #94a3b8;">
                 ${level === 3 ? "✓" : ""}
               </td>
-              <td style="padding: 4px; text-align: center; font-weight: 900; font-size: 13px; color: #1e3a8a; width: 4%;">
+              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%;">
                 ${level === 4 ? "✓" : ""}
               </td>
             </tr>
@@ -873,26 +873,26 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         return `
           <div
             class="pdf-page bg-white flex flex-col justify-between"
-            style="width: 794px; height: 1122px; min-height: 1122px; max-height: 1122px; padding: 24px; box-sizing: border-box; margin-bottom: 20px; overflow: hidden; background: #ffffff;"
+            style="width: 794px; height: 1122px; min-height: 1122px; max-height: 1122px; padding: 24px; box-sizing: border-box; margin-bottom: 20px; overflow: hidden; background: #ffffff; font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif; letter-spacing: 0; text-rendering: geometricPrecision; -webkit-font-smoothing: antialiased;"
           >
             <div>
-              <h1 style="font-size: 16px; font-weight: 900; color: #1e3a8a; text-align: center; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a; padding-bottom: 4px; letter-spacing: -0.025em; line-height: 1.2;">
+              <h1 style="font-size: 18px; font-weight: 800; color: #1e3a8a; text-align: center; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; letter-spacing: 0; line-height: 1.25;">
                 अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
               </h1>
-              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 900; color: #1e293b; background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #cbd5e1; margin-bottom: 8px;">
-                <span>विद्यार्थ्याचे नाव - <b style="color: #0f172a; font-weight: 900;">${student.fullName || student.name || ""}</b></span>
-                <span>इयत्ता - <b>${selectedClass}</b></span>
-                <span>तुकडी - <b>${student.division || student.section || student.tukdi || division}</b></span>
-                <span>हजेरी क्र. <b>${student.rollNo || ""}</b></span>
-                <span>${selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: #0f172a; background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #94a3b8; margin-bottom: 8px;">
+                <span>विद्यार्थ्याचे नाव - <b style="color: #000000; font-weight: 800;">${student.fullName || student.name || ""}</b></span>
+                <span>इयत्ता - <b style="color: #000000; font-weight: 800;">${selectedClass}</b></span>
+                <span>तुकडी - <b style="color: #000000; font-weight: 800;">${student.division || student.section || student.tukdi || division}</b></span>
+                <span>हजेरी क्र. <b style="color: #000000; font-weight: 800;">${student.rollNo || ""}</b></span>
+                <span style="font-weight: 800;">${selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
               </div>
               <div style="margin-bottom: 8px;">
-                <h3 style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin: 0; text-align: center; background-color: #fef3c7; padding: 4px 10px; border-radius: 6px; border: 1.5px solid #fde68a;">
+                <h3 style="font-size: 13px; font-weight: 800; color: #000000; margin: 0; text-align: center; background-color: #fef3c7; padding: 5px 10px; border-radius: 6px; border: 1.5px solid #f59e0b;">
                   ${pgData.secTitle}
                 </h3>
               </div>
-              <div style="width: 100%; border: 1.5px solid #94a3b8; border-radius: 6px; overflow: hidden; background: #ffffff;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; color: #0f172a; table-layout: fixed;">
+              <div style="width: 100%; border: 1.5px solid #475569; border-radius: 6px; overflow: hidden; background: #ffffff;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; color: #000000; table-layout: fixed;">
                   <colgroup>
                     <col style="width: 10%;" />
                     <col style="width: 74%;" />
@@ -902,22 +902,22 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                     <col style="width: 4%;" />
                   </colgroup>
                   <thead>
-                    <tr style="background-color: #f1f5f9; font-weight: 900; font-size: 10.5px; border-bottom: 1.5px solid #94a3b8;">
-                      <th style="border-right: 1px solid #94a3b8; padding: 4px; text-align: center; line-height: 1.2;">
+                    <tr style="background-color: #f1f5f9; font-weight: 800; font-size: 12px; color: #000000; border-bottom: 1.5px solid #475569;">
+                      <th style="border-right: 1px solid #64748b; padding: 5px 4px; text-align: center; line-height: 1.25;">
                         अध्ययन<br />निष्पत्ती<br />क्र.
                       </th>
-                      <th style="border-right: 1px solid #94a3b8; padding: 4px 6px; text-align: center; vertical-align: middle;">
+                      <th style="border-right: 1px solid #64748b; padding: 5px 6px; text-align: center; vertical-align: middle;">
                         अध्ययन निष्पत्ती
                       </th>
                       <th colSpan="4" style="padding: 0; text-align: center;">
-                        <div style="border-bottom: 1px solid #94a3b8; padding: 2px 0; font-weight: 900; text-align: center; font-size: 10.5px;">
+                        <div style="border-bottom: 1px solid #64748b; padding: 3px 0; font-weight: 800; text-align: center; font-size: 12px;">
                           स्तर
                         </div>
-                        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 10px;">
-                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">1</div>
-                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">2</div>
-                          <div style="border-right: 1px solid #94a3b8; padding: 2px 0; text-align: center; font-weight: bold;">3</div>
-                          <div style="padding: 2px 0; text-align: center; font-weight: bold;">4</div>
+                        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); font-size: 11.5px;">
+                          <div style="border-right: 1px solid #64748b; padding: 2px 0; text-align: center; font-weight: 800;">1</div>
+                          <div style="border-right: 1px solid #64748b; padding: 2px 0; text-align: center; font-weight: 800;">2</div>
+                          <div style="border-right: 1px solid #64748b; padding: 2px 0; text-align: center; font-weight: 800;">3</div>
+                          <div style="padding: 2px 0; text-align: center; font-weight: 800;">4</div>
                         </div>
                       </th>
                     </tr>
@@ -926,14 +926,14 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                 </table>
               </div>
             </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px; border-top: 1px solid #cbd5e1; margin-top: 6px; font-size: 10.5px; font-weight: bold; color: #1e293b;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 7px; border-top: 1px solid #94a3b8; margin-top: 6px; font-size: 12px; font-weight: 700; color: #0f172a;">
               <div style="text-align: center;">
-                <p style="font-weight: 800; margin: 0;">${schoolData.teacherName || "वर्गशिक्षक"}</p>
-                <p style="font-size: 9.5px; color: #64748b; font-weight: 500; margin: 0;">वर्गशिक्षक</p>
+                <p style="font-weight: 800; margin: 0; color: #000000;">${schoolData.teacherName || "वर्गशिक्षक"}</p>
+                <p style="font-size: 11px; color: #1e293b; font-weight: 700; margin: 0;">वर्गशिक्षक</p>
               </div>
               <div style="text-align: center;">
-                <p style="font-weight: 800; margin: 0;">${schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                <p style="font-size: 9.5px; color: #64748b; font-weight: 500; margin: 0;">मुख्याध्यापक</p>
+                <p style="font-weight: 800; margin: 0; color: #000000;">${schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                <p style="font-size: 11px; color: #1e293b; font-weight: 700; margin: 0;">मुख्याध्यापक</p>
               </div>
             </div>
           </div>
@@ -951,6 +951,12 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         return;
       }
 
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+
       const pdf = new jsPDF({
         unit: "mm",
         format: "a4",
@@ -958,7 +964,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         compress: true,
       });
 
-      const captureScale = Math.min(2, window.devicePixelRatio || 2);
+      const captureScale = 3;
 
       for (let i = 0; i < pageElements.length; i++) {
         console.log(`Generating PDF page ${i + 1}/${pageElements.length}`);
@@ -995,12 +1001,12 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         const x = (PAGE_WIDTH - renderWidth) / 2;
         const y = (PAGE_HEIGHT - renderHeight) / 2;
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.88);
+        const imgData = canvas.toDataURL("image/png");
 
         if (i > 0) pdf.addPage();
         pdf.addImage(
           imgData,
-          "JPEG",
+          "PNG",
           x,
           y,
           renderWidth,
@@ -1240,7 +1246,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   const sharirikOutcomes = getClassOutcomes(selectedClass, "sharirik", customOutcomesData);
 
   return (
-    <div className="font-sans text-slate-800">
+    <div className="text-black" style={{ fontFamily: "'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif", letterSpacing: 0 }}>
       {/* Top Action Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4 no-print">
         <div className="flex items-center gap-3">
@@ -1297,16 +1303,16 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             <div key={`screen_${student.id}`} className="space-y-6">
               {activeSubjectSections.map((sec) => (
                 <div key={`screen_${student.id}_${sec.key}`} className="bg-white p-5 border border-slate-200 rounded-2xl shadow-sm">
-                  <h1 className="text-lg font-black text-blue-900 text-center mb-2.5 border-b-2 border-blue-900 pb-1 tracking-tight">
+                  <h1 className="text-[18px] font-extrabold text-blue-900 text-center mb-2.5 border-b-2 border-blue-900 pb-1">
                     अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
                   </h1>
 
-                  <div className="flex flex-wrap items-center justify-between text-xs font-black text-slate-800 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-300 mb-3 gap-2">
-                    <span>विद्यार्थ्याचे नाव - <b className="text-slate-900 font-black">{student.fullName || student.name}</b></span>
-                    <span>इयत्ता - <b>{selectedClass}</b></span>
-                    <span>तुकडी - <b>{student.division || student.section || student.tukdi || division}</b></span>
-                    <span>हजेरी क्र. <b>{student.rollNo}</b></span>
-                    <span>{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+                  <div className="flex flex-wrap items-center justify-between text-[12.5px] font-bold text-slate-900 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-400 mb-3 gap-2">
+                    <span>विद्यार्थ्याचे नाव - <b className="text-black font-extrabold">{student.fullName || student.name}</b></span>
+                    <span>इयत्ता - <b className="text-black font-extrabold">{selectedClass}</b></span>
+                    <span>तुकडी - <b className="text-black font-extrabold">{student.division || student.section || student.tukdi || division}</b></span>
+                    <span>हजेरी क्र. <b className="text-black font-extrabold">{student.rollNo}</b></span>
+                    <span className="font-extrabold">{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
                   </div>
 
                   {/* Single Continuous Table for Web Screen View */}
@@ -1318,14 +1324,14 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                     student={student}
                   />
 
-                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-200 mt-2 text-[11px] font-bold text-slate-800">
+                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-400 mt-2 text-[12px] font-bold text-slate-900">
                     <div className="text-center">
-                      <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                      <p className="text-[10px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                      <p className="font-extrabold text-black">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                      <p className="text-[11px] text-slate-800 font-bold">वर्गशिक्षक</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                      <p className="text-[10px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                      <p className="font-extrabold text-black">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                      <p className="text-[11px] text-slate-800 font-bold">मुख्याध्यापक</p>
                     </div>
                   </div>
                 </div>
@@ -1337,6 +1343,17 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
       {/* -------------------- 2. PDF CAPTURE CONTAINER (PAGINATED & BALANCED A4 PAGES FOR PDF DOWNLOAD) -------------------- */}
       <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto hidden print:block">
+        <style>{`
+          .cce-pdf-container .pdf-page, .cce-pdf-container .pdf-page * {
+            font-weight: 700 !important;
+          }
+          .cce-pdf-container .pdf-page .font-extrabold, .cce-pdf-container .pdf-page b, .cce-pdf-container .pdf-page strong, .cce-pdf-container .pdf-page th, .cce-pdf-container .pdf-page h1, .cce-pdf-container .pdf-page h2, .cce-pdf-container .pdf-page h3 {
+            font-weight: 800 !important;
+          }
+          .cce-pdf-container .pdf-page .font-black {
+            font-weight: 900 !important;
+          }
+        `}</style>
         {(() => {
           const displayedStudents = students;
           let globalPageIndex = 0;
@@ -1399,17 +1416,17 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                   >
                     <div>
                       {/* Header Title */}
-                      <h1 className="text-lg font-black text-blue-900 text-center mb-2.5 border-b-2 border-blue-900 pb-1 tracking-tight">
+                      <h1 className="text-[18px] font-extrabold text-blue-900 text-center mb-2.5 border-b-2 border-blue-900 pb-1">
                         अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
                       </h1>
 
                       {/* Student Metadata Bar */}
-                      <div className="flex items-center justify-between text-xs font-black text-slate-800 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-300 mb-3">
-                        <span>विद्यार्थ्याचे नाव - <b className="text-slate-900 font-black">{student.fullName || student.name}</b></span>
-                        <span>इयत्ता - <b>{selectedClass}</b></span>
-                        <span>तुकडी - <b>{student.division || student.section || student.tukdi || division}</b></span>
-                        <span>हजेरी क्र. <b>{student.rollNo}</b></span>
-                        <span>{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+                      <div className="flex items-center justify-between text-[12.5px] font-bold text-slate-900 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-400 mb-3">
+                        <span>विद्यार्थ्याचे नाव - <b className="text-black font-extrabold">{student.fullName || student.name}</b></span>
+                        <span>इयत्ता - <b className="text-black font-extrabold">{selectedClass}</b></span>
+                        <span>तुकडी - <b className="text-black font-extrabold">{student.division || student.section || student.tukdi || division}</b></span>
+                        <span>हजेरी क्र. <b className="text-black font-extrabold">{student.rollNo}</b></span>
+                        <span className="font-extrabold">{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
                       </div>
 
                       {/* Chunked Subject Table */}
@@ -1424,16 +1441,16 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
                     {/* Signatures Footer */}
                     <div
-                      className="flex items-center justify-between pt-2.5 border-t border-slate-200 mt-2 text-[11px] font-bold text-slate-800"
+                      className="flex items-center justify-between pt-2.5 border-t border-slate-400 mt-2 text-[12px] font-bold text-slate-900"
                       style={{ breakInside: "avoid", pageBreakInside: "avoid" }}
                     >
                       <div className="text-center">
-                        <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                        <p className="text-[10px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                        <p className="font-extrabold text-black">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                        <p className="text-[11px] text-slate-800 font-bold">वर्गशिक्षक</p>
                       </div>
                       <div className="text-center">
-                        <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                        <p className="text-[10px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                        <p className="font-extrabold text-black">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                        <p className="text-[11px] text-slate-800 font-bold">मुख्याध्यापक</p>
                       </div>
                     </div>
                   </div>
