@@ -21,9 +21,96 @@ import { db } from "@/lib/firebase";
 import { doc, updateDoc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
 import { cleanThoughtText, getDefaultSuvicharForDate, isDefaultFallbackThought } from "@/lib/parse-diary-file";
 
+const MARATHI_DIGITS = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+
+export const toAsciiDigits = (raw: string | undefined | null): string => {
+  if (!raw) return "";
+  let s = String(raw);
+  for (let i = 0; i < 10; i++) {
+    s = s.replaceAll(MARATHI_DIGITS[i], String(i));
+  }
+  return s;
+};
+
+export const toMarathiDigits = (raw: string | undefined | null): string => {
+  if (!raw) return "";
+  return String(raw).replace(/[0-9]/g, (d) => MARATHI_DIGITS[Number(d)]);
+};
+
+const MARATHI_CLASS_MAP: Record<string, string> = {
+  "1": "पहिली",
+  "1st": "पहिली",
+  "i": "पहिली",
+  "2": "दुसरी",
+  "2nd": "दुसरी",
+  "ii": "दुसरी",
+  "3": "तिसरी",
+  "3rd": "तिसरी",
+  "iii": "तिसरी",
+  "4": "चौथी",
+  "4th": "चौथी",
+  "iv": "चौथी",
+  "5": "पाचवी",
+  "5th": "पाचवी",
+  "v": "पाचवी",
+  "6": "सहावी",
+  "6th": "सहावी",
+  "vi": "सहावी",
+  "7": "सातवी",
+  "7th": "सातवी",
+  "vii": "सातवी",
+  "8": "आठवी",
+  "8th": "आठवी",
+  "viii": "आठवी",
+  "9": "नववी",
+  "9th": "नववी",
+  "ix": "नववी",
+  "10": "दहावी",
+  "10th": "दहावी",
+  "x": "दहावी",
+};
+
+export const toMarathiClassName = (raw: string | undefined | null): string => {
+  if (!raw || raw.trim() === "" || raw.trim() === "-") return "-";
+  const stripped = toAsciiDigits(raw)
+    .trim()
+    .replace(/^(?:class|std|standard|grade|इयत्ता)\s*[-:.]?\s*/i, "")
+    .trim();
+  const mapped = MARATHI_CLASS_MAP[stripped.toLowerCase()];
+  if (mapped) return mapped;
+  return toMarathiDigits(raw.replace(/^(?:class|std|standard|grade)\s*/i, "").trim());
+};
+
+const ENGLISH_TO_MARATHI_DAYS: Record<string, string> = {
+  sunday: "रविवार",
+  sun: "रविवार",
+  monday: "सोमवार",
+  mon: "सोमवार",
+  tuesday: "मंगळवार",
+  tue: "मंगळवार",
+  wednesday: "बुधवार",
+  wed: "बुधवार",
+  thursday: "गुरुवार",
+  thu: "गुरुवार",
+  friday: "शुक्रवार",
+  fri: "शुक्रवार",
+  saturday: "शनिवार",
+  sat: "शनिवार",
+};
+
+export const toMarathiDayName = (rawDay: string | undefined | null, dateStr?: string): string => {
+  const trimmed = (rawDay || "").trim();
+  if (trimmed && trimmed !== "-") {
+    const mapped = ENGLISH_TO_MARATHI_DAYS[trimmed.toLowerCase()];
+    if (mapped) return mapped;
+    return toMarathiDigits(trimmed);
+  }
+  return getMarathiDayName(dateStr || "") || "-";
+};
+
 export const formatCleanDate = (raw: string | undefined | null) => {
   if (!raw) return "-";
-  const cleaned = raw.trim();
+  const cleaned = toAsciiDigits(raw).trim();
   let m = cleaned.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
   if (m) {
     let year = parseInt(m[1], 10);
@@ -42,6 +129,102 @@ export const formatCleanDate = (raw: string | undefined | null) => {
     return `${day}/${month}/${year}`;
   }
   return cleaned;
+};
+
+export const fitPdfDayPageToA4 = (
+  pageEl: HTMLElement,
+  contentWidth: number = 754,
+  maxAllowedHeight: number = 1040
+) => {
+  const innerEl = pageEl.querySelector<HTMLElement>(".pdf-day-inner");
+  if (!innerEl) return;
+
+  innerEl.style.minHeight = "0px";
+
+  const applyTableTypography = (
+    tdMainSize: number,
+    tdSideSize: number,
+    thSize: number,
+    lineHeight: number,
+    cellPadding: string
+  ) => {
+    innerEl.querySelectorAll<HTMLElement>("table.main-diary-table th").forEach((th) => {
+      th.style.fontSize = `${thSize}px`;
+      th.style.padding = cellPadding;
+      th.style.lineHeight = String(lineHeight);
+    });
+    innerEl.querySelectorAll<HTMLTableRowElement>("table.main-diary-table tbody tr").forEach((tr) => {
+      const tds = tr.querySelectorAll<HTMLElement>("td");
+      tds.forEach((td, tdIdx) => {
+        td.style.fontSize = `${tdIdx >= 5 ? tdSideSize : tdMainSize}px`;
+        td.style.padding = cellPadding;
+        td.style.lineHeight = String(lineHeight);
+      });
+    });
+  };
+
+  if (innerEl.scrollHeight <= maxAllowedHeight) {
+    // Step up to the largest font size that still fits comfortably inside 1 A4 page
+    const upscalePresets: Array<[number, number, number, number, string]> = [
+      [13.5, 12.5, 12.5, 1.35, "6px 4px"],
+      [13, 12, 12, 1.32, "5px 4px"],
+      [12.5, 11.5, 12, 1.3, "5px 4px"],
+      [12, 11.5, 11.5, 1.28, "4.5px 4px"],
+    ];
+    for (const [tdMain, tdSide, thSz, lh, pad] of upscalePresets) {
+      applyTableTypography(tdMain, tdSide, thSz, lh, pad);
+      if (innerEl.scrollHeight <= maxAllowedHeight) {
+        break;
+      }
+    }
+    // Revert to default base if even 12px pushed over maxAllowedHeight
+    if (innerEl.scrollHeight > maxAllowedHeight) {
+      applyTableTypography(11.5, 11, 11.5, 1.26, "4px 4px");
+    }
+  } else {
+    // Compact down step-by-step if dense day overflows 1 page
+    const downscalePresets: Array<[number, number, number, number, string]> = [
+      [10.5, 10, 10.5, 1.22, "3.5px 3px"],
+      [10, 9.5, 10, 1.2, "3px 3px"],
+      [9.5, 9, 9.5, 1.18, "2.5px 3px"],
+      [8.8, 8.5, 9, 1.15, "2.5px 2.5px"],
+    ];
+    for (const [tdMain, tdSide, thSz, lh, pad] of downscalePresets) {
+      applyTableTypography(tdMain, tdSide, thSz, lh, pad);
+      if (innerEl.scrollHeight <= maxAllowedHeight) {
+        break;
+      }
+    }
+  }
+
+  // Final proportional scale safeguard if ultra-dense content still exceeds 1 page
+  const actualHeight = innerEl.scrollHeight;
+  if (actualHeight > maxAllowedHeight) {
+    const scale = maxAllowedHeight / actualHeight;
+    innerEl.style.transform = `scale(${scale})`;
+    innerEl.style.transformOrigin = "top left";
+    innerEl.style.width = `${contentWidth / scale}px`;
+  } else {
+    // Vertically expand table rows so the table stretches cleanly down to fill the available print-safe area
+    const remainingSpace = maxAllowedHeight - actualHeight - 8;
+    const tbodyRows = innerEl.querySelectorAll<HTMLTableRowElement>("table.main-diary-table tbody tr");
+    if (remainingSpace > 12 && tbodyRows.length > 0) {
+      const extraPerRow = Math.floor(remainingSpace / tbodyRows.length);
+      tbodyRows.forEach((tr) => {
+        const currentH = tr.getBoundingClientRect().height;
+        const targetH = Math.floor(currentH + extraPerRow);
+        tr.style.height = `${targetH}px`;
+        tr.querySelectorAll<HTMLElement>("td").forEach((td) => {
+          td.style.height = `${targetH}px`;
+        });
+      });
+    }
+    innerEl.style.minHeight = `${maxAllowedHeight}px`;
+  }
+};
+
+export const formatMarathiDate = (raw: string | undefined | null): string => {
+  return toMarathiDigits(formatCleanDate(raw));
 };
 
 export const formatDateToIso = (raw: string | undefined | null): string => {
@@ -119,12 +302,13 @@ const normalizeDateStr = (raw: string | undefined | null) => {
 export const getMarathiDayName = (dateStr: string) => {
   if (!dateStr || dateStr === "-") return "";
   try {
-    let m = dateStr.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+    const asciiDate = toAsciiDigits(dateStr).trim();
+    let m = asciiDate.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
     let d: Date | null = null;
     if (m) {
       d = new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
     } else {
-      m = dateStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+      m = asciiDate.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
       if (m) {
         let y = parseInt(m[3]);
         if (y < 100) y += 2000;
@@ -1100,7 +1284,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
           {/* Top Pill Badges Bar & Edit Tip */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-bold">
             <span className="px-3.5 py-1.5 bg-slate-100 text-slate-900 border border-slate-200 rounded-full font-extrabold">
-              {p.date ? `दिनांक: ${formatCleanDate(p.date)}` : `Day ${idx + 1}`}
+              {p.date ? `दिनांक: ${formatMarathiDate(p.date)}` : `दिवस ${toMarathiDigits(String(idx + 1))}`}
             </span>
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-[11px] font-black flex items-center gap-1.5 shadow-sm">
@@ -1122,27 +1306,27 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-center font-bold text-slate-900">
                 <div>
                   <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">दिनांक</span>
-                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{formatCleanDate(p.date)}</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{formatMarathiDate(p.date)}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">वार</span>
-                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{p.day && p.day !== "-" ? p.day : (getMarathiDayName(p.date) || "-")}</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiDayName(p.day, p.date)}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">वर्गशिक्षक</span>
-                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-")}</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiDigits(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-"))}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">शाळा</span>
-                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-")}</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiDigits(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-"))}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">इयत्ता</span>
-                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-")}</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-"))}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">सन</span>
-                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27")}</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiDigits(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27"))}</span>
                 </div>
               </div>
             </div>
@@ -2128,18 +2312,18 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           const headers = defaultHeaders
             .map((h: string) => `<th style="background-color:#e2e8f0;color:#0f172a;padding:10px;text-align:center;font-weight:bold;border:1.5pt solid #475569;">${cleanText(h)}</th>`).join("");
 
-          const dayVal = cleanText(p.day && p.day !== "-" ? p.day : (getMarathiDayName(p.date) || "-"));
-          const teacherVal = cleanText(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-"));
-          const schoolVal = cleanText(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-"));
-          const stdVal = cleanText(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-"));
-          const yearVal = cleanText(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27"));
+          const dayVal = cleanText(toMarathiDayName(p.day, p.date));
+          const teacherVal = cleanText(toMarathiDigits(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-")));
+          const schoolVal = cleanText(toMarathiDigits(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-")));
+          const stdVal = cleanText(toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-")));
+          const yearVal = cleanText(toMarathiDigits(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27")));
 
           return `
             <div style="margin-bottom: 25px; page-break-after: always;">
               <h2 style="font-size: 20px; font-weight: 900; text-align: center; color: #0f172a; margin-bottom: 10px;">दैनंदिन पाठ टाचण</h2>
               <table style="width:100%; border-collapse:collapse; margin-bottom:15px; background:#f1f5f9; border:2pt solid #475569; font-size:11px;">
                 <tr>
-                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>दिनांक:</b> <span style="color:#0f172a;">${cleanText(formatCleanDate(p.date))}</span></td>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>दिनांक:</b> <span style="color:#0f172a;">${cleanText(formatMarathiDate(p.date))}</span></td>
                   <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>वार:</b> ${dayVal}</td>
                   <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>वर्गशिक्षक:</b> ${teacherVal}</td>
                 </tr>
@@ -2327,66 +2511,66 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       const dayBlocks = validPages.map((p: any, idx: number) => {
         const rows = (p.periods || []).map((row: any, rIdx: number) => `
           <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
-            <td style="box-sizing:border-box;text-align:center;font-weight:900;color:#0f172a;width:${colWidths[0]};font-size:10px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
+            <td style="box-sizing:border-box;text-align:center;font-weight:900;color:#0f172a;width:${colWidths[0]};font-size:11.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
               <span style="color:#ea580c;margin-right:2px;">${row.period}</span> ${row.subject || "-"}
             </td>
-            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#1e293b;width:${colWidths[1]};font-size:10px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.topic || "-"}</td>
-            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#1e293b;width:${colWidths[2]};font-size:10px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.subtopic || "-"}</td>
-            <td style="box-sizing:border-box;text-align:left;color:#047857;font-weight:800;width:${colWidths[3]};font-size:10px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.outcome || "-"}</td>
-            <td style="box-sizing:border-box;text-align:left;color:#334155;font-weight:700;width:${colWidths[4]};font-size:10px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.experience || "-"}</td>
-            <td style="box-sizing:border-box;text-align:center;color:#334155;font-weight:700;width:${colWidths[5]};font-size:9.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:anywhere;word-break:break-word;white-space:normal;">${row.tools || "-"}</td>
-            <td style="box-sizing:border-box;text-align:center;color:#334155;font-weight:700;width:${colWidths[6]};font-size:9.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:anywhere;word-break:break-word;white-space:normal;">${row.materials || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#1e293b;width:${colWidths[1]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.topic || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#1e293b;width:${colWidths[2]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.subtopic || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;color:#047857;font-weight:800;width:${colWidths[3]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.outcome || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;color:#334155;font-weight:700;width:${colWidths[4]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.experience || "-"}</td>
+            <td style="box-sizing:border-box;text-align:center;color:#334155;font-weight:700;width:${colWidths[5]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.tools || "-"}</td>
+            <td style="box-sizing:border-box;text-align:center;color:#334155;font-weight:700;width:${colWidths[6]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.materials || "-"}</td>
           </tr>`).join("");
 
         const headers = defaultHeaders
           .map((h: string, hIdx: number) => {
-            return `<th style="box-sizing:border-box;width:${colWidths[hIdx] || "auto"};background-color:#e2e8f0 !important;color:#0f172a !important;padding:6px 3px;text-align:center;font-size:10px;font-weight:900;border:1.5px solid #475569;line-height:1.2;word-wrap:break-word;overflow-wrap:break-word;white-space:normal;">${h}</th>`;
+            return `<th style="box-sizing:border-box;width:${colWidths[hIdx] || "auto"};background-color:#e2e8f0 !important;color:#0f172a !important;padding:6px 3px;text-align:center;font-size:11.5px;font-weight:900;border:1.5px solid #475569;line-height:1.22;word-wrap:break-word;overflow-wrap:break-word;white-space:normal;">${h}</th>`;
           }).join("");
 
-        const dayVal = p.day && p.day !== "-" ? p.day : (getMarathiDayName(p.date) || "-");
-        const teacherVal = p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-");
-        const schoolVal = p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-");
-        const stdVal = p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-");
-        const yearVal = p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27");
+        const dayVal = toMarathiDayName(p.day, p.date);
+        const teacherVal = toMarathiDigits(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-"));
+        const schoolVal = toMarathiDigits(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-"));
+        const stdVal = toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-"));
+        const yearVal = toMarathiDigits(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27"));
 
         return `
-          <div class="pdf-day-page ${idx > 0 ? "html2pdf-page-break" : ""}" style="width: 794px; height: 1116px; box-sizing: border-box; padding: 12px 16px; background: #ffffff; overflow: hidden; position: relative;">
-            <div class="pdf-day-inner" style="width: 762px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; min-height: 1090px;">
+          <div class="pdf-day-page ${idx > 0 ? "html2pdf-page-break" : ""}" style="width: 794px; height: 1116px; box-sizing: border-box; padding: 36px 20px; background: #ffffff; overflow: hidden; position: relative;">
+            <div class="pdf-day-inner" style="width: 754px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; min-height: 1040px;">
               <div>
                 <div style="text-align: center; margin-bottom: 6px;">
-                  <h2 style="font-size: 18px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; margin: 0;">दैनंदिन पाठ टाचण</h2>
+                  <h2 style="font-size: 20px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; margin: 0;">दैनंदिन पाठ टाचण</h2>
                 </div>
                 <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 6px; margin-bottom: 6px; background: #ffffff;">
                   <tr>
-                    <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                      <div style="font-size: 9px; font-weight: 800; color: #475569;">दिनांक</div>
-                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${formatCleanDate(p.date)}</div>
+                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                      <div style="font-size: 10px; font-weight: 800; color: #475569;">दिनांक</div>
+                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${formatMarathiDate(p.date)}</div>
                     </td>
-                    <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                      <div style="font-size: 9px; font-weight: 800; color: #475569;">वार</div>
-                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
+                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                      <div style="font-size: 10px; font-weight: 800; color: #475569;">वार</div>
+                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
                     </td>
-                    <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                      <div style="font-size: 9px; font-weight: 800; color: #475569;">वर्गशिक्षक</div>
-                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${teacherVal}</div>
+                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                      <div style="font-size: 10px; font-weight: 800; color: #475569;">वर्गशिक्षक</div>
+                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${teacherVal}</div>
                     </td>
                   </tr>
                   <tr>
-                    <td style="width: 33.33%; padding: 3px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                      <div style="font-size: 9px; font-weight: 800; color: #475569;">शाळा</div>
-                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${schoolVal}</div>
+                    <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                      <div style="font-size: 10px; font-weight: 800; color: #475569;">शाळा</div>
+                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${schoolVal}</div>
                     </td>
-                    <td style="width: 33.33%; padding: 3px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                      <div style="font-size: 9px; font-weight: 800; color: #475569;">इयत्ता</div>
-                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${stdVal}</div>
+                    <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                      <div style="font-size: 10px; font-weight: 800; color: #475569;">इयत्ता</div>
+                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${stdVal}</div>
                     </td>
-                    <td style="width: 33.33%; padding: 3px 8px; vertical-align: top; text-align: left;">
-                      <div style="font-size: 9px; font-weight: 800; color: #475569;">सन</div>
-                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${yearVal}</div>
+                    <td style="width: 33.33%; padding: 4px 8px; vertical-align: top; text-align: left;">
+                      <div style="font-size: 10px; font-weight: 800; color: #475569;">सन</div>
+                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${yearVal}</div>
                     </td>
                   </tr>
                 </table>
-                ${p.thought ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 3px 8px; margin-bottom: 6px; font-size: 10.5px; color: #78350f; text-align: center;"><strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #78350f;">"${p.thought}"</strong></div>` : ""}
+                ${p.thought ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 12px; color: #78350f; text-align: center;"><strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #78350f;">"${p.thought}"</strong></div>` : ""}
                 <table class="main-diary-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #475569; margin-bottom: 6px; background: #ffffff;">
                   <thead>
                     <tr>
@@ -2397,13 +2581,13 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
                 </table>
               </div>
               <div style="margin-top: 6px; shrink-0;">
-                <div style="font-size: 10px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</div>
+                <div style="font-size: 11px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</div>
                 <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
                 <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
                 <table style="width: 100%; border: none; margin-top: 12px; background: transparent;">
                   <tr>
-                    <td style="text-align: left; font-size: 11px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">वर्गशिक्षक स्वाक्षरी</td>
-                    <td style="text-align: right; font-size: 11px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">मुख्याध्यापक स्वाक्षरी</td>
+                    <td style="text-align: left; font-size: 12px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">वर्गशिक्षक स्वाक्षरी</td>
+                    <td style="text-align: right; font-size: 12px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">मुख्याध्यापक स्वाक्षरी</td>
                   </tr>
                 </table>
               </div>
@@ -2430,62 +2614,10 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       wrapper.appendChild(container);
       document.body.appendChild(wrapper);
 
-      // Auto-fit & vertically fill every single day page onto 1 full A4 page
+      // Auto-fit & vertically fill every single day page onto 1 A4 page with safe print gaps
       const dayPages = container.querySelectorAll<HTMLElement>(".pdf-day-page");
       dayPages.forEach((pageEl) => {
-        const innerEl = pageEl.querySelector<HTMLElement>(".pdf-day-inner");
-        if (!innerEl) return;
-
-        innerEl.style.minHeight = "0px";
-        const maxAllowedHeight = 1088;
-
-        // First compact pass if taller than 1 page
-        if (innerEl.scrollHeight > maxAllowedHeight) {
-          const cells = innerEl.querySelectorAll<HTMLElement>("table.main-diary-table td, table.main-diary-table th");
-          cells.forEach((c) => {
-            c.style.padding = "2.5px 3px";
-            c.style.fontSize = "8.8px";
-            c.style.lineHeight = "1.18";
-          });
-        } else if (innerEl.scrollHeight < 940) {
-          // Plenty of room: slightly enhance readability before expanding rows vertically
-          innerEl.querySelectorAll<HTMLElement>("table.main-diary-table th").forEach((th) => {
-            th.style.fontSize = "11px";
-            th.style.padding = "7px 4px";
-          });
-          innerEl.querySelectorAll<HTMLTableRowElement>("table.main-diary-table tbody tr").forEach((tr) => {
-            const tds = tr.querySelectorAll<HTMLElement>("td");
-            tds.forEach((td, tdIdx) => {
-              td.style.fontSize = tdIdx >= 5 ? "10px" : "11px";
-              td.style.lineHeight = "1.35";
-            });
-          });
-        }
-
-        // Measure after font adjustment
-        const actualHeight = innerEl.scrollHeight;
-        if (actualHeight > maxAllowedHeight) {
-          const scale = maxAllowedHeight / actualHeight;
-          innerEl.style.transform = `scale(${scale})`;
-          innerEl.style.transformOrigin = "top left";
-          innerEl.style.width = `${762 / scale}px`;
-        } else {
-          // Vertically expand table rows so the table stretches cleanly down to fill the full page
-          const remainingSpace = maxAllowedHeight - actualHeight - 8;
-          const tbodyRows = innerEl.querySelectorAll<HTMLTableRowElement>("table.main-diary-table tbody tr");
-          if (remainingSpace > 12 && tbodyRows.length > 0) {
-            const extraPerRow = Math.floor(remainingSpace / tbodyRows.length);
-            tbodyRows.forEach((tr) => {
-              const currentH = tr.getBoundingClientRect().height;
-              const targetH = Math.floor(currentH + extraPerRow);
-              tr.style.height = `${targetH}px`;
-              tr.querySelectorAll<HTMLElement>("td").forEach((td) => {
-                td.style.height = `${targetH}px`;
-              });
-            });
-          }
-          innerEl.style.minHeight = `${maxAllowedHeight}px`;
-        }
+        fitPdfDayPageToA4(pageEl, 754, 1040);
       });
 
       const baseName = activeFileName.replace(/\.[^/.]+$/, "") || "Teaching_Diary";

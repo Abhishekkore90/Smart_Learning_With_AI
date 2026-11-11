@@ -25,7 +25,16 @@ import {
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { DocumentLivePreview, formatDateToIso, getMarathiDayName } from "@/components/DocumentLivePreview";
+import {
+  DocumentLivePreview,
+  formatDateToIso,
+  getMarathiDayName,
+  toMarathiDigits,
+  toMarathiClassName,
+  toMarathiDayName,
+  formatMarathiDate,
+  fitPdfDayPageToA4,
+} from "@/components/DocumentLivePreview";
 import { getBunnyStorageUrl } from "@/lib/bunny-auth-pdf";
 import { useAuth } from "@/hooks/use-auth";
 import { cleanThoughtText, getDefaultSuvicharForDate, isDefaultFallbackThought } from "@/lib/parse-diary-file";
@@ -1221,64 +1230,72 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       .map(
         (item, rIdx) =>
           `<tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
-            <td style="box-sizing:border-box;width:${colWidths[0]};text-align:center;font-weight:900;color:#0f172a;font-size:10px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
+            <td style="box-sizing:border-box;width:${colWidths[0]};text-align:center;font-weight:900;color:#0f172a;font-size:11.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
               <span style="color:#ea580c;margin-right:2px;">${item.period}</span> ${item.subject}
             </td>
-            <td style="box-sizing:border-box;width:${colWidths[1]};text-align:left;font-weight:800;color:#1e293b;font-size:10px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.topic}</td>
-            <td style="box-sizing:border-box;width:${colWidths[2]};text-align:left;font-weight:800;color:#1e293b;font-size:10px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.subtopic || "-"}</td>
-            <td style="box-sizing:border-box;width:${colWidths[3]};text-align:left;color:#047857;font-weight:800;font-size:10px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.outcome || "-"}</td>
-            <td style="box-sizing:border-box;width:${colWidths[4]};text-align:left;color:#334155;font-weight:700;font-size:10px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.experience || "-"}</td>
-            <td style="box-sizing:border-box;width:${colWidths[5]};text-align:center;color:#334155;font-weight:700;font-size:9.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:anywhere;word-break:break-word;white-space:normal;">${item.tools || "-"}</td>
-            <td style="box-sizing:border-box;width:${colWidths[6]};text-align:center;color:#334155;font-weight:700;font-size:9.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:anywhere;word-break:break-word;white-space:normal;">${item.materials || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[1]};text-align:left;font-weight:800;color:#1e293b;font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.topic}</td>
+            <td style="box-sizing:border-box;width:${colWidths[2]};text-align:left;font-weight:800;color:#1e293b;font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.subtopic || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[3]};text-align:left;color:#047857;font-weight:800;font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.outcome || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[4]};text-align:left;color:#334155;font-weight:700;font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.experience || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[5]};text-align:center;color:#334155;font-weight:700;font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.tools || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[6]};text-align:center;color:#334155;font-weight:700;font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.materials || "-"}</td>
           </tr>`
       )
       .join("");
 
-    const displayDateVal = todayDiary.displayDate || (activeDate ? format(activeDate, "d/M/yyyy") : "-");
-    const dayVal = todayDiary.day || (activeDate ? format(activeDate, "eeee") : "-");
+    const rawDateStr = todayDiary.displayDate || (activeDate ? format(activeDate, "d/M/yyyy") : "-");
+    const displayDateVal = rawDateStr !== "-" ? formatMarathiDate(rawDateStr) : "-";
+    const dayVal = toMarathiDayName(
+      todayDiary.day && todayDiary.day !== "-" ? todayDiary.day : (activeDate ? ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"][activeDate.getDay()] : "-"),
+      rawDateStr
+    );
+    const teacherVal = toMarathiDigits(activeProfile.teacherName || "—");
+    const schoolVal = toMarathiDigits(activeProfile.schoolName || "—");
+    const classVal = toMarathiClassName(activeProfile.className || todayDiary.className || selectedClass);
+    const yearVal = toMarathiDigits(activeProfile.academicYear || "2026-27");
 
     return `
-    <div class="pdf-day-page" style="width: 794px; height: 1116px; box-sizing: border-box; padding: 12px 16px; background: #ffffff; overflow: hidden; position: relative;">
-      <div class="pdf-day-inner" style="width: 762px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; min-height: 1090px;">
+    <div class="pdf-day-page" style="width: 794px; height: 1116px; box-sizing: border-box; padding: 36px 20px; background: #ffffff; overflow: hidden; position: relative;">
+      <div class="pdf-day-inner" style="width: 754px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; min-height: 1040px;">
         <div>
           <div style="text-align: center; margin-bottom: 6px;">
-            <h1 style="font-size: 18px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; margin: 0;">दैनंदिन पाठ टाचण</h1>
+            <h1 style="font-size: 20px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; margin: 0;">दैनंदिन पाठ टाचण</h1>
           </div>
 
           <!-- 3x2 Header Box -->
           <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 6px; margin-bottom: 6px; background: #ffffff;">
             <tr>
-              <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                <div style="font-size: 9px; font-weight: 800; color: #475569;">दिनांक</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${displayDateVal}</div>
+              <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                <div style="font-size: 10px; font-weight: 800; color: #475569;">दिनांक</div>
+                <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${displayDateVal}</div>
               </td>
-              <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                <div style="font-size: 9px; font-weight: 800; color: #475569;">वार</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
+              <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                <div style="font-size: 10px; font-weight: 800; color: #475569;">वार</div>
+                <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
               </td>
-              <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                <div style="font-size: 9px; font-weight: 800; color: #475569;">वर्गशिक्षक</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${activeProfile.teacherName || "—"}</div>
+              <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                <div style="font-size: 10px; font-weight: 800; color: #475569;">वर्गशिक्षक</div>
+                <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${teacherVal}</div>
               </td>
             </tr>
             <tr>
-              <td style="width: 33.33%; padding: 3px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                <div style="font-size: 9px; font-weight: 800; color: #475569;">शाळा</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${activeProfile.schoolName || "—"}</div>
+              <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                <div style="font-size: 10px; font-weight: 800; color: #475569;">शाळा</div>
+                <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${schoolVal}</div>
               </td>
-              <td style="width: 33.33%; padding: 3px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                <div style="font-size: 9px; font-weight: 800; color: #475569;">इयत्ता</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${activeProfile.className || todayDiary.className || selectedClass}</div>
+              <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                <div style="font-size: 10px; font-weight: 800; color: #475569;">इयत्ता</div>
+                <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${classVal}</div>
               </td>
-              <td style="width: 33.33%; padding: 3px 8px; vertical-align: top; text-align: left;">
-                <div style="font-size: 9px; font-weight: 800; color: #475569;">सन</div>
-                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${activeProfile.academicYear || "2026-27"}</div>
+              <td style="width: 33.33%; padding: 4px 8px; vertical-align: top; text-align: left;">
+                <div style="font-size: 10px; font-weight: 800; color: #475569;">सन</div>
+                <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${yearVal}</div>
               </td>
             </tr>
           </table>
 
           <!-- Suvichar Box -->
-          ${cleanThoughtText(todayDiary.thought) ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 3px 8px; margin-bottom: 6px; font-size: 10.5px; color: #78350f; text-align: center;">
+          ${cleanThoughtText(todayDiary.thought) ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 12px; color: #78350f; text-align: center;">
             <strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #78350f;">"${cleanThoughtText(todayDiary.thought)}"</strong>
           </div>` : ''}
 
@@ -1286,13 +1303,13 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           <table class="main-diary-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #475569; margin-bottom: 6px; background: #ffffff;">
             <thead>
               <tr>
-                <th style="box-sizing:border-box;width:${colWidths[0]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">तासिका/ विषय</th>
-                <th style="box-sizing:border-box;width:${colWidths[1]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">पाठ / घटक</th>
-                <th style="box-sizing:border-box;width:${colWidths[2]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन मुद्दा</th>
-                <th style="box-sizing:border-box;width:${colWidths[3]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन निष्पत्ती</th>
-                <th style="box-sizing:border-box;width:${colWidths[4]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन अनुभवाचे स्वरूप</th>
-                <th style="box-sizing:border-box;width:${colWidths[5]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">साधन तंत्रे</th>
-                <th style="box-sizing:border-box;width:${colWidths[6]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">शैक्षणिक साहित्य</th>
+                <th style="box-sizing:border-box;width:${colWidths[0]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">तासिका/ विषय</th>
+                <th style="box-sizing:border-box;width:${colWidths[1]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">पाठ / घटक</th>
+                <th style="box-sizing:border-box;width:${colWidths[2]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन मुद्दा</th>
+                <th style="box-sizing:border-box;width:${colWidths[3]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन निष्पत्ती</th>
+                <th style="box-sizing:border-box;width:${colWidths[4]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन अनुभवाचे स्वरूप</th>
+                <th style="box-sizing:border-box;width:${colWidths[5]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">साधन तंत्रे</th>
+                <th style="box-sizing:border-box;width:${colWidths[6]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">शैक्षणिक साहित्य</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -1301,14 +1318,14 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
         <!-- Bottom Special Features & Signatures -->
         <div style="margin-top: 6px; shrink-0;">
-          <div style="font-size: 10px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</div>
+          <div style="font-size: 11px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</div>
           <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
           <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
           
           <table style="width: 100%; border: none; margin-top: 12px; background: transparent;">
             <tr>
-              <td style="text-align: left; font-size: 11px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">वर्गशिक्षक स्वाक्षरी</td>
-              <td style="text-align: right; font-size: 11px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">मुख्याध्यापक स्वाक्षरी</td>
+              <td style="text-align: left; font-size: 12px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">वर्गशिक्षक स्वाक्षरी</td>
+              <td style="text-align: right; font-size: 12px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">मुख्याध्यापक स्वाक्षरी</td>
             </tr>
           </table>
         </div>
@@ -1329,7 +1346,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     
     @page {
       size: A4 portrait;
-      margin: 6mm 8mm;
+      margin: 10mm 8mm;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1400,56 +1417,10 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       wrapper.appendChild(container);
       document.body.appendChild(wrapper);
 
-      // Auto-fit & vertically fill single-day page onto 1 full A4 page
+      // Auto-fit & vertically fill single-day page onto 1 A4 page with safe print gaps
       const pageEl = container.querySelector<HTMLElement>(".pdf-day-page");
-      const innerEl = container.querySelector<HTMLElement>(".pdf-day-inner");
-      if (pageEl && innerEl) {
-        innerEl.style.minHeight = "0px";
-        const maxAllowedHeight = 1088;
-
-        if (innerEl.scrollHeight > maxAllowedHeight) {
-          const cells = innerEl.querySelectorAll<HTMLElement>("table.main-diary-table td, table.main-diary-table th");
-          cells.forEach((c) => {
-            c.style.padding = "2.5px 3px";
-            c.style.fontSize = "8.8px";
-            c.style.lineHeight = "1.18";
-          });
-        } else if (innerEl.scrollHeight < 940) {
-          innerEl.querySelectorAll<HTMLElement>("table.main-diary-table th").forEach((th) => {
-            th.style.fontSize = "11px";
-            th.style.padding = "7px 4px";
-          });
-          innerEl.querySelectorAll<HTMLTableRowElement>("table.main-diary-table tbody tr").forEach((tr) => {
-            const tds = tr.querySelectorAll<HTMLElement>("td");
-            tds.forEach((td, tdIdx) => {
-              td.style.fontSize = tdIdx >= 5 ? "10px" : "11px";
-              td.style.lineHeight = "1.35";
-            });
-          });
-        }
-
-        const actualHeight = innerEl.scrollHeight;
-        if (actualHeight > maxAllowedHeight) {
-          const scale = maxAllowedHeight / actualHeight;
-          innerEl.style.transform = `scale(${scale})`;
-          innerEl.style.transformOrigin = "top left";
-          innerEl.style.width = `${762 / scale}px`;
-        } else {
-          const remainingSpace = maxAllowedHeight - actualHeight - 8;
-          const tbodyRows = innerEl.querySelectorAll<HTMLTableRowElement>("table.main-diary-table tbody tr");
-          if (remainingSpace > 12 && tbodyRows.length > 0) {
-            const extraPerRow = Math.floor(remainingSpace / tbodyRows.length);
-            tbodyRows.forEach((tr) => {
-              const currentH = tr.getBoundingClientRect().height;
-              const targetH = Math.floor(currentH + extraPerRow);
-              tr.style.height = `${targetH}px`;
-              tr.querySelectorAll<HTMLElement>("td").forEach((td) => {
-                td.style.height = `${targetH}px`;
-              });
-            });
-          }
-          innerEl.style.minHeight = `${maxAllowedHeight}px`;
-        }
+      if (pageEl) {
+        fitPdfDayPageToA4(pageEl, 754, 1040);
       }
 
       const fileName = `दैनंदिन_पाठ_टाचण_${todayDiary.displayDate || format(activeDate, "dd-MM-yyyy")}.pdf`;
@@ -1789,7 +1760,9 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           {/* Top Pill Badges Bar & Edit Tip */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-bold">
             <span className="px-3.5 py-1.5 bg-slate-100 text-slate-900 border border-slate-200 rounded-full font-extrabold">
-              दिनांक: {todayDiary.displayDate || (activeDate ? format(activeDate, "d/M/yyyy") : "-")}
+              दिनांक: {formatMarathiDate(todayDiary.displayDate && todayDiary.displayDate !== "-"
+                ? todayDiary.displayDate
+                : (activeDate ? format(activeDate, "d/M/yyyy") : "-"))}
             </span>
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-[11px] font-black flex items-center gap-1.5 shadow-sm">
@@ -1814,17 +1787,20 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               <div>
                 <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">दिनांक</span>
                 <span className="text-slate-900 font-black text-base block">
-                  {todayDiary.displayDate && todayDiary.displayDate !== "-"
+                  {formatMarathiDate(todayDiary.displayDate && todayDiary.displayDate !== "-"
                     ? todayDiary.displayDate
-                    : (activeDate ? format(activeDate, "d/M/yyyy") : "-")}
+                    : (activeDate ? format(activeDate, "d/M/yyyy") : "-"))}
                 </span>
               </div>
               <div>
                 <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">वार</span>
                 <span className="text-slate-900 font-black text-base block">
-                  {todayDiary.day && todayDiary.day !== "-"
-                    ? todayDiary.day
-                    : (activeDate ? ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"][activeDate.getDay()] : "-")}
+                  {toMarathiDayName(
+                    todayDiary.day && todayDiary.day !== "-"
+                      ? todayDiary.day
+                      : (activeDate ? ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"][activeDate.getDay()] : "-"),
+                    todayDiary.displayDate
+                  )}
                 </span>
               </div>
               <div>
@@ -1836,7 +1812,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                   className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text"
                   title="वर्गशिक्षक नाव बदलण्यासाठी येथे क्लिक करा"
                 >
-                  {activeProfile.teacherName || "—"}
+                  {toMarathiDigits(activeProfile.teacherName || "—")}
                 </span>
               </div>
               <div>
@@ -1848,7 +1824,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                   className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text"
                   title="शाळेचे नाव बदलण्यासाठी येथे क्लिक करा"
                 >
-                  {activeProfile.schoolName || "—"}
+                  {toMarathiDigits(activeProfile.schoolName || "—")}
                 </span>
               </div>
               <div>
@@ -1860,7 +1836,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                   className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text"
                   title="इयत्ता बदलण्यासाठी येथे क्लिक करा"
                 >
-                  {activeProfile.className || todayDiary.className || selectedClass}
+                  {toMarathiClassName(activeProfile.className || todayDiary.className || selectedClass)}
                 </span>
               </div>
               <div>
@@ -1872,7 +1848,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                   className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text"
                   title="सन बदलण्यासाठी येथे क्लिक करा"
                 >
-                  {activeProfile.academicYear || "2026-27"}
+                  {toMarathiDigits(activeProfile.academicYear || "2026-27")}
                 </span>
               </div>
             </div>
