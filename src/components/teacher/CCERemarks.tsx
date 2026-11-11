@@ -432,11 +432,9 @@ export function CCERemarks({
       if (!isMounted) return;
       if (docSnap.exists() && docSnap.data().remarks) {
         const remoteData = docSnap.data().remarks;
-        setCustomClassRemarks((prev) => ({
-          ...masterData,
-          ...prev,
-          ...remoteData,
-        }));
+        setCustomClassRemarks(remoteData);
+      } else {
+        setCustomClassRemarks(masterData);
       }
     });
 
@@ -448,11 +446,7 @@ export function CCERemarks({
         if (isMounted && res.ok) {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
-            setCustomClassRemarks((prev) => ({
-              ...masterData,
-              ...prev,
-              ...data,
-            }));
+            setCustomClassRemarks(data);
           }
         }
       } catch (err) {

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   ArrowLeft,
   Sparkles,
@@ -19,6 +19,11 @@ import {
   X,
   FileText,
   FolderPlus,
+  FileSpreadsheet,
+  FileUp,
+  CheckCheck,
+  Upload,
+  Database,
 } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { getClassRemarks } from "@/data/classRemarksData";
@@ -89,6 +94,7 @@ function AdminCCERemarksPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [migratingAll, setMigratingAll] = useState(false);
 
   // New remark input & inline edit state
   const [newRemarkText, setNewRemarkText] = useState("");
@@ -101,12 +107,52 @@ function AdminCCERemarksPage() {
   const [newSubjectName, setNewSubjectName] = useState("");
   const [newSubjectIcon, setNewSubjectIcon] = useState("📚");
 
+  // Excel / Word File Upload & Fullscreen Popup Modal State
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isParsingFile, setIsParsingFile] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
+  const [fetchedRemarks, setFetchedRemarks] = useState<string[]>([]);
+  const [modalSearchTerm, setModalSearchTerm] = useState("");
+
   const docId = `${selectedClass}_${selectedMedium}`;
 
   // Combined subjects list (Default + Custom Admin Subjects)
   const allSubjects = useMemo(() => {
     return [...DEFAULT_SUBJECTS_CONFIG, ...customSubjects];
   }, [customSubjects]);
+
+  // ── Helper: Save/Sync Remarks Store directly to Backend (Firestore, LocalStorage & Bunny) ──
+  const persistStoreToFirestore = async (
+    newStore: Record<string, string[]>,
+    newCustomSubjects?: CustomSubjectItem[]
+  ) => {
+    try {
+      const firestoreRef = doc(db, "cce_admin_remarks", docId);
+      await setDoc(
+        firestoreRef,
+        {
+          classId: selectedClass,
+          mediumId: selectedMedium,
+          remarks: newStore,
+          customSubjects: newCustomSubjects || customSubjects,
+          updatedAt: new Date().toISOString(),
+          updatedBy: "admin",
+        },
+        { merge: true }
+      );
+
+      // Local Cache update
+      localStorage.setItem(`cce_custom_remarks_${selectedClass}_${selectedMedium}`, JSON.stringify(newStore));
+
+      // Asynchronously update Bunny Storage CDN
+      const bunnyPath = `cce_remarks/class_${selectedClass}_${selectedMedium}_remarks.json`;
+      saveJsonToBunny(bunnyPath, newStore).catch(() => {});
+    } catch (e: any) {
+      console.error("Firestore auto-persist error:", e);
+      toast.error("बॅकएंडमध्ये सेव्ह करताना त्रुटी आली: " + (e?.message || e));
+    }
+  };
 
   // ── Load Master Remarks & Custom Subjects for Class & Medium ──
   useEffect(() => {
@@ -120,23 +166,29 @@ function AdminCCERemarksPage() {
       doc(db, "cce_admin_remarks", docId),
       (docSnap) => {
         if (!isMounted) return;
-        if (docSnap.exists()) {
+        if (docSnap.exists() && docSnap.data().remarks) {
           const data = docSnap.data();
           const remoteRemarks = data.remarks || {};
           const remoteCustomSubjects = data.customSubjects || [];
 
-          const merged: Record<string, string[]> = { ...defaultMaster };
-          Object.keys(remoteRemarks).forEach((k) => {
-            if (Array.isArray(remoteRemarks[k])) {
-              merged[k] = remoteRemarks[k];
-            }
-          });
-
-          setRemarksStore(merged);
+          setRemarksStore(remoteRemarks);
           setCustomSubjects(remoteCustomSubjects);
         } else {
+          // If not in Firestore yet, automatically seed into Firestore backend
           setRemarksStore(defaultMaster);
           setCustomSubjects([]);
+          setDoc(
+            doc(db, "cce_admin_remarks", docId),
+            {
+              classId: selectedClass,
+              mediumId: selectedMedium,
+              remarks: defaultMaster,
+              customSubjects: [],
+              updatedAt: new Date().toISOString(),
+              updatedBy: "system_init",
+            },
+            { merge: true }
+          ).catch((e) => console.warn("Auto-seed error:", e));
         }
         setLoading(false);
       },
@@ -155,11 +207,7 @@ function AdminCCERemarksPage() {
         if (isMounted && res.ok) {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
-            setRemarksStore((prev) => ({
-              ...defaultMaster,
-              ...prev,
-              ...data,
-            }));
+            setRemarksStore(data);
           }
         }
       } catch (e) {
@@ -186,6 +234,13 @@ function AdminCCERemarksPage() {
     return currentSubjectRemarks.filter((r) => r.toLowerCase().includes(q));
   }, [currentSubjectRemarks, searchTerm]);
 
+  // Filtered Remarks in Modal
+  const filteredModalRemarks = useMemo(() => {
+    if (!modalSearchTerm.trim()) return fetchedRemarks;
+    const q = modalSearchTerm.toLowerCase().trim();
+    return fetchedRemarks.filter((r) => r.toLowerCase().includes(q));
+  }, [fetchedRemarks, modalSearchTerm]);
+
   // ── Handle Add New Custom Subject ──
   const handleAddNewSubject = async () => {
     const trimmed = newSubjectName.trim();
@@ -211,11 +266,13 @@ function AdminCCERemarksPage() {
 
     setNewSubjectName("");
     setIsAddSubjectOpen(false);
-    toast.success(`🎉 '${trimmed}' हा नवीन विषय जोडला गेला!`);
+
+    await persistStoreToFirestore(updatedRemarksStore, updatedCustomSubjects);
+    toast.success(`🎉 '${trimmed}' हा नवीन विषय जोडला गेला व बॅकएंडमध्ये सेव्ह झाला!`);
   };
 
   // ── Handle Delete Custom Subject ──
-  const handleDeleteCustomSubject = (subjKey: string, subjName: string, e: React.MouseEvent) => {
+  const handleDeleteCustomSubject = async (subjKey: string, subjName: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm(`नक्की '${subjName}' हा विषय हटवायचा आहे का?`)) return;
 
@@ -226,11 +283,13 @@ function AdminCCERemarksPage() {
     setCustomSubjects(updatedCustomSubjects);
     setRemarksStore(updatedRemarksStore);
     setActiveSubjectKey(DEFAULT_SUBJECTS_CONFIG[0].key);
-    toast.success(`'${subjName}' विषय हटवला गेला.`);
+
+    await persistStoreToFirestore(updatedRemarksStore, updatedCustomSubjects);
+    toast.success(`'${subjName}' विषय बॅकएंडमधून यशस्वीरित्या हटवला गेला.`);
   };
 
   // ── Handle Add New Remark ──
-  const handleAddRemark = () => {
+  const handleAddRemark = async () => {
     const trimmed = newRemarkText.trim();
     if (!trimmed) {
       toast.error("कृपया नोंदीचे वर्णन टाका!");
@@ -247,11 +306,13 @@ function AdminCCERemarksPage() {
 
     setRemarksStore(updatedStore);
     setNewRemarkText("");
-    toast.success("✅ नोंद समाविष्ट केली! (जतन करण्यासाठी 'सर्व सेव्ह करा' वर क्लिक करा)");
+
+    await persistStoreToFirestore(updatedStore);
+    toast.success("✅ नोंद समाविष्ट केली व बॅकएंडमध्ये सेव्ह झाली!");
   };
 
   // ── Handle Edit Existing Remark ──
-  const handleSaveEdit = (originalIndex: number) => {
+  const handleSaveEdit = async (originalIndex: number) => {
     const trimmed = editingText.trim();
     if (!trimmed) {
       toast.error("नोंद रिकामी असू शकत नाही!");
@@ -265,18 +326,266 @@ function AdminCCERemarksPage() {
     setRemarksStore(updatedStore);
     setEditingIndex(null);
     setEditingText("");
-    toast.success("✅ नोंद अपडेट केली!");
+
+    await persistStoreToFirestore(updatedStore);
+    toast.success("✅ नोंद बॅकएंडमध्ये अपडेट केली व CCE डॅशबोर्डवर त्वरित लागू झाली!");
   };
 
   // ── Handle Delete Remark ──
-  const handleDeleteRemark = (indexToDelete: number) => {
-    if (!confirm("तुम्हाला नक्की ही नोंद हटवायची आहे का?")) return;
+  const handleDeleteRemark = async (indexToDelete: number) => {
+    if (!confirm("तुम्हाला नक्की ही नोंद हटवायची आहे का? CCE डॅशबोर्डवरूनही ती तात्काळ निघून जाईल.")) return;
 
     const updatedList = currentSubjectRemarks.filter((_, idx) => idx !== indexToDelete);
     const updatedStore = { ...remarksStore, [activeSubjectKey]: updatedList };
 
     setRemarksStore(updatedStore);
-    toast.success("🗑️ नोंद हटवली!");
+
+    await persistStoreToFirestore(updatedStore);
+    toast.success("🗑️ नोंद बॅकएंडमधून कायमची हटवली व CCE डॅशबोर्डवरूनही काढून टाकली!");
+  };
+
+  // ── Bulk Migrate All Code Remarks to Firestore Backend ──
+  const handleMigrateAllCodeRemarksToBackend = async () => {
+    if (!confirm("तुम्हाला नक्की सर्व १० वर्गांच्या सर्व विषयांच्या डीफॉल्ट नोंदी Firestore बॅकएंडमध्ये सेव्ह/मायग्रेट करायच्या आहेत का?")) return;
+    setMigratingAll(true);
+    toast.info("⚡ सर्व १० वर्गांच्या नोंदी Firestore बॅकएंडमध्ये सुरक्षित सेव्ह होत आहेत...", { duration: 6000 });
+
+    try {
+      let updatedCount = 0;
+      for (const c of CLASSES_LIST) {
+        for (const m of MEDIUMS_LIST) {
+          const dId = `${c.id}_${m.id}`;
+          const defaultData = getClassRemarks(c.id, m.id) || {};
+          const snap = await getDoc(doc(db, "cce_admin_remarks", dId));
+          if (!snap.exists() || !snap.data().remarks) {
+            await setDoc(doc(db, "cce_admin_remarks", dId), {
+              classId: c.id,
+              mediumId: m.id,
+              remarks: defaultData,
+              customSubjects: [],
+              updatedAt: new Date().toISOString(),
+              updatedBy: "admin_bulk_seed",
+            }, { merge: true });
+            updatedCount++;
+          }
+        }
+      }
+      toast.success(`🎉 सर्व वर्गांच्या नोंदी बॅकएंड डेटाबेसमध्ये सुरक्षित सेव्ह झाल्या!`);
+    } catch (e: any) {
+      console.error("Migration error:", e);
+      toast.error("मायग्रेशनमध्ये त्रुटी: " + (e?.message || e));
+    } finally {
+      setMigratingAll(false);
+    }
+  };
+
+  // ── Handle File Upload & Extract Nondis (Excel / Word) ──
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    e.target.value = ""; // Reset file input
+
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    if (!["xlsx", "xls", "csv", "docx", "doc"].includes(ext)) {
+      toast.error("कृपया फक्त एक्सेल (.xlsx, .xls, .csv) किंवा वर्ड (.docx) फाईल निवडा!");
+      return;
+    }
+
+    setIsParsingFile(true);
+    setUploadedFileName(file.name);
+    toast.info(`"${file.name}" मधून नोंदी वाचत आहे... (Parsing file...)`);
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const extracted: string[] = [];
+
+      // Helper to check if a cell or string is an index number, serial label, or table column header
+      const isIndexOrHeader = (text: string): boolean => {
+        const t = text.trim();
+        if (!t) return true;
+
+        // Pure numbers, Marathi numerals, Roman numerals, symbols, dates or punctuation
+        // e.g. "1", "२", "1.", "१)", "(1)", "1 - 10", "1/8/2026", "#", etc.
+        if (/^[\d०-९IVXLCDMivxlcdm\s\.\,\-\:\/\(\)\[\]\{\}\#\*\_\+\\\%\@\&\;\।\|\'\"`~^=]+$/.test(t)) {
+          return true;
+        }
+
+        // Strip leading/trailing punctuation and whitespace for comparison
+        const cleanHeader = t.replace(/^[\s\.\:\-\(\)\[\]\,\;\।\|\'\"`~^=]+|[\s\.\:\-\(\)\[\]\,\;\।\|\'\"`~^=]+$/g, "").toLowerCase();
+
+        // Variations of index headers:
+        // अ. क्र., अ.क्र., अ क्र, अ.क्रं., अनुक्रमांक, क्रमांक, क्र., क्र, Sr. No., S.No, etc.
+        const headerPatterns = [
+          /^अ[\.\s]*क्र[\.\s]*ं?[\.\s]*$/i,
+          /^अ[\.\s]*नं[\.\s]*$/i,
+          /^अनुक्रमांक[\.\s]*$/i,
+          /^क्रमांक[\.\s]*$/i,
+          /^क्र[\.\s]*ं?[\.\s]*$/i,
+          /^sr[\.\s]*no[\.\s]*$/i,
+          /^sr[\.\s]*$/i,
+          /^s[\.\s]*no[\.\s]*$/i,
+          /^no[\.\s]*$/i,
+          /^sl[\.\s]*no[\.\s]*$/i,
+          /^serial[\.\s]*no[\.\s]*$/i,
+          /^index[\.\s]*$/i,
+          /^(?:वर्णनात्मक\s*)?नोंद(?:ी)?[\.\s]*$/i,
+          /^remark(?:s)?[\.\s]*$/i,
+          /^विषय[\.\s]*$/i,
+          /^तपशील[\.\s]*$/i,
+          /^घटक[\.\s]*$/i,
+          /^पाठ[\.\s]*$/i,
+          /^मुद्दा[\.\s]*$/i,
+          /^कौशल्य[\.\s]*$/i,
+          /^विद्यार्थी(?:\s*नाव)?[\.\s]*$/i,
+          /^नाव[\.\s]*$/i,
+          /^इयत्ता[\.\s]*$/i,
+          /^वर्ग[\.\s]*$/i,
+          /^श्रेणी[\.\s]*$/i,
+          /^गुण[\.\s]*$/i,
+          /^शेरा[\.\s]*$/i,
+          /^अध्ययन\s*निष्पत्ती$/i,
+          /^अध्ययन\s*अनुभव$/i,
+          /^साधन\s*तंत्रे$/i,
+          /^शैक्षणिक\s*साहित्य$/i,
+        ];
+
+        if (headerPatterns.some((pattern) => pattern.test(cleanHeader) || pattern.test(t))) {
+          return true;
+        }
+
+        return false;
+      };
+
+      // Helper to process a text candidate and add genuine remarks
+      const processCandidate = (candidate: string) => {
+        if (!candidate) return;
+        const raw = candidate.trim();
+        if (!raw || raw.length < 3) return;
+
+        // 1. Skip if raw is an index or header
+        if (isIndexOrHeader(raw)) return;
+
+        // 2. Remove leading serial numbers e.g. "1. ", "१. ", "1) ", "१) ", "१ ", "1 - ", "• ", "- "
+        const cleaned = raw
+          .replace(/^[\d०-९]+[\.\)\-\:\s]+/g, "")
+          .replace(/^[\(（][\d०-९]+[\)）]\s*/g, "")
+          .replace(/^[•\-\*\>]\s*/g, "")
+          .trim();
+
+        // 3. Skip if after cleaning it's too short, empty, or an index/header
+        if (!cleaned || cleaned.length < 4) return;
+        if (isIndexOrHeader(cleaned)) return;
+
+        // 4. Skip pure numbers or dates that might remain
+        if (/^[\d०-९\s\.\,\-\:\/\(\)\[\]\{\}\#\*\_\+]+$/.test(cleaned)) return;
+
+        if (!extracted.includes(cleaned)) {
+          extracted.push(cleaned);
+        }
+      };
+
+      if (ext === "xlsx" || ext === "xls" || ext === "csv") {
+        const XLSX = await import("xlsx");
+        const workbook = XLSX.read(buffer, { type: "array" });
+
+        workbook.SheetNames.forEach((sheetName) => {
+          const sheet = workbook.Sheets[sheetName];
+          if (!sheet) return;
+          const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+
+          rows.forEach((row) => {
+            if (!Array.isArray(row)) return;
+            row.forEach((cell) => {
+              if (cell === null || cell === undefined) return;
+              processCandidate(String(cell));
+            });
+          });
+        });
+      } else if (ext === "docx" || ext === "doc") {
+        const mammoth = await import("mammoth");
+        const res = await mammoth.extractRawText({ arrayBuffer: buffer });
+        const text = res.value || "";
+        const lines = text.split(/\r?\n+/);
+
+        lines.forEach((line) => {
+          // Split by tabs as well in case of Word tables
+          const parts = line.split(/\t+/);
+          parts.forEach((part) => {
+            processCandidate(part);
+          });
+        });
+      }
+
+      if (extracted.length === 0) {
+        toast.error("या फाईलमध्ये कोणतीही योग्य वर्णनात्मक नोंद आढळली नाही. कृपया फाईल तपासा.");
+        return;
+      }
+
+      setFetchedRemarks(extracted);
+      setModalSearchTerm("");
+      setIsPreviewModalOpen(true);
+      toast.success(`🎉 फाईलवरून ${extracted.length} नोंदी फेच झाल्या! फुलस्क्रीन पॉपअपमध्ये तपासा.`);
+    } catch (err: any) {
+      console.error("File parse error:", err);
+      toast.error("फाईल वाचताना त्रुटी आली: " + (err?.message || "काहीतरी अडचण आली"));
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
+  // ── Modal Actions: Edit, Delete, Add Row ──
+  const updateFetchedRemark = (idx: number, newText: string) => {
+    const updated = [...fetchedRemarks];
+    updated[idx] = newText;
+    setFetchedRemarks(updated);
+  };
+
+  const deleteFetchedRemark = (idx: number) => {
+    const updated = fetchedRemarks.filter((_, i) => i !== idx);
+    setFetchedRemarks(updated);
+    toast.info("नोंद वगळली.");
+  };
+
+  const addExtraFetchedRemark = () => {
+    setFetchedRemarks((prev) => [...prev, ""]);
+  };
+
+  // ── Add All Fetched Remarks into CCE (Appended after last existing remark) ──
+  const handleAddAllFetchedRemarks = async () => {
+    const validNewRemarks = fetchedRemarks
+      .map((r) => r.trim())
+      .filter((r) => r.length > 0);
+
+    if (validNewRemarks.length === 0) {
+      toast.error("जोडण्यासाठी कोणतीही नोंद शिल्लक नाही!");
+      return;
+    }
+
+    // Filter out items already present in currentSubjectRemarks to avoid exact duplicates
+    const existingSet = new Set(currentSubjectRemarks);
+    const toAdd = validNewRemarks.filter((r) => !existingSet.has(r));
+
+    if (toAdd.length === 0) {
+      toast.info("या सर्व नोंदी आधीपासूनच CCE मध्ये अस्तित्वात आहेत!");
+      setIsPreviewModalOpen(false);
+      return;
+    }
+
+    // Append after the last existing remark (after the before nondis)
+    const updatedList = [...currentSubjectRemarks, ...toAdd];
+    const updatedStore = {
+      ...remarksStore,
+      [activeSubjectKey]: updatedList,
+    };
+
+    setRemarksStore(updatedStore);
+    setIsPreviewModalOpen(false);
+
+    // Save to Firestore backend immediately
+    await persistStoreToFirestore(updatedStore);
+
+    toast.success(`🎉 ${toAdd.length} नवीन नोंदी CCE बॅकएंडमध्ये यशस्वीरित्या जोडल्या गेल्या! CCE डॅशबोर्डवर लगेच दिसतील.`);
   };
 
   // ── Handle Save & Sync All to Backend (Firestore + Bunny CDN + LocalStorage) ──
@@ -339,7 +648,17 @@ function AdminCCERemarksPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={handleMigrateAllCodeRemarksToBackend}
+            disabled={migratingAll}
+            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-bold text-xs transition-all flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+            title="सर्व १० वर्गांच्या सर्व विषयांच्या डीफॉल्ट नोंदी थेट Firestore डेटाबेसमध्ये सेव्ह करा"
+          >
+            {migratingAll ? <Loader2 className="size-3.5 animate-spin text-blue-600" /> : <Database className="size-3.5 text-blue-600" />}
+            <span>सर्व नोंदी बॅकएंडमध्ये सेव्ह करा</span>
+          </button>
+
           <button
             onClick={handleSaveAllToBackend}
             disabled={saving}
@@ -500,6 +819,49 @@ function AdminCCERemarksPage() {
             <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-right">
               <div className="text-xs font-bold text-slate-500">एकूण नोंद संख्या</div>
               <div className="text-xl font-black text-blue-700">{currentSubjectRemarks.length}</div>
+            </div>
+          </div>
+
+          {/* ── EXCEL / WORD FILE UPLOAD BANNER ────────────────────────────────── */}
+          <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border-2 border-emerald-300 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <span className="p-3 rounded-2xl bg-white border border-emerald-300 text-emerald-600 shadow-xs shrink-0">
+                <FileSpreadsheet className="size-6" />
+              </span>
+              <div>
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900 flex items-center gap-1.5 flex-wrap">
+                  <span>फाईलवरून नोंदी अपलोड करा (Excel / Word Upload)</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-950 text-[10px] font-black">
+                    .xlsx / .xls / .docx
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-600 font-medium mt-0.5">
+                  या विषयासाठी एक्सेल शीट किंवा वर्ड फाईलमधून नोंदी फेच करून फुलस्क्रीन पॉपअपमध्ये तपासा, संपादित करा व CCE मध्ये जोडा.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".xlsx,.xls,.csv,.docx,.doc"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isParsingFile}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer transform hover:scale-105 active:scale-95 disabled:opacity-50"
+              >
+                {isParsingFile ? (
+                  <Loader2 className="size-4 animate-spin text-white" />
+                ) : (
+                  <FileUp className="size-4 stroke-[2.5]" />
+                )}
+                <span>📥 फाईल अपलोड करा (Upload File)</span>
+              </button>
             </div>
           </div>
 
@@ -716,6 +1078,156 @@ function AdminCCERemarksPage() {
               >
                 ➕ विषय जोडा
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── FULLSCREEN POPUP: FETCHED NONDIS PREVIEW & EDIT MODAL ────────────────── */}
+      {isPreviewModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col justify-between p-2 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 max-w-6xl w-full h-full mx-auto flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Top Header */}
+            <div className="bg-slate-900 text-white px-5 sm:px-8 py-4 sm:py-5 flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <FileSpreadsheet className="size-6" />
+                </span>
+                <div>
+                  <h3 className="text-base sm:text-xl font-extrabold flex items-center gap-2 flex-wrap">
+                    <span>फाईलवरून फेच केलेल्या नोंदी (Fetched Nondis Preview)</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-xs">
+                      {fetchedRemarks.length} नोंदी
+                    </span>
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300 mt-1 font-medium">
+                    <span className="text-amber-300 font-bold flex items-center gap-1">
+                      <FileText className="size-3.5" />
+                      {uploadedFileName}
+                    </span>
+                    <span>•</span>
+                    <span>वर्ग: <b className="text-white">{selectedClass}</b></span>
+                    <span>•</span>
+                    <span>माध्यम: <b className="text-white">{selectedMedium === "semi" ? "सेमी इंग्रजी" : "मराठी"}</b></span>
+                    <span>•</span>
+                    <span>विषय: <b className="text-white">{activeSubjectInfo.icon} {activeSubjectInfo.label}</b></span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleAddAllFetchedRemarks}
+                  disabled={saving || fetchedRemarks.filter((r) => r.trim()).length === 0}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs sm:text-sm transition-all flex items-center gap-2 shadow-lg cursor-pointer transform hover:scale-105 active:scale-95 disabled:opacity-50"
+                >
+                  <CheckCheck className="size-4 stroke-[3]" />
+                  <span>या सर्व नोंदी CCE मध्ये जोडा (Add All in CCE)</span>
+                </button>
+                <button
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                  title="बंद करा"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Sub-Header Toolbar */}
+            <div className="bg-slate-50 border-b border-slate-200 px-5 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <div className="relative flex-1 min-w-[220px] max-w-md">
+                <Search className="size-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={modalSearchTerm}
+                  onChange={(e) => setModalSearchTerm(e.target.value)}
+                  placeholder="फेच केलेल्या नोंदींमध्ये शोधा..."
+                  className="w-full bg-white border border-slate-300 focus:border-blue-600 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-900 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={addExtraFetchedRemark}
+                  className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-blue-700 border border-slate-300 text-xs font-black transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Plus className="size-3.5" />
+                  <span>एक नोंद जोडा</span>
+                </button>
+                <span className="text-xs text-slate-500 font-semibold">
+                  दाखवत आहे: <b className="text-slate-900">{filteredModalRemarks.length}</b> नोंदी
+                </span>
+              </div>
+            </div>
+
+            {/* Info notice bar */}
+            <div className="bg-amber-50/80 border-b border-amber-200/80 px-5 sm:px-8 py-2 text-[11px] sm:text-xs text-amber-900 flex items-center gap-2 shrink-0">
+              <Sparkles className="size-4 text-amber-600 shrink-0" />
+              <span>
+                <b>सूचना:</b> खालील प्रत्येक नोंद एडिटेबल आहे. तुम्हाला हवी असलेली दुरुस्ती थेट बॉक्समध्ये क्लिक करून करू शकता किंवा नको असलेली नोंद <b>🗑️</b> वर क्लिक करून वगळू शकता. <b>'या सर्व नोंदी CCE मध्ये जोडा'</b> वर क्लिक करताच या सर्व नोंदी सध्याच्या शेवटच्या नोंदीनंतर ({currentSubjectRemarks.length} व्या नोंदीनंतर) थेट बॅकएंडमध्ये सेव्ह केल्या जातील.
+              </span>
+            </div>
+
+            {/* Modal Body: List of Editable Rows */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-3 bg-slate-100/60">
+              {filteredModalRemarks.map((remark, fIdx) => {
+                const originalIdx = fetchedRemarks.indexOf(remark);
+                return (
+                  <div
+                    key={originalIdx}
+                    className="bg-white border-2 border-slate-200 hover:border-blue-300 rounded-2xl p-3 sm:p-4 shadow-sm flex items-start gap-3 transition-all group"
+                  >
+                    <span className="size-7 rounded-xl bg-indigo-50 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0 border border-indigo-100 mt-1">
+                      {originalIdx + 1}
+                    </span>
+
+                    <textarea
+                      value={remark}
+                      onChange={(e) => updateFetchedRemark(originalIdx, e.target.value)}
+                      rows={2}
+                      className="flex-1 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 focus:border-blue-500 rounded-xl p-2.5 text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-100 resize-none font-sans font-medium leading-relaxed transition-all"
+                      placeholder="नोंदीचे वर्णन येथे संपादित करा..."
+                    />
+
+                    <button
+                      onClick={() => deleteFetchedRemark(originalIdx)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 mt-1 cursor-pointer"
+                      title="ही नोंद वगळा"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Bottom Footer */}
+            <div className="bg-white border-t border-slate-200 px-5 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4 shrink-0 shadow-lg">
+              <div className="text-xs sm:text-sm text-slate-600 font-bold flex flex-wrap items-center gap-3">
+                <span>आधीच्या नोंदी: <b className="text-slate-900 font-black">{currentSubjectRemarks.length}</b></span>
+                <span>+</span>
+                <span>नवीन जोडल्या जाणाऱ्या नोंदी: <b className="text-emerald-700 font-black">{fetchedRemarks.filter((r) => r.trim()).length}</b></span>
+                <span>=</span>
+                <span>एकूण नोंदी होतील: <b className="text-blue-700 font-black">{currentSubjectRemarks.length + fetchedRemarks.filter((r) => r.trim()).length}</b></span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                >
+                  रद्द करा (Cancel)
+                </button>
+                <button
+                  onClick={handleAddAllFetchedRemarks}
+                  disabled={saving || fetchedRemarks.filter((r) => r.trim()).length === 0}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm transition-all flex items-center gap-2 shadow-md cursor-pointer transform hover:scale-105 active:scale-95 disabled:opacity-50"
+                >
+                  <CheckCheck className="size-4 stroke-[3]" />
+                  <span>या सर्व नोंदी CCE मध्ये जोडा</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
