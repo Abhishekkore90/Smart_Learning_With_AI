@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { getClassRemarks } from "@/data/classRemarksData";
+import { getClassSpecificCCESubjects, type ClassSubjectConfigItem } from "@/data/cceSubjects";
 import { uploadBlobToBunny, saveJsonToBunny } from "@/lib/bunnyStorage";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
@@ -57,26 +58,7 @@ const MEDIUMS_LIST = [
   { id: "semi", label: "सेमी इंग्रजी माध्यम (Semi-English Medium)" },
 ];
 
-const DEFAULT_SUBJECTS_CONFIG: CustomSubjectItem[] = [
-  { key: "prathambhasha", label: "प्रथम भाषा (मराठी)", icon: "📘" },
-  { key: "dvitiybhasha", label: "द्वितीय भाषा (इंग्रजी)", icon: "🌐" },
-  { key: "tritiyabhasha", label: "तृतीय भाषा (हिंदी)", icon: "🪔" },
-  { key: "ganit", label: "गणित", icon: "📐" },
-  { key: "parisar", label: "परिसर अभ्यास / विज्ञान", icon: "🔬" },
-  { key: "samajik_shastra", label: "सामाजिक शास्त्रे", icon: "🏛️" },
-  { key: "kala", label: "कला", icon: "🎨" },
-  { key: "karyanubhav", label: "कार्यानुभव", icon: "🛠️" },
-  { key: "sharirik", label: "शारीरिक शिक्षण व आरोग्य", icon: "⚽" },
-  { key: "visheshpragati", label: "विशेष प्रगती", icon: "🌟" },
-  { key: "aavad", label: "आवड / छंद", icon: "💖" },
-  { key: "sudharna", label: "सुधारणा आवश्यक", icon: "⚠️" },
-  { key: "vyaktimatva", label: "व्यक्तिमत्त्व गुणविशेष", icon: "👤" },
-];
-
-interface CustomSubjectItem {
-  key: string;
-  label: string;
-  icon: string;
+interface CustomSubjectItem extends ClassSubjectConfigItem {
   isCustom?: boolean;
 }
 
@@ -95,6 +77,7 @@ function AdminCCERemarksPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [migratingAll, setMigratingAll] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   // New remark input & inline edit state
   const [newRemarkText, setNewRemarkText] = useState("");
@@ -117,37 +100,49 @@ function AdminCCERemarksPage() {
 
   const docId = `${selectedClass}_${selectedMedium}`;
 
-  // Combined subjects list (Default + Custom Admin Subjects)
-  const allSubjects = useMemo(() => {
-    return [...DEFAULT_SUBJECTS_CONFIG, ...customSubjects];
-  }, [customSubjects]);
+  // Class & Medium specific exact CCE Dashboard subjects
+  const classSubjects = useMemo(() => {
+    return getClassSpecificCCESubjects(selectedClass, selectedMedium);
+  }, [selectedClass, selectedMedium]);
+
+  // Combined subjects list (Class CCE Subjects + Custom Admin Subjects)
+  const allSubjects = useMemo<CustomSubjectItem[]>(() => {
+    return [...classSubjects, ...customSubjects];
+  }, [classSubjects, customSubjects]);
+
+  // Keep activeSubjectKey valid when switching Class or Medium
+  useEffect(() => {
+    if (allSubjects.length > 0 && !allSubjects.some((s) => s.key === activeSubjectKey)) {
+      setActiveSubjectKey(allSubjects[0].key);
+      setEditingIndex(null);
+      setEditingText("");
+      setSearchTerm("");
+    }
+  }, [allSubjects, activeSubjectKey]);
 
   // ── Helper: Save/Sync Remarks Store directly to Backend (Firestore, LocalStorage & Bunny) ──
   const persistStoreToFirestore = async (
     newStore: Record<string, string[]>,
-    newCustomSubjects?: CustomSubjectItem[]
+    newCustomSubjects?: CustomSubjectItem[],
+    updatedBy: string = "admin"
   ) => {
     try {
       const firestoreRef = doc(db, "cce_admin_remarks", docId);
-      await setDoc(
-        firestoreRef,
-        {
-          classId: selectedClass,
-          mediumId: selectedMedium,
-          remarks: newStore,
-          customSubjects: newCustomSubjects || customSubjects,
-          updatedAt: new Date().toISOString(),
-          updatedBy: "admin",
-        },
-        { merge: true }
-      );
+      await setDoc(firestoreRef, {
+        classId: selectedClass,
+        mediumId: selectedMedium,
+        remarks: newStore,
+        customSubjects: newCustomSubjects || customSubjects,
+        updatedAt: new Date().toISOString(),
+        updatedBy,
+      });
 
       // Local Cache update
       localStorage.setItem(`cce_custom_remarks_${selectedClass}_${selectedMedium}`, JSON.stringify(newStore));
 
       // Asynchronously update Bunny Storage CDN
       const bunnyPath = `cce_remarks/class_${selectedClass}_${selectedMedium}_remarks.json`;
-      saveJsonToBunny(bunnyPath, newStore).catch(() => {});
+      await saveJsonToBunny(bunnyPath, newStore).catch(() => {});
     } catch (e: any) {
       console.error("Firestore auto-persist error:", e);
       toast.error("बॅकएंडमध्ये सेव्ह करताना त्रुटी आली: " + (e?.message || e));
@@ -157,16 +152,23 @@ function AdminCCERemarksPage() {
   // ── Load Master Remarks & Custom Subjects for Class & Medium ──
   useEffect(() => {
     let isMounted = true;
+    let firestoreAuthoritative = false;
     setLoading(true);
 
-    const defaultMaster = getClassRemarks(selectedClass, selectedMedium) || {};
+    const rawDefaultMaster = getClassRemarks(selectedClass, selectedMedium) || {};
+    const allowedKeys = new Set(getClassSpecificCCESubjects(selectedClass, selectedMedium).map((s) => s.key));
+    const defaultMaster: Record<string, string[]> = {};
+    allowedKeys.forEach((k) => {
+      defaultMaster[k] = rawDefaultMaster[k] || [];
+    });
 
     // 1. Listen for Firestore Admin Remarks & Custom Subjects
     const unsubDoc = onSnapshot(
       doc(db, "cce_admin_remarks", docId),
       (docSnap) => {
         if (!isMounted) return;
-        if (docSnap.exists() && docSnap.data().remarks) {
+        if (docSnap.exists() && docSnap.data().remarks !== undefined) {
+          firestoreAuthoritative = true;
           const data = docSnap.data();
           const remoteRemarks = data.remarks || {};
           const remoteCustomSubjects = data.customSubjects || [];
@@ -198,13 +200,13 @@ function AdminCCERemarksPage() {
       }
     );
 
-    // 2. Fetch Bunny CDN JSON fallback
+    // 2. Fetch Bunny CDN JSON fallback ONLY if Firestore hasn't resolved yet
     async function fetchFromBunnyCdn() {
       try {
         const cdnBase = import.meta.env.DEV ? "/api/bunny-cdn" : "https://sgkbrainova.b-cdn.net";
-        const cdnUrl = `${cdnBase}/cce_remarks/class_${selectedClass}_${selectedMedium}_remarks.json`;
+        const cdnUrl = `${cdnBase}/cce_remarks/class_${selectedClass}_${selectedMedium}_remarks.json?t=${Date.now()}`;
         const res = await fetch(cdnUrl);
-        if (isMounted && res.ok) {
+        if (isMounted && !firestoreAuthoritative && res.ok) {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
             setRemarksStore(data);
@@ -226,6 +228,14 @@ function AdminCCERemarksPage() {
   const currentSubjectRemarks = useMemo(() => {
     return remarksStore[activeSubjectKey] || [];
   }, [remarksStore, activeSubjectKey]);
+
+  // Total Remarks across all subjects in active Class & Medium
+  const totalClassRemarksCount = useMemo(() => {
+    return allSubjects.reduce(
+      (sum, subj) => sum + (Array.isArray(remarksStore[subj.key]) ? remarksStore[subj.key].length : 0),
+      0
+    );
+  }, [remarksStore, allSubjects]);
 
   // Filtered Remarks by search term
   const filteredRemarks = useMemo(() => {
@@ -282,7 +292,7 @@ function AdminCCERemarksPage() {
 
     setCustomSubjects(updatedCustomSubjects);
     setRemarksStore(updatedRemarksStore);
-    setActiveSubjectKey(DEFAULT_SUBJECTS_CONFIG[0].key);
+    setActiveSubjectKey(allSubjects[0]?.key || "prathambhasha");
 
     await persistStoreToFirestore(updatedRemarksStore, updatedCustomSubjects);
     toast.success(`'${subjName}' विषय बॅकएंडमधून यशस्वीरित्या हटवला गेला.`);
@@ -344,6 +354,65 @@ function AdminCCERemarksPage() {
     toast.success("🗑️ नोंद बॅकएंडमधून कायमची हटवली व CCE डॅशबोर्डवरूनही काढून टाकली!");
   };
 
+  // ── Handle Delete All Remarks for Active Subject ──
+  const handleDeleteAllSubjectRemarks = async () => {
+    if (currentSubjectRemarks.length === 0) return;
+    if (
+      !confirm(
+        `तुम्हाला नक्की '${activeSubjectInfo.label}' या विषयातील सर्व ${currentSubjectRemarks.length} नोंदी हटवायच्या आहेत का? त्या बॅकएंड (Firestore/Bunny) आणि CCE डॅशबोर्डवरूनही कायमच्या काढून टाकल्या जातील.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingAll(true);
+    try {
+      const updatedStore = { ...remarksStore, [activeSubjectKey]: [] };
+      setRemarksStore(updatedStore);
+      setEditingIndex(null);
+      setEditingText("");
+      setSearchTerm("");
+
+      await persistStoreToFirestore(updatedStore, customSubjects, "admin_delete_subject_all");
+      toast.success(`🗑️ '${activeSubjectInfo.label}' विषयाच्या सर्व नोंदी बॅकएंड व CCE डॅशबोर्डवरून हटवल्या!`);
+    } finally {
+      setDeletingAll(false);
+    }
+  };
+
+  // ── Handle Delete All Remarks for Active Class & Medium ──
+  const handleDeleteAllClassRemarks = async () => {
+    if (totalClassRemarksCount === 0) return;
+    if (
+      !confirm(
+        `तुम्हाला नक्की इयत्ता '${selectedClass}' (${selectedMedium === "semi" ? "सेमी इंग्रजी" : "मराठी"}) मधील सर्व विषयांच्या एकूण ${totalClassRemarksCount} नोंदी हटवायच्या आहेत का? या सर्व नोंदी बॅकएंड आणि CCE डॅशबोर्डवरून कायमच्या काढून टाकल्या जातील.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingAll(true);
+    try {
+      const clearedStore: Record<string, string[]> = {};
+      allSubjects.forEach((subj) => {
+        clearedStore[subj.key] = [];
+      });
+      Object.keys(remarksStore).forEach((key) => {
+        clearedStore[key] = [];
+      });
+
+      setRemarksStore(clearedStore);
+      setEditingIndex(null);
+      setEditingText("");
+      setSearchTerm("");
+
+      await persistStoreToFirestore(clearedStore, customSubjects, "admin_delete_class_all");
+      toast.success(`🗑️ इयत्ता '${selectedClass}' मधील सर्व विषयांच्या नोंदी बॅकएंड व CCE डॅशबोर्डवरून हटवल्या!`);
+    } finally {
+      setDeletingAll(false);
+    }
+  };
+
   // ── Bulk Migrate All Code Remarks to Firestore Backend ──
   const handleMigrateAllCodeRemarksToBackend = async () => {
     if (!confirm("तुम्हाला नक्की सर्व १० वर्गांच्या सर्व विषयांच्या डीफॉल्ट नोंदी Firestore बॅकएंडमध्ये सेव्ह/मायग्रेट करायच्या आहेत का?")) return;
@@ -355,7 +424,12 @@ function AdminCCERemarksPage() {
       for (const c of CLASSES_LIST) {
         for (const m of MEDIUMS_LIST) {
           const dId = `${c.id}_${m.id}`;
-          const defaultData = getClassRemarks(c.id, m.id) || {};
+          const rawDefaultData = getClassRemarks(c.id, m.id) || {};
+          const classAllowedKeys = new Set(getClassSpecificCCESubjects(c.id, m.id).map((s) => s.key));
+          const defaultData: Record<string, string[]> = {};
+          classAllowedKeys.forEach((k) => {
+            defaultData[k] = rawDefaultData[k] || [];
+          });
           const snap = await getDoc(doc(db, "cce_admin_remarks", dId));
           if (!snap.exists() || !snap.data().remarks) {
             await setDoc(doc(db, "cce_admin_remarks", dId), {
@@ -605,8 +679,7 @@ function AdminCCERemarksPage() {
           customSubjects: customSubjects,
           updatedAt: new Date().toISOString(),
           updatedBy: "admin",
-        },
-        { merge: true }
+        }
       );
 
       // 2. Save JSON to Bunny Storage CDN for instant public access across all user sessions
@@ -649,6 +722,16 @@ function AdminCCERemarksPage() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={handleDeleteAllClassRemarks}
+            disabled={deletingAll || totalClassRemarksCount === 0}
+            className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 font-bold text-xs transition-all flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            title="या वर्गातील सर्व विषयांच्या सर्व नोंदी बॅकएंड व CCE डॅशबोर्डवरून हटवा"
+          >
+            {deletingAll ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+            <span>सर्व नोंदी हटवा (Delete All)</span>
+          </button>
+
           <button
             onClick={handleMigrateAllCodeRemarksToBackend}
             disabled={migratingAll}
@@ -816,9 +899,24 @@ function AdminCCERemarksPage() {
               </div>
             </div>
 
-            <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-right">
-              <div className="text-xs font-bold text-slate-500">एकूण नोंद संख्या</div>
-              <div className="text-xl font-black text-blue-700">{currentSubjectRemarks.length}</div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 text-right">
+                <div className="text-xs font-bold text-slate-500">एकूण नोंद संख्या</div>
+                <div className="text-xl font-black text-blue-700">{currentSubjectRemarks.length}</div>
+              </div>
+
+              {currentSubjectRemarks.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleDeleteAllSubjectRemarks}
+                  disabled={deletingAll}
+                  className="px-3.5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 font-black text-xs transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                  title="या विषयातील सर्व नोंदी बॅकएंड व CCE डॅशबोर्डवरून हटवा"
+                >
+                  {deletingAll ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+                  <span>या विषयाच्या सर्व नोंदी हटवा</span>
+                </button>
+              )}
             </div>
           </div>
 

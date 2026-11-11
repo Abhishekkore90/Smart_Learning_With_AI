@@ -7,6 +7,7 @@ export interface ParsedPeriod {
   class: string;
   subject: string;
   topic: string;
+  subtopic?: string;
   experience: string;
   tools: string;
   materials: string;
@@ -306,20 +307,22 @@ function parseTextToDiary(rawText: string, className: string): ParsedDiaryConten
   ];
 
   // Try to find tab/pipe-separated table rows (common in DOCX tables)
-  const tableRowPattern = /(\d+)\s*[\t|]+\s*(.+?)[\t|]+\s*(.+?)[\t|]+\s*(.+?)(?:[\t|]+\s*(.+?))?(?:[\t|]+\s*(.+?))?(?:[\t|]+\s*(.+?))?/g;
+  const tableRowPattern = /(\d+)\s*[\t|]+\s*(.+?)[\t|]+\s*(.+?)[\t|]+\s*(.+?)(?:[\t|]+\s*(.+?))?(?:[\t|]+\s*(.+?))?(?:[\t|]+\s*(.+?))?(?:[\t|]+\s*(.+?))?/g;
   let tableMatch;
   while ((tableMatch = tableRowPattern.exec(fullText)) !== null) {
     const periodNum = tableMatch[1].trim();
     if (!isNaN(parseInt(periodNum))) {
+      const hasEightCols = Boolean(tableMatch[8]?.trim());
       periods.push({
         period: periodNum,
         class: className,
         subject: tableMatch[2]?.trim() || "",
         topic: tableMatch[3]?.trim() || "",
-        outcome: tableMatch[4]?.trim() || "",
-        experience: tableMatch[5]?.trim() || "",
-        tools: tableMatch[6]?.trim() || "",
-        materials: tableMatch[7]?.trim() || "",
+        subtopic: hasEightCols ? (tableMatch[4]?.trim() || "") : "",
+        outcome: (hasEightCols ? tableMatch[5] : tableMatch[4])?.trim() || "",
+        experience: (hasEightCols ? tableMatch[6] : tableMatch[5])?.trim() || "",
+        tools: (hasEightCols ? tableMatch[7] : tableMatch[6])?.trim() || "",
+        materials: (hasEightCols ? tableMatch[8] : tableMatch[7])?.trim() || "",
       });
     }
   }
@@ -774,7 +777,8 @@ export function parseExcelToDiaries(arrayBuffer: ArrayBuffer, className: string)
       date: headers.findIndex(h => /तारीख|दिनांक|date/i.test(h)),
       period: headers.findIndex(h => /तास|तासिका|period|time/i.test(h)),
       subject: headers.findIndex(h => /विषय|subject/i.test(h)),
-      topic: headers.findIndex(h => /मुद्दा|पाठ्यांश|पाठ्यघटक|घटक|पाठ|topic|chapter/i.test(h)),
+      topic: headers.findIndex(h => /पाठ\s*[\/\-]?\s*घटक|पाठ्यांश|पाठ्यघटक|घटक|पाठ|topic|chapter/i.test(h)),
+      subtopic: headers.findIndex(h => /अध्ययन\s*मुद्दा|मुद्दा|उपघटक|subtopic|point/i.test(h)),
       outcome: headers.findIndex(h => /निष्पत्ती|निष्पती|दर्शक|दर्शके|outcome|result/i.test(h)),
       experience: headers.findIndex(h => /अनुभव|अनुभवाचे|स्वरूप|कृती|experience/i.test(h)),
       tools: headers.findIndex(h => /साधन|तंत्र|tools|method/i.test(h)),
@@ -783,6 +787,11 @@ export function parseExcelToDiaries(arrayBuffer: ArrayBuffer, className: string)
       dinvishesh: headers.findIndex(h => /दिनविशेष|special/i.test(h)),
       highlights: headers.findIndex(h => /प्रमुख उपक्रम|highlights/i.test(h)),
     };
+
+    if (colIndex.topic === -1 && colIndex.subtopic !== -1) {
+      colIndex.topic = colIndex.subtopic;
+      colIndex.subtopic = -1;
+    }
 
     if (colIndex.date === -1) colIndex.date = 0;
 
@@ -819,17 +828,19 @@ export function parseExcelToDiaries(arrayBuffer: ArrayBuffer, className: string)
       const periodNum = colIndex.period !== -1 ? String(row[colIndex.period] || "").trim() : (entry.periods.length + 1).toString();
       const subject = colIndex.subject !== -1 ? String(row[colIndex.subject] || "").trim() : "";
       const topic = colIndex.topic !== -1 ? String(row[colIndex.topic] || "").trim() : "";
+      const subtopic = colIndex.subtopic !== -1 ? String(row[colIndex.subtopic] || "").trim() : "";
       const experience = colIndex.experience !== -1 ? String(row[colIndex.experience] || "").trim() : "";
       const tools = colIndex.tools !== -1 ? String(row[colIndex.tools] || "").trim() : "";
       const materials = colIndex.materials !== -1 ? String(row[colIndex.materials] || "").trim() : "";
       const outcome = colIndex.outcome !== -1 ? String(row[colIndex.outcome] || "").trim() : "";
 
-      if (subject || topic || experience) {
+      if (subject || topic || subtopic || experience) {
         entry.periods.push({
           period: periodNum,
           class: className,
           subject,
           topic,
+          subtopic,
           experience,
           tools,
           materials,
@@ -864,7 +875,8 @@ Extract:
 For each period row, extract:
 - period: number (1, 2, 3...)
 - subject: subject name (मराठी, गणित, इंग्रजी, विज्ञान...)
-- topic: topic / पाठ्यघटक / मुद्दा (e.g. ४. माझी जोडी, ३. आधी नंतर, 1.3 My home...)
+- topic: topic / पाठ / घटक (e.g. ४. माझी जोडी, ३. आधी नंतर, 1.3 My home...)
+- subtopic: subtopic / अध्ययन मुद्दा (e.g. चित्र बघा, वाक्ये, संख्याओळख...)
 - outcome: learning outcome / अध्ययन निष्पत्ती (e.g. १.७: चित्र आणि संदर्भ..., 8.2: अवकाशीय संबोध...)
 - experience: learning experience / अध्ययनाचे स्वरूप (अनुभव / कृती) (e.g. चित्रे बघा, ओळखा..., नंतर घडणाऱ्या...)
 - tools: teaching tools / साधन तंत्रे (e.g. तोंडीकाम, वर्गकार्य, स्वाध्याय, Class work...)
@@ -879,7 +891,8 @@ Return ONLY a valid JSON object matching:
     {
       "period": "1",
       "subject": "विषय",
-      "topic": "पाठाचे नाव / मुद्दा",
+      "topic": "पाठ / घटक",
+      "subtopic": "अध्ययन मुद्दा",
       "outcome": "अध्ययन निष्पत्ती",
       "experience": "अध्ययन अनुभव",
       "tools": "साधन तंत्रे",
@@ -1260,14 +1273,15 @@ function parseHtmlSection(
         }
       }
 
-      let colMap = { period: 0, subject: 1, topic: 2, outcome: 3, experience: 4, tools: 5, materials: 6 };
+      let colMap = { period: 0, subject: 0, topic: 1, subtopic: 2, outcome: 3, experience: 4, tools: 5, materials: 6 };
 
       if (headerRowIndex !== -1) {
-        const headerCells = (grid[headerRowIndex] || []).map(c => c.toLowerCase());
+        const headerCells = (grid[headerRowIndex] || []).map(c => c.toLowerCase().trim());
         colMap = {
-          period: headerCells.findIndex(h => /तास|तासिका|period|time/i.test(h)),
+          period: headerCells.findIndex(h => /तासिका\s*[\/\-]?\s*विषय|तास|तासिका|period|time/i.test(h)),
           subject: headerCells.findIndex(h => /विषय|subject/i.test(h)),
-          topic: headerCells.findIndex(h => /मुद्दा|पाठ्यांश|पाठ्यघटक|घटक|पाठ|topic|chapter/i.test(h)),
+          topic: headerCells.findIndex(h => /पाठ\s*[\/\-]?\s*घटक|पाठ्यांश|पाठ्यघटक|घटक|पाठ|topic|chapter|unit/i.test(h)),
+          subtopic: headerCells.findIndex(h => /अध्ययन\s*मुद्दा|मुद्दा|उपघटक|subtopic|point/i.test(h)),
           outcome: headerCells.findIndex(h => /निष्पत्ती|निष्पती|दर्शक|दर्शके|outcome|result/i.test(h)),
           experience: headerCells.findIndex(h => /अनुभव|अनुभवाचे|स्वरूप|कृती|experience/i.test(h)),
           tools: headerCells.findIndex(h => /साधन|तंत्र|tools|method/i.test(h)),
@@ -1275,8 +1289,12 @@ function parseHtmlSection(
         };
 
         if (colMap.period === -1) colMap.period = 0;
-        if (colMap.subject === -1) colMap.subject = 1;
-        if (colMap.topic === -1) colMap.topic = 2;
+        if (colMap.subject === -1) colMap.subject = colMap.period === 0 && headerCells.length >= 7 ? 0 : 1;
+        if (colMap.topic === -1 && colMap.subtopic !== -1) {
+          colMap.topic = colMap.subtopic;
+          colMap.subtopic = -1;
+        }
+        if (colMap.topic === -1) colMap.topic = colMap.subject === 0 ? 1 : 2;
         if (colMap.outcome === -1) colMap.outcome = 3;
         if (colMap.experience === -1) colMap.experience = 4;
         if (colMap.tools === -1) colMap.tools = 5;
@@ -1289,22 +1307,37 @@ function parseHtmlSection(
         if (cells.length < 2) continue;
 
         const rawPeriodStr = colMap.period !== -1 && cells[colMap.period] ? cells[colMap.period] : "";
-        if (rawPeriodStr === "तासिका" || rawPeriodStr === "Period" || rawPeriodStr === "तास") continue;
+        if (/^(?:तासिका|तास|period)$/i.test(rawPeriodStr.trim())) continue;
 
-        const periodNum = rawPeriodStr || (periods.length + 1).toString();
-        const subject = colMap.subject !== -1 && cells[colMap.subject] ? cells[colMap.subject] : "";
+        let periodNum = rawPeriodStr || (periods.length + 1).toString();
+        let subject = colMap.subject !== -1 && cells[colMap.subject] ? cells[colMap.subject] : "";
+
+        // Handle combined column "तासिका/ विषय" (e.g. "१  मराठी" -> period "१", subject "मराठी")
+        if (colMap.period === colMap.subject && rawPeriodStr) {
+          const combinedMatch = rawPeriodStr.trim().match(/^([\d०-९]+)\s+([\s\S]+)$/);
+          if (combinedMatch) {
+            periodNum = combinedMatch[1].trim();
+            subject = combinedMatch[2].trim();
+          } else {
+            periodNum = (periods.length + 1).toString();
+            subject = rawPeriodStr.trim();
+          }
+        }
+
         const topic = colMap.topic !== -1 && cells[colMap.topic] ? cells[colMap.topic] : "";
+        const subtopic = colMap.subtopic !== -1 && cells[colMap.subtopic] ? cells[colMap.subtopic] : "";
         const outcome = colMap.outcome !== -1 && cells[colMap.outcome] ? cells[colMap.outcome] : "";
         const experience = colMap.experience !== -1 && cells[colMap.experience] ? cells[colMap.experience] : "";
         const tools = colMap.tools !== -1 && cells[colMap.tools] ? cells[colMap.tools] : "";
         const materials = colMap.materials !== -1 && cells[colMap.materials] ? cells[colMap.materials] : "";
 
-        if (subject || topic || outcome || experience) {
+        if (subject || topic || subtopic || outcome || experience) {
           periods.push({
             period: periodNum,
             class: className,
             subject,
             topic,
+            subtopic,
             experience,
             tools,
             materials,
@@ -1349,7 +1382,8 @@ Identify each day's entry. For each entry, extract:
 For each period in the table, extract:
 - period: the period number (e.g. 1, 2, 3...)
 - subject: the subject name (e.g. मराठी, गणित, इंग्रजी...)
-- topic: the topic/chapter name (घटक / पाठ)
+- topic: the topic/chapter name (पाठ / घटक)
+- subtopic: the teaching subtopic/point (अध्ययन मुद्दा)
 - experience: the learning experience details (अध्ययन अनुभव)
 - tools: teaching tools used (साधन / तंत्र)
 - materials: required materials (साहित्य)
@@ -1368,7 +1402,8 @@ Return ONLY a valid JSON array of these entries matching this TypeScript structu
       {
         "period": "1",
         "subject": "विषय",
-        "topic": "घटक",
+        "topic": "पाठ / घटक",
+        "subtopic": "अध्ययन मुद्दा",
         "experience": "अध्ययन अनुभव",
         "tools": "साधन",
         "materials": "साहित्य",

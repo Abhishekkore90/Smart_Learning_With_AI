@@ -673,7 +673,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             }
           }
 
-          // Asynchronously parse DOCX file from Bunny Storage if structuredData is still empty
+          // Asynchronously parse DOCX file from Bunny Storage if structuredData is empty OR missing subtopic (अध्ययन मुद्दा)
           const fetchTarget = matchedDoc.pageUrl || matchedDoc.masterPdfUrl;
           const isDocx =
             fetchTarget &&
@@ -681,7 +681,14 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             !fetchTarget.startsWith("data:") &&
             (fetchTarget.startsWith("http://") || fetchTarget.startsWith("https://") || fetchTarget.startsWith("/")) &&
             (fetchTarget.toLowerCase().endsWith(".docx") || fetchTarget.toLowerCase().includes(".docx?"));
-          if (fetchTarget && isDocx && (!matchedDoc.structuredData || matchedDoc.structuredData.length === 0)) {
+          const hasSubtopicData =
+            Array.isArray(matchedDoc.structuredData) &&
+            matchedDoc.structuredData.some(
+              (d: any) =>
+                Array.isArray(d.periods) &&
+                d.periods.some((p: any) => p.subtopic && String(p.subtopic).trim() !== "" && String(p.subtopic).trim() !== "-")
+            );
+          if (fetchTarget && isDocx && (!matchedDoc.structuredData || matchedDoc.structuredData.length === 0 || !hasSubtopicData)) {
             try {
               const targetUrl = getBunnyStorageUrl(fetchTarget);
               const headers: Record<string, string> = {
@@ -1209,19 +1216,20 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   // ── Build the printable HTML content for A4 PDF (Matching Screenshot 1) ─────
   const buildPrintableHTMLInner = () => {
     if (!todayDiary || !activeDate) return "";
+    const colWidths = ["10%", "13%", "9%", "24%", "22%", "11%", "11%"];
     const rows = todayDiary.periods
       .map(
-        (item) =>
-          `<tr style="background:#ffffff;">
-            <td style="text-align:center;font-weight:900;color:#0f172a;font-size:12px;padding:9px 4px;border:1.5px solid #334155;vertical-align:middle;">
+        (item, rIdx) =>
+          `<tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
+            <td style="box-sizing:border-box;width:${colWidths[0]};text-align:center;font-weight:900;color:#0f172a;font-size:10px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
               <span style="color:#ea580c;margin-right:2px;">${item.period}</span> ${item.subject}
             </td>
-            <td style="text-align:left;font-weight:800;color:#1e293b;font-size:11.5px;padding:9px 6px;border:1.5px solid #334155;vertical-align:middle;line-height:1.4;">${item.topic}</td>
-            <td style="text-align:left;font-weight:800;color:#1e293b;font-size:11.5px;padding:9px 6px;border:1.5px solid #334155;vertical-align:middle;line-height:1.4;">${item.subtopic || "-"}</td>
-            <td style="text-align:left;color:#047857;font-weight:800;font-size:11.5px;padding:9px 8px;border:1.5px solid #334155;vertical-align:middle;line-height:1.4;">${item.outcome || "-"}</td>
-            <td style="text-align:left;color:#334155;font-weight:700;font-size:11.5px;padding:9px 8px;border:1.5px solid #334155;vertical-align:middle;line-height:1.4;">${item.experience || "-"}</td>
-            <td style="text-align:center;color:#334155;font-weight:700;font-size:11.5px;padding:9px 4px;border:1.5px solid #334155;vertical-align:middle;">${item.tools || "-"}</td>
-            <td style="text-align:center;color:#334155;font-weight:700;font-size:11.5px;padding:9px 4px;border:1.5px solid #334155;vertical-align:middle;">${item.materials || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[1]};text-align:left;font-weight:800;color:#1e293b;font-size:10px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.topic}</td>
+            <td style="box-sizing:border-box;width:${colWidths[2]};text-align:left;font-weight:800;color:#1e293b;font-size:10px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.subtopic || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[3]};text-align:left;color:#047857;font-weight:800;font-size:10px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.outcome || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[4]};text-align:left;color:#334155;font-weight:700;font-size:10px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.experience || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[5]};text-align:center;color:#334155;font-weight:700;font-size:9.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:anywhere;word-break:break-word;white-space:normal;">${item.tools || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[6]};text-align:center;color:#334155;font-weight:700;font-size:9.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:anywhere;word-break:break-word;white-space:normal;">${item.materials || "-"}</td>
           </tr>`
       )
       .join("");
@@ -1230,76 +1238,80 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     const dayVal = todayDiary.day || (activeDate ? format(activeDate, "eeee") : "-");
 
     return `
-    <div style="width: 100%; margin: 0 auto; background: #ffffff; box-sizing: border-box;">
-      <div style="text-align: center; margin-bottom: 14px;">
-        <h1 style="font-size: 26px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; margin: 0;">दैनंदिन पाठ टाचण</h1>
-      </div>
+    <div class="pdf-day-page" style="width: 794px; height: 1116px; box-sizing: border-box; padding: 12px 16px; background: #ffffff; overflow: hidden; position: relative;">
+      <div class="pdf-day-inner" style="width: 762px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; min-height: 1090px;">
+        <div>
+          <div style="text-align: center; margin-bottom: 6px;">
+            <h1 style="font-size: 18px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; margin: 0;">दैनंदिन पाठ टाचण</h1>
+          </div>
 
-      <!-- 3x2 Header Box -->
-      <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 8px; margin-bottom: 14px; background: #ffffff;">
-        <tr>
-          <td style="width: 33.33%; padding: 10px 14px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-            <div style="font-size: 11px; font-weight: 800; color: #475569;">दिनांक</div>
-            <div style="font-size: 14px; font-weight: 900; color: #0f172a; margin-top: 2px;">${displayDateVal}</div>
-          </td>
-          <td style="width: 33.33%; padding: 10px 14px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-            <div style="font-size: 11px; font-weight: 800; color: #475569;">वार</div>
-            <div style="font-size: 14px; font-weight: 900; color: #0f172a; margin-top: 2px;">${dayVal}</div>
-          </td>
-          <td style="width: 33.33%; padding: 10px 14px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-            <div style="font-size: 11px; font-weight: 800; color: #475569;">वर्गशिक्षक</div>
-            <div style="font-size: 14px; font-weight: 900; color: #0f172a; margin-top: 2px;">${activeProfile.teacherName || "—"}</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="width: 33.33%; padding: 10px 14px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-            <div style="font-size: 11px; font-weight: 800; color: #475569;">शाळा</div>
-            <div style="font-size: 14px; font-weight: 900; color: #0f172a; margin-top: 2px;">${activeProfile.schoolName || "—"}</div>
-          </td>
-          <td style="width: 33.33%; padding: 10px 14px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-            <div style="font-size: 11px; font-weight: 800; color: #475569;">इयत्ता</div>
-            <div style="font-size: 14px; font-weight: 900; color: #0f172a; margin-top: 2px;">${activeProfile.className || todayDiary.className || selectedClass}</div>
-          </td>
-          <td style="width: 33.33%; padding: 10px 14px; vertical-align: top; text-align: left;">
-            <div style="font-size: 11px; font-weight: 800; color: #475569;">सन</div>
-            <div style="font-size: 14px; font-weight: 900; color: #0f172a; margin-top: 2px;">${activeProfile.academicYear || "2026-27"}</div>
-          </td>
-        </tr>
-      </table>
+          <!-- 3x2 Header Box -->
+          <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 6px; margin-bottom: 6px; background: #ffffff;">
+            <tr>
+              <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                <div style="font-size: 9px; font-weight: 800; color: #475569;">दिनांक</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${displayDateVal}</div>
+              </td>
+              <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                <div style="font-size: 9px; font-weight: 800; color: #475569;">वार</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
+              </td>
+              <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                <div style="font-size: 9px; font-weight: 800; color: #475569;">वर्गशिक्षक</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${activeProfile.teacherName || "—"}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="width: 33.33%; padding: 3px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                <div style="font-size: 9px; font-weight: 800; color: #475569;">शाळा</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${activeProfile.schoolName || "—"}</div>
+              </td>
+              <td style="width: 33.33%; padding: 3px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                <div style="font-size: 9px; font-weight: 800; color: #475569;">इयत्ता</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${activeProfile.className || todayDiary.className || selectedClass}</div>
+              </td>
+              <td style="width: 33.33%; padding: 3px 8px; vertical-align: top; text-align: left;">
+                <div style="font-size: 9px; font-weight: 800; color: #475569;">सन</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${activeProfile.academicYear || "2026-27"}</div>
+              </td>
+            </tr>
+          </table>
 
-      <!-- Suvichar Box -->
-      ${cleanThoughtText(todayDiary.thought) ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 8px; padding: 10px 16px; margin-bottom: 14px; font-size: 13.5px; color: #78350f; text-align: center;">
-        <strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #78350f;">"${cleanThoughtText(todayDiary.thought)}"</strong>
-      </div>` : ''}
+          <!-- Suvichar Box -->
+          ${cleanThoughtText(todayDiary.thought) ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 3px 8px; margin-bottom: 6px; font-size: 10.5px; color: #78350f; text-align: center;">
+            <strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #78350f;">"${cleanThoughtText(todayDiary.thought)}"</strong>
+          </div>` : ''}
 
-      <!-- Main Table -->
-      <table style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 2px solid #0f172a; margin-bottom: 16px; background: #ffffff;">
-        <thead>
-          <tr>
-            <th style="width:11%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 2px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">तासिका/ विषय</th>
-            <th style="width:15%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 4px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">पाठ / घटक</th>
-            <th style="width:15%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 4px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">अध्ययन मुद्दा</th>
-            <th style="width:23%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 4px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">अध्ययन निष्पत्ती</th>
-            <th style="width:22%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 4px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b;">अध्ययन अनुभवाचे स्वरूप</th>
-            <th style="width:7%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 2px; text-align:center; font-size:11px; font-weight:900; border:1.5px solid #1e293b;">साधन तंत्रे</th>
-            <th style="width:7%; background-color:#0f172a !important; color:#ffffff !important; padding:11px 2px; text-align:center; font-size:11px; font-weight:900; border:1.5px solid #1e293b;">शैक्षणिक साहित्य</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
+          <!-- Main Table -->
+          <table class="main-diary-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #475569; margin-bottom: 6px; background: #ffffff;">
+            <thead>
+              <tr>
+                <th style="box-sizing:border-box;width:${colWidths[0]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">तासिका/ विषय</th>
+                <th style="box-sizing:border-box;width:${colWidths[1]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">पाठ / घटक</th>
+                <th style="box-sizing:border-box;width:${colWidths[2]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन मुद्दा</th>
+                <th style="box-sizing:border-box;width:${colWidths[3]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन निष्पत्ती</th>
+                <th style="box-sizing:border-box;width:${colWidths[4]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन अनुभवाचे स्वरूप</th>
+                <th style="box-sizing:border-box;width:${colWidths[5]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">साधन तंत्रे</th>
+                <th style="box-sizing:border-box;width:${colWidths[6]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:10px; font-weight:900; border:1.5px solid #475569; line-height:1.2; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">शैक्षणिक साहित्य</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
 
-      <!-- Bottom Special Features & Signatures -->
-      <div style="margin-top: 16px;">
-        <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-bottom: 8px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</div>
-        <div style="border-bottom: 1.5px dashed #cbd5e1; height: 24px; margin-bottom: 8px;"></div>
-        <div style="border-bottom: 1.5px dashed #cbd5e1; height: 24px; margin-bottom: 8px;"></div>
-        
-        <table style="width: 100%; border: none; margin-top: 36px; background: transparent;">
-          <tr>
-            <td style="text-align: left; font-size: 14px; font-weight: 900; color: #0f172a; border: none; padding: 0 10px;">वर्गशिक्षक</td>
-            <td style="text-align: right; font-size: 14px; font-weight: 900; color: #0f172a; border: none; padding: 0 10px;">मुख्याध्यापक</td>
-          </tr>
-        </table>
+        <!-- Bottom Special Features & Signatures -->
+        <div style="margin-top: 6px; shrink-0;">
+          <div style="font-size: 10px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</div>
+          <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
+          <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
+          
+          <table style="width: 100%; border: none; margin-top: 12px; background: transparent;">
+            <tr>
+              <td style="text-align: left; font-size: 11px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">वर्गशिक्षक स्वाक्षरी</td>
+              <td style="text-align: right; font-size: 11px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">मुख्याध्यापक स्वाक्षरी</td>
+            </tr>
+          </table>
+        </div>
       </div>
     </div>`;
   };
@@ -1329,6 +1341,11 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       padding: 6px 10px;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+    }
+
+    @media print {
+      .pdf-day-page { width: 100% !important; height: auto !important; padding: 0 !important; }
+      .pdf-day-inner { width: 100% !important; min-height: 0 !important; }
     }
   </style>
 </head>
@@ -1374,7 +1391,6 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
       const container = document.createElement("div");
       container.style.width = "794px";
-      container.style.padding = "16px 20px";
       container.style.boxSizing = "border-box";
       container.style.backgroundColor = "#ffffff";
       container.style.color = "#0f172a";
@@ -1383,6 +1399,58 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
       wrapper.appendChild(container);
       document.body.appendChild(wrapper);
+
+      // Auto-fit & vertically fill single-day page onto 1 full A4 page
+      const pageEl = container.querySelector<HTMLElement>(".pdf-day-page");
+      const innerEl = container.querySelector<HTMLElement>(".pdf-day-inner");
+      if (pageEl && innerEl) {
+        innerEl.style.minHeight = "0px";
+        const maxAllowedHeight = 1088;
+
+        if (innerEl.scrollHeight > maxAllowedHeight) {
+          const cells = innerEl.querySelectorAll<HTMLElement>("table.main-diary-table td, table.main-diary-table th");
+          cells.forEach((c) => {
+            c.style.padding = "2.5px 3px";
+            c.style.fontSize = "8.8px";
+            c.style.lineHeight = "1.18";
+          });
+        } else if (innerEl.scrollHeight < 940) {
+          innerEl.querySelectorAll<HTMLElement>("table.main-diary-table th").forEach((th) => {
+            th.style.fontSize = "11px";
+            th.style.padding = "7px 4px";
+          });
+          innerEl.querySelectorAll<HTMLTableRowElement>("table.main-diary-table tbody tr").forEach((tr) => {
+            const tds = tr.querySelectorAll<HTMLElement>("td");
+            tds.forEach((td, tdIdx) => {
+              td.style.fontSize = tdIdx >= 5 ? "10px" : "11px";
+              td.style.lineHeight = "1.35";
+            });
+          });
+        }
+
+        const actualHeight = innerEl.scrollHeight;
+        if (actualHeight > maxAllowedHeight) {
+          const scale = maxAllowedHeight / actualHeight;
+          innerEl.style.transform = `scale(${scale})`;
+          innerEl.style.transformOrigin = "top left";
+          innerEl.style.width = `${762 / scale}px`;
+        } else {
+          const remainingSpace = maxAllowedHeight - actualHeight - 8;
+          const tbodyRows = innerEl.querySelectorAll<HTMLTableRowElement>("table.main-diary-table tbody tr");
+          if (remainingSpace > 12 && tbodyRows.length > 0) {
+            const extraPerRow = Math.floor(remainingSpace / tbodyRows.length);
+            tbodyRows.forEach((tr) => {
+              const currentH = tr.getBoundingClientRect().height;
+              const targetH = Math.floor(currentH + extraPerRow);
+              tr.style.height = `${targetH}px`;
+              tr.querySelectorAll<HTMLElement>("td").forEach((td) => {
+                td.style.height = `${targetH}px`;
+              });
+            });
+          }
+          innerEl.style.minHeight = `${maxAllowedHeight}px`;
+        }
+      }
 
       const fileName = `दैनंदिन_पाठ_टाचण_${todayDiary.displayDate || format(activeDate, "dd-MM-yyyy")}.pdf`;
 
@@ -1638,8 +1706,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
       {/* All Days Mode vs Daily View */}
       {isAllDaysMode ? (
-        <div className="bg-white border-2 border-slate-300 rounded-2xl sm:rounded-3xl p-1.5 sm:p-6 md:p-8 shadow-xl space-y-4 sm:space-y-5 max-w-full">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-200 pb-3 px-1">
+        <div className="w-full space-y-4 sm:space-y-5 max-w-full">
+          <div className="bg-white border-2 border-slate-300 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="size-11 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black shadow-md shrink-0">
                 <FileText className="size-6" />
@@ -1664,7 +1732,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           </div>
 
           {activeTabMasterRecord ? (
-            <div className="w-full rounded-2xl overflow-visible sm:overflow-hidden min-h-[600px] h-auto sm:h-[800px] border border-slate-200 bg-slate-50 shadow-inner">
+            <div className="w-full">
               <DocumentLivePreview
                 selectedFile={null}
                 savedRecord={activeTabMasterRecord}

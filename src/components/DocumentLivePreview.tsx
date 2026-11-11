@@ -922,7 +922,7 @@ export function groupStructuredPagesByDay(pages: StructuredDayPage[], defaultBas
       school: p.school,
       thought: dayThought,
       dinvishesh: p.dinvishesh,
-      periods: [...p.periods],
+      periods: p.periods.map((item) => ({ ...item })),
       columnHeaders: p.columnHeaders ? [...p.columnHeaders] : undefined,
       rawText: p.rawText,
       pageUrl: (p as any).pageUrl || (p as any).scannedPageUrl || (p as any).pageURL || "",
@@ -934,9 +934,13 @@ export function groupStructuredPagesByDay(pages: StructuredDayPage[], defaultBas
   list.forEach((dayRec) => {
     dayRec.periods.forEach((period, index) => {
       period.period = String(index + 1);
+      if (period.subject && /^[\d०-९]+[\s.\-):]+/.test(period.subject.trim())) {
+        period.subject = period.subject.trim().replace(/^[\d०-९]+[\s.\-):]+/, "").trim();
+      }
       if (period.subject === "माहिती संकलन" || (period.experience && period.experience.includes("स्कॅन केलेले टाचण पान"))) {
         period.subject = "";
         period.topic = "";
+        period.subtopic = "";
         period.outcome = "";
         period.experience = "";
         period.tools = "";
@@ -1019,7 +1023,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
   };
 
   return (
-    <div className="space-y-8 font-sans max-w-4xl mx-auto pb-6">
+    <div className="space-y-6 font-sans w-full max-w-full pb-6">
       <style>{`
         @media print {
           body {
@@ -1092,46 +1096,71 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
       </div>
 
       {dayRecords.map((p, idx) => (
-        <div key={idx} className="bg-white p-1 sm:p-6 md:p-8 rounded-xl sm:rounded-3xl border border-slate-200 shadow-md space-y-3 sm:space-y-6 day-card">
-          <div className="flex items-center justify-between pb-2 sm:pb-3 border-b border-slate-200 text-xs">
-            <span className="font-extrabold text-slate-900 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 uppercase tracking-wider text-[11px] sm:text-xs">
+        <div key={idx} className="bg-white border-2 border-slate-300 rounded-2xl sm:rounded-3xl p-2 sm:p-6 md:p-8 shadow-md space-y-4 sm:space-y-5 day-card w-full">
+          {/* Top Pill Badges Bar & Edit Tip */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-bold">
+            <span className="px-3.5 py-1.5 bg-slate-100 text-slate-900 border border-slate-200 rounded-full font-extrabold">
               {p.date ? `दिनांक: ${formatCleanDate(p.date)}` : `Day ${idx + 1}`}
             </span>
-            <span className="text-slate-600 font-bold bg-slate-100 px-2.5 py-1 rounded-lg text-[10.5px] sm:text-xs">
-              {p.periods.length > 0 ? `${p.periods.length} तासिका (Periods Found)` : "विवरण मजकूर"}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-[11px] font-black flex items-center gap-1.5 shadow-sm">
+                <span>कोणत्याही मजकुरावर क्लिक करून थेट एडिट करा (Live Edit Enabled)</span>
+              </span>
+              <span className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-xl font-extrabold">
+                {p.periods.length > 0 ? `${p.periods.length} तासिका (Periods)` : "विवरण मजकूर"}
+              </span>
+            </div>
           </div>
 
-          <div className="text-center space-y-2 sm:space-y-3">
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          <div className="text-center space-y-4 sm:space-y-5">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">
               दैनंदिन पाठ टाचण
             </h2>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-1.5 sm:gap-2.5 text-xs font-bold text-slate-900 bg-slate-100/80 p-2 sm:p-4 rounded-xl sm:rounded-2xl border-2 border-slate-400 shadow-sm text-center">
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">दिनांक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{formatCleanDate(p.date)}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वार</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.day && p.day !== "-" ? p.day : (getMarathiDayName(p.date) || "-")}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वर्गशिक्षक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-")}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">शाळा</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-")}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">इयत्ता</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-")}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">सन</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27")}</span></div>
+            {/* Header Card (Centered 6-column Box matching 1-day view) */}
+            <div className="bg-white border-2 border-slate-300 rounded-2xl p-4 sm:p-5 shadow-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-center font-bold text-slate-900">
+                <div>
+                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">दिनांक</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{formatCleanDate(p.date)}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">वार</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{p.day && p.day !== "-" ? p.day : (getMarathiDayName(p.date) || "-")}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">वर्गशिक्षक</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-")}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">शाळा</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-")}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">इयत्ता</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-")}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">सन</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27")}</span>
+                </div>
+              </div>
             </div>
 
-            {/* आजचा सुविचार Box - Always displayed & editable for each day */}
-            <div className="text-xs text-amber-950 bg-amber-50/95 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-amber-300 text-center flex items-center justify-center gap-2 shadow-sm my-1.5 sm:my-2">
-              <Sparkles className="size-4 text-amber-600 shrink-0" />
-              <div className="flex-1">
-                <strong className="not-italic text-amber-950 font-black text-xs uppercase tracking-wider inline-block mr-1">आजचा सुविचार :</strong> 
-                <span 
-                  suppressContentEditableWarning 
-                  contentEditable 
-                  onBlur={(e) => updateHeader(idx, "thought", e.currentTarget.textContent || "")}
-                  className="font-black text-xs sm:text-sm text-amber-950 not-italic inline-block outline-indigo-500 focus:bg-white px-2 py-0.5 rounded cursor-text border border-dashed border-amber-300 hover:border-amber-500 transition-colors"
-                >
-                  {cleanThoughtText(p.thought) && !cleanThoughtText(p.thought).includes("प्रविष्ट करण्यासाठी")
-                    ? `"${cleanThoughtText(p.thought)}"`
-                    : "आजचा सुविचार प्रविष्ट करा..."}
-                </span>
-              </div>
+            {/* Yellow Suvichar Card matching 1-day view */}
+            <div className="text-xs text-amber-950 bg-amber-50/95 p-2.5 sm:p-3 rounded-2xl border border-amber-300 text-center shadow-xs flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
+              <strong className="text-amber-900 font-black text-xs uppercase tracking-wider shrink-0">आजचा सुविचार : </strong>
+              <span 
+                suppressContentEditableWarning 
+                contentEditable 
+                onBlur={(e) => updateHeader(idx, "thought", e.currentTarget.textContent || "")}
+                className="font-black text-xs sm:text-sm text-amber-950 not-italic hover:bg-amber-100/80 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text max-w-full break-words"
+                title="सुविचार बदलण्यासाठी येथे क्लिक करा"
+              >
+                {cleanThoughtText(p.thought) && !cleanThoughtText(p.thought).includes("प्रविष्ट करण्यासाठी")
+                  ? `"${cleanThoughtText(p.thought)}"`
+                  : "आजचा सुविचार प्रविष्ट करा..."}
+              </span>
             </div>
           </div>
 
@@ -1154,15 +1183,15 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
 
           {p.periods.length > 0 ? (
             <div className="w-full overflow-hidden rounded-xl border-2 border-slate-900 shadow-sm mt-2 sm:mt-4 max-w-full">
-              <table className="w-full min-w-0 sm:min-w-[920px] text-xs sm:text-sm border-collapse border-2 border-slate-900 table-fixed">
+              <table className="w-full text-xs sm:text-sm border-collapse border-2 border-slate-900 table-fixed">
                 <colgroup>
-                  <col className="w-[11%] sm:w-[90px]" />
-                  <col className="w-[15%] sm:w-[130px]" />
-                  <col className="w-[15%] sm:w-[130px]" />
-                  <col className="w-[23%] sm:w-[220px]" />
-                  <col className="w-[22%] sm:w-[200px]" />
-                  <col className="w-[7%] sm:w-[80px]" />
-                  <col className="w-[7%] sm:w-[80px]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[24%]" />
+                  <col className="w-[22%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[11%]" />
                 </colgroup>
                 <thead className="bg-slate-200 text-slate-950 font-black text-[9px] sm:text-xs md:text-sm border-b-2 border-slate-900">
                   <tr>
@@ -1273,17 +1302,17 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
           )}
 
           <div 
-            className="pt-6 border-t border-slate-200 text-xs font-bold text-slate-850 space-y-3 signature-section"
+            className="pt-4 border-t-2 border-slate-400 space-y-2 signature-section"
             style={{ pageBreakInside: "avoid", breakInside: "avoid", pageBreakBefore: "auto", breakBefore: "auto" }}
           >
-            <div className="space-y-2">
-              <p className="text-slate-800 font-bold text-xs">
-                दिवसभरातील वैशिष्टपूर्ण बाबी:
-              </p>
-              <div className="border-b border-slate-300 h-4 w-full" />
-              <div className="border-b border-slate-300 h-4 w-full" />
-            </div>
-            <div className="flex justify-between items-center pt-8 text-slate-800 font-extrabold text-sm px-6">
+            <p className="font-bold text-xs text-slate-900">दिवसभरातील वैशिष्टपूर्ण बाबी:</p>
+            <div 
+              contentEditable
+              suppressContentEditableWarning
+              className="border-b border-slate-300 p-2 min-h-[36px] text-xs text-slate-800 font-medium hover:bg-amber-50/50 focus:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-lg transition-all cursor-text"
+              title="येथे टिप्पणी किंवा विशेष बाबी प्रविष्ट करण्यासाठी क्लिक करा"
+            />
+            <div className="flex justify-between items-center font-black text-sm text-slate-900 pt-8 px-4">
               <span>वर्गशिक्षक</span>
               <span>मुख्याध्यापक</span>
             </div>
@@ -2293,24 +2322,25 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         return validPeriods.length > 0;
       });
 
+      const colWidths = ["10%", "13%", "9%", "24%", "22%", "11%", "11%"];
+
       const dayBlocks = validPages.map((p: any, idx: number) => {
         const rows = (p.periods || []).map((row: any, rIdx: number) => `
           <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
-            <td style="text-align:center;font-weight:900;color:#0f172a;width:11%;padding:6px 3px;border:1.5px solid #334155;vertical-align:middle;">
+            <td style="box-sizing:border-box;text-align:center;font-weight:900;color:#0f172a;width:${colWidths[0]};font-size:10px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
               <span style="color:#ea580c;margin-right:2px;">${row.period}</span> ${row.subject || "-"}
             </td>
-            <td style="text-align:left;font-weight:800;color:#1e293b;width:15%;padding:6px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.3;">${row.topic || "-"}</td>
-            <td style="text-align:left;font-weight:800;color:#1e293b;width:15%;padding:6px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.3;">${row.subtopic || "-"}</td>
-            <td style="text-align:left;color:#047857;font-weight:800;width:23%;padding:6px 6px;border:1.5px solid #334155;vertical-align:middle;line-height:1.3;">${row.outcome || "-"}</td>
-            <td style="text-align:left;color:#334155;font-weight:700;width:22%;padding:6px 6px;border:1.5px solid #334155;vertical-align:middle;line-height:1.3;">${row.experience || "-"}</td>
-            <td style="text-align:center;color:#334155;font-weight:700;width:7%;padding:6px 3px;border:1.5px solid #334155;vertical-align:middle;">${row.tools || "-"}</td>
-            <td style="text-align:center;color:#334155;font-weight:700;width:7%;padding:6px 3px;border:1.5px solid #334155;vertical-align:middle;">${row.materials || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#1e293b;width:${colWidths[1]};font-size:10px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.topic || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#1e293b;width:${colWidths[2]};font-size:10px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.subtopic || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;color:#047857;font-weight:800;width:${colWidths[3]};font-size:10px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.outcome || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;color:#334155;font-weight:700;width:${colWidths[4]};font-size:10px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.experience || "-"}</td>
+            <td style="box-sizing:border-box;text-align:center;color:#334155;font-weight:700;width:${colWidths[5]};font-size:9.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:anywhere;word-break:break-word;white-space:normal;">${row.tools || "-"}</td>
+            <td style="box-sizing:border-box;text-align:center;color:#334155;font-weight:700;width:${colWidths[6]};font-size:9.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.25;word-wrap:break-word;overflow-wrap:anywhere;word-break:break-word;white-space:normal;">${row.materials || "-"}</td>
           </tr>`).join("");
 
         const headers = defaultHeaders
           .map((h: string, hIdx: number) => {
-            const widths = ["11%", "15%", "15%", "23%", "22%", "7%", "7%"];
-            return `<th style="width:${widths[hIdx] || "auto"}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:8px 3px; text-align:center; font-size:11px; font-weight:900; border:1.5px solid #475569;">${h}</th>`;
+            return `<th style="box-sizing:border-box;width:${colWidths[hIdx] || "auto"};background-color:#e2e8f0 !important;color:#0f172a !important;padding:6px 3px;text-align:center;font-size:10px;font-weight:900;border:1.5px solid #475569;line-height:1.2;word-wrap:break-word;overflow-wrap:break-word;white-space:normal;">${h}</th>`;
           }).join("");
 
         const dayVal = p.day && p.day !== "-" ? p.day : (getMarathiDayName(p.date) || "-");
@@ -2320,61 +2350,63 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         const yearVal = p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27");
 
         return `
-          <div class="${idx > 0 ? "html2pdf-page-break" : ""}" style="width: 794px; height: 1040px; max-height: 1040px; box-sizing: border-box; padding: 12px 18px; background: #ffffff; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <div style="text-align: center; margin-bottom: 8px;">
-                <h2 style="font-size: 20px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; margin: 0;">दैनंदिन पाठ टाचण</h2>
-              </div>
-              <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 6px; margin-bottom: 8px; background: #ffffff;">
-                <tr>
-                  <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">दिनांक</div>
-                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; margin-top: 1px;">${formatCleanDate(p.date)}</div>
-                  </td>
-                  <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">वार</div>
-                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
-                  </td>
-                  <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">वर्गशिक्षक</div>
-                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; margin-top: 1px;">${teacherVal}</div>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">शाळा</div>
-                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; margin-top: 1px;">${schoolVal}</div>
-                  </td>
-                  <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">इयत्ता</div>
-                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; margin-top: 1px;">${stdVal}</div>
-                  </td>
-                  <td style="width: 33.33%; padding: 4px 8px; vertical-align: top; text-align: left;">
-                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">सन</div>
-                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; margin-top: 1px;">${yearVal}</div>
-                  </td>
-                </tr>
-              </table>
-              ${p.thought ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 4px 10px; margin-bottom: 8px; font-size: 11.5px; color: #78350f; text-align: center;"><strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #78350f;">"${p.thought}"</strong></div>` : ""}
-              <table style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #475569; margin-bottom: 8px; background: #ffffff;">
-                <thead>
+          <div class="pdf-day-page ${idx > 0 ? "html2pdf-page-break" : ""}" style="width: 794px; height: 1116px; box-sizing: border-box; padding: 12px 16px; background: #ffffff; overflow: hidden; position: relative;">
+            <div class="pdf-day-inner" style="width: 762px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; min-height: 1090px;">
+              <div>
+                <div style="text-align: center; margin-bottom: 6px;">
+                  <h2 style="font-size: 18px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; margin: 0;">दैनंदिन पाठ टाचण</h2>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 6px; margin-bottom: 6px; background: #ffffff;">
                   <tr>
-                    ${headers}
+                    <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                      <div style="font-size: 9px; font-weight: 800; color: #475569;">दिनांक</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${formatCleanDate(p.date)}</div>
+                    </td>
+                    <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                      <div style="font-size: 9px; font-weight: 800; color: #475569;">वार</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
+                    </td>
+                    <td style="width: 33.33%; padding: 3px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                      <div style="font-size: 9px; font-weight: 800; color: #475569;">वर्गशिक्षक</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${teacherVal}</div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-              </table>
-            </div>
-            <div style="margin-top: 6px; shrink-0;">
-              <div style="font-size: 10.5px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</div>
-              <div style="border-bottom: 1px dashed #cbd5e1; height: 14px; margin-bottom: 2px;"></div>
-              <div style="border-bottom: 1px dashed #cbd5e1; height: 14px; margin-bottom: 2px;"></div>
-              <table style="width: 100%; border: none; margin-top: 16px; background: transparent;">
-                <tr>
-                  <td style="text-align: left; font-size: 11.5px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">वर्गशिक्षक स्वाक्षरी</td>
-                  <td style="text-align: right; font-size: 11.5px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">मुख्याध्यापक स्वाक्षरी</td>
-                </tr>
-              </table>
+                  <tr>
+                    <td style="width: 33.33%; padding: 3px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                      <div style="font-size: 9px; font-weight: 800; color: #475569;">शाळा</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${schoolVal}</div>
+                    </td>
+                    <td style="width: 33.33%; padding: 3px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                      <div style="font-size: 9px; font-weight: 800; color: #475569;">इयत्ता</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${stdVal}</div>
+                    </td>
+                    <td style="width: 33.33%; padding: 3px 8px; vertical-align: top; text-align: left;">
+                      <div style="font-size: 9px; font-weight: 800; color: #475569;">सन</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #0f172a; margin-top: 1px;">${yearVal}</div>
+                    </td>
+                  </tr>
+                </table>
+                ${p.thought ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 3px 8px; margin-bottom: 6px; font-size: 10.5px; color: #78350f; text-align: center;"><strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #78350f;">"${p.thought}"</strong></div>` : ""}
+                <table class="main-diary-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #475569; margin-bottom: 6px; background: #ffffff;">
+                  <thead>
+                    <tr>
+                      ${headers}
+                    </tr>
+                  </thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>
+              <div style="margin-top: 6px; shrink-0;">
+                <div style="font-size: 10px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</div>
+                <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
+                <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
+                <table style="width: 100%; border: none; margin-top: 12px; background: transparent;">
+                  <tr>
+                    <td style="text-align: left; font-size: 11px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">वर्गशिक्षक स्वाक्षरी</td>
+                    <td style="text-align: right; font-size: 11px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">मुख्याध्यापक स्वाक्षरी</td>
+                  </tr>
+                </table>
+              </div>
             </div>
           </div>`;
       }).join("");
@@ -2397,6 +2429,64 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
       wrapper.appendChild(container);
       document.body.appendChild(wrapper);
+
+      // Auto-fit & vertically fill every single day page onto 1 full A4 page
+      const dayPages = container.querySelectorAll<HTMLElement>(".pdf-day-page");
+      dayPages.forEach((pageEl) => {
+        const innerEl = pageEl.querySelector<HTMLElement>(".pdf-day-inner");
+        if (!innerEl) return;
+
+        innerEl.style.minHeight = "0px";
+        const maxAllowedHeight = 1088;
+
+        // First compact pass if taller than 1 page
+        if (innerEl.scrollHeight > maxAllowedHeight) {
+          const cells = innerEl.querySelectorAll<HTMLElement>("table.main-diary-table td, table.main-diary-table th");
+          cells.forEach((c) => {
+            c.style.padding = "2.5px 3px";
+            c.style.fontSize = "8.8px";
+            c.style.lineHeight = "1.18";
+          });
+        } else if (innerEl.scrollHeight < 940) {
+          // Plenty of room: slightly enhance readability before expanding rows vertically
+          innerEl.querySelectorAll<HTMLElement>("table.main-diary-table th").forEach((th) => {
+            th.style.fontSize = "11px";
+            th.style.padding = "7px 4px";
+          });
+          innerEl.querySelectorAll<HTMLTableRowElement>("table.main-diary-table tbody tr").forEach((tr) => {
+            const tds = tr.querySelectorAll<HTMLElement>("td");
+            tds.forEach((td, tdIdx) => {
+              td.style.fontSize = tdIdx >= 5 ? "10px" : "11px";
+              td.style.lineHeight = "1.35";
+            });
+          });
+        }
+
+        // Measure after font adjustment
+        const actualHeight = innerEl.scrollHeight;
+        if (actualHeight > maxAllowedHeight) {
+          const scale = maxAllowedHeight / actualHeight;
+          innerEl.style.transform = `scale(${scale})`;
+          innerEl.style.transformOrigin = "top left";
+          innerEl.style.width = `${762 / scale}px`;
+        } else {
+          // Vertically expand table rows so the table stretches cleanly down to fill the full page
+          const remainingSpace = maxAllowedHeight - actualHeight - 8;
+          const tbodyRows = innerEl.querySelectorAll<HTMLTableRowElement>("table.main-diary-table tbody tr");
+          if (remainingSpace > 12 && tbodyRows.length > 0) {
+            const extraPerRow = Math.floor(remainingSpace / tbodyRows.length);
+            tbodyRows.forEach((tr) => {
+              const currentH = tr.getBoundingClientRect().height;
+              const targetH = Math.floor(currentH + extraPerRow);
+              tr.style.height = `${targetH}px`;
+              tr.querySelectorAll<HTMLElement>("td").forEach((td) => {
+                td.style.height = `${targetH}px`;
+              });
+            });
+          }
+          innerEl.style.minHeight = `${maxAllowedHeight}px`;
+        }
+      });
 
       const baseName = activeFileName.replace(/\.[^/.]+$/, "") || "Teaching_Diary";
       
@@ -2496,7 +2586,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         </div>
       </div>
 
-      <div className="flex-1 w-full bg-slate-50 overflow-auto relative p-1 sm:p-4">
+      <div className="flex-1 w-full bg-slate-50 overflow-y-auto overflow-x-hidden relative p-1 sm:p-3">
         {loadingContent || loadingPdf ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
             <Loader2 className="size-8 animate-spin text-indigo-600" />

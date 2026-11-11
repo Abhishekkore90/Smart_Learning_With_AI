@@ -266,3 +266,119 @@ export function getDefaultSubjectsForClass(selectedClass: string, medium?: strin
   return map[selectedClass] || map["1st"];
 }
 
+export interface ClassSubjectConfigItem {
+  key: string;
+  label: string;
+  icon: string;
+  isCustom?: boolean;
+}
+
+const CO_CURRICULAR_SUBJECTS: ClassSubjectConfigItem[] = [
+  { key: "visheshpragati", label: "विशेष प्रगती", icon: "🌟" },
+  { key: "aavad", label: "आवडी-निवडी", icon: "💖" },
+  { key: "sudharna", label: "सुधारणा आवश्यक", icon: "⚠️" },
+  { key: "vyaktimatva", label: "व्यक्तिमत्त्व गुण", icon: "👤" },
+];
+
+/**
+ * Map a CCE subject display name from cceSubjects.ts to its exact remark store key, label, and icon
+ * matching CCERemarks.tsx (CCE Dashboard).
+ */
+function mapDefaultSubjectToConfig(subName: string, isSemi: boolean): ClassSubjectConfigItem | null {
+  const s = subName.toLowerCase().trim();
+  if (s.includes("प्रथम") || s.includes("मराठी")) {
+    return { key: "prathambhasha", label: "प्रथम भाषा (मराठी)", icon: "📘" };
+  }
+  if (s.includes("द्वितीय") || s.includes("इंग्रजी") || s.includes("english")) {
+    return {
+      key: "dvitiybhasha",
+      label: isSemi ? "English (द्वितीय भाषा)" : "द्वितीय भाषा (इंग्रजी)",
+      icon: "🌐",
+    };
+  }
+  if (s.includes("तृतीय") || s.includes("हिंदी") || s.includes("hindi")) {
+    return {
+      key: "tritiyabhasha",
+      label: isSemi ? "हिंदी (तृतीय भाषा)" : "तृतीय भाषा (हिंदी)",
+      icon: "🪔",
+    };
+  }
+  if (s.includes("गणित") || s.includes("math") || s.includes("mathematics")) {
+    return {
+      key: "ganit",
+      label: isSemi ? "Mathematics (गणित)" : "गणित",
+      icon: "📐",
+    };
+  }
+  if (s.includes("परिसर अभ्यास भाग १") || s.includes("परिसर १")) {
+    return { key: "parisar1", label: "परिसर अभ्यास भाग १", icon: "🌱" };
+  }
+  if (s.includes("परिसर अभ्यास भाग २") || s.includes("परिसर २")) {
+    return { key: "parisar2", label: "परिसर अभ्यास भाग २", icon: "🏛️" };
+  }
+  if (s.includes("परिसर") || s.includes("संभोवतालचे")) {
+    return { key: "parisar", label: "आपले संभोवतालचे जग (परिसर अभ्यास)", icon: "🌿" };
+  }
+  if (s.includes("सामान्य विज्ञान") || s.includes("विज्ञान") || s.includes("general science") || s.includes("science")) {
+    return {
+      key: "vijnan",
+      label: isSemi ? "General Science (सामान्य विज्ञान)" : "सामान्य विज्ञान",
+      icon: "🔬",
+    };
+  }
+  if (s.includes("सामाजिक") || s.includes("social")) {
+    return {
+      key: "samajik_shastra",
+      label: isSemi ? "Social Sciences (सामाजिक शास्त्रे)" : "सामाजिक शास्त्रे",
+      icon: "🗺️",
+    };
+  }
+  if (s.includes("कला") || s.includes("art")) {
+    return { key: "kala", label: "कलाशिक्षण", icon: "🎨" };
+  }
+  if (s.includes("कार्य") || s.includes("work")) {
+    return { key: "karyanubhav", label: "कार्यशिक्षण", icon: "🛠️" };
+  }
+  if (s.includes("शारीरिक") || s.includes("physical")) {
+    return { key: "sharirik", label: "शारीरिक शिक्षण व आरोग्य", icon: "⚽" };
+  }
+  return null;
+}
+
+/**
+ * Returns the exact list of CCE subject keys & labels for the given class and medium,
+ * matching the CCE Dashboard (CCERemarks.tsx) class-by-class.
+ */
+export function getClassSpecificCCESubjects(
+  selectedClass: string,
+  medium: string = "marathi"
+): ClassSubjectConfigItem[] {
+  const isSemi =
+    medium.toLowerCase().includes("semi") ||
+    medium.toLowerCase().includes("सेमी") ||
+    medium.toLowerCase() === "english";
+  const map = isSemi ? DEFAULT_SEMI_SUBJECTS_MAP : DEFAULT_MARATHI_SUBJECTS_MAP;
+  const effectiveClass = map[selectedClass] ? selectedClass : selectedClass === "9th" || selectedClass === "10th" ? "8th" : "1st";
+  const rawNames = map[effectiveClass] || map["1st"];
+
+  const result: ClassSubjectConfigItem[] = [];
+  const seenKeys = new Set<string>();
+
+  for (const name of rawNames) {
+    const item = mapDefaultSubjectToConfig(name, isSemi);
+    if (item && !seenKeys.has(item.key)) {
+      seenKeys.add(item.key);
+      result.push(item);
+    }
+  }
+
+  for (const extra of CO_CURRICULAR_SUBJECTS) {
+    if (!seenKeys.has(extra.key)) {
+      seenKeys.add(extra.key);
+      result.push(extra);
+    }
+  }
+
+  return result;
+}
+

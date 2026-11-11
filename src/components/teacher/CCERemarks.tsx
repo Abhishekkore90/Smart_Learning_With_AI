@@ -367,6 +367,7 @@ export function CCERemarks({
   const [allRemarks, setAllRemarks] = useState<Record<string, StudentRemarks>>({});
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [customClassRemarks, setCustomClassRemarks] = useState<Record<string, string[]>>({});
+  const [adminCustomSubjects, setAdminCustomSubjects] = useState<Array<{ key: string; label: string; icon?: string }>>([]);
   const [configuredSubjects, setConfiguredSubjects] = useState<string[]>([]);
   const [studentRemarks, setStudentRemarks] = useState<StudentRemarks>({});
   const [expandedSubject, setExpandedSubject] = useState<string | null>("prathambhasha");
@@ -420,30 +421,33 @@ export function CCERemarks({
     };
   }, [propMedium, selectedClass]);
 
-  // Load master remarks for the standard
   // Load master remarks for the standard (Sync with Firestore real-time & Bunny CDN)
   useEffect(() => {
     let isMounted = true;
+    let firestoreAuthoritative = false;
     const masterData = getClassRemarks(selectedClass, selectedMedium);
     setCustomClassRemarks(masterData);
 
     const docId = `${selectedClass}_${selectedMedium}`;
     const unsubDoc = onSnapshot(doc(db, "cce_admin_remarks", docId), (docSnap) => {
       if (!isMounted) return;
-      if (docSnap.exists() && docSnap.data().remarks) {
-        const remoteData = docSnap.data().remarks;
+      if (docSnap.exists() && docSnap.data().remarks !== undefined) {
+        firestoreAuthoritative = true;
+        const remoteData = docSnap.data().remarks || {};
         setCustomClassRemarks(remoteData);
+        setAdminCustomSubjects(Array.isArray(docSnap.data().customSubjects) ? docSnap.data().customSubjects : []);
       } else {
         setCustomClassRemarks(masterData);
+        setAdminCustomSubjects([]);
       }
     });
 
     async function fetchCustomAdminRemarks() {
       try {
         const cdnBase = import.meta.env.DEV ? '/api/bunny-cdn' : 'https://sgkbrainova.b-cdn.net';
-        const cdnUrl = `${cdnBase}/cce_remarks/class_${selectedClass}_${selectedMedium}_remarks.json`;
+        const cdnUrl = `${cdnBase}/cce_remarks/class_${selectedClass}_${selectedMedium}_remarks.json?t=${Date.now()}`;
         const res = await fetch(cdnUrl);
-        if (isMounted && res.ok) {
+        if (isMounted && !firestoreAuthoritative && res.ok) {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
             setCustomClassRemarks(data);
@@ -820,14 +824,139 @@ export function CCERemarks({
             teacherId,
             records: updated,
             updatedAt: new Date().toISOString(),
-          },
-          { merge: true }
+          }
         ).catch((err) => {
           console.warn("Background Firestore save warning:", err);
         });
       }
     } catch (err: any) {
       console.warn("Background save failed:", err);
+    }
+  };
+
+  // Clear ALL remarks for the currently opened student
+  const clearCurrentStudentAllRemarks = async () => {
+    if (!editingStudent) return;
+    const studentName = editingStudent.fullName || editingStudent.name || "या विद्यार्थ्याची";
+    if (!confirm(`तुम्हाला नक्की '${studentName}' या विद्यार्थ्याची सर्व विषयांच्या नोंदी हटवायच्या आहेत का?`)) return;
+
+    setSaving(true);
+    try {
+      const updated = { ...allRemarks };
+      const keysToRemove = [
+        editingStudent.id,
+        editingStudent.rollNo,
+        editingStudent.rollNo ? String(editingStudent.rollNo) : "",
+        editingStudent.name,
+        editingStudent.fullName,
+      ].filter(Boolean) as string[];
+      keysToRemove.forEach((k) => {
+        delete updated[k];
+      });
+
+      setStudentRemarks({});
+      setAllRemarks(updated);
+      try {
+        localStorage.setItem(
+          `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
+          JSON.stringify(updated)
+        );
+      } catch (e) {}
+
+      const teacherId = getTeacherId();
+      const docIdsToSave = [`${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`];
+      if (teacherId) {
+        docIdsToSave.push(`${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`);
+      }
+      await Promise.all(
+        docIdsToSave.map((dId) =>
+          setDoc(doc(db, "cce_remarks_v2", dId), {
+            class: selectedClass,
+            academicYear,
+            semester: activeSemester,
+            medium: selectedMedium,
+            teacherId,
+            records: updated,
+            updatedAt: new Date().toISOString(),
+          })
+        )
+      );
+      toast.success(`🗑️ '${studentName}' च्या सर्व नोंदी डॅशबोर्ड व बॅकएंडमधून हटवल्या!`);
+    } catch (err: any) {
+      toast.error("नोंदी हटवताना त्रुटी आली: " + (err?.message || err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Clear ALL student remarks for the entire Class, Academic Year, Semester & Medium
+  const clearAllClassStudentRemarks = async () => {
+    if (
+      !confirm(
+        `तुम्हाला नक्की इयत्ता ${selectedClass} (${activeSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}) मधील सर्व विद्यार्थ्यांच्या भरलेल्या सर्व नोंदी डॅशबोर्ड व बॅकएंडमधून कायमच्या हटवायच्या आहेत का?`
+      )
+    ) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      setAllRemarks({});
+      setStudentRemarks({});
+      try {
+        localStorage.removeItem(
+          `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
+        );
+      } catch (e) {}
+
+      const teacherId = getTeacherId();
+      const targetDocIds = Array.from(
+        new Set(
+          [
+            teacherId ? `${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}` : null,
+            teacherId ? `${teacherId}_${selectedClass}_${academicYear}_${activeSemester}` : null,
+            `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
+            `${selectedClass}_${academicYear}_${activeSemester}`,
+          ].filter(Boolean) as string[]
+        )
+      );
+
+      await Promise.all(
+        targetDocIds.map(async (dId) => {
+          await setDoc(doc(db, "cce_remarks_v2", dId), {
+            class: selectedClass,
+            academicYear,
+            semester: activeSemester,
+            medium: selectedMedium,
+            teacherId: teacherId || null,
+            records: {},
+            updatedAt: new Date().toISOString(),
+          });
+          try {
+            const legacyRef = doc(db, "cce_remarks", dId);
+            const legacySnap = await getDoc(legacyRef);
+            if (legacySnap.exists()) {
+              await setDoc(legacyRef, {
+                class: selectedClass,
+                academicYear,
+                semester: activeSemester,
+                medium: selectedMedium,
+                students: {},
+                records: {},
+                remarks: {},
+                updatedAt: new Date().toISOString(),
+              });
+            }
+          } catch (e) {}
+        })
+      );
+
+      toast.success(`🗑️ इयत्ता ${selectedClass} मधील सर्व नोंदी CCE डॅशबोर्ड व बॅकएंडमधून हटवल्या गेल्या!`);
+    } catch (err: any) {
+      console.error("Delete all class student remarks error:", err);
+      toast.error("सर्व नोंदी हटवताना त्रुटी आली: " + (err?.message || err));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -951,6 +1080,13 @@ export function CCERemarks({
       }
     });
 
+    // Include any Admin-defined custom subjects for this class & medium
+    adminCustomSubjects.forEach((cs) => {
+      if (cs?.key && !mappedKeys.includes(cs.key)) {
+        mappedKeys.push(cs.key);
+      }
+    });
+
     // Always append the 4 co-curricular subject categories
     ALWAYS_INCLUDED_KEYS.forEach((k) => {
       if (!mappedKeys.includes(k)) {
@@ -967,12 +1103,13 @@ export function CCERemarks({
 
       return (
         ALWAYS_INCLUDED_KEYS.includes(k) ||
+        adminCustomSubjects.some((cs) => cs.key === k) ||
         (customClassRemarks[k] && customClassRemarks[k].length > 0) ||
         SUBJECT_META[k] ||
         SUBJECT_NAMES_MAP[k]
       );
     });
-  }, [configuredSubjects, selectedClass, selectedMedium, customClassRemarks]);
+  }, [configuredSubjects, selectedClass, selectedMedium, customClassRemarks, adminCustomSubjects]);
 
   // ── STUDENT REMARK EDITOR VIEW ──
   if (editingStudent) {
@@ -1049,7 +1186,21 @@ export function CCERemarks({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {Object.values(studentRemarks).some(
+              (val) => (Array.isArray(val) && val.length > 0) || (typeof val === "string" && val.trim().length > 0)
+            ) && (
+              <button
+                onClick={clearCurrentStudentAllRemarks}
+                disabled={saving}
+                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                title="या विद्यार्थ्याची सर्व विषयांच्या नोंदी हटवा"
+              >
+                <Trash2 className="size-3.5" />
+                <span>सर्व नोंदी हटवा</span>
+              </button>
+            )}
+
             {/* Semester Switcher */}
             <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs font-bold">
               <button
@@ -1080,8 +1231,9 @@ export function CCERemarks({
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 pb-28">
           {availableSubjectKeys.map((subKey) => {
             const isExpanded = expandedSubject === subKey;
+            const customMeta = adminCustomSubjects.find((cs) => cs.key === subKey);
             const meta = SUBJECT_META[subKey] || {
-              label: SUBJECT_NAMES_MAP[subKey] || subKey,
+              label: customMeta?.label || SUBJECT_NAMES_MAP[subKey] || subKey,
               icon: BookOpen,
               gradient: "from-blue-600 to-indigo-700",
               text: "text-blue-600",
@@ -1245,7 +1397,9 @@ export function CCERemarks({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-72 overflow-y-auto p-1 pr-2 rounded-2xl bg-white border border-slate-200/80">
                         {filteredMasterList.length === 0 ? (
                           <div className="col-span-full py-8 text-center text-xs text-slate-400 font-semibold">
-                            "{remarkSearchQuery}" शी संबंधित नोंद सापडली नाही
+                            {remarkSearchQuery.trim()
+                              ? `"${remarkSearchQuery}" शी संबंधित नोंद सापडली नाही`
+                              : "या विषयासाठी सध्या कोणत्याही नोंदी उपलब्ध नाहीत (तुम्ही खाली स्वतःची नवीन नोंद जोडू शकता)"}
                           </div>
                         ) : (
                           filteredMasterList.map((rawItemText, iIdx) => {
@@ -1381,12 +1535,26 @@ export function CCERemarks({
           </div>
         </div>
 
-        {/* Progress Badge */}
-        <div className="flex items-center gap-2 bg-white/15 px-3.5 py-1.5 rounded-2xl border border-white/20 text-xs font-bold">
-          <CheckCircle2 className="size-4 text-emerald-300" />
-          <span>
-            प्रगती: {rosterStats.completedCount} / {rosterStats.total} विद्यार्थी पूर्ण
-          </span>
+        {/* Progress Badge & Delete All Nondis Button */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 bg-white/15 px-3.5 py-1.5 rounded-2xl border border-white/20 text-xs font-bold">
+            <CheckCircle2 className="size-4 text-emerald-300" />
+            <span>
+              प्रगती: {rosterStats.completedCount} / {rosterStats.total} विद्यार्थी पूर्ण
+            </span>
+          </div>
+
+          {(rosterStats.completedCount > 0 || Object.keys(allRemarks).length > 0) && (
+            <button
+              onClick={clearAllClassStudentRemarks}
+              disabled={saving}
+              className="px-3.5 py-1.5 rounded-2xl bg-rose-500/90 hover:bg-rose-600 text-white border border-rose-300/40 text-xs font-black transition-all flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95 disabled:opacity-50"
+              title="या वर्गातील सर्व विद्यार्थ्यांच्या सर्व नोंदी डॅशबोर्ड व बॅकएंडमधून हटवा"
+            >
+              <Trash2 className="size-3.5" />
+              <span>सर्व नोंदी हटवा (Delete All)</span>
+            </button>
+          )}
         </div>
       </div>
 
