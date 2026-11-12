@@ -202,6 +202,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
   const [selectedSemester, setSelectedSemester] = useState(initialSemester || "sem2");
+  const [viewMode, setViewMode] = useState("matrix");
   const [division, setDivision] = useState("");
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -603,7 +604,291 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
     setLoading(false);
   };
 
+  const toMarathiDigitsLocal = (val) => {
+    if (val === null || val === undefined) return "";
+    const map = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+    return String(val).replace(/\d/g, (d) => map[Number(d)]);
+  };
+
+  const toMarathiClassLabel = (cls) => {
+    const c = String(cls || "").toLowerCase().trim();
+    if (c.includes("1")) return "पहिली";
+    if (c.includes("2")) return "दुसरी";
+    if (c.includes("3")) return "तिसरी";
+    if (c.includes("4")) return "चौथी";
+    if (c.includes("5")) return "पाचवी";
+    if (c.includes("6")) return "सहावी";
+    if (c.includes("7")) return "सातवी";
+    if (c.includes("8")) return "आठवी";
+    return cls || "";
+  };
+
+  const handleDownloadMatrixPdf = async () => {
+    setDownloading(true);
+    toast.info("अध्ययन निष्पत्ती संकलन तक्ता PDF तयार होत आहे...");
+
+    const tempContainer = document.createElement("div");
+    tempContainer.style.cssText =
+      "position: fixed; left: -10000px; top: 0; width: 794px; background: #ffffff; z-index: -1;";
+    document.body.appendChild(tempContainer);
+
+    try {
+      const mOutcomes = getClassOutcomes(selectedClass, "marathi", customOutcomesData);
+      const hOutcomes = getClassOutcomes(selectedClass, "hindi", customOutcomesData);
+      const eOutcomes = getClassOutcomes(selectedClass, "english", customOutcomesData);
+      const mtOutcomes = getClassOutcomes(selectedClass, "math", customOutcomesData);
+      const ev1Outcomes = getClassOutcomes(selectedClass, "evs1", customOutcomesData);
+      const ev2Outcomes = getClassOutcomes(selectedClass, "evs2", customOutcomesData);
+      const sciOutcomes = getClassOutcomes(selectedClass, "science", customOutcomesData);
+      const histOutcomes = getClassOutcomes(selectedClass, "history", customOutcomesData);
+      const geoOutcomes = getClassOutcomes(selectedClass, "geography", customOutcomesData);
+      const kOutcomes = getClassOutcomes(selectedClass, "kala", customOutcomesData);
+      const kaOutcomes = getClassOutcomes(selectedClass, "karyanubhav", customOutcomesData);
+      const shOutcomes = getClassOutcomes(selectedClass, "sharirik", customOutcomesData);
+
+      const activeSections = [
+        { key: "मराठी", title: "मराठी", outcomes: mOutcomes, subjectName: "मराठी", isEnglish: false },
+        { key: "हिंदी", title: "हिंदी", outcomes: hOutcomes, subjectName: "हिंदी", isEnglish: false },
+        { key: "गणित", title: "गणित", outcomes: mtOutcomes, subjectName: "गणित", isEnglish: false },
+        { key: "इंग्रजी", title: "इंग्रजी", outcomes: eOutcomes, subjectName: "इंग्रजी", isEnglish: true },
+        { key: "परिसर अभ्यास १", title: "परिसर अभ्यास १", outcomes: ev1Outcomes, subjectName: "परिसर अभ्यास १", isEnglish: false },
+        { key: "परिसर अभ्यास २", title: "परिसर अभ्यास २", outcomes: ev2Outcomes, subjectName: "परिसर अभ्यास २", isEnglish: false },
+        { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: sciOutcomes, subjectName: "सामान्य विज्ञान", isEnglish: false },
+        { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: histOutcomes, subjectName: "इतिहास व नागरिकशास्त्र", isEnglish: false },
+        { key: "भूगोल", title: "भूगोल", outcomes: geoOutcomes, subjectName: "भूगोल", isEnglish: false },
+        { key: "कला", title: "कलाशिक्षण", outcomes: kOutcomes, subjectName: "कलाशिक्षण", isEnglish: false },
+        { key: "कार्यानुभव", title: "कार्यशिक्षण", outcomes: kaOutcomes, subjectName: "कार्यशिक्षण", isEnglish: false },
+        { key: "शारीरिक", title: "शारीरिक शिक्षण", outcomes: shOutcomes, subjectName: "शारीरिक", isEnglish: false },
+      ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
+
+      const COLS_PER_PAGE = 16;
+      const studentBatches = [];
+      if (students.length === 0) {
+        studentBatches.push(Array(COLS_PER_PAGE).fill(null));
+      } else {
+        for (let i = 0; i < students.length; i += COLS_PER_PAGE) {
+          const slice = students.slice(i, i + COLS_PER_PAGE);
+          while (slice.length < COLS_PER_PAGE) slice.push(null);
+          studentBatches.push(slice);
+        }
+      }
+
+      const marathiClass = toMarathiClassLabel(selectedClass);
+      const schoolName = schoolData.schoolName || "";
+      const pageElements = [];
+
+      const buildTableHeadHtml = (batch, secTitle) => {
+        const stuNameCells = batch
+          .map((stu) => {
+            const name = stu ? (stu.fullName || stu.name || "") : "";
+            return `<th style="border: 1px solid #000000; padding: 0; height: 132px; position: relative; vertical-align: middle; text-align: center; font-weight: 700; font-size: 10px; color: #000000; overflow: hidden;">
+              <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-90deg); width: 126px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;">${name}</div>
+            </th>`;
+          })
+          .join("");
+
+        const rollCells = batch
+          .map((stu, bIdx) => {
+            const roll = stu ? (stu.rollNo || bIdx + 1) : "";
+            const label = roll ? toMarathiDigitsLocal(roll) : "";
+            return `<th style="border: 1px solid #000000; padding: 2px 1px; height: 26px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11.5px; line-height: 1.1; color: #000000;">${label}</th>`;
+          })
+          .join("");
+
+        return `
+          <thead>
+            <tr>
+              <th colspan="2" style="border: 1px solid #000000; padding: 5px 8px; text-align: left; font-weight: 700; font-size: 12px; color: #000000;">शाळेचे नाव - ${schoolName}</th>
+              <th colspan="7" style="border: 1px solid #000000; padding: 5px 4px; text-align: center; font-weight: 700; font-size: 12.5px; color: #000000;">अध्ययन निष्पत्ती संकलन तक्ता</th>
+              <th colspan="4" style="border: 1px solid #000000; padding: 5px 4px; text-align: center; font-weight: 700; font-size: 12px; color: #000000;">इयत्ता - ${marathiClass}</th>
+              <th colspan="6" style="border: 1px solid #000000; padding: 5px 4px; text-align: center; font-weight: 700; font-size: 12px; color: #000000;">विषय - ${secTitle}</th>
+            </tr>
+            <tr>
+              <th rowspan="2" style="border: 1px solid #000000; padding: 4px 2px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 10px; line-height: 1.25; color: #000000;">अध्ययन<br/>निष्पत्ती /<br/>क्षमता क्र.</th>
+              <th style="border: 1px solid #000000; padding: 6px; height: 132px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 13px; color: #000000;">विद्यार्थ्यांचे नाव</th>
+              ${stuNameCells}
+              <th rowspan="2" style="border: 1px solid #000000; padding: 4px 2px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11px; color: #000000;">एकूण</th>
+            </tr>
+            <tr>
+              <th style="border: 1px solid #000000; padding: 2px 8px; height: 26px; vertical-align: middle; font-weight: 700; font-size: 12px; color: #000000;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <span style="flex: 1; text-align: center;">अध्ययन निष्पत्ती</span>
+                  <span style="font-size: 10px; white-space: nowrap;">ह.क्र. →</span>
+                </div>
+              </th>
+              ${rollCells}
+            </tr>
+          </thead>
+        `;
+      };
+
+      const buildColgroupHtml = () => {
+        const stuCols = Array(COLS_PER_PAGE)
+          .fill('<col style="width: 3.1875%;" />')
+          .join("");
+        return `
+          <colgroup>
+            <col style="width: 7%;" />
+            <col style="width: 36%;" />
+            ${stuCols}
+            <col style="width: 6%;" />
+          </colgroup>
+        `;
+      };
+
+      for (const sec of activeSections) {
+        for (const batch of studentBatches) {
+          const allRowsHtml = sec.outcomes.map((item) => {
+            const rawCode = String(item.code || "").replace(/^C-/i, "");
+            const displayCode = sec.isEnglish ? rawCode : toMarathiDigitsLocal(rawCode);
+            let ratedCount = 0;
+            const stuCells = batch
+              .map((stu) => {
+                if (!stu) {
+                  return `<td style="border: 1px solid #000000; padding: 2px; text-align: center; vertical-align: middle;"></td>`;
+                }
+                const lvl = getUserSelectedLevel(stu, item.code, sec.subjectName);
+                if (lvl >= 1 && lvl <= 4) {
+                  ratedCount++;
+                  return `<td style="border: 1px solid #000000; padding: 2px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11.5px; color: #000000;">${toMarathiDigitsLocal(lvl)}</td>`;
+                }
+                return `<td style="border: 1px solid #000000; padding: 2px; text-align: center; vertical-align: middle;"></td>`;
+              })
+              .join("");
+
+            const totalText = ratedCount > 0 ? toMarathiDigitsLocal(ratedCount) : "";
+            return `
+              <tr>
+                <td style="border: 1px solid #000000; padding: 3px 2px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 10.5px; color: #000000; white-space: nowrap;">${displayCode}</td>
+                <td style="border: 1px solid #000000; padding: 3px 5px; text-align: left; vertical-align: middle; font-weight: 700; font-size: 11px; line-height: 1.28; color: #000000;">${item.text}</td>
+                ${stuCells}
+                <td style="border: 1px solid #000000; padding: 2px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11px; color: #000000;">${totalText}</td>
+              </tr>
+            `;
+          });
+
+          // Measure row heights on A4 container
+          const measureEl = document.createElement("div");
+          measureEl.style.cssText =
+            "width: 794px; padding: 18px; box-sizing: border-box; background: #ffffff; font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif;";
+          measureEl.innerHTML = `
+            <table style="width: 100%; border-collapse: collapse; table-layout: fixed; color: #000000;">
+              ${buildColgroupHtml()}
+              ${buildTableHeadHtml(batch, sec.title)}
+              <tbody id="mm_tbody">${allRowsHtml.join("")}</tbody>
+            </table>
+          `;
+          tempContainer.appendChild(measureEl);
+
+          const theadH = measureEl.querySelector("thead")?.getBoundingClientRect().height || 145;
+          const trNodes = Array.from(measureEl.querySelectorAll("#mm_tbody tr"));
+          const rowHeights = trNodes.map((tr) =>
+            Math.max(24, Math.ceil(tr.getBoundingClientRect().height || 26))
+          );
+          tempContainer.removeChild(measureEl);
+
+          const maxBodyHeight = 1122 - 36 - theadH - 18;
+          const chunks = [];
+          let curr = [];
+          let sumH = 0;
+
+          for (let r = 0; r < allRowsHtml.length; r++) {
+            const rh = rowHeights[r] || 26;
+            if (sumH + rh <= maxBodyHeight || curr.length === 0) {
+              curr.push(allRowsHtml[r]);
+              sumH += rh;
+            } else {
+              chunks.push(curr);
+              curr = [allRowsHtml[r]];
+              sumH = rh;
+            }
+          }
+          if (curr.length > 0) chunks.push(curr);
+
+          for (const chunkRows of chunks) {
+            const pageEl = document.createElement("div");
+            pageEl.style.cssText =
+              "width: 794px; min-height: 1122px; padding: 18px; box-sizing: border-box; background: #ffffff; font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif;";
+            pageEl.innerHTML = `
+              <table style="width: 100%; border-collapse: collapse; table-layout: fixed; color: #000000;">
+                ${buildColgroupHtml()}
+                ${buildTableHeadHtml(batch, sec.title)}
+                <tbody>${chunkRows.join("")}</tbody>
+              </table>
+            `;
+            tempContainer.appendChild(pageEl);
+            pageElements.push(pageEl);
+          }
+        }
+      }
+
+      if (pageElements.length === 0) {
+        toast.error("कोणतेही विषय किंवा अध्ययन निष्पत्ती आढळल्या नाहीत.");
+        return;
+      }
+
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+      for (let i = 0; i < pageElements.length; i++) {
+        const canvas = await html2canvas(pageElements[i], {
+          scale: 2.5,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+          windowWidth: 794,
+        });
+
+        const PAGE_WIDTH = 210;
+        const PAGE_HEIGHT = 297;
+        const MARGIN = 4;
+        const availW = PAGE_WIDTH - MARGIN * 2;
+        const availH = PAGE_HEIGHT - MARGIN * 2;
+        const ratio = canvas.width / canvas.height;
+        let renderW = availW;
+        let renderH = renderW / ratio;
+        if (renderH > availH) {
+          renderH = availH;
+          renderW = renderH * ratio;
+        }
+        const x = (PAGE_WIDTH - renderW) / 2;
+        const y = MARGIN;
+        const imgData = canvas.toDataURL("image/png");
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, "PNG", x, y, renderW, renderH, undefined, "FAST");
+      }
+
+      pdf.save(`अध्ययन_निष्पत्ती_संकलन_तक्ता_${selectedClass}_${academicYear}.pdf`);
+      toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
+    } catch (err) {
+      console.error("Matrix PDF generation error:", err);
+      toast.error("PDF निर्मितीत अडचण आली: " + err.message);
+    } finally {
+      if (tempContainer.parentNode) {
+        tempContainer.parentNode.removeChild(tempContainer);
+      }
+      setDownloading(false);
+    }
+  };
+
   const handleDownloadPdf = async () => {
+    if (viewMode === "matrix") {
+      return handleDownloadMatrixPdf();
+    }
     if (!printRef.current) return;
     setDownloading(true);
     toast.info("अध्ययन निष्पती PDF तयार होत आहे, कृपया वाट पाहा...");
@@ -1261,10 +1546,34 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setViewMode("matrix")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                viewMode === "matrix"
+                  ? "bg-white text-blue-700 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              संकलन तक्ता
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("student")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                viewMode === "student"
+                  ? "bg-white text-blue-700 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              विद्यार्थीनिहाय
+            </button>
+          </div>
           <button
             onClick={handleDownloadPdf}
-            disabled={downloading || students.length === 0}
+            disabled={downloading || (viewMode === "student" && students.length === 0)}
             className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-blue-200 flex items-center gap-2 disabled:opacity-50"
           >
             {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
@@ -1281,7 +1590,142 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         </div>
       )}
 
-      {/* -------------------- 1. SCREEN VIEW (SINGLE CONTINUOUS TABLE PER SUBJECT ON WEB UI) -------------------- */}
+      {/* -------------------- 1. SCREEN VIEW -------------------- */}
+      {viewMode === "matrix" ? (
+        <div className="cce-screen-view max-w-5xl mx-auto space-y-6 mb-8 no-print">
+          {(() => {
+            const activeSubjectSections = [
+              { key: "मराठी", title: "मराठी", outcomes: marathiOutcomes, subjectName: "मराठी", isEnglish: false },
+              { key: "हिंदी", title: "हिंदी", outcomes: hindiOutcomes, subjectName: "हिंदी", isEnglish: false },
+              { key: "गणित", title: "गणित", outcomes: mathsOutcomes, subjectName: "गणित", isEnglish: false },
+              { key: "इंग्रजी", title: "इंग्रजी", outcomes: englishOutcomes, subjectName: "इंग्रजी", isEnglish: true },
+              { key: "परिसर अभ्यास १", title: "परिसर अभ्यास १", outcomes: evs1Outcomes, subjectName: "परिसर अभ्यास १", isEnglish: false },
+              { key: "परिसर अभ्यास २", title: "परिसर अभ्यास २", outcomes: evs2Outcomes, subjectName: "परिसर अभ्यास २", isEnglish: false },
+              { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान", isEnglish: false },
+              { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र", isEnglish: false },
+              { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल", isEnglish: false },
+              { key: "कला", title: "कलाशिक्षण", outcomes: kalaOutcomes, subjectName: "कलाशिक्षण", isEnglish: false },
+              { key: "कार्यानुभव", title: "कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: "कार्यशिक्षण", isEnglish: false },
+              { key: "शारीरिक", title: "शारीरिक शिक्षण", outcomes: sharirikOutcomes, subjectName: "शारीरिक", isEnglish: false },
+            ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
+
+            const COLS_PER_PAGE = 16;
+            const studentBatches = [];
+            if (students.length === 0) {
+              studentBatches.push(Array(COLS_PER_PAGE).fill(null));
+            } else {
+              for (let i = 0; i < students.length; i += COLS_PER_PAGE) {
+                const slice = students.slice(i, i + COLS_PER_PAGE);
+                while (slice.length < COLS_PER_PAGE) slice.push(null);
+                studentBatches.push(slice);
+              }
+            }
+
+            return activeSubjectSections.map((sec) =>
+              studentBatches.map((batch, bIdx) => (
+                <div key={`matrix_${sec.key}_${bIdx}`} className="bg-white p-4 border border-slate-300 rounded-2xl shadow-sm overflow-x-auto">
+                  <table className="w-full min-w-[760px] border-collapse table-fixed text-black">
+                    <colgroup>
+                      <col style={{ width: "7%" }} />
+                      <col style={{ width: "36%" }} />
+                      {batch.map((_, cIdx) => (
+                        <col key={cIdx} style={{ width: "3.1875%" }} />
+                      ))}
+                      <col style={{ width: "6%" }} />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th colSpan={2} className="border border-black px-2 py-1.5 text-left font-bold text-xs">
+                          शाळेचे नाव - {schoolData.schoolName || ""}
+                        </th>
+                        <th colSpan={7} className="border border-black px-1 py-1.5 text-center font-bold text-[12.5px]">
+                          अध्ययन निष्पत्ती संकलन तक्ता
+                        </th>
+                        <th colSpan={4} className="border border-black px-1 py-1.5 text-center font-bold text-xs">
+                          इयत्ता - {toMarathiClassLabel(selectedClass)}
+                        </th>
+                        <th colSpan={6} className="border border-black px-1 py-1.5 text-center font-bold text-xs">
+                          विषय - {sec.title}
+                        </th>
+                      </tr>
+                      <tr>
+                        <th rowSpan={2} className="border border-black p-1 text-center align-middle font-bold text-[10px] leading-tight">
+                          अध्ययन<br />निष्पत्ती /<br />क्षमता क्र.
+                        </th>
+                        <th className="border border-black p-2 h-[132px] text-center align-middle font-bold text-[13px]">
+                          विद्यार्थ्यांचे नाव
+                        </th>
+                        {batch.map((stu, cIdx) => (
+                          <th key={cIdx} className="border border-black p-0 h-[132px] relative text-center align-middle font-bold text-[10px] overflow-hidden">
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: "50%",
+                                left: "50%",
+                                transform: "translate(-50%, -50%) rotate(-90deg)",
+                                width: "126px",
+                                lineHeight: 1.2,
+                              }}
+                              className="whitespace-nowrap overflow-hidden text-ellipsis text-center"
+                            >
+                              {stu ? stu.fullName || stu.name || "" : ""}
+                            </div>
+                          </th>
+                        ))}
+                        <th rowSpan={2} className="border border-black p-1 text-center align-middle font-bold text-[11px]">
+                          एकूण
+                        </th>
+                      </tr>
+                      <tr>
+                        <th className="border border-black px-2 py-1 h-[26px] align-middle font-bold text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="flex-1 text-center">अध्ययन निष्पत्ती</span>
+                            <span className="text-[10px] whitespace-nowrap">ह.क्र. →</span>
+                          </div>
+                        </th>
+                        {batch.map((stu, cIdx) => (
+                          <th key={cIdx} className="border border-black p-0.5 h-[26px] text-center align-middle font-bold text-[11.5px] leading-[1.1]">
+                            {stu ? toMarathiDigitsLocal(stu.rollNo || cIdx + 1) : ""}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sec.outcomes.map((item, oIdx) => {
+                        const rawCode = String(item.code || "").replace(/^C-/i, "");
+                        const displayCode = sec.isEnglish ? rawCode : toMarathiDigitsLocal(rawCode);
+                        let ratedCount = 0;
+                        return (
+                          <tr key={`${sec.key}_${oIdx}`}>
+                            <td className="border border-black px-1 py-1 text-center align-middle font-bold text-[10.5px] whitespace-nowrap">
+                              {displayCode}
+                            </td>
+                            <td className="border border-black px-1.5 py-1 text-left align-middle font-bold text-[11px] leading-snug">
+                              {item.text}
+                            </td>
+                            {batch.map((stu, cIdx) => {
+                              const lvl = stu ? getUserSelectedLevel(stu, item.code, sec.subjectName) : 0;
+                              if (lvl >= 1 && lvl <= 4) ratedCount++;
+                              return (
+                                <td key={cIdx} className="border border-black p-0.5 text-center align-middle font-bold text-[11.5px]">
+                                  {lvl >= 1 && lvl <= 4 ? toMarathiDigitsLocal(lvl) : ""}
+                                </td>
+                              );
+                            })}
+                            <td className="border border-black p-0.5 text-center align-middle font-bold text-[11px]">
+                              {ratedCount > 0 ? toMarathiDigitsLocal(ratedCount) : ""}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ))
+            );
+          })()}
+        </div>
+      ) : (
       <div className="cce-screen-view max-w-4xl mx-auto space-y-6 mb-8 no-print">
         {students.map((student) => {
           const activeSubjectSections = [
@@ -1340,6 +1784,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           );
         })}
       </div>
+      )}
 
       {/* -------------------- 2. PDF CAPTURE CONTAINER (PAGINATED & BALANCED A4 PAGES FOR PDF DOWNLOAD) -------------------- */}
       <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto hidden print:block">

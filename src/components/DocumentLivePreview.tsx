@@ -229,7 +229,49 @@ export const fitPdfDayPageToA4 = (
 };
 
 export const formatMarathiDate = (raw: string | undefined | null): string => {
-  return toMarathiDigits(formatCleanDate(raw));
+  let out = formatCleanDate(raw);
+  const enToMrWords: Record<string, string> = {
+    sunday: "रविवार",
+    monday: "सोमवार",
+    tuesday: "मंगळवार",
+    wednesday: "बुधवार",
+    thursday: "गुरुवार",
+    friday: "शुक्रवार",
+    saturday: "शनिवार",
+    sun: "रविवार",
+    mon: "सोमवार",
+    tue: "मंगळवार",
+    wed: "बुधवार",
+    thu: "गुरुवार",
+    fri: "शुक्रवार",
+    sat: "शनिवार",
+    january: "जानेवारी",
+    february: "फेब्रुवारी",
+    march: "मार्च",
+    april: "एप्रिल",
+    may: "मे",
+    june: "जून",
+    july: "जुलै",
+    august: "ऑगस्ट",
+    september: "सप्टेंबर",
+    october: "ऑक्टोबर",
+    november: "नोव्हेंबर",
+    december: "डिसेंबर",
+    jan: "जानेवारी",
+    feb: "फेब्रुवारी",
+    mar: "मार्च",
+    apr: "एप्रिल",
+    jun: "जून",
+    jul: "जुलै",
+    aug: "ऑगस्ट",
+    sep: "सप्टेंबर",
+    sept: "सप्टेंबर",
+    oct: "ऑक्टोबर",
+    nov: "नोव्हेंबर",
+    dec: "डिसेंबर",
+  };
+  out = out.replace(/\b[a-zA-Z]+\b/g, (word) => enToMrWords[word.toLowerCase()] || word);
+  return toMarathiDigits(out);
 };
 
 export const formatDateToIso = (raw: string | undefined | null): string => {
@@ -1347,13 +1389,13 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
             </div>
 
             {/* Yellow Suvichar Card matching 1-day view */}
-            <div className="text-xs text-amber-950 bg-amber-50/95 p-2.5 sm:p-3 rounded-2xl border border-amber-300 text-center shadow-xs flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
-              <strong className="text-amber-900 font-black text-xs uppercase tracking-wider shrink-0">आजचा सुविचार : </strong>
+            <div className="text-xs text-black bg-amber-50/95 p-2.5 sm:p-3 rounded-2xl border border-amber-300 text-center shadow-xs flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
+              <strong className="text-black font-black text-xs uppercase tracking-wider shrink-0">आजचा सुविचार : </strong>
               <span 
                 suppressContentEditableWarning 
                 contentEditable 
                 onBlur={(e) => updateHeader(idx, "thought", e.currentTarget.textContent || "")}
-                className="font-black text-xs sm:text-sm text-amber-950 not-italic hover:bg-amber-100/80 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text max-w-full break-words"
+                className="font-black text-xs sm:text-sm text-black not-italic hover:bg-amber-100/80 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text max-w-full break-words"
                 title="सुविचार बदलण्यासाठी येथे क्लिक करा"
               >
                 {cleanThoughtText(p.thought) && !cleanThoughtText(p.thought).includes("प्रविष्ट करण्यासाठी")
@@ -1427,12 +1469,12 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                       key={rIdx} 
                       className="hover:bg-indigo-50/40 transition-colors border-b-2 border-slate-400"
                     >
-                      <td className="p-1 sm:p-2 border-r-2 border-slate-400 text-center font-black text-slate-900 align-middle hover:bg-amber-100/60 transition-all text-[9.5px] sm:text-xs md:text-sm break-words leading-tight">
+                      <td className="p-1 sm:p-2 border-r-2 border-slate-400 text-center font-black text-black align-middle hover:bg-amber-100/60 transition-all text-[9.5px] sm:text-xs md:text-sm break-words leading-tight">
                         <span
                           suppressContentEditableWarning
                           contentEditable
                           onBlur={(e) => updateRow(idx, rIdx, "period", e.currentTarget.textContent || "")}
-                          className="text-orange-600 font-black mr-1 outline-none hover:bg-amber-200/60 rounded px-0.5"
+                          className="text-black font-black mr-1 outline-none hover:bg-amber-200/60 rounded px-0.5"
                           title="तासिका क्रमांक"
                         >
                           {row.period}
@@ -1441,7 +1483,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                           suppressContentEditableWarning
                           contentEditable
                           onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")}
-                          className="text-slate-900 font-black outline-none hover:bg-amber-200/60 rounded px-0.5 block sm:inline mt-0.5 sm:mt-0"
+                          className="text-black font-black outline-none hover:bg-amber-200/60 rounded px-0.5 block sm:inline mt-0.5 sm:mt-0"
                           title="विषय"
                         >
                           {row.subject}
@@ -1451,7 +1493,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                         suppressContentEditableWarning 
                         contentEditable 
                         onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} 
-                        className="p-1 sm:p-2 border-r-2 border-slate-400 text-slate-900 font-extrabold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words leading-tight sm:leading-normal"
+                        className="p-1 sm:p-2 border-r-2 border-slate-400 text-black font-extrabold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words leading-tight sm:leading-normal"
                         title="पाठ / घटक"
                       >
                         {row.topic}
@@ -1460,7 +1502,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                         suppressContentEditableWarning 
                         contentEditable 
                         onBlur={(e) => updateRow(idx, rIdx, "subtopic", e.currentTarget.textContent || "")} 
-                        className="p-1 sm:p-2 border-r-2 border-slate-400 text-slate-900 font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words leading-tight sm:leading-normal"
+                        className="p-1 sm:p-2 border-r-2 border-slate-400 text-black font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words leading-tight sm:leading-normal"
                         title="अध्ययन मुद्दा"
                       >
                         {row.subtopic || "-"}
@@ -1469,7 +1511,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                         suppressContentEditableWarning 
                         contentEditable 
                         onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} 
-                        className="p-1 sm:p-2 border-r-2 border-slate-400 text-emerald-600 font-extrabold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
+                        className="p-1 sm:p-2 border-r-2 border-slate-400 text-black font-extrabold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
                         title="अध्ययन निष्पत्ती"
                       >
                         {row.outcome || "-"}
@@ -1478,7 +1520,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                         suppressContentEditableWarning 
                         contentEditable 
                         onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} 
-                        className="p-1 sm:p-2 border-r-2 border-slate-400 text-slate-800 font-bold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
+                        className="p-1 sm:p-2 border-r-2 border-slate-400 text-black font-bold leading-tight sm:leading-relaxed text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text text-[9px] sm:text-xs md:text-sm break-words"
                         title="अध्ययन अनुभवाचे स्वरूप"
                       >
                         {row.experience || "-"}
@@ -1487,7 +1529,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                         suppressContentEditableWarning 
                         contentEditable 
                         onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} 
-                        className="p-1 sm:p-2 border-r-2 border-slate-400 text-slate-800 text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
+                        className="p-1 sm:p-2 border-r-2 border-slate-400 text-black text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
                         title="साधन तंत्रे"
                       >
                         {row.tools || "-"}
@@ -1496,7 +1538,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                         suppressContentEditableWarning 
                         contentEditable 
                         onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} 
-                        className="p-1 sm:p-2 text-slate-800 text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
+                        className="p-1 sm:p-2 text-black text-[8.5px] sm:text-xs font-bold text-center align-middle hover:bg-amber-100/60 focus:bg-amber-100 focus:outline-none transition-all cursor-text break-words leading-tight"
                         title="शैक्षणिक साहित्य"
                       >
                         {row.materials || "-"}
@@ -2573,21 +2615,21 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         return validPeriods.length > 0;
       });
 
-      const colWidths = ["10%", "9%", "13%", "27%", "19%", "11%", "11%"];
+      const colWidths = ["8%", "9%", "13%", "33%", "19%", "9%", "9%"];
 
       const dayBlocks = validPages.map((p: any, idx: number) => {
         const rows = (p.periods || []).map((row: any, rIdx: number) => `
           <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
-            <td style="box-sizing:border-box;text-align:center;font-weight:900;color:#0f172a;width:${colWidths[0]};font-size:11.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
-              <div style="color:#ea580c;font-weight:900;line-height:1.2;margin-bottom:2px;">${row.period}</div>
-              <div style="color:#0f172a;font-weight:900;line-height:1.2;">${row.subject || "-"}</div>
+            <td style="box-sizing:border-box;text-align:center;font-weight:900;color:#000000;width:${colWidths[0]};font-size:11.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
+              <div style="color:#000000;font-weight:900;line-height:1.2;margin-bottom:2px;">${row.period}</div>
+              <div style="color:#000000;font-weight:900;line-height:1.2;">${row.subject || "-"}</div>
             </td>
-            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#1e293b;width:${colWidths[1]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.topic || "-"}</td>
-            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#1e293b;width:${colWidths[2]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.subtopic || "-"}</td>
-            <td style="box-sizing:border-box;text-align:left;color:#047857;font-weight:800;width:${colWidths[3]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.outcome || "-"}</td>
-            <td style="box-sizing:border-box;text-align:left;color:#334155;font-weight:700;width:${colWidths[4]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.experience || "-"}</td>
-            <td style="box-sizing:border-box;text-align:center;color:#334155;font-weight:700;width:${colWidths[5]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.tools || "-"}</td>
-            <td style="box-sizing:border-box;text-align:center;color:#334155;font-weight:700;width:${colWidths[6]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.materials || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#000000;width:${colWidths[1]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.topic || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#000000;width:${colWidths[2]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.subtopic || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;color:#000000;font-weight:800;width:${colWidths[3]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.outcome || "-"}</td>
+            <td style="box-sizing:border-box;text-align:left;color:#000000;font-weight:700;width:${colWidths[4]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.experience || "-"}</td>
+            <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[5]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.tools || "-"}</td>
+            <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[6]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.materials || "-"}</td>
           </tr>`).join("");
 
         const headers = defaultHeaders
@@ -2610,35 +2652,35 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
                 </div>
                 <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 6px; margin-bottom: 6px; background: #ffffff;">
                   <tr>
-                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
                       <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">दिनांक</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${formatMarathiDate(p.date)}</div>
                     </td>
-                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
                       <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">वार</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
                     </td>
-                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
                       <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">वर्गशिक्षक</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${teacherVal}</div>
                     </td>
                   </tr>
                   <tr>
-                    <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                    <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
                       <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">शाळा</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${schoolVal}</div>
                     </td>
-                    <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                    <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
                       <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">इयत्ता</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${stdVal}</div>
                     </td>
-                    <td style="width: 33.33%; padding: 4px 8px; vertical-align: top; text-align: left;">
+                    <td style="width: 33.33%; padding: 4px 8px; vertical-align: middle; text-align: center;">
                       <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">सन</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${yearVal}</div>
                     </td>
                   </tr>
                 </table>
-                ${p.thought ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 12px; color: #78350f; text-align: center;"><strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #78350f;">"${p.thought}"</strong></div>` : ""}
+                ${p.thought ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 12px; color: #000000; text-align: center;"><strong style="font-weight: 900; color: #000000;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #000000;">"${p.thought}"</strong></div>` : ""}
                 <table class="main-diary-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #475569; margin-bottom: 6px; background: #ffffff;">
                   <thead>
                     <tr>
@@ -2707,14 +2749,20 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         fitPdfDayPageToA4(pageEl, 754, 1040);
       });
 
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch {}
+      }
+
       const baseName = activeFileName.replace(/\.[^/.]+$/, "") || "Teaching_Diary";
       
       const opt = {
         margin:       [0, 0, 0, 0],
         filename:     `${baseName}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 794 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait', compress: false },
+        image:        { type: 'png', quality: 1.0 },
+        html2canvas:  { scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff', windowWidth: 794 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
         pagebreak:    { mode: 'css', before: '.html2pdf-page-break' }
       };
 
