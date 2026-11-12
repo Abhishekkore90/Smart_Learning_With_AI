@@ -1424,6 +1424,11 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           .pdf-page .font-black {
             font-weight: 900 !important;
           }
+          table.progress-compact-table th,
+          table.progress-compact-table td {
+            padding: 2px 4px !important;
+            width: auto !important;
+          }
           @media print {
             @page {
               size: ${layoutMode === "portrait" ? "A4 portrait" : "A4 landscape"};
@@ -1887,7 +1892,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                         <h4 className="text-[14px] font-extrabold text-orange-950 text-center bg-orange-100/90 py-1 border-b-2 border-orange-400">
                           उपस्थिती
                         </h4>
-                        <table className="w-full text-center text-[13px] border-collapse border border-orange-300">
+                        <table className="w-full text-center text-[13px] border-collapse border border-orange-300 progress-compact-table">
                           <thead>
                             <tr className="bg-amber-100/90 font-extrabold text-amber-950 border-b border-orange-300 text-[13px] min-h-[24px]">
                               <th className="border border-orange-300 px-1 py-0.5 w-[34%] text-center">महिना</th>
@@ -1914,7 +1919,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                         <h4 className="text-[14px] font-extrabold text-orange-950 text-center bg-orange-100/90 py-1 border-b-2 border-orange-400">
                           श्रेणी तक्ता
                         </h4>
-                        <table className="w-full text-center text-[13px] border-collapse border border-orange-300">
+                        <table className="w-full text-center text-[13px] border-collapse border border-orange-300 progress-compact-table">
                           <thead>
                             <tr className="bg-amber-100/90 font-extrabold text-amber-950 border-b border-orange-300 text-[13px] min-h-[22px]">
                               <th className="border border-orange-300 px-1 py-0.5 w-[65%] text-center">गुणांचे वर्गीकरण</th>
@@ -1936,8 +1941,8 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                       </div>
                     </div>
                   </div>
-                  <div className="col-span-6 pl-1 flex flex-col justify-between h-full space-y-1.5">
-                    <div className="space-y-1.5">
+                  <div className="col-span-6 pl-1 flex flex-col justify-between h-full space-y-1">
+                    <div className="space-y-1">
                       <div className="flex items-center justify-between border-b-2 border-orange-400 pb-1">
                         <div className="flex items-center gap-1.5">
                           <div className="w-6 h-6 bg-orange-600 text-white rounded-lg flex items-center justify-center font-extrabold text-[10px] shadow-sm shrink-0">
@@ -1953,7 +1958,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                             विद्यार्थी प्रगतीपत्रक सन {academicYear}
                           </h2>
                         </div>
-                        <div className="w-[62px] h-[72px] rounded-xl border-2 border-orange-500 overflow-hidden bg-white shrink-0 shadow-sm p-0.5 flex items-center justify-center">
+                        <div className="w-[56px] h-[64px] rounded-xl border-2 border-orange-500 overflow-hidden bg-white shrink-0 shadow-sm p-0.5 flex items-center justify-center">
                           {student.photoUrl ? (
                             <img src={student.photoUrl} alt={student.name} className="w-full h-full object-cover rounded-lg" />
                           ) : (
@@ -1964,12 +1969,12 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                           )}
                         </div>
                       </div>
-                      <div className="border-2 border-orange-400 rounded-xl p-2.5 bg-white space-y-1 text-[12.5px]">
-                        <div className="flex items-center justify-between font-extrabold text-black border-b-2 border-orange-300 pb-1 text-[13.5px]">
-                          <span>हजेरी क्र. : <b className="text-blue-950 font-extrabold text-[14px]">{student.rollNo || idx + 1}</b></span>
-                          <span>यु-डायस : <b className="text-blue-950 font-extrabold text-[14px]">{schoolData.udise || student.udise || ""}</b></span>
+                      <div className="border-2 border-orange-400 rounded-xl px-2.5 py-1.5 bg-white space-y-0.5 text-[12.5px]">
+                        <div className="flex items-center justify-between font-extrabold text-black border-b-2 border-orange-300 pb-0.5 text-[13px]">
+                          <span>हजेरी क्र. : <b className="text-blue-950 font-extrabold text-[13.5px]">{student.rollNo || idx + 1}</b></span>
+                          <span>यु-डायस : <b className="text-blue-950 font-extrabold text-[13.5px]">{schoolData.udise || student.udise || ""}</b></span>
                         </div>
-                        <div className="space-y-1 pt-0.5">
+                        <div className="space-y-0.5 pt-0.5">
                           <div className="flex border-b border-slate-300 pb-0.5 items-baseline">
                             <span className="text-slate-900 font-bold shrink-0 text-[12.5px] mr-1.5">शाळेचे नाव :</span>
                             <span className="font-bold text-black text-[12.5px] leading-snug break-words flex-1">{schoolData.schoolName || student.schoolName || ""}</span>
@@ -2013,18 +2018,18 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                           </div>
                         </div>
                       </div>
-                      <div className="border border-orange-300 bg-orange-50/40 rounded-lg p-1.5 text-[14px] font-extrabold text-black flex items-center justify-between">
-                        <span>संपर्क: <b className="text-black font-extrabold text-[14.5px]">{student.mobile || student.phone || ""}</b></span>
+                      <div className="border border-orange-300 bg-orange-50/40 rounded-lg px-2 py-1 text-[13px] font-extrabold text-black flex items-center justify-between">
+                        <span>संपर्क: <b className="text-black font-extrabold text-[13.5px]">{student.mobile || student.phone || ""}</b></span>
                       </div>
-                      <div className="border border-orange-400 bg-orange-50/50 rounded-lg p-1.5 text-[14px] flex items-center justify-between font-extrabold text-black">
-                        <span>वजन: <b className="text-blue-950 font-extrabold text-[14.5px]">{student.weight ? `${student.weight} किलो` : ""}</b></span>
-                        <span className="text-orange-950 font-extrabold text-[14.5px]">आरोग्य विषयक माहिती</span>
-                        <span>उंची: <b className="text-blue-950 font-extrabold text-[14.5px]">{student.height ? `${student.height} सेमी` : ""}</b></span>
+                      <div className="border border-orange-400 bg-orange-50/50 rounded-lg px-2 py-1 text-[13px] flex items-center justify-between font-extrabold text-black">
+                        <span>वजन: <b className="text-blue-950 font-extrabold text-[13.5px]">{student.weight ? `${student.weight} किलो` : ""}</b></span>
+                        <span className="text-orange-950 font-extrabold text-[13.5px]">आरोग्य विषयक माहिती</span>
+                        <span>उंची: <b className="text-blue-950 font-extrabold text-[13.5px]">{student.height ? `${student.height} सेमी` : ""}</b></span>
                       </div>
                     </div>
-                    <div className="border-2 border-orange-400 bg-amber-50/90 rounded-xl p-2 text-[14px] flex items-center justify-between font-extrabold text-black shadow-xs mt-auto">
-                      <span>शाळा भरण्याचा दिनांक: <b className="text-blue-950 font-extrabold text-[15px]">15 Jun 2026</b></span>
-                      <span>पुढील वर्षाची इयत्ता: <b className="text-emerald-900 font-extrabold text-[15px]">{getNextClassName(selectedClass)}</b></span>
+                    <div className="border-2 border-orange-400 bg-amber-50/90 rounded-xl px-2.5 py-1.5 text-[13px] flex items-center justify-between font-extrabold text-black shadow-xs mt-auto">
+                      <span>शाळा भरण्याचा दिनांक: <b className="text-blue-950 font-extrabold text-[13.5px]">15 Jun 2026</b></span>
+                      <span>पुढील वर्षाची इयत्ता: <b className="text-emerald-900 font-extrabold text-[13.5px]">{getNextClassName(selectedClass)}</b></span>
                     </div>
                   </div>
                 </div>

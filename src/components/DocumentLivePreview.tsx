@@ -1320,27 +1320,27 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
             <div className="bg-white border-2 border-slate-300 rounded-2xl p-4 sm:p-5 shadow-sm">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-center font-bold text-slate-900">
                 <div>
-                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">दिनांक</span>
+                  <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">दिनांक</span>
                   <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{formatMarathiDate(p.date)}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">वार</span>
+                  <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">वार</span>
                   <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiDayName(p.day, p.date)}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">वर्गशिक्षक</span>
+                  <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">वर्गशिक्षक</span>
                   <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiDigits(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-"))}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">शाळा</span>
+                  <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">शाळा</span>
                   <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiDigits(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-"))}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">इयत्ता</span>
+                  <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">इयत्ता</span>
                   <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-"))}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">सन</span>
+                  <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">सन</span>
                   <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiDigits(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27"))}</span>
                 </div>
               </div>
@@ -1397,14 +1397,14 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
               <table className="w-full text-xs sm:text-sm border-collapse border-2 border-slate-900 table-fixed">
                 <colgroup>
                   <col className="w-[10%]" />
-                  <col className="w-[13%]" />
                   <col className="w-[9%]" />
-                  <col className="w-[24%]" />
-                  <col className="w-[22%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[27%]" />
+                  <col className="w-[19%]" />
                   <col className="w-[11%]" />
                   <col className="w-[11%]" />
                 </colgroup>
-                <thead className="bg-slate-200 text-slate-950 font-black text-[9px] sm:text-xs md:text-sm border-b-2 border-slate-900">
+                <thead className="bg-slate-200 text-slate-950 font-bold text-[9px] sm:text-xs md:text-sm border-b-2 border-slate-900">
                   <tr>
                     {(p.columnHeaders && p.columnHeaders.length > 0
                       ? p.columnHeaders.map(normalizeTableHeader)
@@ -1413,7 +1413,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                       return (
                         <th
                           key={hIdx}
-                          className={`py-1.5 sm:py-2.5 px-0.5 ${hIdx === 3 || hIdx === 4 ? "sm:px-2" : "sm:px-1.5"} text-center bg-slate-200 text-slate-950 font-black ${hIdx < 6 ? "border-r border-slate-400" : ""} break-words leading-tight ${hIdx >= 1 ? "sm:leading-snug" : ""}`}
+                          className={`py-1.5 sm:py-2.5 px-0.5 ${hIdx === 3 || hIdx === 4 ? "sm:px-2" : "sm:px-1.5"} text-center bg-slate-200 text-slate-950 font-bold ${hIdx < 6 ? "border-r border-slate-400" : ""} break-words leading-tight ${hIdx >= 1 ? "sm:leading-snug" : ""}`}
                         >
                           {header}
                         </th>
@@ -1520,9 +1520,16 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
             <div 
               contentEditable
               suppressContentEditableWarning
+              onBlur={(e) => {
+                const val = e.currentTarget.innerText.trim();
+                updateHeader(idx, "specialRemarks", val);
+                try {
+                  if (p.date) localStorage.setItem(`special_remarks_${p.date}`, val);
+                } catch {}
+              }}
               className="border-b border-slate-300 p-2 min-h-[36px] text-xs text-slate-800 font-medium hover:bg-amber-50/50 focus:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-lg transition-all cursor-text"
               title="येथे टिप्पणी किंवा विशेष बाबी प्रविष्ट करण्यासाठी क्लिक करा"
-            />
+            >{p.specialRemarks || ""}</div>
             <div className="flex justify-between items-center font-black text-sm text-slate-900 pt-8 px-4">
               <span>वर्गशिक्षक</span>
               <span>मुख्याध्यापक</span>
@@ -2350,7 +2357,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         const dayBlocks = pagesToUse.map((p: any, idx: number) => {
           const rows = (p.periods || []).map((row: any, rIdx: number) => `
             <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
-              <td style="text-align:center;font-weight:bold;color:#0f172a;width:11%;border:1.5pt solid #475569;padding:6px 3px;"><b style="color:#ea580c;">${cleanText(row.period)}</b> ${cleanText(row.subject)}</td>
+              <td style="text-align:center;font-weight:bold;color:#0f172a;width:11%;border:1.5pt solid #475569;padding:6px 3px;"><div style="color:#ea580c;font-weight:bold;margin-bottom:2px;">${cleanText(row.period)}</div><div>${cleanText(row.subject) || "-"}</div></td>
               <td style="font-weight:bold;border:1.5pt solid #94a3b8;width:15%;padding:6px 4px;">${cleanText(row.topic)}</td>
               <td style="border:1.5pt solid #94a3b8;width:15%;padding:6px 4px;">${cleanText(row.subtopic || "-")}</td>
               <td style="border:1.5pt solid #94a3b8;width:23%;padding:6px 6px;">${cleanText(row.outcome)}</td>
@@ -2566,13 +2573,14 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         return validPeriods.length > 0;
       });
 
-      const colWidths = ["10%", "13%", "9%", "24%", "22%", "11%", "11%"];
+      const colWidths = ["10%", "9%", "13%", "27%", "19%", "11%", "11%"];
 
       const dayBlocks = validPages.map((p: any, idx: number) => {
         const rows = (p.periods || []).map((row: any, rIdx: number) => `
           <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
             <td style="box-sizing:border-box;text-align:center;font-weight:900;color:#0f172a;width:${colWidths[0]};font-size:11.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
-              <span style="color:#ea580c;margin-right:2px;">${row.period}</span> ${row.subject || "-"}
+              <div style="color:#ea580c;font-weight:900;line-height:1.2;margin-bottom:2px;">${row.period}</div>
+              <div style="color:#0f172a;font-weight:900;line-height:1.2;">${row.subject || "-"}</div>
             </td>
             <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#1e293b;width:${colWidths[1]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.topic || "-"}</td>
             <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#1e293b;width:${colWidths[2]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.subtopic || "-"}</td>
@@ -2584,7 +2592,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
         const headers = defaultHeaders
           .map((h: string, hIdx: number) => {
-            return `<th style="box-sizing:border-box;width:${colWidths[hIdx] || "auto"};background-color:#e2e8f0 !important;color:#0f172a !important;padding:6px 3px;text-align:center;font-size:11.5px;font-weight:900;border:1.5px solid #475569;line-height:1.22;word-wrap:break-word;overflow-wrap:break-word;white-space:normal;">${h}</th>`;
+            return `<th style="box-sizing:border-box;width:${colWidths[hIdx] || "auto"};background-color:#e2e8f0 !important;color:#0f172a !important;padding:6px 3px;text-align:center;font-size:12px;font-weight:700;border:1.5px solid #475569;line-height:1.22;word-wrap:break-word;overflow-wrap:break-word;white-space:normal;">${h}</th>`;
           }).join("");
 
         const dayVal = toMarathiDayName(p.day, p.date);
@@ -2603,29 +2611,29 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
                 <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 6px; margin-bottom: 6px; background: #ffffff;">
                   <tr>
                     <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                      <div style="font-size: 10px; font-weight: 800; color: #475569;">दिनांक</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">दिनांक</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${formatMarathiDate(p.date)}</div>
                     </td>
                     <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                      <div style="font-size: 10px; font-weight: 800; color: #475569;">वार</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">वार</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
                     </td>
                     <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                      <div style="font-size: 10px; font-weight: 800; color: #475569;">वर्गशिक्षक</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">वर्गशिक्षक</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${teacherVal}</div>
                     </td>
                   </tr>
                   <tr>
                     <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                      <div style="font-size: 10px; font-weight: 800; color: #475569;">शाळा</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">शाळा</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${schoolVal}</div>
                     </td>
                     <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                      <div style="font-size: 10px; font-weight: 800; color: #475569;">इयत्ता</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">इयत्ता</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${stdVal}</div>
                     </td>
                     <td style="width: 33.33%; padding: 4px 8px; vertical-align: top; text-align: left;">
-                      <div style="font-size: 10px; font-weight: 800; color: #475569;">सन</div>
+                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">सन</div>
                       <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${yearVal}</div>
                     </td>
                   </tr>
@@ -2641,9 +2649,28 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
                 </table>
               </div>
               <div style="margin-top: 6px; shrink-0;">
-                <div style="font-size: 11px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</div>
-                <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
-                <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
+                ${(() => {
+                  let rawRemarks = (p.specialRemarks || "").trim();
+                  if (!rawRemarks && p.date) {
+                    try {
+                      rawRemarks = (localStorage.getItem(`special_remarks_${p.date}`) || "").trim();
+                    } catch {}
+                  }
+                  if (!rawRemarks) {
+                    return `<div style="display: flex; align-items: flex-end; gap: 6px; margin-bottom: 4px;">
+                      <span style="font-size: 11px; font-weight: 900; color: #0f172a; white-space: nowrap; line-height: 1.2;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span>
+                      <div style="flex: 1; border-bottom: 1px dashed #cbd5e1; height: 12px;"></div>
+                    </div>
+                    <div style="border-bottom: 1px dashed #cbd5e1; height: 14px; margin-bottom: 2px;"></div>`;
+                  }
+                  const safeRemarks = rawRemarks
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;");
+                  return `<div style="font-size: 11.5px; line-height: 1.45; color: #0f172a; margin-bottom: 4px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 3px; word-break: break-word; white-space: pre-wrap;">
+                    <span style="font-weight: 900; margin-right: 6px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span><span style="font-weight: 700;">${safeRemarks}</span>
+                  </div>`;
+                })()}
                 <table style="width: 100%; border: none; margin-top: 12px; background: transparent;">
                   <tr>
                     <td style="text-align: left; font-size: 12px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">वर्गशिक्षक स्वाक्षरी</td>

@@ -60,6 +60,7 @@ interface DailyDiary {
   displayDate: string;
   day: string;
   thought: string;
+  specialRemarks?: string;
   dinvishesh: string;
   className: string;
   medium: string;
@@ -424,6 +425,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 }) => {
   const [activeDate, setActiveDate] = useState<Date | null>(null);
   const [todayDiary, setTodayDiary] = useState<DailyDiary | null>(null);
+  const [specialRemarks, setSpecialRemarks] = useState("");
+  const specialRemarksRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -533,11 +536,23 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
   useEffect(() => {
     if (selectedMonth) {
-      const year = activeDate ? activeDate.getFullYear() : 2026;
+      const today = new Date();
+      const year = activeDate ? activeDate.getFullYear() : today.getFullYear();
       const monthIdx = parseInt(selectedMonth, 10) - 1;
+      const isCurrentMonth = year === today.getFullYear() && monthIdx === today.getMonth();
+      const todayDay = today.getDate();
+      const todayWeek = todayDay <= 10 ? "1 to 10" : todayDay <= 20 ? "11 to 20" : "21 to 31";
+      const normalizedWeek =
+        selectedWeek === "21 to 30" ? "21 to 31" : (selectedWeek || (isCurrentMonth ? todayWeek : "1 to 10"));
+
       let startDay = 1;
-      if (selectedWeek === "11 to 20") startDay = 11;
-      else if (selectedWeek === "21 to 31" || selectedWeek === "21 to 30") startDay = 21;
+      if (isCurrentMonth && normalizedWeek === todayWeek) {
+        startDay = todayDay;
+      } else if (normalizedWeek === "11 to 20") {
+        startDay = 11;
+      } else if (normalizedWeek === "21 to 31") {
+        startDay = 21;
+      }
       const newDateObj = new Date(year, monthIdx, startDay);
       setActiveDate(newDateObj);
     } else if (!activeDate) {
@@ -748,6 +763,27 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   }, [selectedClass, selectedMedium, selectedMonth, currentTabId]);
 
   const isoDate = activeDate ? format(activeDate, "yyyy-MM-dd") : "";
+
+  useEffect(() => {
+    if (!isoDate) {
+      setSpecialRemarks("");
+      if (specialRemarksRef.current) specialRemarksRef.current.innerText = "";
+      return;
+    }
+    let stored = todayDiary?.specialRemarks || "";
+    if (!stored) {
+      try {
+        stored =
+          localStorage.getItem(`special_remarks_${selectedClass}_${selectedMedium}_${isoDate}`) ||
+          localStorage.getItem(`special_remarks_${isoDate}`) ||
+          "";
+      } catch (e) {}
+    }
+    setSpecialRemarks(stored);
+    if (specialRemarksRef.current && document.activeElement !== specialRemarksRef.current) {
+      specialRemarksRef.current.innerText = stored;
+    }
+  }, [isoDate, selectedClass, selectedMedium, todayDiary?.specialRemarks]);
   const displayFormattedDate = activeDate ? format(activeDate, "eeee, dd MMMM yyyy") : "...";
   const isToday = activeDate ? format(new Date(), "yyyy-MM-dd") === isoDate : false;
 
@@ -1175,6 +1211,43 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     }
   };
 
+  const handleSpecialRemarksChange = (newRemarks: string) => {
+    const cleaned = newRemarks.trim();
+    setSpecialRemarks(cleaned);
+    if (todayDiary) {
+      setTodayDiary({
+        ...todayDiary,
+        specialRemarks: cleaned,
+      });
+    }
+    if (isoDate) {
+      try {
+        localStorage.setItem(`special_remarks_${selectedClass}_${selectedMedium}_${isoDate}`, cleaned);
+        localStorage.setItem(`special_remarks_${isoDate}`, cleaned);
+      } catch (e) {}
+
+      try {
+        const tdDocId = `${selectedClass}_${selectedMedium}_${isoDate}`;
+        const tdDocRef = doc(db, "teaching_diaries", tdDocId);
+        setDoc(tdDocRef, {
+          className: selectedClass,
+          medium: selectedMedium,
+          date: isoDate,
+          specialRemarks: cleaned,
+          updatedAt: Date.now(),
+        }, { merge: true });
+      } catch (e) {}
+
+      try {
+        const teacherDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, isoDate);
+        setDoc(teacherDocRef, {
+          specialRemarks: cleaned,
+          updatedAt: Date.now(),
+        }, { merge: true });
+      } catch (e) {}
+    }
+  };
+
   const handleProfileChange = (field: string, value: string) => {
     const updated = { ...localProfile, [field]: value };
     setLocalProfile(updated);
@@ -1262,13 +1335,14 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   // ── Build the printable HTML content for A4 PDF (Matching Screenshot 1) ─────
   const buildPrintableHTMLInner = () => {
     if (!todayDiary || !activeDate) return "";
-    const colWidths = ["10%", "13%", "9%", "24%", "22%", "11%", "11%"];
+    const colWidths = ["10%", "9%", "13%", "27%", "19%", "11%", "11%"];
     const rows = todayDiary.periods
       .map(
         (item, rIdx) =>
           `<tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
             <td style="box-sizing:border-box;width:${colWidths[0]};text-align:center;font-weight:900;color:#0f172a;font-size:11.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
-              <span style="color:#ea580c;margin-right:2px;">${item.period}</span> ${item.subject}
+              <div style="color:#ea580c;font-weight:900;line-height:1.2;margin-bottom:2px;">${item.period}</div>
+              <div style="color:#0f172a;font-weight:900;line-height:1.2;">${item.subject || "-"}</div>
             </td>
             <td style="box-sizing:border-box;width:${colWidths[1]};text-align:left;font-weight:800;color:#1e293b;font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.topic}</td>
             <td style="box-sizing:border-box;width:${colWidths[2]};text-align:left;font-weight:800;color:#1e293b;font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.subtopic || "-"}</td>
@@ -1303,29 +1377,29 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 6px; margin-bottom: 6px; background: #ffffff;">
             <tr>
               <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                <div style="font-size: 10px; font-weight: 800; color: #475569;">दिनांक</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">दिनांक</div>
                 <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${displayDateVal}</div>
               </td>
               <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                <div style="font-size: 10px; font-weight: 800; color: #475569;">वार</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">वार</div>
                 <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
               </td>
               <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                <div style="font-size: 10px; font-weight: 800; color: #475569;">वर्गशिक्षक</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">वर्गशिक्षक</div>
                 <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${teacherVal}</div>
               </td>
             </tr>
             <tr>
               <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                <div style="font-size: 10px; font-weight: 800; color: #475569;">शाळा</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">शाळा</div>
                 <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${schoolVal}</div>
               </td>
               <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
-                <div style="font-size: 10px; font-weight: 800; color: #475569;">इयत्ता</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">इयत्ता</div>
                 <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${classVal}</div>
               </td>
               <td style="width: 33.33%; padding: 4px 8px; vertical-align: top; text-align: left;">
-                <div style="font-size: 10px; font-weight: 800; color: #475569;">सन</div>
+                <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">सन</div>
                 <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${yearVal}</div>
               </td>
             </tr>
@@ -1340,13 +1414,13 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           <table class="main-diary-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #475569; margin-bottom: 6px; background: #ffffff;">
             <thead>
               <tr>
-                <th style="box-sizing:border-box;width:${colWidths[0]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">तासिका/ विषय</th>
-                <th style="box-sizing:border-box;width:${colWidths[1]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">पाठ / घटक</th>
-                <th style="box-sizing:border-box;width:${colWidths[2]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन मुद्दा</th>
-                <th style="box-sizing:border-box;width:${colWidths[3]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन निष्पत्ती</th>
-                <th style="box-sizing:border-box;width:${colWidths[4]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन अनुभवाचे स्वरूप</th>
-                <th style="box-sizing:border-box;width:${colWidths[5]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">साधन तंत्रे</th>
-                <th style="box-sizing:border-box;width:${colWidths[6]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:11.5px; font-weight:900; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">शैक्षणिक साहित्य</th>
+                <th style="box-sizing:border-box;width:${colWidths[0]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:12px; font-weight:700; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">तासिका/ विषय</th>
+                <th style="box-sizing:border-box;width:${colWidths[1]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:12px; font-weight:700; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">पाठ / घटक</th>
+                <th style="box-sizing:border-box;width:${colWidths[2]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:12px; font-weight:700; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन मुद्दा</th>
+                <th style="box-sizing:border-box;width:${colWidths[3]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:12px; font-weight:700; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन निष्पत्ती</th>
+                <th style="box-sizing:border-box;width:${colWidths[4]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:12px; font-weight:700; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">अध्ययन अनुभवाचे स्वरूप</th>
+                <th style="box-sizing:border-box;width:${colWidths[5]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:12px; font-weight:700; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">साधन तंत्रे</th>
+                <th style="box-sizing:border-box;width:${colWidths[6]}; background-color:#e2e8f0 !important; color:#0f172a !important; padding:6px 3px; text-align:center; font-size:12px; font-weight:700; border:1.5px solid #475569; line-height:1.22; word-wrap:break-word; overflow-wrap:break-word; white-space:normal;">शैक्षणिक साहित्य</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -1355,9 +1429,28 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
         <!-- Bottom Special Features & Signatures -->
         <div style="margin-top: 6px; shrink-0;">
-          <div style="font-size: 11px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</div>
-          <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
-          <div style="border-bottom: 1px dashed #cbd5e1; height: 12px; margin-bottom: 2px;"></div>
+          ${(() => {
+            const rawRemarks = (
+              specialRemarksRef.current?.innerText ??
+              todayDiary.specialRemarks ??
+              specialRemarks ??
+              ""
+            ).trim();
+            if (!rawRemarks) {
+              return `<div style="display: flex; align-items: flex-end; gap: 6px; margin-bottom: 4px;">
+                <span style="font-size: 11px; font-weight: 900; color: #0f172a; white-space: nowrap; line-height: 1.2;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span>
+                <div style="flex: 1; border-bottom: 1px dashed #cbd5e1; height: 12px;"></div>
+              </div>
+              <div style="border-bottom: 1px dashed #cbd5e1; height: 14px; margin-bottom: 2px;"></div>`;
+            }
+            const safeRemarks = rawRemarks
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;");
+            return `<div style="font-size: 11.5px; line-height: 1.45; color: #0f172a; margin-bottom: 4px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 3px; word-break: break-word; white-space: pre-wrap;">
+              <span style="font-weight: 900; margin-right: 6px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span><span style="font-weight: 700;">${safeRemarks}</span>
+            </div>`;
+          })()}
           
           <table style="width: 100%; border: none; margin-top: 12px; background: transparent;">
             <tr>
@@ -1856,7 +1949,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           <div className="bg-white border-2 border-slate-300 rounded-2xl p-4 sm:p-5 shadow-sm">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-center font-bold text-slate-900">
               <div>
-                <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">दिनांक</span>
+                <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">दिनांक</span>
                 <span className="text-slate-900 font-black text-base block">
                   {formatMarathiDate(todayDiary.displayDate && todayDiary.displayDate !== "-"
                     ? todayDiary.displayDate
@@ -1864,7 +1957,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">वार</span>
+                <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">वार</span>
                 <span className="text-slate-900 font-black text-base block">
                   {toMarathiDayName(
                     todayDiary.day && todayDiary.day !== "-"
@@ -1875,7 +1968,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">वर्गशिक्षक</span>
+                <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">वर्गशिक्षक</span>
                 <span 
                   contentEditable
                   suppressContentEditableWarning
@@ -1887,7 +1980,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">शाळा</span>
+                <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">शाळा</span>
                 <span 
                   contentEditable
                   suppressContentEditableWarning
@@ -1899,7 +1992,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">इयत्ता</span>
+                <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">इयत्ता</span>
                 <span 
                   contentEditable
                   suppressContentEditableWarning
@@ -1911,7 +2004,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">सन</span>
+                <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">सन</span>
                 <span 
                   contentEditable
                   suppressContentEditableWarning
@@ -1949,20 +2042,20 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 <col className="w-[11%] sm:w-[90px]" />
                 <col className="w-[15%] sm:w-[130px]" />
                 <col className="w-[15%] sm:w-[130px]" />
-                <col className="w-[23%] sm:w-[220px]" />
-                <col className="w-[22%] sm:w-[200px]" />
+                <col className="w-[26%] sm:w-[250px]" />
+                <col className="w-[19%] sm:w-[170px]" />
                 <col className="w-[7%] sm:w-[80px]" />
                 <col className="w-[7%] sm:w-[80px]" />
               </colgroup>
-              <thead className="bg-slate-200 text-slate-950 font-black text-[9px] sm:text-xs md:text-sm border-b-2 border-slate-900">
+              <thead className="bg-slate-200 text-slate-950 font-bold text-[9px] sm:text-xs md:text-sm border-b-2 border-slate-900">
                 <tr>
-                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight">तासिका/ विषय</th>
-                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight">पाठ / घटक</th>
-                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन मुद्दा</th>
-                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन निष्पत्ती</th>
-                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन अनुभवाचे स्वरूप</th>
-                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400 break-words leading-tight sm:leading-snug">साधन तंत्रे</th>
-                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-black break-words leading-tight sm:leading-snug">शैक्षणिक साहित्य</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-bold border-r border-slate-400 break-words leading-tight">तासिका/ विषय</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-bold border-r border-slate-400 break-words leading-tight">पाठ / घटक</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-bold border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन मुद्दा</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-2 text-center bg-slate-200 text-slate-950 font-bold border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन निष्पत्ती</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-2 text-center bg-slate-200 text-slate-950 font-bold border-r border-slate-400 break-words leading-tight sm:leading-snug">अध्ययन अनुभवाचे स्वरूप</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-bold border-r border-slate-400 break-words leading-tight sm:leading-snug">साधन तंत्रे</th>
+                  <th className="py-1.5 sm:py-2.5 px-0.5 sm:px-1.5 text-center bg-slate-200 text-slate-950 font-bold break-words leading-tight sm:leading-snug">शैक्षणिक साहित्य</th>
                 </tr>
               </thead>
               <tbody className="divide-y-2 divide-slate-400 font-medium text-slate-900 bg-white text-[9px] sm:text-xs md:text-sm">
@@ -2054,8 +2147,11 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           <div className="mt-6 pt-4 border-t border-slate-200 space-y-3">
             <p className="font-bold text-xs text-slate-900">दिवसभरातील वैशिष्टपूर्ण बाबी:</p>
             <div 
+              ref={specialRemarksRef}
               contentEditable
               suppressContentEditableWarning
+              onInput={(e) => setSpecialRemarks(e.currentTarget.innerText)}
+              onBlur={(e) => handleSpecialRemarksChange(e.currentTarget.innerText)}
               className="border-b border-slate-300 p-2 min-h-[36px] text-xs text-slate-800 font-medium hover:bg-amber-50/50 focus:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-lg transition-all cursor-text"
               title="येथे टिप्पणी किंवा विशेष बाबी प्रविष्ट करण्यासाठी क्लिक करा"
             />

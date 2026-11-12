@@ -1196,10 +1196,21 @@ function TeachingRecordPage() {
                                   whileTap={{ scale: 0.97 }}
                                   onClick={() => {
                                     setSelectedMonth(m.id);
-                                    setSelectedWeek("1 to 10");
+                                    const today = new Date();
+                                    const isCurrentMonthAndYear =
+                                      selectedYear === today.getFullYear() &&
+                                      parseInt(m.id, 10) === today.getMonth() + 1;
+                                    const todayDay = today.getDate();
+                                    const initialWeek = isCurrentMonthAndYear
+                                      ? (todayDay <= 10 ? "1 to 10" : todayDay <= 20 ? "11 to 20" : "21 to 31")
+                                      : "1 to 10";
+                                    setSelectedWeek(initialWeek);
                                     const updatedDate = new Date(selectedDate);
                                     updatedDate.setFullYear(selectedYear);
                                     updatedDate.setMonth(parseInt(m.id, 10) - 1);
+                                    if (isCurrentMonthAndYear) {
+                                      updatedDate.setDate(todayDay);
+                                    }
                                     setSelectedDate(updatedDate);
                                   }}
                                   className="group relative p-6 rounded-2xl border-2 text-center transition-all duration-500 cursor-pointer overflow-hidden bg-pink-50/40 border-pink-100 hover:border-pink-300 hover:bg-pink-100/30 text-slate-800 flex flex-col items-center gap-2 shadow-sm"
