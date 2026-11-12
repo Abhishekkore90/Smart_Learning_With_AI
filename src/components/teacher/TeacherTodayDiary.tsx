@@ -1336,6 +1336,10 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   const buildPrintableHTMLInner = () => {
     if (!todayDiary || !activeDate) return "";
     const colWidths = ["8%", "9%", "13%", "33%", "19%", "9%", "9%"];
+    const isDash = (v: any) => {
+      const s = String(v ?? "").trim();
+      return !s || s === "-" || s === "--" || s === "—";
+    };
     const rows = todayDiary.periods
       .map(
         (item, rIdx) =>
@@ -1344,10 +1348,10 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               <div style="color:#000000;font-weight:900;line-height:1.2;margin-bottom:2px;">${item.period}</div>
               <div style="color:#000000;font-weight:900;line-height:1.2;">${item.subject || "-"}</div>
             </td>
-            <td style="box-sizing:border-box;width:${colWidths[1]};text-align:left;font-weight:800;color:#000000;font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.topic}</td>
-            <td style="box-sizing:border-box;width:${colWidths[2]};text-align:left;font-weight:800;color:#000000;font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.subtopic || "-"}</td>
-            <td style="box-sizing:border-box;width:${colWidths[3]};text-align:left;color:#000000;font-weight:800;font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.outcome || "-"}</td>
-            <td style="box-sizing:border-box;width:${colWidths[4]};text-align:left;color:#000000;font-weight:700;font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.experience || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[1]};text-align:${isDash(item.topic) ? "center" : "left"};font-weight:800;color:#000000;font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.topic || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[2]};text-align:${isDash(item.subtopic) ? "center" : "left"};font-weight:800;color:#000000;font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.subtopic || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[3]};text-align:${isDash(item.outcome) ? "center" : "left"};color:#000000;font-weight:800;font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.outcome || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[4]};text-align:${isDash(item.experience) ? "center" : "left"};color:#000000;font-weight:700;font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.experience || "-"}</td>
             <td style="box-sizing:border-box;width:${colWidths[5]};text-align:center;color:#000000;font-weight:700;font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.tools || "-"}</td>
             <td style="box-sizing:border-box;width:${colWidths[6]};text-align:center;color:#000000;font-weight:700;font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.materials || "-"}</td>
           </tr>`

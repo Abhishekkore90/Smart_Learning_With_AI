@@ -2617,6 +2617,11 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
       const colWidths = ["8%", "9%", "13%", "33%", "19%", "9%", "9%"];
 
+      const isDash = (v: any) => {
+        const s = String(v ?? "").trim();
+        return !s || s === "-" || s === "--" || s === "—";
+      };
+
       const dayBlocks = validPages.map((p: any, idx: number) => {
         const rows = (p.periods || []).map((row: any, rIdx: number) => `
           <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
@@ -2624,10 +2629,10 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
               <div style="color:#000000;font-weight:900;line-height:1.2;margin-bottom:2px;">${row.period}</div>
               <div style="color:#000000;font-weight:900;line-height:1.2;">${row.subject || "-"}</div>
             </td>
-            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#000000;width:${colWidths[1]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.topic || "-"}</td>
-            <td style="box-sizing:border-box;text-align:left;font-weight:800;color:#000000;width:${colWidths[2]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.subtopic || "-"}</td>
-            <td style="box-sizing:border-box;text-align:left;color:#000000;font-weight:800;width:${colWidths[3]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.outcome || "-"}</td>
-            <td style="box-sizing:border-box;text-align:left;color:#000000;font-weight:700;width:${colWidths[4]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.experience || "-"}</td>
+            <td style="box-sizing:border-box;text-align:${isDash(row.topic) ? "center" : "left"};font-weight:800;color:#000000;width:${colWidths[1]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.topic || "-"}</td>
+            <td style="box-sizing:border-box;text-align:${isDash(row.subtopic) ? "center" : "left"};font-weight:800;color:#000000;width:${colWidths[2]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.subtopic || "-"}</td>
+            <td style="box-sizing:border-box;text-align:${isDash(row.outcome) ? "center" : "left"};color:#000000;font-weight:800;width:${colWidths[3]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.outcome || "-"}</td>
+            <td style="box-sizing:border-box;text-align:${isDash(row.experience) ? "center" : "left"};color:#000000;font-weight:700;width:${colWidths[4]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.experience || "-"}</td>
             <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[5]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.tools || "-"}</td>
             <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[6]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.materials || "-"}</td>
           </tr>`).join("");
