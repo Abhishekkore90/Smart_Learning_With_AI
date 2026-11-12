@@ -404,6 +404,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
   // User's School & Teacher Settings (No hardcoded sample names)
   const [schoolData, setSchoolData] = useState({
     schoolName: "",
+    rawSchoolName: "",
+    address: "",
     udise: "",
     teacherName: "",
     headmasterName: "",
@@ -640,7 +642,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         }
 
         setSchoolData({
-          schoolName: schoolName ? `${schoolName}${address ? ` (${address})` : ""}` : "",
+          schoolName: schoolName ? `${schoolName}${address ? ` (${address.trim()})` : ""}` : "",
+          rawSchoolName: (schoolName || "").trim(),
+          address: (address || "").trim(),
           udise: udise || "",
           teacherName: teacherName || "",
           headmasterName: headmasterName || "",
@@ -1620,8 +1624,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             {/* Top School Header Section */}
             <div className="space-y-2 w-full">
               <h2 className="text-2xl sm:text-3xl font-extrabold text-black leading-snug">
-                {schoolData.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
+                {schoolData.rawSchoolName || schoolData.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
               </h2>
+              {schoolData.address && (
+                <p className="text-lg sm:text-xl font-bold text-slate-800 leading-snug">
+                  ({schoolData.address})
+                </p>
+              )}
               <p className="text-base sm:text-lg font-extrabold text-slate-900 font-mono uppercase mt-2">
                 UDISE : <span className="text-lg sm:text-xl font-black text-black">{schoolData.udise || "s1"}</span>
               </p>
@@ -1877,32 +1886,32 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             <th
                               key={idx}
                               className={`${col.noYBorder ? "border-x border-y-0" : "border"} border-[#0080ff] bg-[#bfe5ff] ${col.bold ? "font-extrabold" : ""}`}
-                              style={{ textAlign: "center", verticalAlign: "middle", padding: "2px 0" }}
+                              style={{
+                                textAlign: "center",
+                                verticalAlign: "middle",
+                                padding: 0,
+                                position: "relative",
+                                height: pageMode === "1page" ? "92px" : "110px",
+                                overflow: "hidden",
+                              }}
                             >
-                              <div
+                              <span
                                 style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  width: "100%",
-                                  height: pageMode === "1page" ? "84px" : "100px",
+                                  position: "absolute",
+                                  top: "50%",
+                                  left: "50%",
+                                  transform: "translate(-50%, -50%) rotate(-90deg)",
+                                  whiteSpace: "nowrap",
+                                  textAlign: "center",
+                                  fontSize: col.large
+                                    ? (pageMode === "1page" ? "11px" : "12.5px")
+                                    : (pageMode === "1page" ? "10.5px" : "12px"),
+                                  lineHeight: "1.1",
+                                  display: "inline-block",
                                 }}
                               >
-                                <span
-                                  style={{
-                                    writingMode: "vertical-rl",
-                                    transform: "rotate(180deg)",
-                                    whiteSpace: "nowrap",
-                                    fontSize: col.large
-                                      ? (pageMode === "1page" ? "11px" : "12.5px")
-                                      : (pageMode === "1page" ? "10.5px" : "12px"),
-                                    lineHeight: "1.1",
-                                    display: "inline-block",
-                                  }}
-                                >
-                                  {col.label}
-                                </span>
-                              </div>
+                                {col.label}
+                              </span>
                             </th>
                           ))}
                         </tr>
@@ -2657,14 +2666,23 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   {/* Table 1: Overall Grade Counts */}
                   <div className="mb-6">
                     <table className="w-full table-fixed border-collapse border border-amber-600 text-[13px] text-center font-semibold text-black">
+                      <colgroup>
+                        <col style={{ width: "5.5%" }} />
+                        <col style={{ width: "21%" }} />
+                        <col style={{ width: "7%" }} />
+                        <col style={{ width: "8%" }} />
+                        {GRADE_KEYS.map((g) => (
+                          <col key={g} style={{ width: "6.5%" }} />
+                        ))}
+                      </colgroup>
                       <thead>
                         <tr className="text-black font-extrabold border-b border-amber-600">
-                          <th className="border border-amber-600 bg-amber-100 p-1.5 w-10 min-w-[32px]">अ. क्र.</th>
-                          <th className="border border-amber-600 bg-amber-100 p-1.5 text-left w-44 min-w-[140px]">विषय</th>
-                          <th className="border border-amber-600 bg-amber-100 p-1.5 w-12 min-w-[40px]">संख्या</th>
-                          <th className="border border-amber-600 bg-amber-100 p-1.5 w-12 min-w-[40px]">उपस्थिती</th>
+                          <th className="border border-amber-600 bg-amber-100 p-1.5 text-center">अ. क्र.</th>
+                          <th className="border border-amber-600 bg-amber-100 p-1.5 text-left">विषय</th>
+                          <th className="border border-amber-600 bg-amber-100 p-1.5 text-center">संख्या</th>
+                          <th className="border border-amber-600 bg-amber-100 p-1.5 text-center">उपस्थिती</th>
                           {GRADE_KEYS.map((g) => (
-                            <th key={g} className="border border-amber-600 bg-amber-100 p-1.5 text-center w-12 min-w-[44px]">{GRADE_LABELS[g]}</th>
+                            <th key={g} className="border border-amber-600 bg-amber-100 p-1.5 text-center">{GRADE_LABELS[g]}</th>
                           ))}
                         </tr>
                       </thead>
@@ -2687,12 +2705,12 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                             return (
                               <tr key={sub} className="border-b border-amber-500 hover:bg-amber-50/40">
-                                <td className="border border-amber-600 p-1.5 font-bold w-10">{idx + 1}</td>
-                                <td className="border border-amber-600 p-1 text-left font-bold text-black text-[12.5px] leading-tight w-44">{getSubjectDisplayName(sub)}</td>
-                                <td className="border border-amber-600 p-1.5 font-bold w-12">{students.length}</td>
-                                <td className="border border-amber-600 p-1.5 font-bold w-12">{displayPresent}</td>
+                                <td className="border border-amber-600 p-1.5 font-bold text-center">{idx + 1}</td>
+                                <td className="border border-amber-600 px-2 py-1.5 text-left font-bold text-black text-[12px] leading-snug break-words">{getSubjectDisplayName(sub)}</td>
+                                <td className="border border-amber-600 p-1.5 font-bold text-center">{students.length}</td>
+                                <td className="border border-amber-600 p-1.5 font-bold text-center">{displayPresent}</td>
                                 {GRADE_KEYS.map((g) => (
-                                  <td key={g} className="border border-amber-600 p-1.5 font-bold text-center w-12 min-w-[44px]">
+                                  <td key={g} className="border border-amber-600 p-1.5 font-bold text-center">
                                     {gradeCounts[g]}
                                   </td>
                                 ))}

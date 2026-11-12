@@ -530,20 +530,24 @@ function Collectout({ initialClass, initialYear, onBack }) {
                         font-weight: bold;
                     }
                     .rotate-print-header {
-                        padding: 7px 3px;
+                        padding: 0;
                         text-align: center;
-                        writing-mode: vertical-rl;
-                        transform: rotate(180deg);
                         width: 28px;
                         height: 100px;
                         white-space: nowrap;
                         vertical-align: middle;
                         background-color: #f4f4f4;
                         font-weight: bold;
+                        position: relative;
+                        overflow: hidden;
                     }
                     .rotate-print-header div {
-                        writing-mode: vertical-rl;
-                        transform: rotate(180deg);
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%) rotate(-90deg);
+                        white-space: nowrap;
+                        text-align: center;
                     }
                     .school-header {
                         display: flex;

@@ -1559,137 +1559,48 @@ const ResultEntry = () => {
                 </tr>
                 <tr style={{ backgroundColor: "#f2f2f2", fontSize: "14px", textAlign: "center" }}>
                   <th colSpan="2" style={{ padding: "8px", border: "1px solid black" }}></th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Daily Monitoring" : "दैनंदिन निरीक्षण"}</th>
-
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "150px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Oral Work" : "तोंडी काम"}</th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Demonstration" : "प्रात्यक्षिके"}</th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Activity" : "उपक्रम/कृती"}</th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Project" : "प्रकल्प"}</th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Test" : "चाचणी"}</th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Homework" : "गृहपाठ"}</th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Others" : "इतर"}</th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Total" : "एकूण"}</th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Orally" : "तोंडी"}</th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Demonstration" : "प्रात्यक्षिके"}</th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Writing" : "लेखन"}</th>
-                  <th style={{
-                    padding: "20px",
-                    border: "1px solid black",
-                    height: "140px",
-                    width: "40px", // This width will now be applied correctly
-                    writingMode: "vertical-rl", // Rotates the text vertically
-                    transform: "rotate(180deg)", // Adjusts the text direction
-                    whiteSpace: "nowrap", // Ensures the text doesn't wrap
-                    overflow: "hidden", // Prevent overflow
-                  }}>{language === "English" ? " Total" : "एकूण"}</th>
+                  {[
+                    { en: "Daily Monitoring", mr: "दैनंदिन निरीक्षण", h: "140px" },
+                    { en: "Oral Work", mr: "तोंडी काम", h: "150px" },
+                    { en: "Demonstration", mr: "प्रात्यक्षिके", h: "140px" },
+                    { en: "Activity", mr: "उपक्रम/कृती", h: "140px" },
+                    { en: "Project", mr: "प्रकल्प", h: "140px" },
+                    { en: "Test", mr: "चाचणी", h: "140px" },
+                    { en: "Homework", mr: "गृहपाठ", h: "140px" },
+                    { en: "Others", mr: "इतर", h: "140px" },
+                    { en: "Total", mr: "एकूण", h: "140px" },
+                    { en: "Orally", mr: "तोंडी", h: "140px" },
+                    { en: "Demonstration", mr: "प्रात्यक्षिके", h: "140px" },
+                    { en: "Writing", mr: "लेखन", h: "140px" },
+                    { en: "Total", mr: "एकूण", h: "140px" },
+                  ].map((col, idx) => (
+                    <th
+                      key={idx}
+                      style={{
+                        padding: 0,
+                        border: "1px solid black",
+                        height: col.h,
+                        width: "40px",
+                        position: "relative",
+                        textAlign: "center",
+                        verticalAlign: "middle",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: "50%",
+                          left: "50%",
+                          transform: "translate(-50%, -50%) rotate(-90deg)",
+                          whiteSpace: "nowrap",
+                          textAlign: "center",
+                        }}
+                      >
+                        {language === "English" ? col.en : col.mr}
+                      </span>
+                    </th>
+                  ))}
                   <th style={{ padding: "8px", border: "1px solid black" }}>{language === "English" ? " Special entries" : "विशेष नोंदी"}</th>
                   <th style={{ padding: "8px", border: "1px solid black" }}>{language === "English" ? " Interests and hobbies" : "आवडी आणि छंद"}</th>
                   <th style={{ padding: "8px", border: "1px solid black" }}>{language === "English" ? " Necessary corrections" : "आवश्यक दुरुस्ती"}</th>

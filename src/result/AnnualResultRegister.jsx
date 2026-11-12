@@ -916,13 +916,17 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
       {/* Print Specific CSS matching Image 2 exact layout */}
       <style>{`
         .writing-vertical {
-          writing-mode: vertical-rl;
-          transform: rotate(180deg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 96px;
+          transform: rotate(-90deg);
+          transform-origin: center center;
           text-align: center;
           white-space: nowrap;
           margin: 0 auto;
-          padding: 6px 2px;
-          height: 96px;
+          padding: 0;
           color: #000000 !important;
           letter-spacing: 0 !important;
         }

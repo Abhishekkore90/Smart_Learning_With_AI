@@ -647,11 +647,15 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
             }
             
             .rotate-header {
+              position: relative;
+              white-space: nowrap;
+              padding: 0 !important;
+              height: 65px;
+              text-align: center;
+              vertical-align: middle;
               writing-mode: vertical-rl;
               transform: rotate(180deg);
-              white-space: nowrap;
-              padding: 6px 2px !important;
-              height: 65px;
+              display: table-cell;
             }
 
             /* Larger Tables styling */

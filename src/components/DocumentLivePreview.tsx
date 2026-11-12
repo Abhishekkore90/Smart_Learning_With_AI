@@ -210,10 +210,10 @@ export const fitPdfDayPageToA4 = (
     innerEl.style.transformOrigin = "top left";
     innerEl.style.width = `${contentWidth / scale}px`;
   } else {
-    // Vertically expand table rows so the table stretches cleanly down to fill the available print-safe area
-    const remainingSpace = maxAllowedHeight - actualHeight - 8;
     const tbodyRows = innerEl.querySelectorAll<HTMLTableRowElement>("table.main-diary-table tbody tr");
-    if (remainingSpace > 12 && tbodyRows.length > 0) {
+    const remainingSpace = maxAllowedHeight - actualHeight - 8;
+    if (tbodyRows.length > 6 && remainingSpace > 12 && remainingSpace <= 180) {
+      // Only gently fill remaining space when 7+ periods already nearly fill the A4 page
       const extraPerRow = Math.floor(remainingSpace / tbodyRows.length);
       tbodyRows.forEach((tr) => {
         const currentH = tr.getBoundingClientRect().height;
@@ -223,8 +223,12 @@ export const fitPdfDayPageToA4 = (
           td.style.height = `${targetH}px`;
         });
       });
+      innerEl.style.minHeight = `${maxAllowedHeight}px`;
+    } else {
+      // 6 or fewer periods (or sparse content): fit naturally to the required space without blank row stretching
+      innerEl.style.minHeight = "0px";
+      innerEl.style.justifyContent = "flex-start";
     }
-    innerEl.style.minHeight = `${maxAllowedHeight}px`;
   }
 };
 
