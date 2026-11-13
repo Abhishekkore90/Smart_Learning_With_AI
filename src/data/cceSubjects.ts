@@ -38,8 +38,7 @@ export const DEFAULT_MARATHI_SUBJECTS_MAP: Record<string, string[]> = {
     "द्वितीय भाषा : इंग्रजी",
     "तृतीय भाषा : हिंदी",
     "गणित",
-    "परिसर अभ्यास भाग १",
-    "परिसर अभ्यास भाग २",
+    "परिसर अभ्यास",
     "कलाशिक्षण",
     "कार्यशिक्षण",
     "शारीरिक शिक्षण",
@@ -49,8 +48,6 @@ export const DEFAULT_MARATHI_SUBJECTS_MAP: Record<string, string[]> = {
     "द्वितीय भाषा : इंग्रजी",
     "तृतीय भाषा : हिंदी",
     "गणित",
-    "परिसर अभ्यास भाग १",
-    "परिसर अभ्यास भाग २",
     "सामान्य विज्ञान",
     "सामाजिक शास्त्रे",
     "कलाशिक्षण",
@@ -121,8 +118,7 @@ export const DEFAULT_SEMI_SUBJECTS_MAP: Record<string, string[]> = {
     "English",
     "हिंदी",
     "Mathematics",
-    "परिसर अभ्यास भाग १",
-    "परिसर अभ्यास भाग २",
+    "परिसर अभ्यास",
     "कलाशिक्षण",
     "कार्यशिक्षण",
     "शारीरिक शिक्षण",
@@ -132,8 +128,6 @@ export const DEFAULT_SEMI_SUBJECTS_MAP: Record<string, string[]> = {
     "English",
     "हिंदी",
     "Mathematics",
-    "परिसर अभ्यास भाग १",
-    "परिसर अभ्यास भाग २",
     "General Science",
     "Social Sciences",
     "कलाशिक्षण",
@@ -310,14 +304,14 @@ function mapDefaultSubjectToConfig(subName: string, isSemi: boolean): ClassSubje
       icon: "📐",
     };
   }
-  if (s.includes("परिसर अभ्यास भाग १") || s.includes("परिसर १")) {
+  if ((s.includes("परिसर") || s.includes("evs")) && (s.includes("१") || s.includes("1") || s.includes("भाग १") || s.includes("भाग 1"))) {
     return { key: "parisar1", label: "परिसर अभ्यास भाग १", icon: "🌱" };
   }
-  if (s.includes("परिसर अभ्यास भाग २") || s.includes("परिसर २")) {
+  if ((s.includes("परिसर") || s.includes("evs")) && (s.includes("२") || s.includes("2") || s.includes("भाग २") || s.includes("भाग 2"))) {
     return { key: "parisar2", label: "परिसर अभ्यास भाग २", icon: "🏛️" };
   }
   if (s.includes("परिसर") || s.includes("संभोवतालचे")) {
-    return { key: "parisar", label: "आपले संभोवतालचे जग (परिसर अभ्यास)", icon: "🌿" };
+    return { key: "parisar", label: "परिसर अभ्यास", icon: "🌿" };
   }
   if (s.includes("सामान्य विज्ञान") || s.includes("विज्ञान") || s.includes("general science") || s.includes("science")) {
     return {

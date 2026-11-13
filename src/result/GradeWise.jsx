@@ -338,9 +338,8 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                 } else if (lower.includes("हिंदी")) {
                   subData = studentMarks["hindi"] || studentMarks["tritiyabhasha"] || studentMarks["हिंदी"] || {};
                 } else if (lower.includes("गणित")) {
-                  subData = studentMarks["ganit"] || studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};
-                } else if (lower.includes("परिसर") || lower.includes("संभोवतालचे")) {
-                  subData = studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["परिसर अभ्यास"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
+                  subData = studentMarks["ganit"] || studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};                } else if (lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("evs")) {
+                  subData = studentMarks["parisar"] || studentMarks["evs"] || studentMarks["परिसर अभ्यास"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["parisar1"] || studentMarks["evs1"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
                 } else if (lower.includes("कला")) {
                   subData = studentMarks["kala"] || studentMarks["कलाशिक्षण"] || studentMarks["कला"] || {};
                 } else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) {

@@ -131,7 +131,7 @@ const MODULE_CARDS = [
     moduleId: "hpc-card",
     labelKey: "hpcCard",
     fallbackLabel: "८. Holistic Progress Card (HPC)",
-    to: "/teacher/hpc-card",
+    to: "/teacher/hpc",
     icon: Sparkles,
     description: "या विभागात आपणास तीनही स्तरातील इयत्ता पहिली ते आठवीपर्यंतचे एचपीसी कार्ड उपलब्ध आहेत. CCE रिजल्ट सेक्शन मध्ये भरलेली विद्यार्थ्यांची माहिती ऑटोमॅटिक या विभागांमध्ये येईल. त्यामुळे विद्यार्थ्यांची माहिती परत भरावी लागणार नाही.",
   },

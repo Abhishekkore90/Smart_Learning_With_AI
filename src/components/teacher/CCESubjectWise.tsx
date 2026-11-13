@@ -39,8 +39,7 @@ const SUBJECTS_LIST = [
   { key: "hindi", label: "द्वितीय भाषा (हिंदी)" },
   { key: "math", label: "गणित" },
   { key: "english", label: "तृतीय भाषा (इंग्रजी)" },
-  { key: "evs1", label: "परिसर अभ्यास १" },
-  { key: "evs2", label: "परिसर अभ्यास २" },
+  { key: "evs1", label: "परिसर अभ्यास" },
   { key: "science", label: "सामान्य विज्ञान" },
   { key: "history", label: "इतिहास व नागरिकशास्त्र" },
   { key: "geography", label: "भूगोल" },
@@ -56,9 +55,9 @@ const ALWAYS_INCLUDED_SPECIAL_SUBJECTS = ["kala", "karyanubhav", "sharirik"];
 const CLASS_ACADEMIC_SUBJECTS_MAP: Record<string, string[]> = {
   "1st": ["marathi", "math", "english"],
   "2nd": ["marathi", "math", "english"],
-  "3rd": ["marathi", "math", "english", "evs1", "evs2"],
-  "4th": ["marathi", "math", "english", "evs1", "evs2"],
-  "5th": ["marathi", "hindi", "math", "english", "evs1", "evs2"],
+  "3rd": ["marathi", "math", "english", "evs1"],
+  "4th": ["marathi", "math", "english", "evs1"],
+  "5th": ["marathi", "hindi", "math", "english", "evs1"],
   "6th": ["marathi", "hindi", "math", "english", "science", "history", "geography"],
   "7th": ["marathi", "hindi", "math", "english", "science", "history", "geography"],
   "8th": ["marathi", "hindi", "math", "english", "science", "history", "geography"],
@@ -70,9 +69,7 @@ const mapSubjectNameToKey = (name: string): string | null => {
   if (n.includes("हिंदी") || n.includes("hindi")) return "hindi";
   if (n.includes("इंग्रजी") || n.includes("english")) return "english";
   if (n.includes("गणित") || n.includes("math")) return "math";
-  if (n.includes("परिसर अभ्यास १") || n.includes("evs 1") || n.includes("evs1")) return "evs1";
-  if (n.includes("परिसर अभ्यास २") || n.includes("evs 2") || n.includes("evs2")) return "evs2";
-  if (n.includes("परिसर अभ्यास") || n.includes("संभोवतालचे") || n.includes("evs")) return "evs1";
+  if (n.includes("परिसर") || n.includes("संभोवतालचे") || n.includes("evs")) return "evs1";
   if (n.includes("विज्ञान") || n.includes("science")) return "science";
   if (n.includes("इतिहास") || n.includes("history")) return "history";
   if (n.includes("भूगोल") || n.includes("geography")) return "geography";

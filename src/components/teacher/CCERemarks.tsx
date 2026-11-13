@@ -114,7 +114,7 @@ const SUBJECT_META: Record<
     activeBg: "bg-emerald-50 border-emerald-300 text-emerald-950",
   },
   vijnan: {
-    label: "विज्ञान व तंत्रज्ञान",
+    label: "सामान्य विज्ञान",
     icon: FlaskConical,
     gradient: "from-cyan-600 to-blue-700",
     text: "text-cyan-600",
@@ -123,7 +123,7 @@ const SUBJECT_META: Record<
     activeBg: "bg-cyan-50 border-cyan-300 text-cyan-950",
   },
   vidnyan: {
-    label: "विज्ञान",
+    label: "सामान्य विज्ञान",
     icon: FlaskConical,
     gradient: "from-cyan-600 to-blue-700",
     text: "text-cyan-600",
@@ -327,9 +327,7 @@ function mapSubjectNameToKey(subName: string, customKeys: string[] = []): string
     if (customKeys.includes("vidnyan") && !customKeys.includes("vijnan")) return "vidnyan";
     return "vijnan";
   }
-  if (s.includes("परिसर अभ्यास १") || s.includes("परिसर १")) return "parisar1";
-  if (s.includes("परिसर अभ्यास २") || s.includes("परिसर २")) return "parisar2";
-  if (s.includes("परिसर") || s.includes("संभोवतालचे")) return "parisar";
+  if (s.includes("परिसर") || s.includes("संभोवतालचे") || s.includes("evs")) return "parisar";
   if (s.includes("सामाजिक") || s.includes("इतिहास") || s.includes("भूगोल") || s.includes("social")) {
     if (customKeys.includes("samajshastra") && !customKeys.includes("samajik_shastra")) return "samajshastra";
     return "samajik_shastra";
@@ -679,14 +677,40 @@ export function CCERemarks({
     setEditingStudent(student);
     const rawRemarks = getStudentRemarksRecord(student);
 
-    // Merge science (vijnan/vidnyan) remarks into parisar if science has remarks
-    if (rawRemarks.vijnan || rawRemarks.vidnyan) {
-      const sciList = [
-        ...(Array.isArray(rawRemarks.vijnan) ? rawRemarks.vijnan : []),
-        ...(Array.isArray(rawRemarks.vidnyan) ? rawRemarks.vidnyan : []),
-      ];
-      const existingParisar = Array.isArray(rawRemarks.parisar) ? rawRemarks.parisar : [];
-      rawRemarks.parisar = [...new Set([...existingParisar, ...sciList])];
+    // Merge science (vijnan/vidnyan) and old parisar1/2 remarks into parisar if present for primary classes 1st-5th
+    const normClass = normalizeClassKey(selectedClass);
+    const isPrimaryOr5th = ["1st", "2nd", "3rd", "4th", "5th"].includes(normClass);
+
+    if (isPrimaryOr5th) {
+      if (rawRemarks.vijnan || rawRemarks.vidnyan || rawRemarks.parisar1 || rawRemarks.parisar2) {
+        const sciList = [
+          ...(Array.isArray(rawRemarks.vijnan) ? rawRemarks.vijnan : []),
+          ...(Array.isArray(rawRemarks.vidnyan) ? rawRemarks.vidnyan : []),
+          ...(Array.isArray(rawRemarks.parisar1) ? rawRemarks.parisar1 : []),
+          ...(Array.isArray(rawRemarks.parisar2) ? rawRemarks.parisar2 : []),
+        ];
+        const existingParisar = Array.isArray(rawRemarks.parisar) ? rawRemarks.parisar : [];
+        rawRemarks.parisar = [...new Set([...existingParisar, ...sciList])];
+      }
+    } else {
+      // For Class 6th, 7th, 8th: Parisar Abhyas does NOT exist; Science (vijnan) is the official subject!
+      // If student previously had remarks stored under parisar or parisar1, migrate them to vijnan (Science)!
+      if (rawRemarks.parisar || rawRemarks.parisar1) {
+        const pList = [
+          ...(Array.isArray(rawRemarks.parisar) ? rawRemarks.parisar : []),
+          ...(Array.isArray(rawRemarks.parisar1) ? rawRemarks.parisar1 : []),
+        ];
+        const existingSci = Array.isArray(rawRemarks.vijnan) ? rawRemarks.vijnan : [];
+        rawRemarks.vijnan = [...new Set([...existingSci, ...pList])];
+        delete rawRemarks.parisar;
+        delete rawRemarks.parisar1;
+      }
+      if (rawRemarks.parisar2) {
+        const p2List = Array.isArray(rawRemarks.parisar2) ? rawRemarks.parisar2 : [];
+        const existingSoc = Array.isArray(rawRemarks.samajik_shastra) ? rawRemarks.samajik_shastra : [];
+        rawRemarks.samajik_shastra = [...new Set([...existingSoc, ...p2List])];
+        delete rawRemarks.parisar2;
+      }
     }
 
     setExpandedSubject(null);
@@ -1098,8 +1122,15 @@ export function CCERemarks({
     const normClass = normalizeClassKey(selectedClass);
     const isPrimaryOr5th = ["1st", "2nd", "3rd", "4th", "5th"].includes(normClass);
 
+    // For Class 6th and above, Science ("vijnan") is always an official subject
+    if (!isPrimaryOr5th && !mappedKeys.includes("vijnan") && !mappedKeys.includes("vidnyan")) {
+      mappedKeys.push("vijnan");
+    }
+
     return mappedKeys.filter((k) => {
-      if (isPrimaryOr5th && (k === "vijnan" || k === "vidnyan")) return false;
+      if (isPrimaryOr5th && (k === "vijnan" || k === "vidnyan" || k === "parisar1" || k === "parisar2")) return false;
+      // For Class 6th and above, Parisar Abhyas does NOT exist; remove parisar, parisar1, parisar2
+      if (!isPrimaryOr5th && (k === "parisar" || k === "parisar1" || k === "parisar2")) return false;
 
       return (
         ALWAYS_INCLUDED_KEYS.includes(k) ||

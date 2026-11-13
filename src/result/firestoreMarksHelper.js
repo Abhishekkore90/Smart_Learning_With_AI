@@ -167,13 +167,20 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
     if (cceSnap) cceSnap.forEach(processDoc);
   } catch (e) {}
 
-  // Fetch detailed student profiles from student_details collection
+  // Fetch detailed student profiles only for the matched students in parallel
   const detailsMap = new Map();
   try {
-    const detailsSnap = await getDocs(collection(db, "student_details"));
-    detailsSnap.forEach((docSnap) => {
-      detailsMap.set(docSnap.id, docSnap.data());
-    });
+    const studentIds = Array.from(new Set(loadedStudents.map((s) => s.id).filter(Boolean)));
+    if (studentIds.length > 0) {
+      const detailsSnaps = await Promise.allSettled(
+        studentIds.map((sid) => getDoc(doc(db, "student_details", sid)))
+      );
+      detailsSnaps.forEach((res) => {
+        if (res.status === "fulfilled" && res.value && res.value.exists()) {
+          detailsMap.set(res.value.id, res.value.data());
+        }
+      });
+    }
   } catch (e) {}
 
   // Deduplicate and merge student_details
@@ -224,8 +231,12 @@ export const fetchFirestoreMarks = async (selectedClass, academicYear, term = "f
 
   try {
     if (activeTeacherId) {
-      bunnyMarksSec = (await fetchJsonFromBunny(`cce_results/${activeTeacherId}_${selectedClass}_${academicYear}_marks_second.json`)) || {};
-      bunnyMarksFirst = (await fetchJsonFromBunny(`cce_results/${activeTeacherId}_${selectedClass}_${academicYear}_marks_first.json`)) || {};
+      const [secRes, firstRes] = await Promise.all([
+        fetchJsonFromBunny(`cce_results/${activeTeacherId}_${selectedClass}_${academicYear}_marks_second.json`).catch(() => null),
+        fetchJsonFromBunny(`cce_results/${activeTeacherId}_${selectedClass}_${academicYear}_marks_first.json`).catch(() => null)
+      ]);
+      bunnyMarksSec = secRes || {};
+      bunnyMarksFirst = firstRes || {};
     }
   } catch (e) {}
 
@@ -248,9 +259,14 @@ export const fetchFirestoreMarks = async (selectedClass, academicYear, term = "f
 
   let sem1 = {}, sem2 = {}, gen = {};
   try {
-    sem1 = await loadDocData("sem1");
-    sem2 = await loadDocData("sem2");
-    gen = await loadDocData("");
+    const [s1, s2, g] = await Promise.all([
+      loadDocData("sem1"),
+      loadDocData("sem2"),
+      loadDocData("")
+    ]);
+    sem1 = s1 || {};
+    sem2 = s2 || {};
+    gen = g || {};
   } catch (err) {
     console.error("Error loading CCE marks documents:", err);
   }
@@ -297,7 +313,7 @@ export const matchAndMergeMarks = (students = [], currentMarks = {}, firestoreMa
         else if (lower.includes("इंग्रजी") || lower === "english") subData = stdFsMarks["english"] || stdFsMarks["English"] || stdFsMarks["द्वितीय भाषा : इंग्रजी"];
         else if (lower.includes("गणित") || lower.includes("math")) subData = stdFsMarks["Mathematics"] || stdFsMarks["math"] || stdFsMarks["maths"] || stdFsMarks["गणित"];
         else if (lower.includes("विज्ञान") || lower.includes("science")) subData = stdFsMarks["General Science"] || stdFsMarks["science"] || stdFsMarks["सामान्य विज्ञान"];
-        else if (lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("environment")) subData = stdFsMarks["Environmental Studies"] || stdFsMarks["आपले संभोवतालचे जग"] || stdFsMarks["परिसर अभ्यास"];
+        else if (lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("environment") || lower.includes("evs")) subData = stdFsMarks["parisar"] || stdFsMarks["evs"] || stdFsMarks["परिसर अभ्यास"] || stdFsMarks["आपले संभोवतालचे जग"] || stdFsMarks["parisar1"] || stdFsMarks["evs1"] || stdFsMarks["Environmental Studies"];
         else if (lower.includes("कला")) subData = stdFsMarks["kala"] || stdFsMarks["कलाशिक्षण"] || stdFsMarks["कला"] || stdFsMarks["Art"];
         else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) subData = stdFsMarks["karyanubhav"] || stdFsMarks["कार्यशिक्षण"] || stdFsMarks["कार्यानुभव"] || stdFsMarks["Work Experience"];
         else if (lower.includes("शारीरिक")) subData = stdFsMarks["sharirik"] || stdFsMarks["शारीरिक शिक्षण"] || stdFsMarks["Physical Education"];

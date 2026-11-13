@@ -80,6 +80,9 @@ const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
     }
   }
 
+  if (baseBankList.length === 0 && (normKey === "evs" || normKey === "parisar" || normKey === "परिसर अभ्यास") && outcomeBank) {
+    baseBankList = [...(outcomeBank.evs || []), ...(outcomeBank.evs1 || []), ...(outcomeBank.evs2 || [])];
+  }
   if (baseBankList.length === 0 && ["kala", "karyanubhav", "sharirik"].includes(normKey) && CLASS_1_OUTCOMES[normKey]) {
     baseBankList = CLASS_1_OUTCOMES[normKey];
   }
@@ -114,20 +117,139 @@ const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
   return Array.from(itemMap.values());
 };
 
-const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, student }) => {
-  if (!outcomes || outcomes.length === 0) return null;
+const toMarathiDigitsLocal = (val) => {
+  if (val === null || val === undefined) return "";
+  const map = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+  return String(val).replace(/\d/g, (d) => map[Number(d)]);
+};
+
+const toMarathiClassLabel = (cls) => {
+  const c = String(cls || "").toLowerCase().trim();
+  if (c.includes("1")) return "पहिली";
+  if (c.includes("2")) return "दुसरी";
+  if (c.includes("3")) return "तिसरी";
+  if (c.includes("4")) return "चौथी";
+  if (c.includes("5")) return "पाचवी";
+  if (c.includes("6")) return "सहावी";
+  if (c.includes("7")) return "सातवी";
+  if (c.includes("8")) return "आठवी";
+  return cls || "";
+};
+
+// A4 Page Mobile Scale Wrapper to show authentic A4 proportions on mobile without horizontal scrollbar
+function A4PageWrapper({ children, isLandscape = false }) {
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(1);
+
+  const targetWidth = isLandscape ? 1123 : 794;
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const parentWidth = rect.width || containerRef.current.clientWidth || window.innerWidth;
+      if (parentWidth > 0 && parentWidth < targetWidth) {
+        setScale(Number((parentWidth / targetWidth).toFixed(4)));
+      } else {
+        setScale(1);
+      }
+    };
+
+    updateScale();
+    const timer = setTimeout(updateScale, 60);
+    window.addEventListener("resize", updateScale);
+    window.addEventListener("orientationchange", updateScale);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", updateScale);
+      window.removeEventListener("orientationchange", updateScale);
+    };
+  }, [targetWidth]);
+
+  const supportsZoom = typeof document !== "undefined" && "zoom" in document.documentElement.style;
 
   return (
-    <div className="mb-3">
-      {/* Subject Title Banner */}
-      <h3
-        className="text-[13px] font-extrabold text-black mb-2 text-center bg-amber-100 py-1.5 px-3 rounded-lg border-2 border-amber-400 shadow-sm"
-        style={{ breakAfter: "avoid", pageBreakAfter: "avoid" }}
+    <div
+      ref={containerRef}
+      className="a4-page-scale-wrapper w-full flex justify-center mb-6 overflow-x-hidden"
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        overflowX: "hidden",
+      }}
+    >
+      <div
+        className="a4-page-scale-inner"
+        style={
+          scale < 1
+            ? supportsZoom
+              ? {
+                  zoom: scale,
+                  width: `${targetWidth}px`,
+                  minWidth: `${targetWidth}px`,
+                  maxWidth: `${targetWidth}px`,
+                }
+              : {
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top center",
+                  width: `${targetWidth}px`,
+                  minWidth: `${targetWidth}px`,
+                  maxWidth: `${targetWidth}px`,
+                  marginBottom: `-${Math.round((1 - scale) * (isLandscape ? 794 : 1123))}px`,
+                }
+            : {
+                width: `${targetWidth}px`,
+                minWidth: `${targetWidth}px`,
+                maxWidth: `${targetWidth}px`,
+              }
+        }
       >
-        {title}
-      </h3>
+        {children}
+      </div>
+    </div>
+  );
+}
 
-      {/* Semantic HTML Table for 100% html2canvas border rendering */}
+const OutcomeTable = ({
+  title,
+  outcomes,
+  subjectName,
+  getUserSelectedLevel,
+  student,
+  schoolData = {},
+  selectedClass = "",
+  division = "",
+  selectedSemester = "",
+  showHeader = false
+}) => {
+  if (!outcomes || outcomes.length === 0) return null;
+
+  const marathiClass = toMarathiClassLabel(selectedClass);
+  const divLabel = student?.division || student?.section || student?.tukdi || division || "अ";
+  const semLabel = selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र";
+
+  return (
+    <div className="mb-4">
+      {showHeader && (
+        <div className="mb-3">
+          <h1 className="text-[18px] font-extrabold text-blue-900 text-center mb-2.5 border-b-2 border-blue-900 pb-1">
+            अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
+          </h1>
+          <div className="flex flex-wrap items-center justify-between text-[12.5px] font-bold text-slate-900 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-400 mb-3 gap-2">
+            <span>विद्यार्थ्याचे नाव - <b className="text-black font-extrabold">{student?.fullName || student?.name}</b></span>
+            <span>इयत्ता - <b className="text-black font-extrabold">{marathiClass || selectedClass}</b></span>
+            <span>हजेरी क्र. <b className="text-black font-extrabold">{student?.rollNo || ""}</b></span>
+            <span className="font-extrabold">{semLabel}</span>
+          </div>
+          <div className="mb-3">
+            <h3 className="text-[13px] font-extrabold text-black text-center bg-amber-100 py-1.5 px-3 rounded-lg border-2 border-amber-400 shadow-sm">
+              {title}
+            </h3>
+          </div>
+        </div>
+      )}
+
+      {/* Semantic HTML Table for 100% border rendering */}
       <div className="w-full border-2 border-slate-500 rounded-lg overflow-hidden bg-white">
         <table className="w-full border-collapse text-left text-black" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
           <colgroup>
@@ -174,16 +296,16 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
                   <td className="border-r border-slate-400 p-1.5 px-2 font-bold text-[12.5px] text-black leading-snug">
                     {item.text}
                   </td>
-                  <td className="border-r border-slate-400 p-1 text-center font-extrabold text-blue-900 text-[15px]">
+                  <td className="border-r border-slate-400 p-1 text-center font-extrabold text-black text-[15px]">
                     {level === 1 ? "✓" : ""}
                   </td>
-                  <td className="border-r border-slate-400 p-1 text-center font-extrabold text-blue-900 text-[15px]">
+                  <td className="border-r border-slate-400 p-1 text-center font-extrabold text-black text-[15px]">
                     {level === 2 ? "✓" : ""}
                   </td>
-                  <td className="border-r border-slate-400 p-1 text-center font-extrabold text-blue-900 text-[15px]">
+                  <td className="border-r border-slate-400 p-1 text-center font-extrabold text-black text-[15px]">
                     {level === 3 ? "✓" : ""}
                   </td>
-                  <td className="p-1 text-center font-extrabold text-blue-900 text-[15px]">
+                  <td className="p-1 text-center font-extrabold text-black text-[15px]">
                     {level === 4 ? "✓" : ""}
                   </td>
                 </tr>
@@ -442,13 +564,14 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           } catch (e) {}
         });
 
-        for (const cls of classVariants) {
-          try {
-            const customListSnap = await getDoc(doc(db, "cce_outcomes_list_v2", `${cls}_${academicYear}`));
-            if (customListSnap.exists() && customListSnap.data().outcomes) {
-              mergedCustomOutcomes = { ...mergedCustomOutcomes, ...customListSnap.data().outcomes };
-            }
-          } catch (e) { }
+        const customSnaps = await Promise.allSettled(
+          classVariants.map((cls) => getDoc(doc(db, "cce_outcomes_list_v2", `${cls}_${academicYear}`)))
+        );
+        for (const res of customSnaps) {
+          if (res.status === "fulfilled" && res.value && res.value.exists()) {
+            const out = res.value.data().outcomes;
+            if (out) mergedCustomOutcomes = { ...mergedCustomOutcomes, ...out };
+          }
         }
         setCustomOutcomesData(mergedCustomOutcomes);
       } catch (e) { }
@@ -472,11 +595,23 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       loadedStudents.sort((a, b) => (parseInt(a.rollNo) || 0) - (parseInt(b.rollNo) || 0));
       setStudents(loadedStudents);
 
-      // 3. Fetch User Outcome Ratings (from cce_outcomes, cce_levels_v2 & Bunny CDN)
+      // Auto-detect division from students if not set in settings/localStorage
+      if (!loadedDiv && loadedStudents.length > 0) {
+        const detectedDiv = loadedStudents.find((s) => s.division)?.division ||
+                            loadedStudents.find((s) => s.section)?.section ||
+                            loadedStudents.find((s) => s.tukdi)?.tukdi || "";
+        if (detectedDiv) {
+          setDivision(detectedDiv);
+        }
+      }
+
+      // 3. Fetch User Outcome Ratings (from cce_outcomes, cce_levels_v2 & Bunny CDN in parallel)
       try {
         const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-        const bunnyOutcomes = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_outcomes.json`);
-        const bunnyLevels = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_levels.json`);
+        const [bunnyOutcomes, bunnyLevels] = await Promise.all([
+          fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_outcomes.json`),
+          fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_levels.json`),
+        ]);
 
         const targetSem = selectedSemester || "sem2";
         const currentMed = localStorage.getItem("cce_selected_medium") || "marathi";
@@ -491,7 +626,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           rawClassNum ? `${rawClassNum}th` : null,
         ].filter(Boolean)));
 
-        // Query documents matching the selected semester strictly to prevent cross-semester overwrites
+        // Query documents matching the selected semester in parallel
         const outcomeDocIds = [];
         classVariants.forEach((cls) => {
           if (currentTeacherId) {
@@ -507,15 +642,17 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         });
         if (docId) outcomeDocIds.push(docId);
 
+        const uniqueOutcomeDocIds = Array.from(new Set(outcomeDocIds.filter(Boolean)));
+        const outcomeSnaps = await Promise.allSettled(
+          uniqueOutcomeDocIds.map((oDocId) => getDoc(doc(db, "cce_outcomes", oDocId)))
+        );
+
         let mergedRatings = {};
-        for (const oDocId of outcomeDocIds) {
-          try {
-            const outSnap = await getDoc(doc(db, "cce_outcomes", oDocId));
-            if (outSnap.exists()) {
-              const rData = outSnap.data().ratings || outSnap.data();
-              mergedRatings = deepMergeRatings(mergedRatings, rData);
-            }
-          } catch (e) { }
+        for (const res of outcomeSnaps) {
+          if (res.status === "fulfilled" && res.value && res.value.exists()) {
+            const rData = res.value.data().ratings || res.value.data();
+            mergedRatings = deepMergeRatings(mergedRatings, rData);
+          }
         }
         if (bunnyOutcomes) {
           mergedRatings = deepMergeRatings(mergedRatings, bunnyOutcomes);
@@ -536,8 +673,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
         setOutcomesRatings(mergedRatings);
 
-        // Fetch levels data (teacher-isolated first)
-        let mergedLevels = {};
+        // Fetch levels data in parallel (teacher-isolated first)
         const levelDocIds = [];
         classVariants.forEach((cls) => {
           if (currentTeacherId) {
@@ -551,14 +687,17 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         });
         if (docId) levelDocIds.push(docId);
 
-        for (const lDocId of levelDocIds) {
-          try {
-            const levSnap = await getDoc(doc(db, "cce_levels_v2", lDocId));
-            if (levSnap.exists()) {
-              const lData = levSnap.data().levelsData || levSnap.data();
-              mergedLevels = deepMergeRatings(mergedLevels, lData);
-            }
-          } catch (e) { }
+        const uniqueLevelDocIds = Array.from(new Set(levelDocIds.filter(Boolean)));
+        const levelSnaps = await Promise.allSettled(
+          uniqueLevelDocIds.map((lDocId) => getDoc(doc(db, "cce_levels_v2", lDocId)))
+        );
+
+        let mergedLevels = {};
+        for (const res of levelSnaps) {
+          if (res.status === "fulfilled" && res.value && res.value.exists()) {
+            const lData = res.value.data().levelsData || res.value.data();
+            mergedLevels = deepMergeRatings(mergedLevels, lData);
+          }
         }
         if (bunnyLevels) {
           mergedLevels = deepMergeRatings(mergedLevels, bunnyLevels);
@@ -568,29 +707,33 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         console.error("Error fetching outcome levels:", e);
       }
 
-      // 4. Fetch Marks Data (teacher-isolated first)
+      // 4. Fetch Marks Data in parallel (teacher-isolated first)
       try {
         const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-        const bunnyMarksSec = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_second.json`);
-        const bunnyMarksFirst = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_first.json`);
+        const [bunnyMarksSec, bunnyMarksFirst] = await Promise.all([
+          fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_second.json`),
+          fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_first.json`),
+        ]);
 
-        let mergedMarks = {};
-        const marksDocIds = [
+        const marksDocIds = Array.from(new Set([
           currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}` : null,
           currentTeacherId ? `${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}` : null,
           docId,
-        ].filter(Boolean);
-        for (const mDocId of marksDocIds) {
-          try {
-            const marksSnap = await getDoc(doc(db, "cce_marks_v2", mDocId));
-            if (marksSnap.exists()) {
-              const mData = marksSnap.data();
-              const mRecords = selectedSemester === "sem1"
-                ? (mData.semester1 || mData.semester2 || mData.marksData || mData.data || mData || {})
-                : (mData.semester2 || mData.semester1 || mData.marksData || mData.data || mData || {});
-              mergedMarks = { ...mergedMarks, ...mRecords };
-            }
-          } catch (e) { }
+        ].filter(Boolean)));
+
+        const marksSnaps = await Promise.allSettled(
+          marksDocIds.map((mDocId) => getDoc(doc(db, "cce_marks_v2", mDocId)))
+        );
+
+        let mergedMarks = {};
+        for (const res of marksSnaps) {
+          if (res.status === "fulfilled" && res.value && res.value.exists()) {
+            const mData = res.value.data();
+            const mRecords = selectedSemester === "sem1"
+              ? (mData.semester1 || mData.semester2 || mData.marksData || mData.data || mData || {})
+              : (mData.semester2 || mData.semester1 || mData.marksData || mData.data || mData || {});
+            mergedMarks = { ...mergedMarks, ...mRecords };
+          }
         }
         mergedMarks = { ...mergedMarks, ...(bunnyMarksFirst || {}), ...(bunnyMarksSec || {}) };
         setMarksData(mergedMarks);
@@ -604,24 +747,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
     setLoading(false);
   };
 
-  const toMarathiDigitsLocal = (val) => {
-    if (val === null || val === undefined) return "";
-    const map = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
-    return String(val).replace(/\d/g, (d) => map[Number(d)]);
-  };
 
-  const toMarathiClassLabel = (cls) => {
-    const c = String(cls || "").toLowerCase().trim();
-    if (c.includes("1")) return "पहिली";
-    if (c.includes("2")) return "दुसरी";
-    if (c.includes("3")) return "तिसरी";
-    if (c.includes("4")) return "चौथी";
-    if (c.includes("5")) return "पाचवी";
-    if (c.includes("6")) return "सहावी";
-    if (c.includes("7")) return "सातवी";
-    if (c.includes("8")) return "आठवी";
-    return cls || "";
-  };
 
   const handleDownloadMatrixPdf = async () => {
     setDownloading(true);
@@ -646,13 +772,13 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       const kaOutcomes = getClassOutcomes(selectedClass, "karyanubhav", customOutcomesData);
       const shOutcomes = getClassOutcomes(selectedClass, "sharirik", customOutcomesData);
 
+      const evsOutcomes = [...(ev1Outcomes || []), ...(ev2Outcomes || [])];
       const activeSections = [
         { key: "मराठी", title: "मराठी", outcomes: mOutcomes, subjectName: "मराठी", isEnglish: false },
         { key: "हिंदी", title: "हिंदी", outcomes: hOutcomes, subjectName: "हिंदी", isEnglish: false },
         { key: "गणित", title: "गणित", outcomes: mtOutcomes, subjectName: "गणित", isEnglish: false },
         { key: "इंग्रजी", title: "इंग्रजी", outcomes: eOutcomes, subjectName: "इंग्रजी", isEnglish: true },
-        { key: "परिसर अभ्यास १", title: "परिसर अभ्यास १", outcomes: ev1Outcomes, subjectName: "परिसर अभ्यास १", isEnglish: false },
-        { key: "परिसर अभ्यास २", title: "परिसर अभ्यास २", outcomes: ev2Outcomes, subjectName: "परिसर अभ्यास २", isEnglish: false },
+        { key: "परिसर अभ्यास", title: "परिसर अभ्यास", outcomes: evsOutcomes, subjectName: "परिसर अभ्यास", isEnglish: false },
         { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: sciOutcomes, subjectName: "सामान्य विज्ञान", isEnglish: false },
         { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: histOutcomes, subjectName: "इतिहास व नागरिकशास्त्र", isEnglish: false },
         { key: "भूगोल", title: "भूगोल", outcomes: geoOutcomes, subjectName: "भूगोल", isEnglish: false },
@@ -681,7 +807,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         const stuNameCells = batch
           .map((stu) => {
             const name = stu ? (stu.fullName || stu.name || "") : "";
-            return `<th style="border: 1px solid #000000; padding: 0; height: 132px; position: relative; vertical-align: middle; text-align: center; font-weight: 700; font-size: 10px; color: #000000; overflow: hidden;">
+            return `<th style="border: 1px solid #000000; padding: 0; width: 3.1875%; min-width: 3.1875%; max-width: 3.1875%; height: 132px; position: relative; vertical-align: middle; text-align: center; font-weight: 700; font-size: 10px; color: #000000; overflow: hidden; box-sizing: border-box;">
               <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-90deg); width: 126px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;">${name}</div>
             </th>`;
           })
@@ -691,26 +817,20 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           .map((stu, bIdx) => {
             const roll = stu ? (stu.rollNo || bIdx + 1) : "";
             const label = roll ? toMarathiDigitsLocal(roll) : "";
-            return `<th style="border: 1px solid #000000; padding: 2px 1px; height: 26px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11.5px; line-height: 1.1; color: #000000;">${label}</th>`;
+            return `<th style="border: 1px solid #000000; padding: 2px 1px; width: 3.1875%; min-width: 3.1875%; max-width: 3.1875%; height: 26px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11.5px; line-height: 1.1; color: #000000; box-sizing: border-box;">${label}</th>`;
           })
           .join("");
 
         return `
           <thead>
-            <tr>
-              <th colspan="2" style="border: 1px solid #000000; padding: 5px 8px; text-align: left; font-weight: 700; font-size: 12px; color: #000000;">शाळेचे नाव - ${schoolName}</th>
-              <th colspan="7" style="border: 1px solid #000000; padding: 5px 4px; text-align: center; font-weight: 700; font-size: 12.5px; color: #000000;">अध्ययन निष्पत्ती संकलन तक्ता</th>
-              <th colspan="4" style="border: 1px solid #000000; padding: 5px 4px; text-align: center; font-weight: 700; font-size: 12px; color: #000000;">इयत्ता - ${marathiClass}</th>
-              <th colspan="6" style="border: 1px solid #000000; padding: 5px 4px; text-align: center; font-weight: 700; font-size: 12px; color: #000000;">विषय - ${secTitle}</th>
-            </tr>
-            <tr>
-              <th rowspan="2" style="border: 1px solid #000000; padding: 4px 2px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 10px; line-height: 1.25; color: #000000;">अध्ययन<br/>निष्पत्ती /<br/>क्षमता क्र.</th>
-              <th style="border: 1px solid #000000; padding: 6px; height: 132px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 13px; color: #000000;">विद्यार्थ्यांचे नाव</th>
+            <tr id="mm_thead_r1">
+              <th rowspan="2" style="border: 1px solid #000000; padding: 4px 2px; width: 7%; min-width: 7%; max-width: 7%; text-align: center; vertical-align: middle; font-weight: 700; font-size: 10px; line-height: 1.25; color: #000000; background-color: #f1f5f9; box-sizing: border-box;">अध्ययन<br/>निष्पत्ती /<br/>क्षमता क्र.</th>
+              <th style="border: 1px solid #000000; padding: 6px; width: 36%; min-width: 36%; max-width: 36%; height: 132px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 13px; color: #000000; background-color: #f1f5f9; box-sizing: border-box;">विद्यार्थ्यांचे नाव</th>
               ${stuNameCells}
-              <th rowspan="2" style="border: 1px solid #000000; padding: 4px 2px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11px; color: #000000;">एकूण</th>
+              <th rowspan="2" style="border: 1px solid #000000; padding: 4px 2px; width: 6%; min-width: 6%; max-width: 6%; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11px; color: #000000; background-color: #f1f5f9; box-sizing: border-box;">एकूण</th>
             </tr>
-            <tr>
-              <th style="border: 1px solid #000000; padding: 2px 8px; height: 26px; vertical-align: middle; font-weight: 700; font-size: 12px; color: #000000;">
+            <tr id="mm_thead_r2">
+              <th style="border: 1px solid #000000; padding: 2px 8px; width: 36%; min-width: 36%; max-width: 36%; height: 26px; vertical-align: middle; font-weight: 700; font-size: 12px; color: #000000; background-color: #f1f5f9; box-sizing: border-box;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                   <span style="flex: 1; text-align: center;">अध्ययन निष्पत्ती</span>
                   <span style="font-size: 10px; white-space: nowrap;">ह.क्र. →</span>
@@ -724,14 +844,14 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
       const buildColgroupHtml = () => {
         const stuCols = Array(COLS_PER_PAGE)
-          .fill('<col style="width: 3.1875%;" />')
+          .fill('<col style="width: 3.1875%;" width="3.1875%" />')
           .join("");
         return `
           <colgroup>
-            <col style="width: 7%;" />
-            <col style="width: 36%;" />
+            <col style="width: 7%;" width="7%" />
+            <col style="width: 36%;" width="36%" />
             ${stuCols}
-            <col style="width: 6%;" />
+            <col style="width: 6%;" width="6%" />
           </colgroup>
         `;
       };
@@ -745,41 +865,61 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             const stuCells = batch
               .map((stu) => {
                 if (!stu) {
-                  return `<td style="border: 1px solid #000000; padding: 2px; text-align: center; vertical-align: middle;"></td>`;
+                  return `<td style="border: 1px solid #000000; padding: 2px; width: 3.1875%; min-width: 3.1875%; max-width: 3.1875%; text-align: center; vertical-align: middle; box-sizing: border-box;"></td>`;
                 }
                 const lvl = getUserSelectedLevel(stu, item.code, sec.subjectName);
                 if (lvl >= 1 && lvl <= 4) {
                   ratedCount++;
-                  return `<td style="border: 1px solid #000000; padding: 2px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11.5px; color: #000000;">${toMarathiDigitsLocal(lvl)}</td>`;
+                  return `<td style="border: 1px solid #000000; padding: 2px; width: 3.1875%; min-width: 3.1875%; max-width: 3.1875%; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11.5px; color: #000000; box-sizing: border-box;">${toMarathiDigitsLocal(lvl)}</td>`;
                 }
-                return `<td style="border: 1px solid #000000; padding: 2px; text-align: center; vertical-align: middle;"></td>`;
+                return `<td style="border: 1px solid #000000; padding: 2px; width: 3.1875%; min-width: 3.1875%; max-width: 3.1875%; text-align: center; vertical-align: middle; box-sizing: border-box;"></td>`;
               })
               .join("");
 
             const totalText = ratedCount > 0 ? toMarathiDigitsLocal(ratedCount) : "";
             return `
               <tr>
-                <td style="border: 1px solid #000000; padding: 3px 2px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 10.5px; color: #000000; white-space: nowrap;">${displayCode}</td>
-                <td style="border: 1px solid #000000; padding: 3px 5px; text-align: left; vertical-align: middle; font-weight: 700; font-size: 11px; line-height: 1.28; color: #000000;">${item.text}</td>
+                <td style="border: 1px solid #000000; padding: 3px 2px; width: 7%; min-width: 7%; max-width: 7%; text-align: center; vertical-align: middle; font-weight: 700; font-size: 10.5px; color: #000000; white-space: nowrap; box-sizing: border-box;">${displayCode}</td>
+                <td style="border: 1px solid #000000; padding: 3px 5px; width: 36%; min-width: 36%; max-width: 36%; text-align: left; vertical-align: middle; font-weight: 700; font-size: 11px; line-height: 1.28; color: #000000; box-sizing: border-box;">${item.text}</td>
                 ${stuCells}
-                <td style="border: 1px solid #000000; padding: 2px; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11px; color: #000000;">${totalText}</td>
+                <td style="border: 1px solid #000000; padding: 2px; width: 6%; min-width: 6%; max-width: 6%; text-align: center; vertical-align: middle; font-weight: 700; font-size: 11px; color: #000000; box-sizing: border-box;">${totalText}</td>
               </tr>
             `;
           });
 
-          // Measure row heights on A4 container
+          // Measure row heights on A4 container with Image 3 header format
           const measureEl = document.createElement("div");
           measureEl.style.cssText =
             "width: 794px; padding: 18px; box-sizing: border-box; background: #ffffff; font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif;";
           measureEl.innerHTML = `
-            <table style="width: 100%; border-collapse: collapse; table-layout: fixed; color: #000000;">
-              ${buildColgroupHtml()}
-              ${buildTableHeadHtml(batch, sec.title)}
-              <tbody id="mm_tbody">${allRowsHtml.join("")}</tbody>
-            </table>
+            <div>
+              <h1 id="mm_title" style="font-size: 18px; font-weight: 800; color: #1e3a8a; text-align: center; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; letter-spacing: 0; line-height: 1.25;">
+                अध्ययन निष्पत्ती संकलन तक्ता
+              </h1>
+              <div id="mm_info" style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: #0f172a; background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #94a3b8; margin-bottom: 8px;">
+                <span>शाळेचे नाव - <b style="color: #000000; font-weight: 800;">${schoolData.schoolName || schoolName || ""}</b></span>
+                <span>इयत्ता - <b style="color: #000000; font-weight: 800;">${marathiClass || selectedClass}</b></span>
+                <span style="font-weight: 800;">${selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+              </div>
+              <div id="mm_banner" style="margin-bottom: 8px;">
+                <h3 style="font-size: 13px; font-weight: 800; color: #000000; margin: 0; text-align: center; background-color: #fef3c7; padding: 5px 10px; border-radius: 6px; border: 1.5px solid #f59e0b;">
+                  ${sec.title}
+                </h3>
+              </div>
+              <div style="width: 100%; border: 1.5px solid #475569; border-radius: 6px; overflow: hidden; background: #ffffff;">
+                <table style="width: 100%; border-collapse: collapse; table-layout: fixed; color: #000000;">
+                  ${buildColgroupHtml()}
+                  ${buildTableHeadHtml(batch, sec.title)}
+                  <tbody id="mm_tbody">${allRowsHtml.join("")}</tbody>
+                </table>
+              </div>
+            </div>
           `;
           tempContainer.appendChild(measureEl);
 
+          const h1H = measureEl.querySelector("#mm_title")?.getBoundingClientRect().height || 33;
+          const infoH = measureEl.querySelector("#mm_info")?.getBoundingClientRect().height || 37;
+          const bannerH = measureEl.querySelector("#mm_banner")?.getBoundingClientRect().height || 35;
           const theadH = measureEl.querySelector("thead")?.getBoundingClientRect().height || 145;
           const trNodes = Array.from(measureEl.querySelectorAll("#mm_tbody tr"));
           const rowHeights = trNodes.map((tr) =>
@@ -787,7 +927,8 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           );
           tempContainer.removeChild(measureEl);
 
-          const maxBodyHeight = 1122 - 36 - theadH - 18;
+          const footerH = 65;
+          const maxBodyHeight = 1122 - 36 - h1H - 8 - infoH - 8 - bannerH - 8 - theadH - footerH;
           const chunks = [];
           let curr = [];
           let sumH = 0;
@@ -805,16 +946,55 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           }
           if (curr.length > 0) chunks.push(curr);
 
-          for (const chunkRows of chunks) {
+          for (let cIdx = 0; cIdx < chunks.length; cIdx++) {
+            const chunkRows = chunks[cIdx];
+            const isLastChunkOfSubject = cIdx === chunks.length - 1;
             const pageEl = document.createElement("div");
             pageEl.style.cssText =
-              "width: 794px; min-height: 1122px; padding: 18px; box-sizing: border-box; background: #ffffff; font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif;";
+              "width: 794px; min-height: 1122px; max-height: 1122px; padding: 18px; box-sizing: border-box; background: #ffffff; font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', 'Inter', sans-serif; display: flex; flex-direction: column; justify-content: space-between;";
             pageEl.innerHTML = `
-              <table style="width: 100%; border-collapse: collapse; table-layout: fixed; color: #000000;">
-                ${buildColgroupHtml()}
-                ${buildTableHeadHtml(batch, sec.title)}
-                <tbody>${chunkRows.join("")}</tbody>
-              </table>
+              <div>
+                <h1 style="font-size: 18px; font-weight: 800; color: #1e3a8a; text-align: center; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; letter-spacing: 0; line-height: 1.25;">
+                  अध्ययन निष्पत्ती संकलन तक्ता
+                </h1>
+                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: #0f172a; background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #94a3b8; margin-bottom: 8px;">
+                  <span>शाळेचे नाव - <b style="color: #000000; font-weight: 800;">${schoolData.schoolName || schoolName || ""}</b></span>
+                  <span>इयत्ता - <b style="color: #000000; font-weight: 800;">${marathiClass || selectedClass}</b></span>
+                  <span style="font-weight: 800;">${selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+                </div>
+                <div style="margin-bottom: 8px;">
+                  <h3 style="font-size: 13px; font-weight: 800; color: #000000; margin: 0; text-align: center; background-color: #fef3c7; padding: 5px 10px; border-radius: 6px; border: 1.5px solid #f59e0b;">
+                    ${sec.title}
+                  </h3>
+                </div>
+                <div style="width: 100%; border: 1.5px solid #475569; border-radius: 6px; overflow: hidden; background: #ffffff;">
+                  <table style="width: 100%; border-collapse: collapse; table-layout: fixed; color: #000000;">
+                    ${buildColgroupHtml()}
+                    ${buildTableHeadHtml(batch, sec.title)}
+                    <tbody>${chunkRows.join("")}</tbody>
+                  </table>
+                </div>
+              </div>
+              ${isLastChunkOfSubject ? `
+                <div style="display: flex; align-items: flex-end; justify-content: space-between; padding-top: 16px; margin-top: 12px; font-size: 13px; font-weight: 700; color: #000000;">
+                  <div style="text-align: center; min-width: 150px;">
+                    <p style="font-weight: 800; margin: 0 0 4px 0; color: #000000;">${schoolData.teacherName || ""}</p>
+                    <div style="border-top: 1.5px solid #000000; padding-top: 4px; font-size: 12px; font-weight: 800; color: #000000;">
+                      वर्गशिक्षक स्वाक्षरी
+                    </div>
+                  </div>
+                  <div style="text-align: center; min-width: 150px;">
+                    <p style="font-weight: 800; margin: 0 0 4px 0; color: #000000;">${schoolData.headmasterName || ""}</p>
+                    <div style="border-top: 1.5px solid #000000; padding-top: 4px; font-size: 12px; font-weight: 800; color: #000000;">
+                      मुख्याध्यापक स्वाक्षरी
+                    </div>
+                  </div>
+                </div>
+              ` : `
+                <div style="display: flex; align-items: center; justify-content: flex-end; padding-top: 8px; font-size: 11px; font-weight: 700; color: #475569;">
+                  <span>(पुढील पानावर सुरू...)</span>
+                </div>
+              `}
             `;
             tempContainer.appendChild(pageEl);
             pageElements.push(pageEl);
@@ -951,6 +1131,8 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
       // 2. TWO-PASS REAL DOM MEASUREMENT & DYNAMIC PAGINATION
       const generatedPages = [];
+      const marathiClass = toMarathiClassLabel(selectedClass);
+      const schoolName = schoolData.schoolName || "";
 
       for (const student of students) {
         const activeSubjectSections = [
@@ -958,8 +1140,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           { key: "हिंदी", title: "द्वितीय भाषा: हिंदी", outcomes: hindiOutcomes, subjectName: "हिंदी" },
           { key: "गणित", title: "गणित", outcomes: mathsOutcomes, subjectName: "गणित" },
           { key: "इंग्रजी", title: "तृतीय भाषा: इंग्रजी", outcomes: englishOutcomes, subjectName: "इंग्रजी" },
-          { key: "परिसर अभ्यास १", title: "परिसर अभ्यास १", outcomes: evs1Outcomes, subjectName: "परिसर अभ्यास १" },
-          { key: "परिसर अभ्यास २", title: "परिसर अभ्यास २", outcomes: evs2Outcomes, subjectName: "परिसर अभ्यास २" },
+          { key: "परिसर अभ्यास", title: "परिसर अभ्यास", outcomes: evsUnifiedOutcomes, subjectName: "परिसर अभ्यास" },
           { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान" },
           { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र" },
           { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल" },
@@ -1008,8 +1189,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
               </h1>
               <div id="m_student" style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: #0f172a; background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #94a3b8; margin-bottom: 8px;">
                 <span>विद्यार्थ्याचे नाव - <b style="color: #000000; font-weight: 800;">${student.fullName || student.name || ""}</b></span>
-                <span>इयत्ता - <b style="color: #000000; font-weight: 800;">${selectedClass}</b></span>
-                <span>तुकडी - <b style="color: #000000; font-weight: 800;">${student.division || student.section || student.tukdi || division}</b></span>
+                <span>इयत्ता - <b style="color: #000000; font-weight: 800;">${marathiClass || selectedClass}</b></span>
                 <span>हजेरी क्र. <b style="color: #000000; font-weight: 800;">${student.rollNo || ""}</b></span>
                 <span style="font-weight: 800;">${selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
               </div>
@@ -1053,14 +1233,18 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                 </table>
               </div>
             </div>
-            <div id="m_footer" style="display: flex; align-items: center; justify-content: space-between; padding-top: 7px; border-top: 1px solid #94a3b8; margin-top: 6px; font-size: 12px; font-weight: 700; color: #0f172a;">
-              <div style="text-align: center;">
-                <p style="font-weight: 800; margin: 0; color: #000000;">${schoolData.teacherName || "वर्गशिक्षक"}</p>
-                <p style="font-size: 11px; color: #1e293b; font-weight: 700; margin: 0;">वर्गशिक्षक</p>
+            <div id="m_footer" style="display: flex; align-items: flex-end; justify-content: space-between; padding-top: 14px; margin-top: 12px; font-size: 12.5px; font-weight: 700; color: #000000;">
+              <div style="text-align: center; min-width: 150px;">
+                <p style="font-weight: 800; margin: 0 0 4px 0; color: #000000;">${schoolData.teacherName || ""}</p>
+                <div style="border-top: 1.5px solid #000000; padding-top: 4px; font-size: 12px; font-weight: 800; color: #000000;">
+                  वर्गशिक्षक स्वाक्षरी
+                </div>
               </div>
-              <div style="text-align: center;">
-                <p style="font-weight: 800; margin: 0; color: #000000;">${schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                <p style="font-size: 11px; color: #1e293b; font-weight: 700; margin: 0;">मुख्याध्यापक</p>
+              <div style="text-align: center; min-width: 150px;">
+                <p style="font-weight: 800; margin: 0 0 4px 0; color: #000000;">${schoolData.headmasterName || ""}</p>
+                <div style="border-top: 1.5px solid #000000; padding-top: 4px; font-size: 12px; font-weight: 800; color: #000000;">
+                  मुख्याध्यापक स्वाक्षरी
+                </div>
               </div>
             </div>
           `;
@@ -1072,7 +1256,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           const stdH = measureEl.querySelector("#m_student")?.getBoundingClientRect().height || 37;
           const bannerH = measureEl.querySelector("#m_banner")?.getBoundingClientRect().height || 35;
           const theadH = measureEl.querySelector("#m_thead_row")?.getBoundingClientRect().height || 38;
-          const footerH = measureEl.querySelector("#m_footer")?.getBoundingClientRect().height || 41;
+          const footerH = measureEl.querySelector("#m_footer")?.getBoundingClientRect().height || 55;
 
           // Padding and non-table height total
           const pageInnerHeight = 1122 - 48; // 1074px
@@ -1117,9 +1301,13 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             generatedPages.push({
               student,
               secTitle: partTitle,
+              rawSecTitle: sec.title,
               secKey: sec.key,
               subjectName: sec.subjectName,
               outcomesChunk: chunk,
+              isLastChunkOfSubject: chunkIdx === totalParts - 1,
+              partIndex: chunkIdx + 1,
+              totalParts,
             });
           });
         }
@@ -1132,23 +1320,23 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           const level = getUserSelectedLevel(student, item.code, pgData.subjectName);
           const isLast = idx === pgData.outcomesChunk.length - 1;
           return `
-            <tr style="font-size: 12.5px; color: #000000; ${!isLast ? "border-bottom: 1px solid #94a3b8;" : ""}">
-              <td style="padding: 5px 4px; text-align: center; font-weight: 700; font-size: 10.5px; color: #0f172a; width: 10%; background-color: #f8fafc; border-right: 1px solid #94a3b8;">
+            <tr style="font-size: 12.5px; color: #000000; ${!isLast ? "border-bottom: 1px solid #000000;" : ""}">
+              <td style="padding: 5px 4px; text-align: center; font-weight: 700; font-size: 10.5px; color: #0f172a; width: 10%; background-color: #f8fafc; border-right: 1px solid #000000;">
                 ${item.code || ""}
               </td>
-              <td style="padding: 6px; text-align: left; font-weight: 700; font-size: 12.5px; line-height: 1.35; color: #000000; width: 74%; border-right: 1px solid #94a3b8;">
+              <td style="padding: 6px; text-align: left; font-weight: 700; font-size: 12.5px; line-height: 1.35; color: #000000; width: 74%; border-right: 1px solid #000000;">
                 ${item.text || ""}
               </td>
-              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%; border-right: 1px solid #94a3b8;">
+              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #000000; width: 4%; border-right: 1px solid #000000;">
                 ${level === 1 ? "✓" : ""}
               </td>
-              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%; border-right: 1px solid #94a3b8;">
+              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #000000; width: 4%; border-right: 1px solid #000000;">
                 ${level === 2 ? "✓" : ""}
               </td>
-              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%; border-right: 1px solid #94a3b8;">
+              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #000000; width: 4%; border-right: 1px solid #000000;">
                 ${level === 3 ? "✓" : ""}
               </td>
-              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #1e3a8a; width: 4%;">
+              <td style="padding: 4px; text-align: center; font-weight: 800; font-size: 15px; color: #000000; width: 4%;">
                 ${level === 4 ? "✓" : ""}
               </td>
             </tr>
@@ -1166,8 +1354,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
               </h1>
               <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: #0f172a; background-color: #f1f5f9; padding: 6px 12px; border-radius: 6px; border: 1px solid #94a3b8; margin-bottom: 8px;">
                 <span>विद्यार्थ्याचे नाव - <b style="color: #000000; font-weight: 800;">${student.fullName || student.name || ""}</b></span>
-                <span>इयत्ता - <b style="color: #000000; font-weight: 800;">${selectedClass}</b></span>
-                <span>तुकडी - <b style="color: #000000; font-weight: 800;">${student.division || student.section || student.tukdi || division}</b></span>
+                <span>इयत्ता - <b style="color: #000000; font-weight: 800;">${marathiClass || selectedClass}</b></span>
                 <span>हजेरी क्र. <b style="color: #000000; font-weight: 800;">${student.rollNo || ""}</b></span>
                 <span style="font-weight: 800;">${selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
               </div>
@@ -1211,16 +1398,26 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                 </table>
               </div>
             </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 7px; border-top: 1px solid #94a3b8; margin-top: 6px; font-size: 12px; font-weight: 700; color: #0f172a;">
-              <div style="text-align: center;">
-                <p style="font-weight: 800; margin: 0; color: #000000;">${schoolData.teacherName || "वर्गशिक्षक"}</p>
-                <p style="font-size: 11px; color: #1e293b; font-weight: 700; margin: 0;">वर्गशिक्षक</p>
+            ${pgData.isLastChunkOfSubject ? `
+              <div style="display: flex; align-items: flex-end; justify-content: space-between; padding-top: 14px; margin-top: 12px; font-size: 12.5px; font-weight: 700; color: #000000;">
+                <div style="text-align: center; min-width: 150px;">
+                  <p style="font-weight: 800; margin: 0 0 4px 0; color: #000000;">${schoolData.teacherName || ""}</p>
+                  <div style="border-top: 1.5px solid #000000; padding-top: 4px; font-size: 12px; font-weight: 800; color: #000000;">
+                    वर्गशिक्षक स्वाक्षरी
+                  </div>
+                </div>
+                <div style="text-align: center; min-width: 150px;">
+                  <p style="font-weight: 800; margin: 0 0 4px 0; color: #000000;">${schoolData.headmasterName || ""}</p>
+                  <div style="border-top: 1.5px solid #000000; padding-top: 4px; font-size: 12px; font-weight: 800; color: #000000;">
+                    मुख्याध्यापक स्वाक्षरी
+                  </div>
+                </div>
               </div>
-              <div style="text-align: center;">
-                <p style="font-weight: 800; margin: 0; color: #000000;">${schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                <p style="font-size: 11px; color: #1e293b; font-weight: 700; margin: 0;">मुख्याध्यापक</p>
+            ` : `
+              <div style="display: flex; align-items: center; justify-content: flex-end; padding-top: 8px; font-size: 11px; font-weight: 700; color: #475569;">
+                <span>(पुढील पानावर सुरू...)</span>
               </div>
-            </div>
+            `}
           </div>
         `;
       }).join("");
@@ -1353,13 +1550,9 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       if (name.includes("हिंदी")) return active.includes("हिंदी") || active.includes("hindi");
       if (name.includes("इंग्रजी")) return active.includes("इंग्रजी") || active.includes("english");
       if (name.includes("गणित")) return active.includes("गणित") || active.includes("math");
-      if (name === "परिसर अभ्यास १" || name.includes("परिसर १")) {
-        return active.includes("परिसर १") || active.includes("परिसर अभ्यास १") || ((active.includes("परिसर अभ्यास") || active.includes("संभोवतालचे")) && !active.includes("२") && !active.includes("2"));
+      if (name.includes("परिसर") || name.includes("संभोवतालचे") || name.includes("evs")) {
+        return active.includes("परिसर") || active.includes("संभोवतालचे") || active.includes("evs");
       }
-      if (name === "परिसर अभ्यास २" || name.includes("परिसर २")) {
-        return active.includes("परिसर २") || active.includes("परिसर अभ्यास २");
-      }
-      if (name.includes("परिसर अभ्यास") || name.includes("संभोवतालचे")) return active.includes("परिसर") || active.includes("संभोवतालचे") || active.includes("evs");
       if (name.includes("सामान्य विज्ञान") || name.includes("विज्ञान")) return active.includes("विज्ञान") || active.includes("science");
       if (name.includes("इतिहास")) return active.includes("इतिहास") || active.includes("नागरिकशास्त्र") || active.includes("सामाजिक") || active.includes("social");
       if (name.includes("भूगोल")) return active.includes("भूगोल") || active.includes("सामाजिक") || active.includes("social");
@@ -1416,9 +1609,11 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         subjectName && subjectName.includes("इंग्रजी") ? "english" : "",
         subjectName && subjectName.includes("गणित") ? "math" : "",
         subjectName && subjectName.includes("गणित") ? "maths" : "",
-        subjectName && (subjectName.includes("परिसर अभ्यास १") || subjectName.includes("परिसर १")) ? "evs1" : "",
-        subjectName && (subjectName.includes("परिसर अभ्यास २") || subjectName.includes("परिसर २")) ? "evs2" : "",
-        subjectName && (subjectName.includes("परिसर") || subjectName.includes("संभोवतालचे")) ? "evs" : "",
+        subjectName && ((subjectName.includes("परिसर") || subjectName.includes("evs")) && (subjectName.includes("१") || subjectName.includes("1") || subjectName.includes("भाग १") || subjectName.includes("भाग 1"))) ? "evs1" : "",
+        subjectName && ((subjectName.includes("परिसर") || subjectName.includes("evs")) && (subjectName.includes("२") || subjectName.includes("2") || subjectName.includes("भाग २") || subjectName.includes("भाग 2"))) ? "evs2" : "",
+        subjectName && ((subjectName.includes("परिसर") || subjectName.includes("evs")) && (subjectName.includes("१") || subjectName.includes("1") || subjectName.includes("भाग १") || subjectName.includes("भाग 1"))) ? "parisar1" : "",
+        subjectName && ((subjectName.includes("परिसर") || subjectName.includes("evs")) && (subjectName.includes("२") || subjectName.includes("2") || subjectName.includes("भाग २") || subjectName.includes("भाग 2"))) ? "parisar2" : "",
+        subjectName && (subjectName.includes("परिसर") || subjectName.includes("संभोवतालचे")) && !subjectName.includes("१") && !subjectName.includes("२") && !subjectName.includes("1") && !subjectName.includes("2") ? "evs" : "",
         subjectName && (subjectName.includes("सामान्य विज्ञान") || subjectName.includes("विज्ञान")) ? "science" : "",
         subjectName && (subjectName.includes("इतिहास") || subjectName.includes("नागरिकशास्त्र")) ? "history" : "",
         subjectName && subjectName.includes("भूगोल") ? "geography" : "",
@@ -1523,6 +1718,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   const mathsOutcomes = getClassOutcomes(selectedClass, "math", customOutcomesData);
   const evs1Outcomes = getClassOutcomes(selectedClass, "evs1", customOutcomesData);
   const evs2Outcomes = getClassOutcomes(selectedClass, "evs2", customOutcomesData);
+  const evsUnifiedOutcomes = [...(evs1Outcomes || []), ...(evs2Outcomes || [])];
   const scienceOutcomes = getClassOutcomes(selectedClass, "science", customOutcomesData);
   const historyOutcomes = getClassOutcomes(selectedClass, "history", customOutcomesData);
   const geographyOutcomes = getClassOutcomes(selectedClass, "geography", customOutcomesData);
@@ -1592,15 +1788,14 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
       {/* -------------------- 1. SCREEN VIEW -------------------- */}
       {viewMode === "matrix" ? (
-        <div className="cce-screen-view max-w-5xl mx-auto space-y-6 mb-8 no-print">
+        <div className="cce-screen-view w-full max-w-5xl mx-auto space-y-6 mb-8 no-print overflow-x-hidden">
           {(() => {
             const activeSubjectSections = [
               { key: "मराठी", title: "मराठी", outcomes: marathiOutcomes, subjectName: "मराठी", isEnglish: false },
               { key: "हिंदी", title: "हिंदी", outcomes: hindiOutcomes, subjectName: "हिंदी", isEnglish: false },
               { key: "गणित", title: "गणित", outcomes: mathsOutcomes, subjectName: "गणित", isEnglish: false },
               { key: "इंग्रजी", title: "इंग्रजी", outcomes: englishOutcomes, subjectName: "इंग्रजी", isEnglish: true },
-              { key: "परिसर अभ्यास १", title: "परिसर अभ्यास १", outcomes: evs1Outcomes, subjectName: "परिसर अभ्यास १", isEnglish: false },
-              { key: "परिसर अभ्यास २", title: "परिसर अभ्यास २", outcomes: evs2Outcomes, subjectName: "परिसर अभ्यास २", isEnglish: false },
+              { key: "परिसर अभ्यास", title: "परिसर अभ्यास", outcomes: evsUnifiedOutcomes, subjectName: "परिसर अभ्यास", isEnglish: false },
               { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान", isEnglish: false },
               { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र", isEnglish: false },
               { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल", isEnglish: false },
@@ -1623,40 +1818,43 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
             return activeSubjectSections.map((sec) =>
               studentBatches.map((batch, bIdx) => (
-                <div key={`matrix_${sec.key}_${bIdx}`} className="bg-white p-4 border border-slate-300 rounded-2xl shadow-sm overflow-x-auto">
-                  <table className="w-full min-w-[760px] border-collapse table-fixed text-black">
+                <A4PageWrapper key={`matrix_${sec.key}_${bIdx}`} isLandscape={false}>
+                  <div className="bg-white p-4 border border-slate-300 rounded-2xl shadow-sm w-[794px] min-w-[794px] max-w-[794px] box-border">
+                    <div className="mb-3">
+                      <h1 className="text-[18px] font-extrabold text-blue-900 text-center mb-2.5 border-b-2 border-blue-900 pb-1">
+                        अध्ययन निष्पत्ती संकलन तक्ता
+                      </h1>
+                      <div className="flex flex-wrap items-center justify-between text-[12.5px] font-bold text-slate-900 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-400 mb-3 gap-2">
+                        <span>शाळेचे नाव - <b className="text-black font-extrabold">{schoolData.schoolName || schoolName || ""}</b></span>
+                        <span>इयत्ता - <b className="text-black font-extrabold">{toMarathiClassLabel(selectedClass)}</b></span>
+                        <span className="font-extrabold">{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+                      </div>
+                      <div className="mb-3">
+                        <h3 className="text-[13px] font-extrabold text-black text-center bg-amber-100 py-1.5 px-3 rounded-lg border-2 border-amber-400 shadow-sm">
+                          {sec.title}
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="w-full border-2 border-slate-500 rounded-lg overflow-hidden bg-white">
+                    <table className="w-full border-collapse table-fixed text-black" style={{ width: "100%", tableLayout: "fixed" }}>
                     <colgroup>
-                      <col style={{ width: "7%" }} />
-                      <col style={{ width: "36%" }} />
+                      <col style={{ width: "7%" }} width="7%" />
+                      <col style={{ width: "36%" }} width="36%" />
                       {batch.map((_, cIdx) => (
-                        <col key={cIdx} style={{ width: "3.1875%" }} />
+                        <col key={cIdx} style={{ width: "3.1875%" }} width="3.1875%" />
                       ))}
-                      <col style={{ width: "6%" }} />
+                      <col style={{ width: "6%" }} width="6%" />
                     </colgroup>
                     <thead>
                       <tr>
-                        <th colSpan={2} className="border border-black px-2 py-1.5 text-left font-bold text-xs">
-                          शाळेचे नाव - {schoolData.schoolName || ""}
-                        </th>
-                        <th colSpan={7} className="border border-black px-1 py-1.5 text-center font-bold text-[12.5px]">
-                          अध्ययन निष्पत्ती संकलन तक्ता
-                        </th>
-                        <th colSpan={4} className="border border-black px-1 py-1.5 text-center font-bold text-xs">
-                          इयत्ता - {toMarathiClassLabel(selectedClass)}
-                        </th>
-                        <th colSpan={6} className="border border-black px-1 py-1.5 text-center font-bold text-xs">
-                          विषय - {sec.title}
-                        </th>
-                      </tr>
-                      <tr>
-                        <th rowSpan={2} className="border border-black p-1 text-center align-middle font-bold text-[10px] leading-tight">
+                        <th rowSpan={2} style={{ width: "7%", minWidth: "7%", maxWidth: "7%", boxSizing: "border-box" }} className="border border-black p-1 text-center align-middle font-bold text-[10px] leading-tight bg-slate-100">
                           अध्ययन<br />निष्पत्ती /<br />क्षमता क्र.
                         </th>
-                        <th className="border border-black p-2 h-[132px] text-center align-middle font-bold text-[13px]">
+                        <th style={{ width: "36%", minWidth: "36%", maxWidth: "36%", boxSizing: "border-box" }} className="border border-black p-2 h-[132px] text-center align-middle font-bold text-[13px]">
                           विद्यार्थ्यांचे नाव
                         </th>
                         {batch.map((stu, cIdx) => (
-                          <th key={cIdx} className="border border-black p-0 h-[132px] relative text-center align-middle font-bold text-[10px] overflow-hidden">
+                          <th key={cIdx} style={{ width: "3.1875%", minWidth: "3.1875%", maxWidth: "3.1875%", boxSizing: "border-box" }} className="border border-black p-0 h-[132px] relative text-center align-middle font-bold text-[10px] overflow-hidden">
                             <div
                               style={{
                                 position: "absolute",
@@ -1672,19 +1870,19 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                             </div>
                           </th>
                         ))}
-                        <th rowSpan={2} className="border border-black p-1 text-center align-middle font-bold text-[11px]">
+                        <th rowSpan={2} style={{ width: "6%", minWidth: "6%", maxWidth: "6%", boxSizing: "border-box" }} className="border border-black p-1 text-center align-middle font-bold text-[11px]">
                           एकूण
                         </th>
                       </tr>
                       <tr>
-                        <th className="border border-black px-2 py-1 h-[26px] align-middle font-bold text-xs">
+                        <th style={{ width: "36%", minWidth: "36%", maxWidth: "36%", boxSizing: "border-box" }} className="border border-black px-2 py-1 h-[26px] align-middle font-bold text-xs">
                           <div className="flex items-center justify-between">
                             <span className="flex-1 text-center">अध्ययन निष्पत्ती</span>
                             <span className="text-[10px] whitespace-nowrap">ह.क्र. →</span>
                           </div>
                         </th>
                         {batch.map((stu, cIdx) => (
-                          <th key={cIdx} className="border border-black p-0.5 h-[26px] text-center align-middle font-bold text-[11.5px] leading-[1.1]">
+                          <th key={cIdx} style={{ width: "3.1875%", minWidth: "3.1875%", maxWidth: "3.1875%", boxSizing: "border-box" }} className="border border-black p-0.5 h-[26px] text-center align-middle font-bold text-[11.5px] leading-[1.1]">
                             {stu ? toMarathiDigitsLocal(stu.rollNo || cIdx + 1) : ""}
                           </th>
                         ))}
@@ -1697,22 +1895,22 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                         let ratedCount = 0;
                         return (
                           <tr key={`${sec.key}_${oIdx}`}>
-                            <td className="border border-black px-1 py-1 text-center align-middle font-bold text-[10.5px] whitespace-nowrap">
+                            <td style={{ width: "7%", minWidth: "7%", maxWidth: "7%", boxSizing: "border-box" }} className="border border-black px-1 py-1 text-center align-middle font-bold text-[10.5px] whitespace-nowrap">
                               {displayCode}
                             </td>
-                            <td className="border border-black px-1.5 py-1 text-left align-middle font-bold text-[11px] leading-snug">
+                            <td style={{ width: "36%", minWidth: "36%", maxWidth: "36%", boxSizing: "border-box" }} className="border border-black px-1.5 py-1 text-left align-middle font-bold text-[11px] leading-snug">
                               {item.text}
                             </td>
                             {batch.map((stu, cIdx) => {
                               const lvl = stu ? getUserSelectedLevel(stu, item.code, sec.subjectName) : 0;
                               if (lvl >= 1 && lvl <= 4) ratedCount++;
                               return (
-                                <td key={cIdx} className="border border-black p-0.5 text-center align-middle font-bold text-[11.5px]">
+                                <td key={cIdx} style={{ width: "3.1875%", minWidth: "3.1875%", maxWidth: "3.1875%", boxSizing: "border-box" }} className="border border-black p-0.5 text-center align-middle font-bold text-[11.5px]">
                                   {lvl >= 1 && lvl <= 4 ? toMarathiDigitsLocal(lvl) : ""}
                                 </td>
                               );
                             })}
-                            <td className="border border-black p-0.5 text-center align-middle font-bold text-[11px]">
+                            <td style={{ width: "6%", minWidth: "6%", maxWidth: "6%", boxSizing: "border-box" }} className="border border-black p-0.5 text-center align-middle font-bold text-[11px]">
                               {ratedCount > 0 ? toMarathiDigitsLocal(ratedCount) : ""}
                             </td>
                           </tr>
@@ -1720,21 +1918,36 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                       })}
                     </tbody>
                   </table>
+                  </div>
+                  <div className="flex items-end justify-between pt-3 mt-3 text-xs font-bold text-black border-t border-slate-300">
+                    <div className="text-center min-w-[140px]">
+                      <p className="font-extrabold text-black mb-1">{schoolData.teacherName || ""}</p>
+                      <div className="border-t border-black pt-1 text-[11.5px] font-extrabold text-black">
+                        वर्गशिक्षक स्वाक्षरी
+                      </div>
+                    </div>
+                    <div className="text-center min-w-[140px]">
+                      <p className="font-extrabold text-black mb-1">{schoolData.headmasterName || ""}</p>
+                      <div className="border-t border-black pt-1 text-[11.5px] font-extrabold text-black">
+                        मुख्याध्यापक स्वाक्षरी
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ))
-            );
+              </A4PageWrapper>
+            ))
+          );
           })()}
         </div>
       ) : (
-      <div className="cce-screen-view max-w-4xl mx-auto space-y-6 mb-8 no-print">
+      <div className="cce-screen-view w-full max-w-4xl mx-auto space-y-6 mb-8 no-print overflow-x-hidden">
         {students.map((student) => {
           const activeSubjectSections = [
             { key: "मराठी", title: "प्रथम भाषा: मराठी", outcomes: marathiOutcomes, subjectName: "मराठी" },
             { key: "हिंदी", title: "द्वितीय भाषा: हिंदी", outcomes: hindiOutcomes, subjectName: "हिंदी" },
             { key: "गणित", title: "गणित", outcomes: mathsOutcomes, subjectName: "गणित" },
             { key: "इंग्रजी", title: "तृतीय भाषा: इंग्रजी", outcomes: englishOutcomes, subjectName: "इंग्रजी" },
-            { key: "परिसर अभ्यास १", title: "परिसर अभ्यास १", outcomes: evs1Outcomes, subjectName: "परिसर अभ्यास १" },
-            { key: "परिसर अभ्यास २", title: "परिसर अभ्यास २", outcomes: evs2Outcomes, subjectName: "परिसर अभ्यास २" },
+            { key: "परिसर अभ्यास", title: "परिसर अभ्यास", outcomes: evsUnifiedOutcomes, subjectName: "परिसर अभ्यास" },
             { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान" },
             { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र" },
             { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल" },
@@ -1746,39 +1959,38 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           return (
             <div key={`screen_${student.id}`} className="space-y-6">
               {activeSubjectSections.map((sec) => (
-                <div key={`screen_${student.id}_${sec.key}`} className="bg-white p-5 border border-slate-200 rounded-2xl shadow-sm">
-                  <h1 className="text-[18px] font-extrabold text-blue-900 text-center mb-2.5 border-b-2 border-blue-900 pb-1">
-                    अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
-                  </h1>
+                <A4PageWrapper key={`screen_${student.id}_${sec.key}`} isLandscape={false}>
+                  <div className="bg-white p-5 border border-slate-300 rounded-xl shadow-sm w-[794px] min-w-[794px] max-w-[794px] box-border">
+                    {/* Integrated Boxed Table for Web Screen View */}
+                    <OutcomeTable
+                      title={sec.title}
+                      outcomes={sec.outcomes}
+                      subjectName={sec.subjectName}
+                      getUserSelectedLevel={getUserSelectedLevel}
+                      student={student}
+                      schoolData={schoolData}
+                      selectedClass={selectedClass}
+                      division={division}
+                      selectedSemester={selectedSemester}
+                      showHeader={true}
+                    />
 
-                  <div className="flex flex-wrap items-center justify-between text-[12.5px] font-bold text-slate-900 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-400 mb-3 gap-2">
-                    <span>विद्यार्थ्याचे नाव - <b className="text-black font-extrabold">{student.fullName || student.name}</b></span>
-                    <span>इयत्ता - <b className="text-black font-extrabold">{selectedClass}</b></span>
-                    <span>तुकडी - <b className="text-black font-extrabold">{student.division || student.section || student.tukdi || division}</b></span>
-                    <span>हजेरी क्र. <b className="text-black font-extrabold">{student.rollNo}</b></span>
-                    <span className="font-extrabold">{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
-                  </div>
-
-                  {/* Single Continuous Table for Web Screen View */}
-                  <OutcomeTable
-                    title={sec.title}
-                    outcomes={sec.outcomes}
-                    subjectName={sec.subjectName}
-                    getUserSelectedLevel={getUserSelectedLevel}
-                    student={student}
-                  />
-
-                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-400 mt-2 text-[12px] font-bold text-slate-900">
-                    <div className="text-center">
-                      <p className="font-extrabold text-black">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                      <p className="text-[11px] text-slate-800 font-bold">वर्गशिक्षक</p>
+                    <div className="flex items-end justify-between pt-3 mt-3 text-xs font-bold text-black border-t border-slate-300">
+                      <div className="text-center min-w-[140px]">
+                        <p className="font-extrabold text-black mb-1">{schoolData.teacherName || ""}</p>
+                        <div className="border-t border-black pt-1 text-[11.5px] font-extrabold text-black">
+                          वर्गशिक्षक स्वाक्षरी
+                        </div>
+                      </div>
+                      <div className="text-center min-w-[140px]">
+                        <p className="font-extrabold text-black mb-1">{schoolData.headmasterName || ""}</p>
+                        <div className="border-t border-black pt-1 text-[11.5px] font-extrabold text-black">
+                          मुख्याध्यापक स्वाक्षरी
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="font-extrabold text-black">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                      <p className="text-[11px] text-slate-800 font-bold">मुख्याध्यापक</p>
-                    </div>
                   </div>
-                </div>
+                </A4PageWrapper>
               ))}
             </div>
           );
@@ -1823,8 +2035,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
               { key: "हिंदी", title: "द्वितीय भाषा: हिंदी", outcomes: hindiOutcomes, subjectName: "हिंदी" },
               { key: "गणित", title: "गणित", outcomes: mathsOutcomes, subjectName: "गणित" },
               { key: "इंग्रजी", title: "तृतीय भाषा: इंग्रजी", outcomes: englishOutcomes, subjectName: "इंग्रजी" },
-              { key: "परिसर अभ्यास १", title: "परिसर अभ्यास १", outcomes: evs1Outcomes, subjectName: "परिसर अभ्यास १" },
-              { key: "परिसर अभ्यास २", title: "परिसर अभ्यास २", outcomes: evs2Outcomes, subjectName: "परिसर अभ्यास २" },
+              { key: "परिसर अभ्यास", title: "परिसर अभ्यास", outcomes: evsUnifiedOutcomes, subjectName: "परिसर अभ्यास" },
               { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान" },
               { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र" },
               { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल" },
@@ -1847,7 +2058,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                 return (
                   <div
                     key={`${student.id}_${sec.key}_part_${chunkIdx}`}
-                    className={`pdf-page bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between mb-4 ${
+                    className={`pdf-page bg-white p-5 border border-black flex flex-col justify-between mb-4 ${
                       !isFirstPage ? "pdf-page-break" : ""
                     }`}
                     style={{
@@ -1860,44 +2071,45 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                     }}
                   >
                     <div>
-                      {/* Header Title */}
-                      <h1 className="text-[18px] font-extrabold text-blue-900 text-center mb-2.5 border-b-2 border-blue-900 pb-1">
-                        अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
-                      </h1>
-
-                      {/* Student Metadata Bar */}
-                      <div className="flex items-center justify-between text-[12.5px] font-bold text-slate-900 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-400 mb-3">
-                        <span>विद्यार्थ्याचे नाव - <b className="text-black font-extrabold">{student.fullName || student.name}</b></span>
-                        <span>इयत्ता - <b className="text-black font-extrabold">{selectedClass}</b></span>
-                        <span>तुकडी - <b className="text-black font-extrabold">{student.division || student.section || student.tukdi || division}</b></span>
-                        <span>हजेरी क्र. <b className="text-black font-extrabold">{student.rollNo}</b></span>
-                        <span className="font-extrabold">{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
-                      </div>
-
-                      {/* Chunked Subject Table */}
+                      {/* Integrated Boxed Table */}
                       <OutcomeTable
                         title={partTitle}
                         outcomes={outcomeChunk}
                         subjectName={sec.subjectName}
                         getUserSelectedLevel={getUserSelectedLevel}
                         student={student}
+                        schoolData={schoolData}
+                        selectedClass={selectedClass}
+                        division={division}
+                        selectedSemester={selectedSemester}
+                        showHeader={true}
                       />
                     </div>
 
-                    {/* Signatures Footer */}
-                    <div
-                      className="flex items-center justify-between pt-2.5 border-t border-slate-400 mt-2 text-[12px] font-bold text-slate-900"
-                      style={{ breakInside: "avoid", pageBreakInside: "avoid" }}
-                    >
-                      <div className="text-center">
-                        <p className="font-extrabold text-black">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                        <p className="text-[11px] text-slate-800 font-bold">वर्गशिक्षक</p>
+                    {/* Signatures Footer (Only at the end of subject) */}
+                    {chunkIdx === chunks.length - 1 ? (
+                      <div
+                        className="flex items-end justify-between pt-3 mt-3 text-xs font-bold text-black"
+                        style={{ breakInside: "avoid", pageBreakInside: "avoid" }}
+                      >
+                        <div className="text-center min-w-[140px]">
+                          <p className="font-extrabold text-black mb-1">{schoolData.teacherName || ""}</p>
+                          <div className="border-t border-black pt-1 text-[11.5px] font-extrabold text-black">
+                            वर्गशिक्षक स्वाक्षरी
+                          </div>
+                        </div>
+                        <div className="text-center min-w-[140px]">
+                          <p className="font-extrabold text-black mb-1">{schoolData.headmasterName || ""}</p>
+                          <div className="border-t border-black pt-1 text-[11.5px] font-extrabold text-black">
+                            मुख्याध्यापक स्वाक्षरी
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <p className="font-extrabold text-black">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                        <p className="text-[11px] text-slate-800 font-bold">मुख्याध्यापक</p>
+                    ) : (
+                      <div className="text-right text-[11px] font-bold text-slate-600 pt-2">
+                        <span>(पुढील पानावर सुरू...)</span>
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               });

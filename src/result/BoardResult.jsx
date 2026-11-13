@@ -667,32 +667,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
       // 2. Fetch User's Real Students for this selected class & medium (Isolated by teacherId)
       const loadedStudents = await fetchStudentsForClass(selectedClass, selectedMedium, currentTeacherId);
+      setStudents(loadedStudents);
 
-      // Merge student_details collection for accurate gender, caste, religion, etc.
-      try {
-        const detailsMap = new Map();
-        const detailsSnap = await getDocs(collection(db, "student_details"));
-        detailsSnap.forEach((docSnap) => {
-          detailsMap.set(docSnap.id, docSnap.data());
-        });
-
-        const mergedStudents = loadedStudents.map((s) => {
-          const det = detailsMap.get(s.id) || detailsMap.get(s.name) || detailsMap.get(s.fullName) || {};
-          return {
-            ...s,
-            gender: det.gender || s.gender || s.ling || s.sex || "",
-            caste: det.caste || s.caste || s.category || det.category || s.jaat || "",
-            religion: det.religion || s.religion || "",
-            dob: det.dob || s.dob || "",
-            phone: det.phone || s.phone || s.mobile || "",
-          };
-        });
-        setStudents(mergedStudents);
-      } catch (e) {
-        setStudents(loadedStudents);
-      }
-
-      // 3. Fetch User's Entered Marks for this Class & Year (Merging all exam docs & Bunny CDN)
+      // 3. Fetch User's Entered Marks for this Class & Year (Merging all exam docs & Bunny CDN in parallel)
       try {
         let mergedMarks = {};
 
@@ -703,14 +680,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             `${selectedClass}_${academicYear}_${examKey}`,
             `${selectedClass}_${selectedMedium}_${academicYear}_${examKey}`,
           ];
-          for (const dId of docIdsToTry) {
-            try {
-              const snap = await getDoc(doc(db, "cce_marks_v2", dId));
-              if (snap.exists()) {
-                const d = snap.data();
-                return d.records || d.marksData || d.data || d;
-              }
-            } catch (e) {}
+          const snaps = await Promise.allSettled(docIdsToTry.map(dId => getDoc(doc(db, "cce_marks_v2", dId))));
+          for (const res of snaps) {
+            if (res.status === "fulfilled" && res.value && res.value.exists()) {
+              const d = res.value.data();
+              const rec = d.records || d.marksData || d.data || d;
+              if (rec) return rec;
+            }
           }
           return null;
         };
@@ -720,8 +696,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           ? ["sem1", "test1", "oral1", "pratyakshik1", "general"]
           : ["sem2", "test2", "oral2", "pratyakshik2", "general"];
 
-        for (const exKey of examKeys) {
-          const exData = await loadMarksDoc(exKey);
+        const examResults = await Promise.all(examKeys.map(exKey => loadMarksDoc(exKey)));
+        examResults.forEach((exData) => {
           if (exData && typeof exData === "object") {
             Object.keys(exData).forEach((stdKey) => {
               if (!mergedMarks[stdKey]) mergedMarks[stdKey] = {};
@@ -738,9 +714,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               }
             });
           }
-        }
+        });
 
-        // Bunny CDN fallback — only for selected term
+        // Bunny CDN fallback in parallel — only for selected term
         try {
           const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
           const bunnyFiles = termSuffix === "sem1"
@@ -752,8 +728,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                 `cce_results/${selectedClass}_${academicYear}_marks_second.json`,
                 `cce_results/${selectedClass}_${academicYear}_marks_sem2.json`,
               ];
-          for (const file of bunnyFiles) {
-            const bData = await fetchJsonFromBunny(file);
+          const bunnyResults = await Promise.all(bunnyFiles.map(file => fetchJsonFromBunny(file)));
+          for (const bData of bunnyResults) {
             if (bData && typeof bData === "object") {
               Object.keys(bData).forEach((stdKey) => {
                 if (!mergedMarks[stdKey]) mergedMarks[stdKey] = {};
@@ -763,6 +739,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                     if (!mergedMarks[stdKey][subKey]) mergedMarks[stdKey][subKey] = {};
                     if (typeof stdObj[subKey] === "object") {
                       Object.assign(mergedMarks[stdKey][subKey], stdObj[subKey]);
+                    } else {
+                      mergedMarks[stdKey][subKey] = stdObj[subKey];
                     }
                   });
                 }
@@ -817,24 +795,22 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             `${selectedClass}_${selectedMedium}_${academicYear}_${sem}`,
           ].filter(Boolean);
 
-          for (const dId of docIds) {
-            try {
-              const snap = await getDoc(doc(db, "cce_remarks_v2", dId));
-              if (snap.exists()) {
-                const data = snap.data();
-                const parsedRecs = data.records || data.remarks || data.data || null;
-                if (parsedRecs && typeof parsedRecs === "object" && Object.keys(parsedRecs).length > 0) {
-                  Object.keys(parsedRecs).forEach((stdKey) => {
-                    if (!recs[stdKey]) recs[stdKey] = {};
-                    if (typeof parsedRecs[stdKey] === "object" && parsedRecs[stdKey] !== null) {
-                      Object.assign(recs[stdKey], parsedRecs[stdKey]);
-                    } else {
-                      recs[stdKey] = parsedRecs[stdKey];
-                    }
-                  });
-                }
+          const snaps = await Promise.allSettled(docIds.map(dId => getDoc(doc(db, "cce_remarks_v2", dId))));
+          for (const res of snaps) {
+            if (res.status === "fulfilled" && res.value && res.value.exists()) {
+              const data = res.value.data();
+              const parsedRecs = data.records || data.remarks || data.data || null;
+              if (parsedRecs && typeof parsedRecs === "object" && Object.keys(parsedRecs).length > 0) {
+                Object.keys(parsedRecs).forEach((stdKey) => {
+                  if (!recs[stdKey]) recs[stdKey] = {};
+                  if (typeof parsedRecs[stdKey] === "object" && parsedRecs[stdKey] !== null) {
+                    Object.assign(recs[stdKey], parsedRecs[stdKey]);
+                  } else {
+                    recs[stdKey] = parsedRecs[stdKey];
+                  }
+                });
               }
-            } catch (e) {}
+            }
           }
           return recs;
         };
@@ -1948,7 +1924,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             if (lower.includes("इंग्रजी")) return studentMarks["english"] || studentMarks["dvitiybhasha"] || studentMarks["द्वितीय भाषा : इंग्रजी"] || studentMarks["द्वितीय भाषा: इंग्रजी"] || studentMarks["तृतीय भाषा: इंग्रजी"] || studentMarks["तृतीय भाषा : इंग्रजी"] || studentMarks["तृतीय भाषा"] || studentMarks["इंग्रजी"] || {};
                             if (lower.includes("हिंदी")) return studentMarks["hindi"] || studentMarks["tritiyabhasha"] || studentMarks["हिंदी"] || {};
                             if (lower.includes("गणित")) return studentMarks["ganit"] || studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};
-                            if (lower.includes("परिसर") || lower.includes("संभोवतालचे")) return studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["परिसर अभ्यास"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
+                            if (lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("evs")) return studentMarks["parisar"] || studentMarks["evs"] || studentMarks["परिसर अभ्यास"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["parisar1"] || studentMarks["evs1"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
                             if (lower.includes("कला")) return studentMarks["kala"] || studentMarks["art"] || studentMarks["कलाशिक्षण"] || studentMarks["कला"] || {};
                             if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) return studentMarks["karyanubhav"] || studentMarks["work"] || studentMarks["कार्यशिक्षण"] || studentMarks["कार्यानुभव"] || {};
                             if (lower.includes("शारीरिक")) return studentMarks["sharirik"] || studentMarks["pe"] || studentMarks["शारीरिक शिक्षण"] || studentMarks["शारीरिक शिक्षण व आरोग्य"] || {};
@@ -1963,7 +1939,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                 (lower.includes("कला") && kLower.includes("कला")) ||
                                 ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("कार्य"))) ||
                                 (lower.includes("शारीरिक") && kLower.includes("शारीरिक")) ||
-                                ((lower.includes("परिसर") || lower.includes("संभोवतालचे")) && (kLower.includes("परिसर") || kLower.includes("संभोवतालचे"))) ||
+                                ((lower.includes("विज्ञान") || lower.includes("science")) && (kLower.includes("विज्ञान") || kLower.includes("science") || kLower.includes("vijnan") || kLower.includes("vidnyan"))) ||
+                                ((lower.includes("सामाजिक") || lower.includes("social")) && (kLower.includes("सामाजिक") || kLower.includes("social") || kLower.includes("samajik") || kLower.includes("samajshastra"))) ||
+                                ((lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("evs")) && (kLower.includes("परिसर") || kLower.includes("संभोवतालचे") || kLower.includes("evs") || kLower.includes("parisar"))) ||
                                 kLower === lower
                               ) {
                                 return v;
@@ -2208,9 +2186,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                 } else if (lower.includes("हिंदी") || lower.includes("tritiyabhasha")) {
                                   val = remarksObj["tritiyabhasha"] || remarksObj["hindi"] || remarksObj["तृतीय भाषा (हिंदी)"] || remarksObj["तृतीय भाषा: हिंदी"] || remarksObj["हिंदी"];
                                 } else if (lower.includes("गणित") || lower.includes("ganit")) {
-                                  val = remarksObj["ganit"] || remarksObj["math"] || remarksObj["maths"] || remarksObj["गणित"];
-                                } else if (lower.includes("परिसर") || lower.includes("parisar") || lower.includes("संभोवतालचे")) {
-                                  val = remarksObj["parisar"] || remarksObj["parisar1"] || remarksObj["parisar2"] || remarksObj["आपले संभोवतालचे जग"] || remarksObj["परिसर अभ्यास"] || remarksObj["परिसर अभ्यास १"] || remarksObj["परिसर अभ्यास २"];
+                                  val = remarksObj["ganit"] || remarksObj["math"] || remarksObj["maths"] || remarksObj["गणित"];                                } else if (lower.includes("परिसर") || lower.includes("parisar") || lower.includes("संभोवतालचे") || lower.includes("evs")) {
+                                  val = remarksObj["parisar"] || remarksObj["evs"] || remarksObj["परिसर अभ्यास"] || remarksObj["आपले संभोवतालचे जग"] || remarksObj["parisar1"] || remarksObj["parisar2"];
                                 } else if (lower.includes("विज्ञान") || lower.includes("vijnan") || lower.includes("vidnyan")) {
                                   val = remarksObj["vijnan"] || remarksObj["vidnyan"] || remarksObj["विज्ञान"] || remarksObj["विज्ञान व तंत्रज्ञान"];
                                 } else if (lower.includes("सामाजिक") || lower.includes("samajik_shastra") || lower.includes("samajshastra")) {
@@ -2395,7 +2372,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             } else if (lower.includes("गणित") || lower.includes("ganit")) {
                               val = remarksObj["ganit"] || remarksObj["math"] || remarksObj["गणित"];
                             } else if (lower.includes("परिसर") || lower.includes("parisar") || lower.includes("संभोवतालचे")) {
-                              val = remarksObj["parisar"] || remarksObj["parisar1"] || remarksObj["parisar2"] || remarksObj["आपले संभोवतालचे जग"] || remarksObj["परिसर अभ्यास"];
+                              val = remarksObj["parisar"] || remarksObj["evs"] || remarksObj["परिसर अभ्यास"] || remarksObj["आपले संभोवतालचे जग"] || remarksObj["parisar1"] || remarksObj["parisar2"];
                             } else if (lower.includes("कला") || lower.includes("kala")) {
                               val = remarksObj["kala"] || remarksObj["कलाशिक्षण"] || remarksObj["कला"];
                             } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) {
@@ -2522,9 +2499,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             } else if (lower.includes("हिंदी")) {
               subData = studentMarks["hindi"] || studentMarks["tritiyabhasha"] || studentMarks["हिंदी"] || {};
             } else if (lower.includes("गणित")) {
-              subData = studentMarks["ganit"] || studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};
-            } else if (lower.includes("परिसर") || lower.includes("संभोवतालचे")) {
-              subData = studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["परिसर अभ्यास"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
+              subData = studentMarks["ganit"] || studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};            } else if (lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("evs")) {
+              subData = studentMarks["parisar"] || studentMarks["evs"] || studentMarks["परिसर अभ्यास"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
             } else if (lower.includes("कला")) {
               subData = studentMarks["kala"] || studentMarks["कलाशिक्षण"] || studentMarks["कला"] || {};
             } else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) {
@@ -2544,6 +2520,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   (lower.includes("कला") && kLower.includes("कला")) ||
                   ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("कार्य"))) ||
                   (lower.includes("शारीरिक") && kLower.includes("शारीरिक")) ||
+                  ((lower.includes("विज्ञान") || lower.includes("science")) && (kLower.includes("विज्ञान") || kLower.includes("science") || kLower.includes("vijnan") || kLower.includes("vidnyan"))) ||
+                  ((lower.includes("सामाजिक") || lower.includes("social")) && (kLower.includes("सामाजिक") || kLower.includes("social") || kLower.includes("samajik") || kLower.includes("samajshastra"))) ||
                   ((lower.includes("परिसर") || lower.includes("संभोवतालचे")) && (kLower.includes("परिसर") || kLower.includes("संभोवतालचे"))) ||
                   kLower === lower
                 ) {
@@ -2635,7 +2613,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             if (str.includes("द्वितीय") || str.includes("इंग्रजी")) return "द्वितीय भाषा : इंग्रजी";
             if (str.includes("तृतीय") || str.includes("हिंदी")) return "तृतीय भाषा : हिंदी";
             if (str.includes("गणित")) return "गणित";
-            if (str.includes("परिसर") || str.includes("संभोवतालचे")) return "आपले संभोवतालचे जग";
+            if (str.includes("परिसर") || str.includes("संभोवतालचे") || str.includes("evs")) return "परिसर अभ्यास";
             if (str.includes("कला")) return "कलाशिक्षण";
             if (str.includes("कार्यानुभव") || str.includes("कार्यशिक्षण") || str.includes("कार्य")) return "कार्यशिक्षण";
             if (str.includes("शारीरिक")) return "शारीरिक शिक्षण व आरोग्य";

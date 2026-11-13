@@ -68,10 +68,12 @@ export async function fetchJsonFromBunny<T = any>(filePath: string): Promise<T |
   const cleanPath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
   const cacheKey = `bunny_cache_${cleanPath.replace(/[^a-zA-Z0-9_]/g, "_")}`;
   
-  // Try fetching from Bunny CDN
+  // Try fetching from Bunny CDN with a strict 2-second timeout to avoid page freezes
   try {
     const cdnUrl = `${PULL_ZONE_URL}/${cleanPath}?t=${Date.now()}`;
-    const res = await fetch(cdnUrl);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch(cdnUrl, { signal: controller.signal }).finally(() => clearTimeout(timeoutId));
     if (res.ok) {
       const contentType = (res.headers.get("content-type") || "").toLowerCase();
       if (!contentType.includes("text/html")) {
@@ -87,7 +89,7 @@ export async function fetchJsonFromBunny<T = any>(filePath: string): Promise<T |
       }
     }
   } catch {
-    // Missing CDN file or offline error; fall back to local cache
+    // Missing CDN file, timeout, or offline error; fall back to local cache
   }
 
   // Fallback to local cache

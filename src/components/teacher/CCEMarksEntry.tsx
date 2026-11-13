@@ -68,14 +68,19 @@ const emptySubjectMarks = (): SubjectMarks => ({
 });
 
 const getSubjectKey = (subjectName: string): string => {
-  if (subjectName.includes("मराठी")) return "marathi";
-  if (subjectName.includes("इंग्रजी")) return "english";
-  if (subjectName.includes("गणित")) return "math";
-  if (subjectName.includes("कला")) return "art";
-  if (subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण") || subjectName.includes("कार्य")) return "work";
-  if (subjectName.includes("शारीरिक")) return "pe";
-  if (subjectName.includes("परिसर") || subjectName.includes("संभोवतालचे")) return "evs";
-  return "marathi";
+  const s = (subjectName || "").toLowerCase();
+  if (s.includes("मराठी")) return "marathi";
+  if (s.includes("हिंदी") || s.includes("hindi")) return "hindi";
+  if (s.includes("इंग्रजी") || s.includes("english")) return "english";
+  if (s.includes("गणित") || s.includes("math")) return "math";
+  if (s.includes("कला") || s.includes("art")) return "art";
+  if (s.includes("कार्यानुभव") || s.includes("कार्यशिक्षण") || s.includes("कार्य") || s.includes("work")) return "work";
+  if (s.includes("शारीरिक") || s.includes("pe") || s.includes("physical")) return "pe";
+  if (s.includes("परिसर") || s.includes("संभोवतालचे") || s.includes("evs")) return "evs";
+  if (s.includes("विज्ञान") || s.includes("science")) return "science";
+  if (s.includes("इतिहास") || s.includes("history")) return "history";
+  if (s.includes("भूगोल") || s.includes("geography") || s.includes("सामाजिक") || s.includes("social")) return "social";
+  return s;
 };
 
 interface Student {
@@ -393,9 +398,8 @@ export function CCEMarksEntry({
         (lowerTarget.includes("hindi") && sLower.includes("hindi")) ||
         (lowerTarget.includes("गणित") && sLower.includes("गणित")) ||
         (lowerTarget.includes("math") && sLower.includes("math")) ||
-        (lowerTarget.includes("परिसर १") && sLower.includes("परिसर १")) ||
-        (lowerTarget.includes("परिसर २") && sLower.includes("परिसर २")) ||
-        ((lowerTarget.includes("परिसर") || lowerTarget.includes("संभोवतालचे")) && (sLower.includes("परिसर") || sLower.includes("संभोवतालचे")) && !lowerTarget.includes("१") && !lowerTarget.includes("२") && !sLower.includes("१") && !sLower.includes("२")) ||
+        ((lowerTarget.includes("परिसर") || lowerTarget.includes("संभोवतालचे") || lowerTarget === "evs") &&
+         (sLower.includes("परिसर") || sLower.includes("संभोवतालचे") || sLower.includes("evs"))) ||
         (lowerTarget.includes("विज्ञान") && sLower.includes("विज्ञान")) ||
         (lowerTarget.includes("इतिहास") && sLower.includes("इतिहास")) ||
         (lowerTarget.includes("भूगोल") && sLower.includes("भूगोल")) ||

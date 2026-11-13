@@ -57,14 +57,16 @@ const DEFAULT_SUBJECTS = [
 ];
 
 const getSubjectKeyFallback = (subjectName: string): string => {
-  if (subjectName.includes("मराठी")) return "marathi";
-  if (subjectName.includes("इंग्रजी")) return "english";
-  if (subjectName.includes("गणित")) return "math";
-  if (subjectName.includes("कला")) return "art";
-  if (subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण") || subjectName.includes("कार्य")) return "work";
-  if (subjectName.includes("शारीरिक")) return "pe";
-  if (subjectName.includes("परिसर") || subjectName.includes("संभोवतालचे")) return "evs";
-  return "marathi";
+  const s = (subjectName || "").toLowerCase();
+  if (s.includes("मराठी")) return "marathi";
+  if (s.includes("हिंदी") || s.includes("hindi")) return "hindi";
+  if (s.includes("इंग्रजी") || s.includes("english")) return "english";
+  if (s.includes("गणित") || s.includes("math")) return "math";
+  if (s.includes("कला") || s.includes("art")) return "art";
+  if (s.includes("कार्यानुभव") || s.includes("कार्यशिक्षण") || s.includes("कार्य") || s.includes("work")) return "work";
+  if (s.includes("शारीरिक") || s.includes("pe") || s.includes("physical")) return "pe";
+  if (s.includes("परिसर") || s.includes("संभोवतालचे") || s.includes("evs")) return "evs";
+  return s;
 };
 
 const ensureSubjectWeightages = (item: WeightageItem, dynamicSubjects: string[]): WeightageItem => {

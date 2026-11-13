@@ -33,7 +33,7 @@ const getSubjectDisplayLabel = (subName) => {
   if (s.toLowerCase().includes("कला")) return "कलाशिक्षण";
   if (s.toLowerCase().includes("कार्यानुभव") || s.toLowerCase().includes("कार्यशिक्षण") || s.toLowerCase().includes("कार्य")) return "कार्यशिक्षण";
   if (s.toLowerCase().includes("शारीरिक")) return "शारीरिक शिक्षण";
-  if (s.toLowerCase().includes("परिसर") || s.toLowerCase().includes("संभोवतालचे")) return "आपले संभोवतालचे जग";
+  if (s.toLowerCase().includes("परिसर") || s.toLowerCase().includes("संभोवतालचे") || s.toLowerCase().includes("evs")) return "परिसर अभ्यास";
   return s;
 };
 

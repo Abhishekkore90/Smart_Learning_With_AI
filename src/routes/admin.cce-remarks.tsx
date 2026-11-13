@@ -107,8 +107,12 @@ function AdminCCERemarksPage() {
 
   // Combined subjects list (Class CCE Subjects + Custom Admin Subjects)
   const allSubjects = useMemo<CustomSubjectItem[]>(() => {
-    return [...classSubjects, ...customSubjects];
-  }, [classSubjects, customSubjects]);
+    const isUpperPrimary = ["6th", "7th", "8th"].includes(selectedClass);
+    const combined = [...classSubjects, ...customSubjects];
+    return isUpperPrimary
+      ? combined.filter((s) => s.key !== "parisar" && s.key !== "parisar1" && s.key !== "parisar2")
+      : combined;
+  }, [classSubjects, customSubjects, selectedClass]);
 
   // Keep activeSubjectKey valid when switching Class or Medium
   useEffect(() => {
@@ -171,7 +175,29 @@ function AdminCCERemarksPage() {
           firestoreAuthoritative = true;
           const data = docSnap.data();
           const remoteRemarks = data.remarks || {};
-          const remoteCustomSubjects = data.customSubjects || [];
+          let remoteCustomSubjects: CustomSubjectItem[] = Array.isArray(data.customSubjects) ? data.customSubjects : [];
+
+          const isUpperPrimary = ["6th", "7th", "8th"].includes(selectedClass);
+          if (isUpperPrimary) {
+            // Guarantee Parisar Abhyas is removed and migrated into Science for Class 6th and above
+            if (remoteRemarks.parisar || remoteRemarks.parisar1) {
+              const pList = [
+                ...(Array.isArray(remoteRemarks.parisar) ? remoteRemarks.parisar : []),
+                ...(Array.isArray(remoteRemarks.parisar1) ? remoteRemarks.parisar1 : []),
+              ];
+              remoteRemarks.vijnan = [...new Set([...(Array.isArray(remoteRemarks.vijnan) ? remoteRemarks.vijnan : []), ...pList])];
+              delete remoteRemarks.parisar;
+              delete remoteRemarks.parisar1;
+            }
+            if (remoteRemarks.parisar2) {
+              const p2List = Array.isArray(remoteRemarks.parisar2) ? remoteRemarks.parisar2 : [];
+              remoteRemarks.samajik_shastra = [...new Set([...(Array.isArray(remoteRemarks.samajik_shastra) ? remoteRemarks.samajik_shastra : []), ...p2List])];
+              delete remoteRemarks.parisar2;
+            }
+            remoteCustomSubjects = remoteCustomSubjects.filter(
+              (cs) => cs.key !== "parisar" && cs.key !== "parisar1" && cs.key !== "parisar2"
+            );
+          }
 
           setRemarksStore(remoteRemarks);
           setCustomSubjects(remoteCustomSubjects);
@@ -209,6 +235,23 @@ function AdminCCERemarksPage() {
         if (isMounted && !firestoreAuthoritative && res.ok) {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
+            const isUpperPrimary = ["6th", "7th", "8th"].includes(selectedClass);
+            if (isUpperPrimary) {
+              if (data.parisar || data.parisar1) {
+                const pList = [
+                  ...(Array.isArray(data.parisar) ? data.parisar : []),
+                  ...(Array.isArray(data.parisar1) ? data.parisar1 : []),
+                ];
+                data.vijnan = [...new Set([...(Array.isArray(data.vijnan) ? data.vijnan : []), ...pList])];
+                delete data.parisar;
+                delete data.parisar1;
+              }
+              if (data.parisar2) {
+                const p2List = Array.isArray(data.parisar2) ? data.parisar2 : [];
+                data.samajik_shastra = [...new Set([...(Array.isArray(data.samajik_shastra) ? data.samajik_shastra : []), ...p2List])];
+                delete data.parisar2;
+              }
+            }
             setRemarksStore(data);
           }
         }

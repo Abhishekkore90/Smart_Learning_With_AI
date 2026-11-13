@@ -54,6 +54,7 @@ import { Route as TeacherMeetingRouteImport } from './routes/teacher.meeting'
 import { Route as TeacherMdmRouteImport } from './routes/teacher.mdm'
 import { Route as TeacherLoginRouteImport } from './routes/teacher.login'
 import { Route as TeacherHpcCardRouteImport } from './routes/teacher.hpc-card'
+import { Route as TeacherHpcRouteImport } from './routes/teacher.hpc'
 import { Route as TeacherHomeworkRouteImport } from './routes/teacher.homework'
 import { Route as TeacherConceptMappingRouteImport } from './routes/teacher.concept-mapping'
 import { Route as TeacherClassSetupRouteImport } from './routes/teacher.class-setup'
@@ -80,6 +81,7 @@ import { Route as AdminPlanningRouteImport } from './routes/admin.planning'
 import { Route as AdminModulePaymentsRouteImport } from './routes/admin.module-payments'
 import { Route as AdminMeetingTemplatesRouteImport } from './routes/admin.meeting-templates'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminHpcManagementRouteImport } from './routes/admin.hpc-management'
 import { Route as AdminHomeworkRouteImport } from './routes/admin.homework'
 import { Route as AdminEnrollmentsRouteImport } from './routes/admin.enrollments'
 import { Route as AdminDigitalSchoolInquiriesRouteImport } from './routes/admin.digital-school-inquiries'
@@ -106,6 +108,8 @@ import { Route as TeacherTemplatesAnnualRouteImport } from './routes/teacher.tem
 import { Route as TeacherTemplatesAdmissionRouteImport } from './routes/teacher.templates.admission'
 import { Route as TeacherTemplatesAchievementRouteImport } from './routes/teacher.templates.achievement'
 import { Route as TeacherModulesModuleIdRouteImport } from './routes/teacher.modules.$moduleId'
+import { Route as TeacherHpcStudentsRouteImport } from './routes/teacher.hpc.students'
+import { Route as TeacherHpcReportsRouteImport } from './routes/teacher.hpc.reports'
 import { Route as TeacherActivitiesCulturalRouteImport } from './routes/teacher.activities.cultural'
 import { Route as TeacherActivitiesAnnualRouteImport } from './routes/teacher.activities.annual'
 import { Route as SchoolResourceResourceIdRouteImport } from './routes/school.resource.$resourceId'
@@ -113,6 +117,8 @@ import { Route as CoursesWatchIdRouteImport } from './routes/courses.watch.$id'
 import { Route as AdminUploaderUploaderIdRouteImport } from './routes/admin.uploader.$uploaderId'
 import { Route as AdminStudentStudentIdRouteImport } from './routes/admin.student.$studentId'
 import { Route as TeacherTemplatesEditTemplateIdRouteImport } from './routes/teacher.templates.edit.$templateId'
+import { Route as TeacherHpcStudentStudentIdRouteImport } from './routes/teacher.hpc.student.$studentId'
+import { Route as TeacherHpcAssessmentStudentIdRouteImport } from './routes/teacher.hpc.assessment.$studentId'
 import { Route as WebResultUdiseNumberSrNoAcademicYearClassValueSelectedExamNameRouteImport } from './routes/webResult.$udiseNumber.$srNo.$academicYear.$classValue.$selectedExamName'
 
 const UploadRoute = UploadRouteImport.update({
@@ -340,6 +346,11 @@ const TeacherHpcCardRoute = TeacherHpcCardRouteImport.update({
   path: '/teacher/hpc-card',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeacherHpcRoute = TeacherHpcRouteImport.update({
+  id: '/teacher/hpc',
+  path: '/teacher/hpc',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeacherHomeworkRoute = TeacherHomeworkRouteImport.update({
   id: '/teacher/homework',
   path: '/teacher/homework',
@@ -468,6 +479,11 @@ const AdminMeetingTemplatesRoute = AdminMeetingTemplatesRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminHpcManagementRoute = AdminHpcManagementRouteImport.update({
+  id: '/admin/hpc-management',
+  path: '/admin/hpc-management',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminHomeworkRoute = AdminHomeworkRouteImport.update({
@@ -610,6 +626,16 @@ const TeacherModulesModuleIdRoute = TeacherModulesModuleIdRouteImport.update({
   path: '/teacher/modules/$moduleId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeacherHpcStudentsRoute = TeacherHpcStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => TeacherHpcRoute,
+} as any)
+const TeacherHpcReportsRoute = TeacherHpcReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => TeacherHpcRoute,
+} as any)
 const TeacherActivitiesCulturalRoute =
   TeacherActivitiesCulturalRouteImport.update({
     id: '/teacher/activities/cultural',
@@ -648,6 +674,18 @@ const TeacherTemplatesEditTemplateIdRoute =
     path: '/edit/$templateId',
     getParentRoute: () => TeacherTemplatesRoute,
   } as any)
+const TeacherHpcStudentStudentIdRoute =
+  TeacherHpcStudentStudentIdRouteImport.update({
+    id: '/student/$studentId',
+    path: '/student/$studentId',
+    getParentRoute: () => TeacherHpcRoute,
+  } as any)
+const TeacherHpcAssessmentStudentIdRoute =
+  TeacherHpcAssessmentStudentIdRouteImport.update({
+    id: '/assessment/$studentId',
+    path: '/assessment/$studentId',
+    getParentRoute: () => TeacherHpcRoute,
+  } as any)
 const WebResultUdiseNumberSrNoAcademicYearClassValueSelectedExamNameRoute =
   WebResultUdiseNumberSrNoAcademicYearClassValueSelectedExamNameRouteImport.update(
     {
@@ -683,6 +721,7 @@ export interface FileRoutesByFullPath {
   '/admin/digital-school-inquiries': typeof AdminDigitalSchoolInquiriesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/homework': typeof AdminHomeworkRoute
+  '/admin/hpc-management': typeof AdminHpcManagementRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
   '/admin/module-payments': typeof AdminModulePaymentsRoute
@@ -709,6 +748,7 @@ export interface FileRoutesByFullPath {
   '/teacher/class-setup': typeof TeacherClassSetupRoute
   '/teacher/concept-mapping': typeof TeacherConceptMappingRoute
   '/teacher/homework': typeof TeacherHomeworkRoute
+  '/teacher/hpc': typeof TeacherHpcRouteWithChildren
   '/teacher/hpc-card': typeof TeacherHpcCardRoute
   '/teacher/login': typeof TeacherLoginRoute
   '/teacher/mdm': typeof TeacherMdmRoute
@@ -742,6 +782,8 @@ export interface FileRoutesByFullPath {
   '/school/resource/$resourceId': typeof SchoolResourceResourceIdRoute
   '/teacher/activities/annual': typeof TeacherActivitiesAnnualRoute
   '/teacher/activities/cultural': typeof TeacherActivitiesCulturalRoute
+  '/teacher/hpc/reports': typeof TeacherHpcReportsRoute
+  '/teacher/hpc/students': typeof TeacherHpcStudentsRoute
   '/teacher/modules/$moduleId': typeof TeacherModulesModuleIdRoute
   '/teacher/templates/achievement': typeof TeacherTemplatesAchievementRoute
   '/teacher/templates/admission': typeof TeacherTemplatesAdmissionRoute
@@ -761,6 +803,8 @@ export interface FileRoutesByFullPath {
   '/teacher/timetable/class': typeof TeacherTimetableClassRoute
   '/teacher/timetable/teacher': typeof TeacherTimetableTeacherRoute
   '/teacher/activities/': typeof TeacherActivitiesIndexRoute
+  '/teacher/hpc/assessment/$studentId': typeof TeacherHpcAssessmentStudentIdRoute
+  '/teacher/hpc/student/$studentId': typeof TeacherHpcStudentStudentIdRoute
   '/teacher/templates/edit/$templateId': typeof TeacherTemplatesEditTemplateIdRoute
   '/webResult/$udiseNumber/$srNo/$academicYear/$classValue/$selectedExamName': typeof WebResultUdiseNumberSrNoAcademicYearClassValueSelectedExamNameRoute
 }
@@ -789,6 +833,7 @@ export interface FileRoutesByTo {
   '/admin/digital-school-inquiries': typeof AdminDigitalSchoolInquiriesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/homework': typeof AdminHomeworkRoute
+  '/admin/hpc-management': typeof AdminHpcManagementRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
   '/admin/module-payments': typeof AdminModulePaymentsRoute
@@ -815,6 +860,7 @@ export interface FileRoutesByTo {
   '/teacher/class-setup': typeof TeacherClassSetupRoute
   '/teacher/concept-mapping': typeof TeacherConceptMappingRoute
   '/teacher/homework': typeof TeacherHomeworkRoute
+  '/teacher/hpc': typeof TeacherHpcRouteWithChildren
   '/teacher/hpc-card': typeof TeacherHpcCardRoute
   '/teacher/login': typeof TeacherLoginRoute
   '/teacher/mdm': typeof TeacherMdmRoute
@@ -848,6 +894,8 @@ export interface FileRoutesByTo {
   '/school/resource/$resourceId': typeof SchoolResourceResourceIdRoute
   '/teacher/activities/annual': typeof TeacherActivitiesAnnualRoute
   '/teacher/activities/cultural': typeof TeacherActivitiesCulturalRoute
+  '/teacher/hpc/reports': typeof TeacherHpcReportsRoute
+  '/teacher/hpc/students': typeof TeacherHpcStudentsRoute
   '/teacher/modules/$moduleId': typeof TeacherModulesModuleIdRoute
   '/teacher/templates/achievement': typeof TeacherTemplatesAchievementRoute
   '/teacher/templates/admission': typeof TeacherTemplatesAdmissionRoute
@@ -867,6 +915,8 @@ export interface FileRoutesByTo {
   '/teacher/timetable/class': typeof TeacherTimetableClassRoute
   '/teacher/timetable/teacher': typeof TeacherTimetableTeacherRoute
   '/teacher/activities': typeof TeacherActivitiesIndexRoute
+  '/teacher/hpc/assessment/$studentId': typeof TeacherHpcAssessmentStudentIdRoute
+  '/teacher/hpc/student/$studentId': typeof TeacherHpcStudentStudentIdRoute
   '/teacher/templates/edit/$templateId': typeof TeacherTemplatesEditTemplateIdRoute
   '/webResult/$udiseNumber/$srNo/$academicYear/$classValue/$selectedExamName': typeof WebResultUdiseNumberSrNoAcademicYearClassValueSelectedExamNameRoute
 }
@@ -897,6 +947,7 @@ export interface FileRoutesById {
   '/admin/digital-school-inquiries': typeof AdminDigitalSchoolInquiriesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/homework': typeof AdminHomeworkRoute
+  '/admin/hpc-management': typeof AdminHpcManagementRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
   '/admin/module-payments': typeof AdminModulePaymentsRoute
@@ -923,6 +974,7 @@ export interface FileRoutesById {
   '/teacher/class-setup': typeof TeacherClassSetupRoute
   '/teacher/concept-mapping': typeof TeacherConceptMappingRoute
   '/teacher/homework': typeof TeacherHomeworkRoute
+  '/teacher/hpc': typeof TeacherHpcRouteWithChildren
   '/teacher/hpc-card': typeof TeacherHpcCardRoute
   '/teacher/login': typeof TeacherLoginRoute
   '/teacher/mdm': typeof TeacherMdmRoute
@@ -956,6 +1008,8 @@ export interface FileRoutesById {
   '/school/resource/$resourceId': typeof SchoolResourceResourceIdRoute
   '/teacher/activities/annual': typeof TeacherActivitiesAnnualRoute
   '/teacher/activities/cultural': typeof TeacherActivitiesCulturalRoute
+  '/teacher/hpc/reports': typeof TeacherHpcReportsRoute
+  '/teacher/hpc/students': typeof TeacherHpcStudentsRoute
   '/teacher/modules/$moduleId': typeof TeacherModulesModuleIdRoute
   '/teacher/templates/achievement': typeof TeacherTemplatesAchievementRoute
   '/teacher/templates/admission': typeof TeacherTemplatesAdmissionRoute
@@ -975,6 +1029,8 @@ export interface FileRoutesById {
   '/teacher/timetable/class': typeof TeacherTimetableClassRoute
   '/teacher/timetable/teacher': typeof TeacherTimetableTeacherRoute
   '/teacher/activities/': typeof TeacherActivitiesIndexRoute
+  '/teacher/hpc/assessment/$studentId': typeof TeacherHpcAssessmentStudentIdRoute
+  '/teacher/hpc/student/$studentId': typeof TeacherHpcStudentStudentIdRoute
   '/teacher/templates/edit/$templateId': typeof TeacherTemplatesEditTemplateIdRoute
   '/webResult/$udiseNumber/$srNo/$academicYear/$classValue/$selectedExamName': typeof WebResultUdiseNumberSrNoAcademicYearClassValueSelectedExamNameRoute
 }
@@ -1006,6 +1062,7 @@ export interface FileRouteTypes {
     | '/admin/digital-school-inquiries'
     | '/admin/enrollments'
     | '/admin/homework'
+    | '/admin/hpc-management'
     | '/admin/login'
     | '/admin/meeting-templates'
     | '/admin/module-payments'
@@ -1032,6 +1089,7 @@ export interface FileRouteTypes {
     | '/teacher/class-setup'
     | '/teacher/concept-mapping'
     | '/teacher/homework'
+    | '/teacher/hpc'
     | '/teacher/hpc-card'
     | '/teacher/login'
     | '/teacher/mdm'
@@ -1065,6 +1123,8 @@ export interface FileRouteTypes {
     | '/school/resource/$resourceId'
     | '/teacher/activities/annual'
     | '/teacher/activities/cultural'
+    | '/teacher/hpc/reports'
+    | '/teacher/hpc/students'
     | '/teacher/modules/$moduleId'
     | '/teacher/templates/achievement'
     | '/teacher/templates/admission'
@@ -1084,6 +1144,8 @@ export interface FileRouteTypes {
     | '/teacher/timetable/class'
     | '/teacher/timetable/teacher'
     | '/teacher/activities/'
+    | '/teacher/hpc/assessment/$studentId'
+    | '/teacher/hpc/student/$studentId'
     | '/teacher/templates/edit/$templateId'
     | '/webResult/$udiseNumber/$srNo/$academicYear/$classValue/$selectedExamName'
   fileRoutesByTo: FileRoutesByTo
@@ -1112,6 +1174,7 @@ export interface FileRouteTypes {
     | '/admin/digital-school-inquiries'
     | '/admin/enrollments'
     | '/admin/homework'
+    | '/admin/hpc-management'
     | '/admin/login'
     | '/admin/meeting-templates'
     | '/admin/module-payments'
@@ -1138,6 +1201,7 @@ export interface FileRouteTypes {
     | '/teacher/class-setup'
     | '/teacher/concept-mapping'
     | '/teacher/homework'
+    | '/teacher/hpc'
     | '/teacher/hpc-card'
     | '/teacher/login'
     | '/teacher/mdm'
@@ -1171,6 +1235,8 @@ export interface FileRouteTypes {
     | '/school/resource/$resourceId'
     | '/teacher/activities/annual'
     | '/teacher/activities/cultural'
+    | '/teacher/hpc/reports'
+    | '/teacher/hpc/students'
     | '/teacher/modules/$moduleId'
     | '/teacher/templates/achievement'
     | '/teacher/templates/admission'
@@ -1190,6 +1256,8 @@ export interface FileRouteTypes {
     | '/teacher/timetable/class'
     | '/teacher/timetable/teacher'
     | '/teacher/activities'
+    | '/teacher/hpc/assessment/$studentId'
+    | '/teacher/hpc/student/$studentId'
     | '/teacher/templates/edit/$templateId'
     | '/webResult/$udiseNumber/$srNo/$academicYear/$classValue/$selectedExamName'
   id:
@@ -1219,6 +1287,7 @@ export interface FileRouteTypes {
     | '/admin/digital-school-inquiries'
     | '/admin/enrollments'
     | '/admin/homework'
+    | '/admin/hpc-management'
     | '/admin/login'
     | '/admin/meeting-templates'
     | '/admin/module-payments'
@@ -1245,6 +1314,7 @@ export interface FileRouteTypes {
     | '/teacher/class-setup'
     | '/teacher/concept-mapping'
     | '/teacher/homework'
+    | '/teacher/hpc'
     | '/teacher/hpc-card'
     | '/teacher/login'
     | '/teacher/mdm'
@@ -1278,6 +1348,8 @@ export interface FileRouteTypes {
     | '/school/resource/$resourceId'
     | '/teacher/activities/annual'
     | '/teacher/activities/cultural'
+    | '/teacher/hpc/reports'
+    | '/teacher/hpc/students'
     | '/teacher/modules/$moduleId'
     | '/teacher/templates/achievement'
     | '/teacher/templates/admission'
@@ -1297,6 +1369,8 @@ export interface FileRouteTypes {
     | '/teacher/timetable/class'
     | '/teacher/timetable/teacher'
     | '/teacher/activities/'
+    | '/teacher/hpc/assessment/$studentId'
+    | '/teacher/hpc/student/$studentId'
     | '/teacher/templates/edit/$templateId'
     | '/webResult/$udiseNumber/$srNo/$academicYear/$classValue/$selectedExamName'
   fileRoutesById: FileRoutesById
@@ -1327,6 +1401,7 @@ export interface RootRouteChildren {
   AdminDigitalSchoolInquiriesRoute: typeof AdminDigitalSchoolInquiriesRoute
   AdminEnrollmentsRoute: typeof AdminEnrollmentsRoute
   AdminHomeworkRoute: typeof AdminHomeworkRoute
+  AdminHpcManagementRoute: typeof AdminHpcManagementRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminMeetingTemplatesRoute: typeof AdminMeetingTemplatesRoute
   AdminModulePaymentsRoute: typeof AdminModulePaymentsRoute
@@ -1351,6 +1426,7 @@ export interface RootRouteChildren {
   TeacherClassSetupRoute: typeof TeacherClassSetupRoute
   TeacherConceptMappingRoute: typeof TeacherConceptMappingRoute
   TeacherHomeworkRoute: typeof TeacherHomeworkRoute
+  TeacherHpcRoute: typeof TeacherHpcRouteWithChildren
   TeacherHpcCardRoute: typeof TeacherHpcCardRoute
   TeacherLoginRoute: typeof TeacherLoginRoute
   TeacherMdmRoute: typeof TeacherMdmRoute
@@ -1704,6 +1780,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeacherHpcCardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/teacher/hpc': {
+      id: '/teacher/hpc'
+      path: '/teacher/hpc'
+      fullPath: '/teacher/hpc'
+      preLoaderRoute: typeof TeacherHpcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/teacher/homework': {
       id: '/teacher/homework'
       path: '/teacher/homework'
@@ -1884,6 +1967,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/hpc-management': {
+      id: '/admin/hpc-management'
+      path: '/admin/hpc-management'
+      fullPath: '/admin/hpc-management'
+      preLoaderRoute: typeof AdminHpcManagementRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/homework': {
@@ -2068,6 +2158,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeacherModulesModuleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/teacher/hpc/students': {
+      id: '/teacher/hpc/students'
+      path: '/students'
+      fullPath: '/teacher/hpc/students'
+      preLoaderRoute: typeof TeacherHpcStudentsRouteImport
+      parentRoute: typeof TeacherHpcRoute
+    }
+    '/teacher/hpc/reports': {
+      id: '/teacher/hpc/reports'
+      path: '/reports'
+      fullPath: '/teacher/hpc/reports'
+      preLoaderRoute: typeof TeacherHpcReportsRouteImport
+      parentRoute: typeof TeacherHpcRoute
+    }
     '/teacher/activities/cultural': {
       id: '/teacher/activities/cultural'
       path: '/teacher/activities/cultural'
@@ -2117,6 +2221,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeacherTemplatesEditTemplateIdRouteImport
       parentRoute: typeof TeacherTemplatesRoute
     }
+    '/teacher/hpc/student/$studentId': {
+      id: '/teacher/hpc/student/$studentId'
+      path: '/student/$studentId'
+      fullPath: '/teacher/hpc/student/$studentId'
+      preLoaderRoute: typeof TeacherHpcStudentStudentIdRouteImport
+      parentRoute: typeof TeacherHpcRoute
+    }
+    '/teacher/hpc/assessment/$studentId': {
+      id: '/teacher/hpc/assessment/$studentId'
+      path: '/assessment/$studentId'
+      fullPath: '/teacher/hpc/assessment/$studentId'
+      preLoaderRoute: typeof TeacherHpcAssessmentStudentIdRouteImport
+      parentRoute: typeof TeacherHpcRoute
+    }
     '/webResult/$udiseNumber/$srNo/$academicYear/$classValue/$selectedExamName': {
       id: '/webResult/$udiseNumber/$srNo/$academicYear/$classValue/$selectedExamName'
       path: '/webResult/$udiseNumber/$srNo/$academicYear/$classValue/$selectedExamName'
@@ -2143,6 +2261,24 @@ const CoursesRouteChildren: CoursesRouteChildren = {
 
 const CoursesRouteWithChildren =
   CoursesRoute._addFileChildren(CoursesRouteChildren)
+
+interface TeacherHpcRouteChildren {
+  TeacherHpcReportsRoute: typeof TeacherHpcReportsRoute
+  TeacherHpcStudentsRoute: typeof TeacherHpcStudentsRoute
+  TeacherHpcAssessmentStudentIdRoute: typeof TeacherHpcAssessmentStudentIdRoute
+  TeacherHpcStudentStudentIdRoute: typeof TeacherHpcStudentStudentIdRoute
+}
+
+const TeacherHpcRouteChildren: TeacherHpcRouteChildren = {
+  TeacherHpcReportsRoute: TeacherHpcReportsRoute,
+  TeacherHpcStudentsRoute: TeacherHpcStudentsRoute,
+  TeacherHpcAssessmentStudentIdRoute: TeacherHpcAssessmentStudentIdRoute,
+  TeacherHpcStudentStudentIdRoute: TeacherHpcStudentStudentIdRoute,
+}
+
+const TeacherHpcRouteWithChildren = TeacherHpcRoute._addFileChildren(
+  TeacherHpcRouteChildren,
+)
 
 interface TeacherTemplatesRouteChildren {
   TeacherTemplatesAchievementRoute: typeof TeacherTemplatesAchievementRoute
@@ -2225,6 +2361,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminDigitalSchoolInquiriesRoute: AdminDigitalSchoolInquiriesRoute,
   AdminEnrollmentsRoute: AdminEnrollmentsRoute,
   AdminHomeworkRoute: AdminHomeworkRoute,
+  AdminHpcManagementRoute: AdminHpcManagementRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminMeetingTemplatesRoute: AdminMeetingTemplatesRoute,
   AdminModulePaymentsRoute: AdminModulePaymentsRoute,
@@ -2249,6 +2386,7 @@ const rootRouteChildren: RootRouteChildren = {
   TeacherClassSetupRoute: TeacherClassSetupRoute,
   TeacherConceptMappingRoute: TeacherConceptMappingRoute,
   TeacherHomeworkRoute: TeacherHomeworkRoute,
+  TeacherHpcRoute: TeacherHpcRouteWithChildren,
   TeacherHpcCardRoute: TeacherHpcCardRoute,
   TeacherLoginRoute: TeacherLoginRoute,
   TeacherMdmRoute: TeacherMdmRoute,

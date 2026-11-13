@@ -128,7 +128,25 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 });
 
-  // Sync initialMedium when prop changes
+  // Sync initial props when changed
+  useEffect(() => {
+    if (initialClass && initialClass !== selectedClass) {
+      setSelectedClass(initialClass);
+    }
+  }, [initialClass]);
+
+  useEffect(() => {
+    if (initialYear && initialYear !== academicYear) {
+      setAcademicYear(initialYear);
+    }
+  }, [initialYear]);
+
+  useEffect(() => {
+    if (initialSemester && initialSemester !== selectedSemester) {
+      setSelectedSemester(initialSemester);
+    }
+  }, [initialSemester]);
+
   useEffect(() => {
     if (initialMedium && initialMedium !== selectedMedium) {
       setSelectedMedium(initialMedium);
@@ -166,6 +184,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
   const [subjects, setSubjects] = useState(DEFAULT_SUBJECTS);
   const [students, setStudents] = useState([]);
   const [marksData, setMarksData] = useState({});
+  const [outcomesData, setOutcomesData] = useState({});
   const [remarksData, setRemarksData] = useState({});
   const [attendanceData, setAttendanceData] = useState({});
   const [workingDaysData, setWorkingDaysData] = useState({});
@@ -175,7 +194,8 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
   useEffect(() => {
     // 0. Check LocalStorage Cache first for initial render, but strictly filter by selectedClass, selectedMedium & teacherId
     const currentTeacherId = getTeacherId();
-    const cacheKey = `cce_progress_cache_${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}`;
+    const currentMed = selectedMedium || (typeof localStorage !== "undefined" ? localStorage.getItem("cce_selected_medium") : null) || "marathi";
+    const cacheKey = `cce_progress_cache_${currentTeacherId}_${selectedClass}_${currentMed}_${academicYear}`;
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
@@ -186,6 +206,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             if (parsed.schoolData) setSchoolData(parsed.schoolData);
             setStudents(validStudents);
             if (parsed.marksData) setMarksData(parsed.marksData);
+            if (parsed.outcomesData) setOutcomesData(parsed.outcomesData);
             if (parsed.remarksData) setRemarksData(parsed.remarksData);
             if (parsed.attendanceData) setAttendanceData(parsed.attendanceData);
             if (parsed.workingDaysData) setWorkingDaysData(parsed.workingDaysData);
@@ -247,7 +268,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
 
     try {
       setLoading(true);
-      const [settingsResult, studentsResult, marksResult, remarksResult, attResult] = await Promise.all([
+      const [settingsResult, studentsResult, marksResult, outcomesResult, remarksResult, attResult] = await Promise.all([
         // Task 1: School Settings & Subjects (Fetching directly from CCESettings - school_settings collection)
         (async () => {
           let schoolName = "";
@@ -535,45 +556,250 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           return loadedStudents;
         })(),
 
-        // Task 3: Marks Data (checking cce_marks_v2 + cce_marks + localStorage caches)
+        // Task 3: Marks Data (checking cce_marks_v2 + cce_marks + Bunny CDN + localStorage caches for both sem1 & sem2 in parallel)
         (async () => {
-          let mergedMarks = {};
+          let mergedMarks = { sem1: {}, sem2: {} };
+
+          const mergeData = (dataObj, specificSem = null) => {
+            if (!dataObj || typeof dataObj !== "object") return;
+
+            // 1. If dataObj contains root semester fields (e.g. sem1 / semester1 / sem2 / semester2)
+            const s1 = dataObj.sem1 || dataObj.semester1;
+            if (s1 && typeof s1 === "object") {
+              const recs1 = s1.records || s1.students || s1.marksData || s1;
+              mergeData(recs1, "sem1");
+            }
+            const s2 = dataObj.sem2 || dataObj.semester2;
+            if (s2 && typeof s2 === "object") {
+              const recs2 = s2.records || s2.students || s2.marksData || s2;
+              mergeData(recs2, "sem2");
+            }
+
+            const recs = dataObj.records || dataObj.students || dataObj.marksData || dataObj.data || dataObj;
+            if (!recs || typeof recs !== "object") return;
+
+            Object.entries(recs).forEach(([stKey, mObj]) => {
+              if (
+                stKey === "sem1" || stKey === "sem2" ||
+                stKey === "semester1" || stKey === "semester2" ||
+                stKey === "class" || stKey === "academicYear" ||
+                stKey === "updatedAt" || stKey === "medium" ||
+                stKey === "records" || stKey === "students"
+              ) return;
+              if (!mObj || typeof mObj !== "object") return;
+
+              if (!mergedMarks[stKey]) mergedMarks[stKey] = {};
+
+              if (specificSem) {
+                if (!mergedMarks[stKey][specificSem]) mergedMarks[stKey][specificSem] = {};
+                if (mObj.sem1 || mObj.sem2 || mObj.semester1 || mObj.semester2) {
+                  const targetObj = specificSem === "sem1" ? (mObj.sem1 || mObj.semester1 || mObj) : (mObj.sem2 || mObj.semester2 || mObj);
+                  Object.assign(mergedMarks[stKey][specificSem], targetObj);
+                } else {
+                  Object.assign(mergedMarks[stKey][specificSem], mObj);
+                }
+
+                if (!mergedMarks[specificSem]) mergedMarks[specificSem] = {};
+                if (!mergedMarks[specificSem][stKey]) mergedMarks[specificSem][stKey] = {};
+                Object.assign(mergedMarks[specificSem][stKey], mergedMarks[stKey][specificSem]);
+              } else {
+                if (mObj.sem1 || mObj.semester1) {
+                  if (!mergedMarks[stKey].sem1) mergedMarks[stKey].sem1 = {};
+                  Object.assign(mergedMarks[stKey].sem1, mObj.sem1 || mObj.semester1);
+                  if (!mergedMarks.sem1[stKey]) mergedMarks.sem1[stKey] = {};
+                  Object.assign(mergedMarks.sem1[stKey], mergedMarks[stKey].sem1);
+                }
+                if (mObj.sem2 || mObj.semester2) {
+                  if (!mergedMarks[stKey].sem2) mergedMarks[stKey].sem2 = {};
+                  Object.assign(mergedMarks[stKey].sem2, mObj.sem2 || mObj.semester2);
+                  if (!mergedMarks.sem2[stKey]) mergedMarks.sem2[stKey] = {};
+                  Object.assign(mergedMarks.sem2[stKey], mergedMarks[stKey].sem2);
+                }
+                Object.assign(mergedMarks[stKey], mObj);
+              }
+            });
+          };
+
+          // 1. Check LocalStorage caches
+          for (const sem of ["sem1", "sem2"]) {
+            const altSem = sem === "sem1" ? "first" : "second";
+            const cacheKeys = [
+              `cce_marks_cache_${selectedClass}_${academicYear}_${sem}_${currentMedium}`,
+              `cce_marks_cache_${selectedClass}_${academicYear}_${sem}`,
+              `cce_marks_${selectedClass}_${academicYear}_${sem}`,
+              `cce_marks_${selectedClass}_${academicYear}_${altSem}`,
+              `cce_marks_cache_${selectedClass}_${academicYear}_${altSem}_${currentMedium}`,
+            ];
+            for (const ck of cacheKeys) {
+              try {
+                const cached = localStorage.getItem(ck);
+                if (cached) mergeData(JSON.parse(cached), sem);
+              } catch (e) { }
+            }
+          }
+
           try {
-            const cacheKey = `cce_marks_cache_${selectedClass}_${academicYear}`;
-            const cached = localStorage.getItem(cacheKey);
-            if (cached)
-              mergedMarks = JSON.parse(cached) || {};
+            const genCached = localStorage.getItem(`cce_marks_cache_${selectedClass}_${academicYear}`) ||
+                              localStorage.getItem(`cce_marks_${selectedClass}_${academicYear}`);
+            if (genCached) mergeData(JSON.parse(genCached));
           } catch (e) { }
 
-          const docIds = [
+          // 2. Query Firestore cce_marks_v2 & cce_marks & Bunny CDN in parallel
+          const tasks = [];
+          for (const sem of ["sem1", "sem2"]) {
+            const altSem = sem === "sem1" ? "first" : "second";
+            const yrLong = academicYear.length === 7 ? `${academicYear.slice(0, 5)}20${academicYear.slice(5)}` : academicYear;
+            const yrShort = academicYear.length === 9 ? `${academicYear.slice(0, 5)}${academicYear.slice(7)}` : academicYear;
+            const yearList = Array.from(new Set([academicYear, yrLong, yrShort]));
+
+            const dIds = [];
+            for (const y of yearList) {
+              if (currentTeacherId) {
+                dIds.push(`${currentTeacherId}_${selectedClass}_${y}_${sem}`);
+                dIds.push(`${currentTeacherId}_${selectedClass}_${currentMedium}_${y}_${sem}`);
+                dIds.push(`${currentTeacherId}_${selectedClass}_${y}_${sem}_${currentMedium}`);
+              }
+              dIds.push(`${selectedClass}_${y}_${sem}`);
+              dIds.push(`${selectedClass}_${currentMedium}_${y}_${sem}`);
+              dIds.push(`${selectedClass}_${y}_${sem}_${currentMedium}`);
+              dIds.push(`${selectedClass}_${y}_${altSem}`);
+            }
+
+            for (const dId of dIds) {
+              tasks.push(
+                getDoc(doc(db, "cce_marks_v2", dId)).then(snap => ({ sem, snap })).catch(() => null),
+                getDoc(doc(db, "cce_marks", dId)).then(snap => ({ sem, snap })).catch(() => null)
+              );
+            }
+
+            // Bunny CDN
+            tasks.push(
+              (async () => {
+                try {
+                  const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+                  const bunnyPaths = [
+                    currentTeacherId ? `cce_results/${currentTeacherId}_${selectedClass}_${academicYear}_marks_${sem}.json` : null,
+                    `cce_results/${selectedClass}_${academicYear}_marks_${sem}.json`,
+                    `cce_results/${selectedClass}_${academicYear}_marks_${altSem}.json`,
+                  ].filter(Boolean);
+                  for (const bp of bunnyPaths) {
+                    const bData = await fetchJsonFromBunny(bp).catch(() => null);
+                    if (bData && typeof bData === "object") return { sem, bunnyData: bData };
+                  }
+                } catch (e) { }
+                return null;
+              })()
+            );
+          }
+
+          // General docs (without semester suffix)
+          const generalDocIds = [
             docId,
             currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}` : null,
             `${selectedClass}_${academicYear}_${currentMedium}`,
           ].filter(Boolean);
 
-          for (const dId of docIds) {
-            try {
-              const mSnap = await getDoc(doc(db, "cce_marks", dId));
-              if (mSnap.exists()) {
-                const data = mSnap.data();
-                const recs = data.students || data.records || data;
-                mergedMarks = { ...mergedMarks, ...recs };
-              }
-            } catch (e) { }
-
-            try {
-              const mSnapV2 = await getDoc(doc(db, "cce_marks_v2", dId));
-              if (mSnapV2.exists()) {
-                const data = mSnapV2.data();
-                const recs = data.students || data.records || data;
-                mergedMarks = { ...mergedMarks, ...recs };
-              }
-            } catch (e) { }
+          for (const gId of generalDocIds) {
+            tasks.push(
+              getDoc(doc(db, "cce_marks_v2", gId)).then(snap => ({ sem: null, snap })).catch(() => null),
+              getDoc(doc(db, "cce_marks", gId)).then(snap => ({ sem: null, snap })).catch(() => null)
+            );
           }
+
+          const results = await Promise.allSettled(tasks);
+          for (const r of results) {
+            if (r.status === "fulfilled" && r.value) {
+              if (r.value.snap && r.value.snap.exists()) {
+                mergeData(r.value.snap.data(), r.value.sem);
+              } else if (r.value.bunnyData) {
+                mergeData(r.value.bunnyData, r.value.sem);
+              }
+            }
+          }
+
           return mergedMarks;
         })(),
 
-        // Task 4: Remarks Data (checking cce_remarks_v2 + cce_remarks for both sem1 & sem2 + localStorage caches)
+        // Task 3b: Outcomes Ratings Data (from cce_outcomes, cce_levels_v2, Bunny CDN & localStorage)
+        (async () => {
+          let mergedOutcomes = {};
+          const deepMerge = (target, src) => {
+            if (!src || typeof src !== "object") return target;
+            Object.keys(src).forEach((k) => {
+              if (src[k] && typeof src[k] === "object" && !Array.isArray(src[k])) {
+                target[k] = deepMerge(target[k] || {}, src[k]);
+              } else if (src[k] !== undefined && src[k] !== null && src[k] !== "") {
+                target[k] = src[k];
+              }
+            });
+            return target;
+          };
+
+          // 1. Check LocalStorage
+          for (const sem of ["sem1", "sem2"]) {
+            const yrList = Array.from(new Set([
+              academicYear,
+              academicYear.length === 7 ? `${academicYear.slice(0, 5)}20${academicYear.slice(5)}` : academicYear,
+              academicYear.length === 9 ? `${academicYear.slice(0, 5)}${academicYear.slice(7)}` : academicYear,
+            ]));
+            for (const y of yrList) {
+              const cKey = `cce_outcomes_ratings_${selectedClass}_${y}_${sem}`;
+              try {
+                const cached = localStorage.getItem(cKey);
+                if (cached) deepMerge(mergedOutcomes, JSON.parse(cached));
+              } catch (e) {}
+            }
+          }
+          try {
+            const cClassOut = localStorage.getItem(`cce_class_outcomes_${selectedClass}_${academicYear}`);
+            if (cClassOut) deepMerge(mergedOutcomes, JSON.parse(cClassOut));
+          } catch (e) {}
+
+          // 2. Query cce_outcomes & cce_levels_v2 in Firestore
+          const outcomeDocIds = [
+            currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_sem1` : null,
+            currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_sem2` : null,
+            currentTeacherId ? `${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}_sem1` : null,
+            currentTeacherId ? `${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}_sem2` : null,
+            currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}` : null,
+            `${selectedClass}_${academicYear}_sem1`,
+            `${selectedClass}_${academicYear}_sem2`,
+            `${selectedClass}_${currentMedium}_${academicYear}_sem1`,
+            `${selectedClass}_${currentMedium}_${academicYear}_sem2`,
+            `${selectedClass}_${academicYear}`,
+            docId,
+          ].filter(Boolean);
+
+          try {
+            const oSnaps = await Promise.allSettled([
+              ...outcomeDocIds.map(dId => getDoc(doc(db, "cce_outcomes", dId))),
+              ...outcomeDocIds.map(dId => getDoc(doc(db, "cce_levels_v2", dId))),
+            ]);
+
+            for (const res of oSnaps) {
+              if (res.status === "fulfilled" && res.value && res.value.exists()) {
+                const d = res.value.data();
+                const r = d.ratings || d.levels || d.records || d;
+                deepMerge(mergedOutcomes, r);
+              }
+            }
+          } catch (e) {}
+
+          // 3. Bunny CDN
+          try {
+            const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+            const [bOut, bLev] = await Promise.all([
+              fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_outcomes.json`).catch(() => null),
+              fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_levels.json`).catch(() => null),
+            ]);
+            if (bOut) deepMerge(mergedOutcomes, bOut);
+            if (bLev) deepMerge(mergedOutcomes, bLev);
+          } catch (e) {}
+
+          return mergedOutcomes;
+        })(),
+
+        // Task 4: Remarks Data (checking cce_remarks_v2 & cce_remarks for both sem1 & sem2 in parallel)
         (async () => {
           let mergedRemarks = {};
           // 1. Check LocalStorage caches
@@ -593,8 +819,9 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             } catch (e) { }
           }
 
-          // 2. Query Firestore cce_remarks_v2 & cce_remarks
+          // 2. Query Firestore cce_remarks_v2 & cce_remarks in parallel
           const semList = ["sem1", "sem2"];
+          const tasks = [];
           for (const sem of semList) {
             const dIds = [
               currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_${sem}_${currentMedium}` : null,
@@ -605,29 +832,22 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             ].filter(Boolean);
 
             for (const dId of dIds) {
-              try {
-                const rSnap = await getDoc(doc(db, "cce_remarks_v2", dId));
-                if (rSnap.exists()) {
-                  const data = rSnap.data();
-                  const recs = data.records || data.remarks || data.data || {};
-                  Object.entries(recs).forEach(([stKey, rObj]) => {
-                    if (!mergedRemarks[stKey]) mergedRemarks[stKey] = {};
-                    mergedRemarks[stKey][sem] = rObj;
-                  });
-                }
-              } catch (e) { }
+              tasks.push(
+                getDoc(doc(db, "cce_remarks_v2", dId)).then(snap => ({ sem, snap, type: "v2" })).catch(() => null),
+                getDoc(doc(db, "cce_remarks", dId)).then(snap => ({ sem, snap, type: "old" })).catch(() => null)
+              );
+            }
+          }
 
-              try {
-                const rSnapOld = await getDoc(doc(db, "cce_remarks", dId));
-                if (rSnapOld.exists()) {
-                  const data = rSnapOld.data();
-                  const recs = data.students || data.records || data.remarks || {};
-                  Object.entries(recs).forEach(([stKey, rObj]) => {
-                    if (!mergedRemarks[stKey]) mergedRemarks[stKey] = {};
-                    mergedRemarks[stKey][sem] = rObj;
-                  });
-                }
-              } catch (e) { }
+          const results = await Promise.allSettled(tasks);
+          for (const r of results) {
+            if (r.status === "fulfilled" && r.value && r.value.snap && r.value.snap.exists()) {
+              const data = r.value.snap.data();
+              const recs = data.records || data.remarks || data.students || data.data || {};
+              Object.entries(recs).forEach(([stKey, rObj]) => {
+                if (!mergedRemarks[stKey]) mergedRemarks[stKey] = {};
+                mergedRemarks[stKey][r.value.sem] = rObj;
+              });
             }
           }
           return mergedRemarks;
@@ -671,6 +891,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
       if (settingsResult.classSubjects) setSubjects(settingsResult.classSubjects);
       if (studentsResult) setStudents(studentsResult);
       if (marksResult) setMarksData(marksResult);
+      if (outcomesResult) setOutcomesData(outcomesResult);
       if (remarksResult) setRemarksData(remarksResult);
       if (attResult.attendance) setAttendanceData(attResult.attendance);
       if (attResult.workingDays) setWorkingDaysData(attResult.workingDays);
@@ -684,6 +905,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             schoolData: settingsResult.schoolObj,
             students: studentsResult,
             marksData: marksResult,
+            outcomesData: outcomesResult,
             remarksData: remarksResult,
             attendanceData: attResult.attendance,
             workingDaysData: attResult.workingDays,
@@ -994,59 +1216,347 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
 
   // Helper to calculate subject grade for a student and semester term
   const getSubjectGradeForTerm = (student, subjectName, term = "sem1") => {
-    if (!student) return "-";
+    if (!student || !subjectName) return "-";
 
+    const termKey = term === "sem2" ? "sem2" : "sem1";
+    const subStr = String(subjectName).trim();
+    const subLower = subStr.toLowerCase();
+
+    // 1. Direct check in student profile (term1/term2 precomputed grades)
     const schemaTerm = term === "sem2" ? (student.term2 || student.sem2) : (student.term1 || student.sem1);
     if (schemaTerm && schemaTerm.grades) {
-      const lower = String(subjectName).toLowerCase();
       const g = schemaTerm.grades;
-      if (lower.includes("मराठी") && g.firstLanguage) return g.firstLanguage;
-      if (lower.includes("इंग्रजी") && g.secondLanguage) return g.secondLanguage;
-      if (lower.includes("गणित") && (g.maths || g.math)) return g.maths || g.math;
-      if (lower.includes("कला") && g.art) return g.art;
-      if ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && g.workExperience) return g.workExperience;
-      if (lower.includes("शारीरिक") && g.physicalEdu) return g.physicalEdu;
-      if ((lower.includes("परिसर") || lower.includes("संभोवतालचे")) && g.evs) return g.evs;
+      if (subLower.includes("मराठी") && g.firstLanguage) return g.firstLanguage;
+      if (subLower.includes("इंग्रजी") && g.secondLanguage) return g.secondLanguage;
+      if (subLower.includes("हिंदी") && g.thirdLanguage) return g.thirdLanguage;
+      if (subLower.includes("गणित") && (g.maths || g.math)) return g.maths || g.math;
+      if (subLower.includes("कला") && g.art) return g.art;
+      if ((subLower.includes("कार्या") || subLower.includes("कार्य")) && (g.workExperience || g.work)) return g.workExperience || g.work;
+      if (subLower.includes("शारीरिक") && (g.physicalEdu || g.pe)) return g.physicalEdu || g.pe;
+      if ((subLower.includes("विज्ञान") || subLower.includes("science")) && (g.science || g.vijnan || g.vidnyan)) return g.science || g.vijnan || g.vidnyan;
+      if ((subLower.includes("सामाजिक") || subLower.includes("social")) && (g.social || g.samajikShastra || g.history)) return g.social || g.samajikShastra || g.history;
+      if ((subLower.includes("परिसर") || subLower.includes("संभोवतालचे") || subLower.includes("evs")) && (g.evs || g.parisar || g.evs1)) return g.evs || g.parisar || g.evs1;
     }
 
-    if (marksData) {
-      const stdKeys = [student.id, student.studentId, student.rollNo, student.name, student.fullName, String(student.rollNo)].filter(Boolean);
+    // 2. Direct check in student.marks
+    if (student.marks && student.marks[subjectName]) {
+      const sm = student.marks[subjectName];
+      const val = sm[term] ?? sm[term === "sem1" ? "term1" : "term2"] ?? sm.total ?? sm;
+      if (typeof val === "number" && val > 0) return getGrade(val);
+      if (typeof val === "string" && val.trim() !== "") {
+        const s = val.trim();
+        if (["अ-1", "अ-2", "ब-1", "ब-2", "क-1", "क-2", "ड", "इ-1", "इ-2"].includes(s)) return s;
+        const n = Number(s);
+        if (!isNaN(n) && n > 0) return getGrade(n);
+      }
+    }
 
-      let studentMarksObj = null;
-      for (const k of stdKeys) {
-        if (marksData[k]) {
-          studentMarksObj = marksData[k];
-          break;
+    // Candidate keys to locate student in datasets
+    const rollNum = parseInt(student.rollNo, 10);
+    const stdKeys = Array.from(new Set([
+      student.id,
+      student.studentId,
+      student.rollNo,
+      String(student.rollNo),
+      !isNaN(rollNum) ? String(rollNum) : null,
+      !isNaN(rollNum) ? String(rollNum).padStart(2, "0") : null,
+      student.name,
+      student.fullName,
+      student.srNo,
+      String(student.srNo),
+      String(student.id || "").trim(),
+    ].filter(Boolean)));
+
+    // 3. Resolve from marksData (CCE Marks Entry: Formative + Summative)
+    if (marksData && typeof marksData === "object") {
+      let termMap = null;
+
+      // 3a. Check marksData[termKey][studentKey]
+      if (marksData[termKey] && typeof marksData[termKey] === "object") {
+        for (const k of stdKeys) {
+          if (marksData[termKey][k]) {
+            termMap = marksData[termKey][k];
+            break;
+          }
+        }
+        // Deep search across keys if not matched directly
+        if (!termMap) {
+          for (const [k, v] of Object.entries(marksData[termKey])) {
+            if (stdKeys.includes(k) || (student.fullName && k.includes(student.fullName)) || (student.name && k.includes(student.name))) {
+              termMap = v;
+              break;
+            }
+          }
         }
       }
 
-      if (studentMarksObj && typeof studentMarksObj === "object") {
-        const termMap = term === "sem1"
-          ? (studentMarksObj.term1 || studentMarksObj.sem1 || studentMarksObj.semester1 || studentMarksObj)
-          : (studentMarksObj.term2 || studentMarksObj.sem2 || studentMarksObj.semester2 || studentMarksObj);
-
-        let subData = termMap[subjectName];
-        if (!subData) {
-          const lower = String(subjectName).toLowerCase();
-          if (lower.includes("मराठी")) subData = termMap["marathi"] || termMap["firstLanguage"] || termMap["प्रथम भाषा : मराठी"] || termMap["मराठी"];
-          else if (lower.includes("इंग्रजी")) subData = termMap["english"] || termMap["secondLanguage"] || termMap["द्वितीय भाषा : इंग्रजी"] || termMap["इंग्रजी"];
-          else if (lower.includes("गणित")) subData = termMap["math"] || termMap["maths"] || termMap["गणित"];
-          else if (lower.includes("कला")) subData = termMap["kala"] || termMap["art"] || termMap["कलाशिक्षण"] || termMap["कला"];
-          else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) subData = termMap["karyanubhav"] || termMap["workExperience"] || termMap["कार्यशिक्षण"] || termMap["कार्यानुभव"];
-          else if (lower.includes("शारीरिक")) subData = termMap["sharirik"] || termMap["physicalEdu"] || termMap["शारीरिक शिक्षण"];
-          else if (lower.includes("परिसर") || lower.includes("संभोवतालचे")) subData = termMap["parisar"] || termMap["evs"] || termMap["आपले संभोवतालचे जग"] || termMap["परिसर अभ्यास"];
-        }
-
-        if (subData) {
-          if (typeof subData === "string" && subData.trim().length > 0) return subData.trim();
-          if (typeof subData === "object") {
-            if (subData.total !== undefined && subData.total !== null && Number(subData.total) > 0) {
-              return getGrade(subData.total);
+      // 3b. Check marksData[studentKey][termKey]
+      if (!termMap) {
+        for (const k of stdKeys) {
+          const stdRecord = marksData[k];
+          if (stdRecord && typeof stdRecord === "object") {
+            const child = termKey === "sem1"
+              ? (stdRecord.sem1 || stdRecord.term1 || stdRecord.semester1)
+              : (stdRecord.sem2 || stdRecord.term2 || stdRecord.semester2);
+            if (child && typeof child === "object") {
+              termMap = child;
+              break;
             }
           }
+        }
+      }
+
+      // 3c. Check flat marksData[studentKey]
+      if (!termMap) {
+        for (const k of stdKeys) {
+          if (marksData[k] && typeof marksData[k] === "object" && k !== "sem1" && k !== "sem2" && k !== "semester1" && k !== "semester2") {
+            termMap = marksData[k];
+            break;
+          }
+        }
+      }
+
+      // 3d. Fallback: check localStorage directly
+      if (!termMap && typeof localStorage !== "undefined") {
+        try {
+          const yrList = Array.from(new Set([
+            academicYear,
+            academicYear.length === 7 ? `${academicYear.slice(0, 5)}20${academicYear.slice(5)}` : academicYear,
+            academicYear.length === 9 ? `${academicYear.slice(0, 5)}${academicYear.slice(7)}` : academicYear,
+          ]));
+          const termNames = [termKey, termKey === "sem1" ? "first" : "second"];
+          for (const y of yrList) {
+            for (const tn of termNames) {
+              const cKeys = [
+                `cce_marks_cache_${selectedClass}_${y}_${tn}_${selectedMedium}`,
+                `cce_marks_cache_${selectedClass}_${y}_${tn}`,
+                `cce_marks_${selectedClass}_${y}_${tn}`,
+              ];
+              for (const ck of cKeys) {
+                const raw = localStorage.getItem(ck);
+                if (raw) {
+                  const parsed = JSON.parse(raw);
+                  if (parsed && typeof parsed === "object") {
+                    for (const k of stdKeys) {
+                      if (parsed[k] && typeof parsed[k] === "object") {
+                        termMap = parsed[k];
+                        break;
+                      }
+                    }
+                  }
+                }
+                if (termMap) break;
+              }
+              if (termMap) break;
+            }
+            if (termMap) break;
+          }
+        } catch (e) {}
+      }
+
+      if (termMap && typeof termMap === "object") {
+        // Find subject record in termMap
+        let subData = termMap[subjectName];
+        if (!subData) {
+          const norm = (s) => String(s || "").toLowerCase().replace(/[\s:_–\-–\(\)\.]/g, "");
+          const targetNorm = norm(subjectName);
+          for (const [k, v] of Object.entries(termMap)) {
+            if (norm(k) === targetNorm) {
+              subData = v;
+              break;
+            }
+          }
+
+          if (!subData) {
+            for (const [k, v] of Object.entries(termMap)) {
+              const kLower = String(k).toLowerCase();
+              if (
+                (subLower.includes("मराठी") && (kLower.includes("मराठी") || kLower.includes("marathi") || kLower.includes("firstlanguage") || kLower === "lang1")) ||
+                (subLower.includes("इंग्रजी") && (kLower.includes("इंग्रजी") || kLower.includes("english") || kLower.includes("secondlanguage") || kLower === "lang2")) ||
+                (subLower.includes("हिंदी") && (kLower.includes("हिंदी") || kLower.includes("hindi") || kLower.includes("thirdlanguage") || kLower === "lang3")) ||
+                (subLower.includes("गणित") && (kLower.includes("गणित") || kLower.includes("math") || kLower.includes("maths"))) ||
+                (subLower.includes("कला") && (kLower.includes("कला") || kLower.includes("art") || kLower.includes("kala"))) ||
+                ((subLower.includes("कार्या") || subLower.includes("कार्य")) && (kLower.includes("कार्या") || kLower.includes("कार्य") || kLower.includes("work") || kLower.includes("karyanubhav"))) ||
+                (subLower.includes("शारीरिक") && (kLower.includes("शारीरिक") || kLower.includes("sharirik") || kLower === "pe" || kLower.includes("physical"))) ||
+                ((subLower.includes("विज्ञान") || subLower.includes("science")) && (kLower.includes("विज्ञान") || kLower.includes("science") || kLower.includes("vijnan") || kLower.includes("vidnyan"))) ||
+                ((subLower.includes("सामाजिक") || subLower.includes("social")) && (kLower.includes("सामाजिक") || kLower.includes("social") || kLower.includes("samajik") || kLower.includes("samajshastra") || kLower.includes("history"))) ||
+                ((subLower.includes("परिसर") || subLower.includes("संभोवतालचे") || subLower.includes("evs")) && (kLower.includes("परिसर") || kLower.includes("संभोवतालचे") || kLower.includes("evs") || kLower.includes("parisar")))
+              ) {
+                subData = v;
+                break;
+              }
+            }
+          }
+        }
+
+        if (subData !== undefined && subData !== null) {
+          if (typeof subData === "string") {
+            const s = subData.trim();
+            if (["अ-1", "अ-2", "ब-1", "ब-2", "क-1", "क-2", "ड", "इ-1", "इ-2", "A1", "A2", "B1", "B2", "C1", "C2", "D", "E1", "E2"].includes(s)) {
+              return s;
+            }
+            const num = Number(s);
+            if (!isNaN(num) && num > 0) return getGrade(num);
+          }
+
           if (typeof subData === "number" && subData > 0) {
             return getGrade(subData);
           }
+
+          if (typeof subData === "object") {
+            if (subData.grade && typeof subData.grade === "string" && subData.grade.trim() !== "") {
+              return subData.grade.trim();
+            }
+            if (subData.shreni && typeof subData.shreni === "string" && subData.shreni.trim() !== "") {
+              return subData.shreni.trim();
+            }
+
+            if (subData.total !== undefined && subData.total !== null && String(subData.total).trim() !== "") {
+              const tot = Number(subData.total);
+              if (!isNaN(tot) && tot > 0) {
+                const maxMarks = Number(subData.outOf ?? subData.max ?? subData.totalMax ?? 100) || 100;
+                return getGrade((tot / maxMarks) * 100);
+              }
+            }
+            if (subData.grandTotal !== undefined && subData.grandTotal !== null && String(subData.grandTotal).trim() !== "") {
+              const tot = Number(subData.grandTotal);
+              if (!isNaN(tot) && tot > 0) {
+                const maxMarks = Number(subData.outOf ?? subData.max ?? subData.totalMax ?? 100) || 100;
+                return getGrade((tot / maxMarks) * 100);
+              }
+            }
+            if (subData.obtained !== undefined && subData.obtained !== null && String(subData.obtained).trim() !== "") {
+              const tot = Number(subData.obtained);
+              if (!isNaN(tot) && tot > 0) {
+                const maxMarks = Number(subData.outOf ?? subData.max ?? subData.totalMax ?? 100) || 100;
+                return getGrade((tot / maxMarks) * 100);
+              }
+            }
+
+            // Formative + Summative sub-totals
+            const aakarik = Number(subData.aakarikTotal ?? subData.formativeTotal ?? subData.akarik ?? subData.formTotal) || 0;
+            const sankalit = Number(subData.sankalitTotal ?? subData.summativeTotal ?? subData.sankalit ?? subData.semTotal) || 0;
+            if (aakarik + sankalit > 0) {
+              const maxMarks = Number(subData.outOf ?? subData.max ?? subData.totalMax ?? (sankalit > 0 ? 100 : 70)) || 100;
+              return getGrade(((aakarik + sankalit) / maxMarks) * 100);
+            }
+
+            // Component marks
+            const markKeys = [
+              "tondiKaam", "tondi", "oral",
+              "pratyakshikPrayog", "pratyakshik", "practical", "activity",
+              "upakramKriti", "upakram", "kriti",
+              "prakalpa", "prakalp", "project",
+              "chaachaniLekhi", "chaachani", "test", "exam",
+              "swadhyayVargakarya", "swadhyay", "vargakarya", "homework",
+              "itar", "other",
+              "sankalitTondi", "sankalitOral",
+              "sankalitPratyakshik", "sankalitPractical",
+              "sankalitLekhi", "sankalitWritten", "lekhi", "written",
+            ];
+
+            let sum = 0;
+            let hasAny = false;
+            let hasSankalit = false;
+            for (const mk of markKeys) {
+              if (subData[mk] !== undefined && subData[mk] !== null && String(subData[mk]).trim() !== "") {
+                const n = Number(subData[mk]);
+                if (!isNaN(n)) {
+                  sum += n;
+                  hasAny = true;
+                  if (mk.startsWith("sankalit") && n > 0) hasSankalit = true;
+                }
+              }
+            }
+
+            if (hasAny && sum > 0) {
+              const isPractical = subLower.includes("कला") || subLower.includes("कार्या") || subLower.includes("कार्य") || subLower.includes("शारीरिक");
+              const defaultMax = isPractical ? 100 : (hasSankalit ? 100 : 70);
+              const maxMarks = Number(subData.outOf ?? subData.max ?? subData.totalMax ?? defaultMax) || defaultMax;
+              return getGrade((sum / maxMarks) * 100);
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Resolve from outcomesData (Learning Outcomes Ratings: 1 to 4 scale from अध्ययन निष्पत्ती संकलन तक्ता)
+    if (outcomesData && typeof outcomesData === "object") {
+      let stdOutcomes = null;
+      for (const k of stdKeys) {
+        if (outcomesData[k]) {
+          stdOutcomes = outcomesData[k];
+          break;
+        }
+      }
+      if (!stdOutcomes && outcomesData[termKey]) {
+        for (const k of stdKeys) {
+          if (outcomesData[termKey][k]) {
+            stdOutcomes = outcomesData[termKey][k];
+            break;
+          }
+        }
+      }
+
+      if (stdOutcomes && typeof stdOutcomes === "object") {
+        // Collect outcome levels for this specific subject
+        const outcomeLevels = [];
+        const normSub = (s) => String(s || "").toLowerCase().replace(/[\s:_–\-–\(\)\.]/g, "");
+        const targetNorm = normSub(subjectName);
+
+        // Check if outcomes are organized by subject
+        let subOutcomes = stdOutcomes[subjectName] || stdOutcomes[targetNorm];
+        if (!subOutcomes) {
+          for (const [k, v] of Object.entries(stdOutcomes)) {
+            const kLower = String(k).toLowerCase();
+            if (
+              (subLower.includes("मराठी") && (kLower.includes("मराठी") || kLower.includes("marathi"))) ||
+              (subLower.includes("इंग्रजी") && (kLower.includes("इंग्रजी") || kLower.includes("english"))) ||
+              (subLower.includes("हिंदी") && (kLower.includes("हिंदी") || kLower.includes("hindi"))) ||
+              (subLower.includes("गणित") && (kLower.includes("गणित") || kLower.includes("math"))) ||
+              (subLower.includes("कला") && (kLower.includes("कला") || kLower.includes("art"))) ||
+              ((subLower.includes("कार्या") || subLower.includes("कार्य")) && (kLower.includes("कार्य") || kLower.includes("work"))) ||
+              (subLower.includes("शारीरिक") && (kLower.includes("शारीरिक") || kLower.includes("pe") || kLower.includes("physical"))) ||
+              ((subLower.includes("परिसर") || subLower.includes("evs")) && (kLower.includes("परिसर") || kLower.includes("evs")))
+            ) {
+              subOutcomes = v;
+              break;
+            }
+          }
+        }
+
+        const scanObj = (typeof subOutcomes === "object" && subOutcomes !== null) ? subOutcomes : stdOutcomes;
+        for (const [oKey, oVal] of Object.entries(scanObj)) {
+          if (oVal !== undefined && oVal !== null && oVal !== "" && oVal !== false) {
+            const num = typeof oVal === "number" ? oVal : parseInt(String(oVal).replace(/[^0-9]/g, ""), 10);
+            if (!isNaN(num) && num >= 1 && num <= 5) {
+              // If flat structure, check if outcome belongs to this subject
+              if (scanObj === stdOutcomes) {
+                const oKeyLower = String(oKey).toLowerCase();
+                const belongsToMarathi = subLower.includes("मराठी") && (oKeyLower.includes("मराठी") || oKeyLower.includes("marathi") || /^1[_\.]/.test(oKey) || /^१[_\.]/.test(oKey));
+                const belongsToEnglish = subLower.includes("इंग्रजी") && (oKeyLower.includes("english") || oKeyLower.includes("इंग्रजी") || /^e[_\.]/i.test(oKey) || /^2[_\.]/.test(oKey));
+                const belongsToMath = subLower.includes("गणित") && (oKeyLower.includes("math") || oKeyLower.includes("गणित") || /^m[_\.]/i.test(oKey) || /^3[_\.]/.test(oKey));
+                const belongsToArt = subLower.includes("कला") && (oKeyLower.includes("art") || oKeyLower.includes("कला"));
+                const belongsToWork = (subLower.includes("कार्या") || subLower.includes("कार्य")) && (oKeyLower.includes("work") || oKeyLower.includes("कार्य"));
+                const belongsToPE = subLower.includes("शारीरिक") && (oKeyLower.includes("pe") || oKeyLower.includes("शारीरिक"));
+                const belongsToEVS = (subLower.includes("परिसर") || subLower.includes("evs")) && (oKeyLower.includes("evs") || oKeyLower.includes("परिसर"));
+
+                if (belongsToMarathi || belongsToEnglish || belongsToMath || belongsToArt || belongsToWork || belongsToPE || belongsToEVS) {
+                  outcomeLevels.push(num);
+                }
+              } else {
+                outcomeLevels.push(num);
+              }
+            }
+          }
+        }
+
+        if (outcomeLevels.length > 0) {
+          const sumLevels = outcomeLevels.reduce((a, b) => a + b, 0);
+          const avgLevel = sumLevels / outcomeLevels.length;
+          const maxLevel = Math.max(...outcomeLevels) > 4 ? 5 : 4;
+          const percent = (avgLevel / maxLevel) * 100;
+          return getGrade(percent);
         }
       }
     }

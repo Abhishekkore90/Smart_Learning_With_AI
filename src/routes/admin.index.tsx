@@ -121,6 +121,17 @@ const adminModules = [
     status: "Active",
   },
   {
+    title: "HPC Management (समग्र प्रगतिपत्रक व्यवस्थापन)",
+    desc: "Configure 3 Stages (Foundational, Preparatory, Middle), Curricular Goals (CG), Competencies (C) & Rubrics.",
+    icon: Sparkles,
+    to: "/admin/hpc-management",
+    color: "from-indigo-600 to-purple-700",
+    glow: "bg-indigo-400/20",
+    stats: "3 Stages & Rubrics",
+    trend: "Live Sync",
+    status: "Active",
+  },
+  {
     title: "Academic Planning Management",
     desc: "Upload & manage Annual Planning, Monthly Planning & Question Bank files for all classes & mediums.",
     icon: ClipboardList,
