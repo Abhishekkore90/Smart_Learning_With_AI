@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Save,
   ArrowLeft,
@@ -40,8 +41,10 @@ interface HpcStudentProfileFormProps {
   academicYear: string;
   stageId: HpcStageId;
   classId: string;
+  initialTab?: "a1" | "a2";
   onBack?: () => void;
   onSaved?: () => void;
+  onProceedToPartB?: () => void;
 }
 
 export const ATTENDANCE_MONTHS = [
@@ -70,11 +73,14 @@ export function HpcStudentProfileForm({
   academicYear,
   stageId,
   classId,
+  initialTab = "a1",
   onBack,
   onSaved,
+  onProceedToPartB,
 }: HpcStudentProfileFormProps) {
-  // Tab State: 'a1' (School & Teacher) vs 'a2' (Attendance & Interests)
-  const [activeTab, setActiveTab] = useState<"a1" | "a2">("a2");
+  const navigate = useNavigate();
+  // Tab State: 'a1' (School & Teacher) vs 'a2' (Attendance & Interests) - defaults strictly to 'a1'
+  const [activeTab, setActiveTab] = useState<"a1" | "a2">(initialTab);
 
   const [student, setStudent] = useState<StudentInfoSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -392,8 +398,26 @@ export function HpcStudentProfileForm({
       };
 
       await saveHpcStudentProfile(profileData);
-      toast.success("भाग अ (विद्यार्थी वैयक्तिक, शाळा व उपस्थिती माहिती) यशस्वीरीत्या जतन झाली!");
-      if (onSaved) onSaved();
+
+      if (activeTab === "a1") {
+        toast.success("भाग A(1) ची माहिती जतन झाली! आता पुढील भाग A(2) (उपस्थिती व आवड) उघडले आहे.");
+        setActiveTab("a2");
+        window.scrollTo({ top: 180, behavior: "smooth" });
+      } else {
+        // activeTab === "a2" -> Proceed to Part B (सत्र मूल्यमापन)
+        toast.success("भाग A(2) यशस्वीरीत्या जतन झाले! आता भाग ब (सत्रनिहाय मूल्यमापन) उघडत आहे...");
+        if (onProceedToPartB) {
+          onProceedToPartB();
+        } else if (onSaved) {
+          onSaved();
+        } else {
+          navigate({
+            to: "/teacher/hpc/assessment/$studentId",
+            params: { studentId },
+            search: { session: "session1", tab: "assessment" } as any,
+          });
+        }
+      }
     } catch (err: any) {
       console.error(err);
       toast.error("माहिती जतन करताना त्रुटी आली: " + (err.message || ""));
@@ -466,12 +490,17 @@ export function HpcStudentProfileForm({
         </div>
 
         <button
+          type="button"
           onClick={handleSave}
           disabled={saving}
           className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-xs sm:text-sm font-black shadow-md shadow-emerald-600/25 hover:from-emerald-700 hover:to-teal-800 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-          <span>नोंद सेव्ह करा (Save Profile)</span>
+          <span>
+            {activeTab === "a1"
+              ? "जतन करा आणि भाग A(2) वर जा →"
+              : "जतन करा आणि भाग ब (मूल्यांकन) वर जा →"}
+          </span>
         </button>
       </div>
 
@@ -1298,32 +1327,42 @@ export function HpcStudentProfileForm({
       )}
 
       {/* ================= BOTTOM ACTION BAR ================= */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
         {onBack && (
           <button
             onClick={onBack}
             type="button"
-            className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
           >
             मागे जा (Back)
           </button>
         )}
-        <div className="flex items-center gap-3 ml-auto">
-          <button
-            type="button"
-            onClick={() => setActiveTab(activeTab === "a1" ? "a2" : "a1")}
-            className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            {activeTab === "a1" ? "पुढील टॅब: भाग A(2) ➔" : "मागील टॅब: ⬅ भाग A(1)"}
-          </button>
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          {activeTab === "a2" && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("a1");
+                window.scrollTo({ top: 180, behavior: "smooth" });
+              }}
+              className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              ⬅ मागील: भाग A(1)
+            </button>
+          )}
 
           <button
+            type="button"
             onClick={handleSave}
             disabled={saving}
             className="px-8 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-xs sm:text-sm font-black shadow-md shadow-emerald-600/25 hover:from-emerald-700 hover:to-teal-800 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-            <span>माहिती सेव्ह करा (Save Profile)</span>
+            <span>
+              {activeTab === "a1"
+                ? "जतन करा आणि पुढील भाग A(2) उघडा →"
+                : "जतन करा आणि भाग ब (मूल्यांकन) वर जा →"}
+            </span>
           </button>
         </div>
       </div>

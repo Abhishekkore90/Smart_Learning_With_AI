@@ -110,6 +110,15 @@ function TeacherHpcAssessmentPage() {
           session={activeSession}
           onBack={() => navigate({ to: "/teacher/hpc" })}
           onSaved={() => {}}
+          onProceedToPartC={() => {
+            setActiveTab("annual");
+            navigate({
+              to: "/teacher/hpc/assessment/$studentId",
+              params: { studentId },
+              search: { tab: "annual" } as any,
+            });
+            window.scrollTo({ top: 120, behavior: "smooth" });
+          }}
         />
       ) : (
         <HpcAnnualSummaryForm
@@ -118,7 +127,12 @@ function TeacherHpcAssessmentPage() {
           stageId={stageId}
           classId={classId}
           onBack={() => setActiveTab("assessment")}
-          onSaved={() => {}}
+          onSaved={() => {
+            navigate({ to: "/teacher/hpc/reports" });
+          }}
+          onProceedToReports={() => {
+            navigate({ to: "/teacher/hpc/reports" });
+          }}
         />
       )}
     </div>

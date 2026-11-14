@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Save,
   ArrowLeft,
@@ -34,6 +35,7 @@ interface HpcAnnualSummaryFormProps {
   classId: string;
   onBack?: () => void;
   onSaved?: () => void;
+  onProceedToReports?: () => void;
 }
 
 export function HpcAnnualSummaryForm({
@@ -43,7 +45,9 @@ export function HpcAnnualSummaryForm({
   classId,
   onBack,
   onSaved,
+  onProceedToReports,
 }: HpcAnnualSummaryFormProps) {
+  const navigate = useNavigate();
   const [student, setStudent] = useState<StudentInfoSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -160,12 +164,24 @@ export function HpcAnnualSummaryForm({
       };
 
       await saveHpcAnnualSummary(summaryData);
+      localStorage.setItem("hpc_last_student_id", studentId);
       toast.success(
         markComplete
-          ? "वार्षिक प्रगती अहवाल पूर्ण म्हणून सेव्ह झाला!"
+          ? "वार्षिक सर्वंकष गोषवारा (भाग क) जतन झाला! आता HPC अहवाल व PDF उघडत आहे..."
           : "वार्षिक अहवाल मसुदा यशस्वीरित्या सेव्ह झाला!"
       );
-      if (onSaved) onSaved();
+
+      if (markComplete) {
+        if (onProceedToReports) {
+          onProceedToReports();
+        } else if (onSaved) {
+          onSaved();
+        } else {
+          navigate({ to: "/teacher/hpc/reports" });
+        }
+      } else {
+        if (onSaved) onSaved();
+      }
     } catch (err: any) {
       toast.error("अहवाल सेव्ह करताना त्रुटी: " + (err.message || ""));
     } finally {
@@ -222,7 +238,7 @@ export function HpcAnnualSummaryForm({
           className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-black shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-          <span>वार्षिक अहवाल जतन करा (Save)</span>
+          <span>जतन करा आणि HPC अहवाल (PDF) पहा →</span>
         </button>
       </div>
 
@@ -385,7 +401,7 @@ export function HpcAnnualSummaryForm({
             className="px-8 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs sm:text-sm font-black shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-            <span>वार्षिक अहवाल सेव्ह करा (Save Part C)</span>
+            <span>वार्षिक अहवाल जतन करा आणि HPC अहवाल (PDF) पहा →</span>
           </button>
         </div>
       </div>

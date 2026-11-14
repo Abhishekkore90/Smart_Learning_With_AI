@@ -65,8 +65,16 @@ function TeacherHpcStudentProfilePage() {
         academicYear={academicYear}
         stageId={stageId}
         classId={classId}
+        initialTab="a1"
         onBack={() => navigate({ to: "/teacher/hpc/students" })}
         onSaved={() => navigate({ to: "/teacher/hpc/students" })}
+        onProceedToPartB={() => {
+          navigate({
+            to: "/teacher/hpc/assessment/$studentId",
+            params: { studentId },
+            search: { session: "session1", tab: "assessment" } as any,
+          });
+        }}
       />
     </div>
   );

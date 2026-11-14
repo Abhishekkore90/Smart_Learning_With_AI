@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Save,
   ArrowLeft,
@@ -64,6 +65,7 @@ interface HpcAssessmentFormProps {
   session?: "session1" | "session2";
   onBack?: () => void;
   onSaved?: () => void;
+  onProceedToPartC?: () => void;
 }
 
 export function HpcAssessmentForm({
@@ -74,7 +76,9 @@ export function HpcAssessmentForm({
   session: initialSession = "session1",
   onBack,
   onSaved,
+  onProceedToPartC,
 }: HpcAssessmentFormProps) {
+  const navigate = useNavigate();
   const [student, setStudent] = useState<StudentInfoSummary | null>(null);
   const [session, setSession] = useState<"session1" | "session2">(initialSession);
   const [loading, setLoading] = useState(true);
@@ -376,10 +380,25 @@ export function HpcAssessmentForm({
       setAssessmentStatus(markComplete ? "completed" : "draft");
       toast.success(
         markComplete
-          ? `${session === "session1" ? "प्रथम सत्र (सत्र १)" : "द्वितीय सत्र (सत्र २)"} मूल्यांकन पूर्ण म्हणून सेव्ह झाले!`
+          ? `${session === "session1" ? "प्रथम सत्र (सत्र १)" : "द्वितीय सत्र (सत्र २)"} मूल्यांकन पूर्ण झाले! आता भाग क: वार्षिक सर्वंकष गोषवारा उघडत आहे...`
           : "मूल्यांकन मसुदा (Draft) यशस्वीरित्या सेव्ह झाला!"
       );
-      if (onSaved) onSaved();
+
+      if (markComplete) {
+        if (onProceedToPartC) {
+          onProceedToPartC();
+        } else if (onSaved) {
+          onSaved();
+        } else {
+          navigate({
+            to: "/teacher/hpc/assessment/$studentId",
+            params: { studentId },
+            search: { tab: "annual" } as any,
+          });
+        }
+      } else {
+        if (onSaved) onSaved();
+      }
     } catch (err: any) {
       toast.error("मूल्यांकन सेव्ह करताना त्रुटी: " + (err.message || ""));
     } finally {
@@ -542,7 +561,7 @@ export function HpcAssessmentForm({
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <CheckCircle2 className="size-3.5" />
-              <span>पूर्ण सबमिट करा (Submit)</span>
+              <span>जतन करा आणि भाग क वर जा →</span>
             </button>
           )}
         </div>
@@ -737,116 +756,152 @@ export function HpcAssessmentForm({
             )}
           </div>
 
-          {/* If Foundational Stage: Render All 5 Upakrams in Photo 2 format */}
+          {/* If Foundational Stage: Full-Text Compact List of 5 Activities + Selected Details */}
           {isFoundational && bankData && bankData.activities?.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-              {bankData.activities.map((act) => {
-                const isSelected =
-                  (currentAssessment.activity1Title || bankData.activities[0]?.title) === act.title;
+            <div className="space-y-2.5 mt-3">
+              {/* Clean 5-Row Activity List with Full Text (No Truncation) */}
+              <div className="space-y-2">
+                {bankData.activities.map((act) => {
+                  const isSelected =
+                    (currentAssessment.activity1Title || bankData.activities[0]?.title) === act.title;
 
-                const badgeColors = [
-                  "text-emerald-800 bg-emerald-100",
-                  "text-teal-800 bg-teal-100",
-                  "text-blue-800 bg-blue-100",
-                  "text-purple-800 bg-purple-100",
-                  "text-amber-800 bg-amber-100",
-                ];
-                const badgeClass = badgeColors[(act.activityNumber - 1) % badgeColors.length];
+                  const badgeColors = [
+                    "text-emerald-800 bg-emerald-100 border-emerald-300",
+                    "text-teal-800 bg-teal-100 border-teal-300",
+                    "text-blue-800 bg-blue-100 border-blue-300",
+                    "text-purple-800 bg-purple-100 border-purple-300",
+                    "text-amber-800 bg-amber-100 border-amber-300",
+                  ];
+                  const badgeClass = badgeColors[(act.activityNumber - 1) % badgeColors.length];
+
+                  return (
+                    <div
+                      key={act.activityNumber}
+                      onClick={() => handleSelectBankActivity(act)}
+                      className={`p-3 sm:p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${
+                        isSelected
+                          ? "border-emerald-600 bg-emerald-50/50 ring-2 ring-emerald-100 shadow-xs"
+                          : "border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/70 shadow-2xs"
+                      }`}
+                    >
+                      {/* Left: Badge + Full Title + Full Description */}
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-lg text-xs font-black uppercase border flex-shrink-0 mt-0.5 ${badgeClass}`}
+                        >
+                          उपक्रम {act.activityNumber}
+                        </span>
+
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <h5 className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                            {act.title}
+                          </h5>
+                          <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                            {act.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right: 5 Questions Pill + Select Action Button */}
+                      <div className="flex items-center gap-3 sm:flex-col sm:items-end justify-between flex-shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                        <span className="text-[11px] font-bold text-slate-400 sm:text-right whitespace-nowrap">
+                          ५ प्रश्न समाविष्ट
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectBankActivity(act);
+                          }}
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                            isSelected
+                              ? "bg-emerald-600 text-white shadow-xs"
+                              : "bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700"
+                          }`}
+                        >
+                          {isSelected ? (
+                            <>
+                              <Check className="size-3.5 stroke-[3]" />
+                              <span>निवडला आहे ✓</span>
+                            </>
+                          ) : (
+                            <span>हा उपक्रम निवडा</span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Selected Activity Details & Outcome (Compact, Editable) */}
+              {(() => {
+                const selectedAct =
+                  bankData.activities.find(
+                    (act) => (currentAssessment.activity1Title || bankData.activities[0]?.title) === act.title
+                  ) || bankData.activities[0];
+
+                if (!selectedAct) return null;
 
                 return (
-                  <div
-                    key={act.activityNumber}
-                    className={`p-5 sm:p-6 rounded-[28px] border-2 transition-all space-y-4 shadow-sm ${
-                      isSelected
-                        ? "border-emerald-500 bg-white ring-4 ring-emerald-50 shadow-md"
-                        : "border-slate-200/90 bg-white/90 hover:bg-white hover:border-slate-300"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-[11px] font-black uppercase ${badgeClass}`}
-                      >
-                        उपक्रम {act.activityNumber} (ACTIVITY {act.activityNumber})
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => handleSelectBankActivity(act)}
-                        className={`px-3.5 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isSelected
-                            ? "bg-emerald-600 text-white shadow-xs"
-                            : "bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700"
-                        }`}
-                      >
-                        {isSelected ? (
-                          <>
-                            <Check className="size-3.5 stroke-[3]" />
-                            <span>निवडला आहे ✓</span>
-                          </>
-                        ) : (
-                          <span>हा उपक्रम निवडा</span>
-                        )}
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black text-slate-800 mb-1.5">
-                        उपक्रमाचे नाव / कृती
-                      </label>
-                      <input
-                        type="text"
-                        value={isSelected ? currentAssessment.activity1Title || act.title : act.title}
-                        onChange={(e) => {
-                          if (isSelected) {
-                            updateCurrentAssessment({ activity1Title: e.target.value });
-                          }
-                        }}
-                        readOnly={!isSelected}
-                        className={`w-full px-5 py-3 rounded-full border text-xs font-bold shadow-2xs focus:outline-none ${
-                          isSelected
-                            ? "border-emerald-300 bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500"
-                            : "border-slate-200 bg-slate-50/70 text-slate-700"
-                        }`}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black text-slate-800 mb-1.5">
-                        उपक्रमाचे सविस्तर वर्णन
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={
-                          isSelected
-                            ? currentAssessment.activity1Description || act.description
-                            : act.description
-                        }
-                        onChange={(e) => {
-                          if (isSelected) {
-                            updateCurrentAssessment({ activity1Description: e.target.value });
-                          }
-                        }}
-                        readOnly={!isSelected}
-                        className={`w-full px-5 py-3.5 rounded-2xl border text-xs font-medium shadow-2xs resize-y focus:outline-none ${
-                          isSelected
-                            ? "border-emerald-300 bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500"
-                            : "border-slate-200 bg-slate-50/70 text-slate-700"
-                        }`}
-                      />
-                    </div>
-
-                    {isSelected && (
-                      <div className="pt-2 border-t border-emerald-100 flex items-center justify-between text-[11px] text-emerald-700 font-bold">
-                        <span className="flex items-center gap-1.5">
-                          <Sparkles className="size-3.5 text-emerald-600" />
-                          <span>सक्रिय मूल्यमापनासाठी निवडलेला उपक्रम</span>
+                  <div className="p-3.5 sm:p-4 rounded-2xl border border-emerald-200/90 bg-emerald-50/20 space-y-2.5 shadow-2xs mt-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-emerald-100">
+                      <div className="flex items-center gap-2">
+                        <span className="size-5 rounded-md bg-emerald-600 text-white text-[11px] font-black flex items-center justify-center shadow-xs">
+                          ✓
                         </span>
-                        <span>५ प्रश्न खाली जोडले आहेत ↓</span>
+                        <span className="text-xs sm:text-sm font-black text-emerald-950">
+                          सध्या निवडलेला उपक्रम {selectedAct.activityNumber} — नाव व सविस्तर वर्णन (संपादनक्षम):
+                        </span>
                       </div>
-                    )}
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-full">
+                        खाली ५ प्रश्न आपोआप जोडले गेले आहेत ↓
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-700 mb-1">
+                          उपक्रमाचे नाव / कृती:
+                        </label>
+                        <input
+                          type="text"
+                          value={currentAssessment.activity1Title || selectedAct.title}
+                          onChange={(e) => updateCurrentAssessment({ activity1Title: e.target.value })}
+                          className="w-full px-4 py-2 rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-900 shadow-2xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-700 mb-1">
+                          अपेक्षित अध्ययन निष्पत्ती (Learning Outcome):
+                        </label>
+                        <input
+                          type="text"
+                          value={
+                            currentAssessment.activity1Outcome ||
+                            "विद्यार्थ्यांमध्ये शारीरिक तंदुरुस्ती व कौशल्य विकास वाढतो."
+                          }
+                          onChange={(e) => updateCurrentAssessment({ activity1Outcome: e.target.value })}
+                          className="w-full px-4 py-2 rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-900 shadow-2xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-[11px] font-black text-slate-700 mb-1">
+                          उपक्रमाचे सविस्तर वर्णन:
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={currentAssessment.activity1Description || selectedAct.description}
+                          onChange={(e) => updateCurrentAssessment({ activity1Description: e.target.value })}
+                          className="w-full px-4 py-2 rounded-2xl border border-slate-200 bg-white text-xs font-medium text-slate-800 shadow-2xs resize-none focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
                   </div>
                 );
-              })}
+              })()}
             </div>
           ) : (
             /* Standard Activity 1 & 2 for Preparatory / Middle stages */
@@ -1569,7 +1624,7 @@ export function HpcAssessmentForm({
                 className="px-8 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-black shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 <CheckCircle2 className="size-4" />
-                <span>सत्र मूल्यांकन पूर्ण करा (Submit)</span>
+                <span>सत्र मूल्यांकन जतन करा आणि भाग क (वार्षिक गोषवारा) वर जा →</span>
               </button>
             )}
           </div>

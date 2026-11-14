@@ -212,47 +212,28 @@ export function HpcDashboard() {
 
   return (
     <div className="space-y-7 max-w-[1360px] mx-auto pb-16">
-      {/* ---------------- 1. HERO BANNER ---------------- */}
-      <div className="w-full bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white rounded-[2.5rem] p-6 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden border border-indigo-900/40">
-        {/* Decorative background glow & mesh */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-indigo-500/20 via-purple-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-            <div className="size-14 sm:size-16 rounded-3xl bg-gradient-to-tr from-amber-500 via-orange-500 to-indigo-600 p-0.5 shadow-xl shadow-orange-500/20 flex-shrink-0">
-              <div className="w-full h-full bg-slate-950/80 rounded-[22px] backdrop-blur-xs flex items-center justify-center text-amber-400">
-                <Sparkles className="size-7 sm:size-8 animate-pulse" />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white">
-                  समग्र प्रगतिपत्रक (HPC) व्यवस्थापन
-                </h1>
-                <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[10px] sm:text-xs font-black px-3 py-1 rounded-full uppercase flex items-center gap-1 shadow-xs">
-                  <ShieldCheck className="size-3.5" />
-                  ३६०° NEP 2020 & PARAKH
-                </span>
-                <span className="bg-emerald-400/15 text-emerald-300 border border-emerald-400/30 text-[10px] sm:text-xs font-extrabold px-3 py-1 rounded-full">
-                  SCERT अधिकृत
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl leading-relaxed">
-                विद्यार्थ्यांच्या बोधात्मक, भावात्मक आणि क्रियात्मक (Cognitive, Affective, Psychomotor) विकासाचे ३६० अंश बहुआयामी मूल्यमापन व प्रगती नोंद.
-              </p>
-            </div>
+      {/* ---------------- 1. THE THREE STAGES SELECTOR (३ शैक्षणिक स्तर) ---------------- */}
+      <div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 px-1 gap-3">
+          <div>
+            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <Layers className="size-5 text-indigo-600" />
+              <span>शैक्षणिक स्तर निवडा (Select Educational Stage)</span>
+            </h2>
+            <p className="text-xs text-slate-500 font-medium">
+              पायाभूत (१ ली-२ री), पूर्वतयारी (३ री-५ वी) किंवा मध्य स्तर (६ वी-८ वी) निवडून वर्ग निवडा
+            </p>
           </div>
 
           {/* Quick Year & Medium Selector */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-xs">
-              <Calendar className="size-3.5 text-indigo-300" />
-              <span className="text-[11px] font-bold text-slate-300 uppercase">वर्ष:</span>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-1.5 flex items-center gap-2 shadow-2xs">
+              <Calendar className="size-3.5 text-indigo-600" />
+              <span className="text-[11px] font-bold text-slate-500 uppercase">वर्ष:</span>
               <select
                 value={academicYear}
                 onChange={(e) => handleAcademicYearChange(e.target.value)}
-                className="bg-transparent text-white text-xs font-black outline-none cursor-pointer"
+                className="bg-transparent text-slate-900 text-xs font-black outline-none cursor-pointer"
               >
                 {academicYearOptions.map((opt) => (
                   <option key={opt.value} value={opt.value} className="text-slate-900 font-bold">
@@ -262,47 +243,12 @@ export function HpcDashboard() {
               </select>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-2.5 flex items-center gap-2 shadow-xs">
-              <span className="text-[11px] font-bold text-slate-300 uppercase">माध्यम:</span>
-              <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            <div className="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-1.5 flex items-center gap-2 shadow-2xs">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">माध्यम:</span>
+              <span className="text-xs font-black text-emerald-700">
                 {selectedMedium === "semi" ? "सेमी इंग्रजी" : "मराठी"}
               </span>
             </div>
-          </div>
-        </div>
-
-        {/* Feature Highlights Banner Bar */}
-        <div className="mt-6 pt-5 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-            <span className="size-2 rounded-full bg-amber-400" />
-            <span>६ विकास क्षेत्रे (६०+ क्षमता)</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-            <span className="size-2 rounded-full bg-emerald-400" />
-            <span>उपक्रम बँक व ५ स्वयंचलित प्रश्न</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-            <span className="size-2 rounded-full bg-indigo-400" />
-            <span>३-स्तरीय रूब्रिक्स व ३६०° अभिप्राय</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
-            <span className="size-2 rounded-full bg-pink-400" />
-            <span>SCERT मानक रंगीत PDF रिपोर्ट</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ---------------- 2. THE THREE STAGES SELECTOR (३ शैक्षणिक स्तर) ---------------- */}
-      <div>
-        <div className="flex items-center justify-between mb-4 px-1">
-          <div>
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <Layers className="size-5 text-indigo-600" />
-              <span>शैक्षणिक स्तर निवडा (Select Educational Stage)</span>
-            </h2>
-            <p className="text-xs text-slate-500 font-medium">
-              पायाभूत (१ ली-२ री), पूर्वतयारी (३ री-५ वी) किंवा मध्य स्तर (६ वी-८ वी) निवडून वर्ग निवडा
-            </p>
           </div>
         </div>
 
