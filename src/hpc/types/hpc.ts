@@ -52,7 +52,37 @@ export interface HpcStudentProfile {
   classId: string;
   division?: string;
   
-  // Basic personal details
+  // Part A(1) - School & Teacher Info
+  schoolName?: string;
+  udiseNumber?: string;
+  cluster?: string; // केंद्र
+  taluka?: string; // तालुका
+  district?: string; // जिल्हा
+  headmasterName?: string; // मुख्याध्यापक
+  teacherName?: string; // वर्गशिक्षक
+  teacherPhone?: string; // वर्गशिक्षक मोबाईल
+
+  // Part A(1) - Student & Parent Details
+  fullName?: string;
+  rollNo?: string;
+  gender?: string;
+  dob?: string;
+  bloodGroup?: string;
+  caste?: string;
+  category?: string;
+  saralId?: string;
+  aadhaar?: string;
+  aparId?: string;
+  parentName?: string;
+  parentPhone?: string;
+  parentOccupation?: string;
+  parentEducation?: string;
+
+  // Part A(2) - Attendance Record (महिनानिहाय उपस्थिती)
+  monthlyAttendance?: Record<string, number>;
+  monthlyWorkingDays?: Record<string, number>;
+  
+  // Part A(2) - Basic personal details (मी व माझा परिसर)
   photoUrl?: string;
   age?: string;
   birthday?: string;

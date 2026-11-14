@@ -18,6 +18,7 @@ import {
   FileText,
   Layers,
   ArrowRight,
+  ArrowLeft,
   Loader2,
   Check,
   RefreshCw,
@@ -40,6 +41,11 @@ import { generateHpcPdf, downloadBlob } from "../reports/HpcPdfGenerator";
 import { FoundationalHpcPdf } from "../reports/FoundationalHpcPdf";
 import { PreparatoryHpcPdf } from "../reports/PreparatoryHpcPdf";
 import { MiddleHpcPdf } from "../reports/MiddleHpcPdf";
+import {
+  getCurrentAcademicYear,
+  getAcademicYearOptions,
+  getInitialAcademicYear,
+} from "../utils/academicYear";
 
 const CLASSES_BY_STAGE: Record<HpcStageId, { id: string; labelMarathi: string }[]> = {
   foundational: [
@@ -62,12 +68,18 @@ export function HpcDashboard() {
   const navigate = useNavigate();
 
   // Filters State
+  const academicYearOptions = useMemo(() => getAcademicYearOptions(), []);
   const [activeStage, setActiveStage] = useState<HpcStageId>("foundational");
   const [selectedClass, setSelectedClass] = useState<string>("1st");
-  const [academicYear, setAcademicYear] = useState<string>("2025-2026");
+  const [academicYear, setAcademicYear] = useState<string>(() => getInitialAcademicYear());
   const [selectedMedium, setSelectedMedium] = useState<string>(() => {
     return localStorage.getItem("cce_selected_medium") || "marathi";
   });
+
+  const handleAcademicYearChange = (yr: string) => {
+    setAcademicYear(yr);
+    localStorage.setItem("cce_academic_year", yr);
+  };
   const [selectedDivision, setSelectedDivision] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -193,7 +205,18 @@ export function HpcDashboard() {
   const currentStageInfo = HPC_STAGES_INFO.find((s) => s.id === activeStage) || HPC_STAGES_INFO[0];
 
   return (
-    <div className="space-y-8 max-w-[1360px] mx-auto pb-16">
+    <div className="space-y-6 max-w-[1360px] mx-auto pb-16">
+      {/* Top Back Action Bar */}
+      <div className="flex items-center justify-between">
+        <Link
+          to="/teacher"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-900 hover:text-white text-slate-800 border border-slate-200 hover:border-slate-900 rounded-2xl text-xs sm:text-sm font-black transition-all shadow-xs cursor-pointer group"
+        >
+          <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
+          <span>मुख्य शिक्षक डॅशबोर्डवर परत जा (Back to Teacher Dashboard)</span>
+        </Link>
+      </div>
+
       {/* ---------------- 1. HERO BANNER ---------------- */}
       <div className="w-full bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-[2.5rem] p-6 md:p-8 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -223,11 +246,14 @@ export function HpcDashboard() {
               <span className="text-[11px] font-bold text-slate-300 uppercase">वर्ष:</span>
               <select
                 value={academicYear}
-                onChange={(e) => setAcademicYear(e.target.value)}
+                onChange={(e) => handleAcademicYearChange(e.target.value)}
                 className="bg-transparent text-white text-xs font-black outline-none cursor-pointer"
               >
-                <option value="2025-2026" className="text-slate-900">२०२५-२६</option>
-                <option value="2024-2025" className="text-slate-900">२०२४-२५</option>
+                {academicYearOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="text-slate-900 font-bold">
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
 

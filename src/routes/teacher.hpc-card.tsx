@@ -26,6 +26,11 @@ import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 import { CCEStudentList } from "@/components/teacher/CCEStudentList";
 import { CCEAttendance } from "@/components/teacher/CCEAttendance";
 import { CCEStudentInfo } from "@/components/teacher/CCEStudentInfo";
+import {
+  getCurrentAcademicYear,
+  getAcademicYearOptions,
+  getInitialAcademicYear,
+} from "@/hpc/utils/academicYear";
 
 export const Route = createFileRoute("/teacher/hpc-card")({
   component: TeacherHpcCardPage,
@@ -164,29 +169,6 @@ const getStageFromClass = (classId: string): HpcStageId => {
   return match?.stageId || "foundational";
 };
 
-const getCurrentAcademicYear = () => {
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth();
-  const referenceYear = currentMonth >= 5 ? currentYear : currentYear - 1;
-  return `${referenceYear}-${referenceYear + 1}`;
-};
-
-const getDynamicAcademicYears = () => {
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth();
-  const referenceYear = currentMonth >= 5 ? currentYear : currentYear - 1;
-  const years = [];
-  for (let y = referenceYear + 1; y >= 2020; y--) {
-    const start = y;
-    const end = y + 1;
-    years.push({
-      value: `${start}-${end}`,
-      label: `${start}-${end.toString().slice(-2)}`,
-    });
-  }
-  return years;
-};
-
 function TeacherHpcCardPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -320,14 +302,33 @@ function TeacherHpcCardPage() {
           totalStudentsCount={currentClassStudentsCount}
         >
           <div className="p-4 sm:p-6 md:p-10 space-y-6 md:space-y-8 max-w-[1360px] mx-auto">
-            {activeTab !== "dashboard" && (
-              <div className="mb-4">
+            {/* Universal Top Back Button for all views */}
+            {activeTab === "dashboard" ? (
+              <div className="mb-2">
+                <button
+                  onClick={() => navigate({ to: "/teacher" })}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-900 hover:text-white text-slate-800 border border-slate-200 hover:border-slate-900 rounded-2xl text-xs sm:text-sm font-black tracking-wide transition-all shadow-sm cursor-pointer group"
+                >
+                  <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
+                  <span>मुख्य शिक्षक डॅशबोर्डवर परत जा (Back to Teacher Dashboard)</span>
+                </button>
+              </div>
+            ) : (
+              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
                 <button
                   onClick={() => setActiveTab("dashboard")}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-slate-900 hover:text-white text-slate-800 border border-slate-300 rounded-2xl text-sm font-bold tracking-wide transition-all shadow-sm cursor-pointer group"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-900 hover:text-white text-slate-800 border border-slate-300 rounded-2xl text-xs sm:text-sm font-black tracking-wide transition-all shadow-sm cursor-pointer group"
                 >
                   <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
                   <span>मुख्य HPC डॅशबोर्डवर परत जा (Back to HPC Dashboard)</span>
+                </button>
+
+                <button
+                  onClick={() => navigate({ to: "/teacher" })}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  <ArrowLeft className="size-3.5" />
+                  <span>मुख्य शिक्षक पॅनल</span>
                 </button>
               </div>
             )}
@@ -369,7 +370,7 @@ function TeacherHpcCardPage() {
                           value={academicYear}
                           onChange={(e) => setAcademicYear(e.target.value)}
                         >
-                          {getDynamicAcademicYears().map((y) => (
+                          {getAcademicYearOptions().map((y) => (
                             <option key={y.value} value={y.value}>
                               {y.label}
                             </option>

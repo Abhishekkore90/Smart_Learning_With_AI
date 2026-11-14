@@ -263,6 +263,55 @@ export async function saveHpcStudentProfile(profile: HpcStudentProfile): Promise
       ...profile,
       updatedAt: new Date().toISOString(),
     });
+
+    // Also sync to student_details if fields provided
+    try {
+      const detailsRef = doc(db, "student_details", profile.studentId);
+      const studentDetailsUpdate: Record<string, any> = {};
+      if (profile.fullName) studentDetailsUpdate.fullName = profile.fullName;
+      if (profile.dob) studentDetailsUpdate.dob = profile.dob;
+      if (profile.homeAddress) studentDetailsUpdate.address = profile.homeAddress;
+      if (profile.saralId) studentDetailsUpdate.studentId = profile.saralId;
+      if (profile.aadhaar) studentDetailsUpdate.aadhar = profile.aadhaar;
+      if (profile.aparId) studentDetailsUpdate.aparId = profile.aparId;
+      if (profile.parentPhone) studentDetailsUpdate.phone = profile.parentPhone;
+      if (profile.bloodGroup) studentDetailsUpdate.bloodGroup = profile.bloodGroup;
+      if (profile.caste) studentDetailsUpdate.caste = profile.caste;
+      if (profile.category) studentDetailsUpdate.category = profile.category;
+      if (profile.parentName) studentDetailsUpdate.fatherName = profile.parentName;
+      if (profile.parentOccupation) studentDetailsUpdate.fatherOccupation = profile.parentOccupation;
+      if (profile.parentEducation) studentDetailsUpdate.fatherEducation = profile.parentEducation;
+
+      if (Object.keys(studentDetailsUpdate).length > 0) {
+        await setDoc(detailsRef, studentDetailsUpdate, { merge: true });
+      }
+    } catch (e) {
+      console.warn("Could not sync to student_details:", e);
+    }
+
+    // Also update cce_attendance monthly record if monthlyAttendance provided
+    if (profile.monthlyAttendance && profile.classId && profile.academicYear) {
+      try {
+        const attRef = doc(db, "cce_attendance", `${profile.classId}_${profile.academicYear}_monthly`);
+        const snap = await getDoc(attRef);
+        const currentData = snap.exists() ? snap.data() : { records: {} };
+        const records = currentData.records || {};
+        records[profile.studentId] = {
+          ...(records[profile.studentId] || {}),
+          ...profile.monthlyAttendance,
+        };
+        if (profile.rollNo) {
+          records[profile.rollNo] = {
+            ...(records[profile.rollNo] || {}),
+            ...profile.monthlyAttendance,
+          };
+        }
+        await setDoc(attRef, { records }, { merge: true });
+      } catch (e) {
+        console.warn("Could not sync to cce_attendance:", e);
+      }
+    }
+
     return true;
   } catch (err) {
     console.error("Error saving HPC profile:", err);

@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Users,
+  User,
   Search,
   Filter,
   CheckCircle2,
@@ -23,6 +24,11 @@ import {
   StudentInfoSummary,
   getHpcStudentProfile,
 } from "@/hpc/services/hpcService";
+import {
+  getCurrentAcademicYear,
+  getAcademicYearOptions,
+  getInitialAcademicYear,
+} from "@/hpc/utils/academicYear";
 
 export const Route = createFileRoute("/teacher/hpc/students")({
   head: () => ({
@@ -45,10 +51,11 @@ const CLASSES_LIST = [
 function TeacherHpcStudentsPage() {
   const navigate = useNavigate();
 
+  const academicYearOptions = useMemo(() => getAcademicYearOptions(), []);
   const [selectedClass, setSelectedClass] = useState<string>(() => {
     return localStorage.getItem("cce_selected_class") || "1st";
   });
-  const [academicYear, setAcademicYear] = useState<string>("2025-2026");
+  const [academicYear, setAcademicYear] = useState<string>(() => getInitialAcademicYear());
   const [selectedMedium, setSelectedMedium] = useState<string>(() => {
     return localStorage.getItem("cce_selected_medium") || "marathi";
   });
@@ -97,6 +104,24 @@ function TeacherHpcStudentsPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
+      {/* Top Back Action Bar */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <Link
+          to="/teacher/hpc"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-900 hover:text-white text-slate-800 border border-slate-200 hover:border-slate-900 rounded-2xl text-xs sm:text-sm font-black transition-all shadow-xs cursor-pointer group"
+        >
+          <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
+          <span>मुख्य HPC डॅशबोर्डवर परत जा (Back to HPC Dashboard)</span>
+        </Link>
+        <Link
+          to="/teacher"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
+        >
+          <ArrowLeft className="size-3.5" />
+          <span>मुख्य शिक्षक पॅनल</span>
+        </Link>
+      </div>
+
       {/* Top Header Card */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -118,6 +143,25 @@ function TeacherHpcStudentsPage() {
 
         {/* Class Filter Dropdown */}
         <div className="flex items-center gap-3 flex-wrap">
+          {/* Academic Year Selector */}
+          <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-2xl border border-slate-200">
+            <span className="text-xs font-bold text-slate-500">वर्ष:</span>
+            <select
+              value={academicYear}
+              onChange={(e) => {
+                setAcademicYear(e.target.value);
+                localStorage.setItem("cce_academic_year", e.target.value);
+              }}
+              className="bg-transparent text-xs font-black text-slate-900 outline-none cursor-pointer"
+            >
+              {academicYearOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-2xl border border-slate-200">
             <span className="text-xs font-bold text-slate-500">इयत्ता:</span>
             <select
@@ -211,10 +255,10 @@ function TeacherHpcStudentsPage() {
                 <Link
                   to="/teacher/hpc/student/$studentId"
                   params={{ studentId: s.id }}
-                  className="flex-1 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-black transition-all text-center shadow-xs flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-black transition-all text-center shadow-xs flex items-center justify-center gap-1.5"
                 >
-                  <Smile className="size-3.5" />
-                  <span>भाग अ: मी व माझा परिसर</span>
+                  <User className="size-3.5" />
+                  <span>भाग अ: विद्यार्थी प्रोफाईल (A1 व A2)</span>
                 </Link>
 
                 <Link

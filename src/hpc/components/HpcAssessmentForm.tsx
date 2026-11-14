@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   Save,
   ArrowLeft,
+  ArrowRight,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -305,6 +306,51 @@ export function HpcAssessmentForm({
     }
   };
 
+  const currentAreaIndex = useMemo(() => {
+    return areas.findIndex((a) => a.id === currentArea?.id);
+  }, [areas, currentArea]);
+
+  const isFirstArea = currentAreaIndex <= 0;
+  const isLastArea = currentAreaIndex === areas.length - 1;
+  const nextArea = !isLastArea && currentAreaIndex >= 0 ? areas[currentAreaIndex + 1] : null;
+  const prevArea = !isFirstArea && currentAreaIndex >= 0 ? areas[currentAreaIndex - 1] : null;
+
+  const handlePrevArea = () => {
+    if (prevArea) {
+      setActiveAreaId(prevArea.id);
+      window.scrollTo({ top: 180, behavior: "smooth" });
+    }
+  };
+
+  const handleSaveAndNext = async () => {
+    if (!nextArea) return;
+    setSaving(true);
+    try {
+      const assessmentData: HpcSessionAssessment = {
+        studentId,
+        academicYear,
+        stageId,
+        classId,
+        session,
+        status: "draft",
+        areaAssessments,
+        teacherGeneralRemarks,
+      };
+
+      await saveHpcSessionAssessment(assessmentData);
+      toast.success(
+        `${currentArea?.nameMarathi || "क्षेत्र"} मसुदा जतन झाला! आता पुढील क्षेत्र: ${nextArea.nameMarathi} उघडले आहे.`
+      );
+      setActiveAreaId(nextArea.id);
+      window.scrollTo({ top: 180, behavior: "smooth" });
+      if (onSaved) onSaved();
+    } catch (err: any) {
+      toast.error("मूल्यांकन सेव्ह करताना त्रुटी: " + (err.message || ""));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-12 text-center bg-white rounded-3xl border border-slate-200">
@@ -388,6 +434,7 @@ export function HpcAssessmentForm({
           </div>
 
           <button
+            type="button"
             onClick={() => handleSave(false)}
             disabled={saving}
             className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
@@ -396,14 +443,27 @@ export function HpcAssessmentForm({
             <span>मसुदा सेव्ह (Draft)</span>
           </button>
 
-          <button
-            onClick={() => handleSave(true)}
-            disabled={saving}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-          >
-            <CheckCircle2 className="size-3.5" />
-            <span>पूर्ण सबमिट करा (Submit)</span>
-          </button>
+          {!isLastArea ? (
+            <button
+              type="button"
+              onClick={handleSaveAndNext}
+              disabled={saving}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-black shadow-md shadow-indigo-600/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <Save className="size-3.5" />
+              <span>जतन व पुढील क्षेत्र →</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleSave(true)}
+              disabled={saving}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <CheckCircle2 className="size-3.5" />
+              <span>पूर्ण सबमिट करा (Submit)</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1092,30 +1152,60 @@ export function HpcAssessmentForm({
 
         {/* ---------------- 7. Save Actions ---------------- */}
         <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs font-black px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+              क्षेत्र {currentAreaIndex + 1} / {areas.length}
+            </span>
             <span className="text-xs text-slate-500 font-bold">
               सक्रिय क्षेत्र: <b className="text-slate-800">{currentArea?.nameMarathi}</b>
             </span>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
+            {!isFirstArea && (
+              <button
+                type="button"
+                onClick={handlePrevArea}
+                disabled={saving}
+                className="px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <ArrowLeft className="size-4" />
+                <span>मागील क्षेत्र</span>
+              </button>
+            )}
+
             <button
+              type="button"
               onClick={() => handleSave(false)}
               disabled={saving}
-              className="px-6 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-black transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-black transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Save className="size-4" />
               <span>मसुदा जतन करा (Save Draft)</span>
             </button>
 
-            <button
-              onClick={() => handleSave(true)}
-              disabled={saving}
-              className="px-8 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-black shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              <CheckCircle2 className="size-4" />
-              <span>सत्र मूल्यांकन पूर्ण करा (Submit)</span>
-            </button>
+            {!isLastArea ? (
+              <button
+                type="button"
+                onClick={handleSaveAndNext}
+                disabled={saving}
+                className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs sm:text-sm font-black shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Save className="size-4" />
+                <span>जतन करा आणि पुढील क्षेत्र उघडा ({nextArea?.nameMarathi ? nextArea.nameMarathi.slice(0, 18) + '...' : 'पुढील क्षेत्र'})</span>
+                <ArrowRight className="size-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleSave(true)}
+                disabled={saving}
+                className="px-8 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-black shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <CheckCircle2 className="size-4" />
+                <span>सत्र मूल्यांकन पूर्ण करा (Submit)</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

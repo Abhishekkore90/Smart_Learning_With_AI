@@ -5,9 +5,10 @@ import { HpcAnnualSummaryForm } from "@/hpc/components/HpcAnnualSummaryForm";
 import { getHpcStudentById, StudentInfoSummary } from "@/hpc/services/hpcService";
 import { HpcStageId } from "@/hpc/types/hpc";
 import { Loader2, ArrowLeft, BookOpen, Award, Sparkles } from "lucide-react";
+import { getCurrentAcademicYear } from "@/hpc/utils/academicYear";
 
 export const Route = createFileRoute("/teacher/hpc/assessment/$studentId")({
-  validateSearch: (search: Record<string, unknown>) => {
+  validateSearch: (search: Record<string, unknown>): { session?: "session1" | "session2"; tab?: "assessment" | "annual" } => {
     return {
       session: (search.session as "session1" | "session2") || "session1",
       tab: (search.tab as "assessment" | "annual") || "assessment",
@@ -33,7 +34,7 @@ function TeacherHpcAssessmentPage() {
     search.session || "session1"
   );
 
-  const academicYear = localStorage.getItem("cce_academic_year") || "2025-2026";
+  const academicYear = localStorage.getItem("cce_academic_year") || getCurrentAcademicYear();
 
   useEffect(() => {
     let isMounted = true;
@@ -67,15 +68,28 @@ function TeacherHpcAssessmentPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {/* Top Back Navigation Bar */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => navigate({ to: "/teacher/hpc/students" })}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-900 hover:text-white text-slate-800 border border-slate-200 hover:border-slate-900 rounded-2xl text-xs sm:text-sm font-black transition-all shadow-xs cursor-pointer group"
+          >
+            <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
+            <span>विद्यार्थी यादीवर परत जा (Back to Students List)</span>
+          </button>
+          <button
+            onClick={() => navigate({ to: "/teacher/hpc" })}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition-all cursor-pointer"
+          >
+            <ArrowLeft className="size-3.5" />
+            <span>HPC डॅशबोर्ड</span>
+          </button>
+        </div>
+      </div>
+
       {/* Top Tab Bar: Assessment vs Annual Summary */}
-      <div className="bg-white rounded-3xl p-3 border border-slate-200 shadow-sm flex items-center justify-between gap-3 flex-wrap">
-        <button
-          onClick={() => navigate({ to: "/teacher/hpc" })}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="size-4" />
-          <span>HPC डॅशबोर्डवर परत जा</span>
-        </button>
+      <div className="bg-white rounded-3xl p-3 border border-slate-200 shadow-sm flex items-center justify-end gap-3 flex-wrap">
 
         <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200">
           <button

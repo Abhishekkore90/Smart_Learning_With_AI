@@ -4,6 +4,7 @@ import { HpcStudentProfileForm } from "@/hpc/components/HpcStudentProfileForm";
 import { getHpcStudentById, StudentInfoSummary } from "@/hpc/services/hpcService";
 import { HpcStageId } from "@/hpc/types/hpc";
 import { Loader2 } from "lucide-react";
+import { getCurrentAcademicYear } from "@/hpc/utils/academicYear";
 
 export const Route = createFileRoute("/teacher/hpc/student/$studentId")({
   head: () => ({
@@ -19,7 +20,7 @@ function TeacherHpcStudentProfilePage() {
   const [student, setStudent] = useState<StudentInfoSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const academicYear = localStorage.getItem("cce_academic_year") || "2025-2026";
+  const academicYear = localStorage.getItem("cce_academic_year") || getCurrentAcademicYear();
 
   useEffect(() => {
     let isMounted = true;
