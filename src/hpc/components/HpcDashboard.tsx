@@ -84,7 +84,24 @@ export function HpcDashboard() {
   const handleAcademicYearChange = (yr: string) => {
     setAcademicYear(yr);
     localStorage.setItem("cce_academic_year", yr);
+    localStorage.setItem("hpc_academic_year", yr);
+    window.dispatchEvent(
+      new CustomEvent("hpc_academic_year_changed", { detail: yr })
+    );
   };
+
+  useEffect(() => {
+    const handleYearEvent = (e: any) => {
+      const yr = e.detail;
+      if (yr && yr !== academicYear) {
+        setAcademicYear(yr);
+      }
+    };
+    window.addEventListener("hpc_academic_year_changed", handleYearEvent);
+    return () => {
+      window.removeEventListener("hpc_academic_year_changed", handleYearEvent);
+    };
+  }, [academicYear]);
   const [selectedDivision, setSelectedDivision] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -225,24 +242,8 @@ export function HpcDashboard() {
             </p>
           </div>
 
-          {/* Quick Year & Medium Selector */}
+          {/* Quick Medium Info */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-1.5 flex items-center gap-2 shadow-2xs">
-              <Calendar className="size-3.5 text-indigo-600" />
-              <span className="text-[11px] font-bold text-slate-500 uppercase">वर्ष:</span>
-              <select
-                value={academicYear}
-                onChange={(e) => handleAcademicYearChange(e.target.value)}
-                className="bg-transparent text-slate-900 text-xs font-black outline-none cursor-pointer"
-              >
-                {academicYearOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value} className="text-slate-900 font-bold">
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div className="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-1.5 flex items-center gap-2 shadow-2xs">
               <span className="text-[11px] font-bold text-slate-500 uppercase">माध्यम:</span>
               <span className="text-xs font-black text-emerald-700">
@@ -330,6 +331,13 @@ export function HpcDashboard() {
                           e.stopPropagation();
                           setActiveStage(stg.id);
                           setSelectedClass(c.id);
+                          localStorage.setItem("hpc_selected_class", c.id);
+                          localStorage.setItem("hpc_selected_stage", stg.id);
+                          window.dispatchEvent(
+                            new CustomEvent("hpc_class_changed", {
+                              detail: { cls: c.id, stageId: stg.id },
+                            })
+                          );
                         }}
                         className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
                           isClassActive

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -9,9 +9,14 @@ import {
   Sparkles,
   BookOpen,
   Award,
+  Calendar,
 } from "lucide-react";
 import { HpcStageId } from "../types/hpc";
 import { HPC_STAGES_INFO } from "../data/hpcCurricularGoals";
+import {
+  getAcademicYearOptions,
+  getInitialAcademicYear,
+} from "../utils/academicYear";
 
 interface HpcNavProps {
   stageId?: HpcStageId;
@@ -23,14 +28,68 @@ interface HpcNavProps {
 
 export function HpcNav({
   stageId = "foundational",
-  selectedClass = "1st",
-  academicYear = "2025-2026",
+  selectedClass: propClass,
+  academicYear: propYear,
+  onClassChange,
+  onYearChange,
 }: HpcNavProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const path = location.pathname;
 
-  const stage = HPC_STAGES_INFO.find((s) => s.id === stageId) || HPC_STAGES_INFO[0];
+  // Dynamic Year, Class, and Stage tracking synchronized across all HPC pages
+  const [activeYear, setActiveYear] = useState<string>(() => {
+    return propYear || getInitialAcademicYear();
+  });
+  const [currentClass, setCurrentClass] = useState<string>(() => {
+    return (
+      propClass ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("hpc_selected_class") || "1st"
+        : "1st")
+    );
+  });
+  const [currentStageId, setCurrentStageId] = useState<HpcStageId>(() => {
+    return (
+      stageId ||
+      (typeof window !== "undefined"
+        ? (localStorage.getItem("hpc_selected_stage") as HpcStageId) ||
+          "foundational"
+        : "foundational")
+    );
+  });
+
+  const academicYearOptions = useMemo(() => getAcademicYearOptions(), []);
+
+  useEffect(() => {
+    const handleYearChange = (e: any) => {
+      const yr = e.detail;
+      if (yr) setActiveYear(yr);
+    };
+    const handleClassChange = (e: any) => {
+      if (e.detail?.cls) setCurrentClass(e.detail.cls);
+      if (e.detail?.stageId) setCurrentStageId(e.detail.stageId);
+    };
+    window.addEventListener("hpc_academic_year_changed", handleYearChange);
+    window.addEventListener("hpc_class_changed", handleClassChange);
+    return () => {
+      window.removeEventListener("hpc_academic_year_changed", handleYearChange);
+      window.removeEventListener("hpc_class_changed", handleClassChange);
+    };
+  }, []);
+
+  const handleYearSelect = (yr: string) => {
+    setActiveYear(yr);
+    localStorage.setItem("cce_academic_year", yr);
+    localStorage.setItem("hpc_academic_year", yr);
+    window.dispatchEvent(
+      new CustomEvent("hpc_academic_year_changed", { detail: yr })
+    );
+    if (onYearChange) onYearChange(yr);
+  };
+
+  const stage =
+    HPC_STAGES_INFO.find((s) => s.id === currentStageId) || HPC_STAGES_INFO[0];
 
   // Extract active studentId from URL if present, or fallback to localStorage
   const studentMatch = path.match(/\/teacher\/hpc\/(?:assessment|student)\/([^/?#]+)/);
@@ -130,17 +189,18 @@ export function HpcNav({
           </div>
 
           <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-500">
-            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200/60">
-              इयत्ता: {selectedClass}
+            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200/60 font-black">
+              इयत्ता: {currentClass}
             </span>
-            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200/60">
-              वर्ष: {academicYear}
+            <span className="px-2.5 py-1 rounded-lg bg-indigo-50/70 text-indigo-900 border border-indigo-200/70 font-black flex items-center gap-1.5">
+              <Calendar className="size-3.5 text-indigo-600" />
+              <span>वर्ष: {activeYear}</span>
             </span>
           </div>
         </div>
       </div>
 
-      {/* Downside Dedicated Navigation Bar (Separate Clean Line) */}
+      {/* Downside Dedicated Navigation Bar (Separate Clean Line as in Image 2) */}
       <div className="bg-slate-50/70 py-2 border-t border-slate-50">
         <div className="max-w-[1360px] mx-auto px-4 sm:px-6 flex items-center justify-center">
           <div className="inline-flex items-center gap-1 sm:gap-2 p-1.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs overflow-x-auto max-w-full">
@@ -162,6 +222,27 @@ export function HpcNav({
                 </Link>
               );
             })}
+
+            {/* Elegant Separator */}
+            <div className="h-6 w-px bg-slate-200 mx-1 flex-shrink-0" />
+
+            {/* Academic Year Selection Dropdown (थेट नेव्हिगेशन बारमध्ये वर्ष निवड) */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200/90 text-xs font-black text-amber-950 transition-all flex-shrink-0 shadow-2xs group cursor-pointer">
+              <Calendar className="size-3.5 text-amber-600 flex-shrink-0" />
+              <span className="text-[11px] font-bold text-amber-800 hidden md:inline">वर्ष:</span>
+              <select
+                value={activeYear}
+                onChange={(e) => handleYearSelect(e.target.value)}
+                className="bg-transparent text-amber-950 font-black text-xs outline-none cursor-pointer pr-1"
+                title="शैक्षणिक वर्ष निवडा"
+              >
+                {academicYearOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="text-slate-900 font-bold bg-white">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>

@@ -859,7 +859,7 @@ export function HpcAssessmentForm({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-2.5">
                       <div>
                         <label className="block text-[11px] font-black text-slate-700 mb-1">
                           उपक्रमाचे नाव / कृती:
@@ -873,21 +873,6 @@ export function HpcAssessmentForm({
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-black text-slate-700 mb-1">
-                          अपेक्षित अध्ययन निष्पत्ती (Learning Outcome):
-                        </label>
-                        <input
-                          type="text"
-                          value={
-                            currentAssessment.activity1Outcome ||
-                            "विद्यार्थ्यांमध्ये शारीरिक तंदुरुस्ती व कौशल्य विकास वाढतो."
-                          }
-                          onChange={(e) => updateCurrentAssessment({ activity1Outcome: e.target.value })}
-                          className="w-full px-4 py-2 rounded-full border border-slate-200 bg-white text-xs font-bold text-slate-900 shadow-2xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
                         <label className="block text-[11px] font-black text-slate-700 mb-1">
                           उपक्रमाचे सविस्तर वर्णन:
                         </label>
