@@ -37,6 +37,18 @@ function TeacherHpcAssessmentPage() {
   const academicYear = localStorage.getItem("cce_academic_year") || getCurrentAcademicYear();
 
   useEffect(() => {
+    if (studentId) {
+      localStorage.setItem("hpc_last_student_id", studentId);
+    }
+  }, [studentId]);
+
+  useEffect(() => {
+    if (search.tab) {
+      setActiveTab(search.tab);
+    }
+  }, [search.tab]);
+
+  useEffect(() => {
     let isMounted = true;
     async function load() {
       setLoading(true);
@@ -84,36 +96,6 @@ function TeacherHpcAssessmentPage() {
           >
             <ArrowLeft className="size-3.5" />
             <span>HPC डॅशबोर्ड</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Top Tab Bar: Assessment vs Annual Summary */}
-      <div className="bg-white rounded-3xl p-3 border border-slate-200 shadow-sm flex items-center justify-end gap-3 flex-wrap">
-
-        <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200">
-          <button
-            onClick={() => setActiveTab("assessment")}
-            className={`flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-              activeTab === "assessment"
-                ? "bg-white text-indigo-700 shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <BookOpen className="size-3.5" />
-            <span>भाग ब: सत्रनिहाय मूल्यमापन</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("annual")}
-            className={`flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-              activeTab === "annual"
-                ? "bg-white text-indigo-700 shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Award className="size-3.5" />
-            <span>भाग क: वार्षिक सर्वंकष गोषवारा</span>
           </button>
         </div>
       </div>

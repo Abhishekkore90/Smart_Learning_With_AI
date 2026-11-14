@@ -23,6 +23,12 @@ function TeacherHpcStudentProfilePage() {
   const academicYear = localStorage.getItem("cce_academic_year") || getCurrentAcademicYear();
 
   useEffect(() => {
+    if (studentId) {
+      localStorage.setItem("hpc_last_student_id", studentId);
+    }
+  }, [studentId]);
+
+  useEffect(() => {
     let isMounted = true;
     async function load() {
       setLoading(true);
