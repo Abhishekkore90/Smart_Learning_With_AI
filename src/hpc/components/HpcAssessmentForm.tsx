@@ -20,8 +20,12 @@ import {
   Smile,
   Layers,
   Monitor,
+  Trash2,
+  Plus,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { toMarathiDigits } from "../utils/academicYear";
 import {
   HpcStageId,
   HpcSessionAssessment,
@@ -303,6 +307,45 @@ export function HpcAssessmentForm({
       assessmentQuestions: [...act.questions],
     });
     toast.success(`उपक्रम ${act.activityNumber}: "${act.title.slice(0, 30)}..." निवडला व ५ प्रश्न आपोआप भरले गेले!`);
+  };
+
+  const handleAddQuestion = () => {
+    const list = [
+      ...(currentAssessment.assessmentQuestions && currentAssessment.assessmentQuestions.length > 0
+        ? currentAssessment.assessmentQuestions
+        : bankData?.activities?.[0]?.questions || ["", "", "", "", ""]),
+    ];
+    list.push("");
+    updateCurrentAssessment({ assessmentQuestions: list });
+    toast.success("नवीन प्रश्न जोडला! कृपया खाली टाईप करा.");
+  };
+
+  const handleDeleteQuestion = (indexToDelete: number) => {
+    const list = [
+      ...(currentAssessment.assessmentQuestions && currentAssessment.assessmentQuestions.length > 0
+        ? currentAssessment.assessmentQuestions
+        : bankData?.activities?.[0]?.questions || ["", "", "", "", ""]),
+    ];
+    if (list.length <= 1) {
+      toast.error("किमान एक प्रश्न असणे आवश्यक आहे.");
+      return;
+    }
+    const updated = list.filter((_, idx) => idx !== indexToDelete);
+    updateCurrentAssessment({ assessmentQuestions: updated });
+    toast.success(`प्रश्न क्र. ${indexToDelete + 1} हटवला.`);
+  };
+
+  const handleResetQuestions = () => {
+    if (bankData?.activities) {
+      const selectedAct =
+        bankData.activities.find(
+          (act) => (currentAssessment.activity1Title || bankData.activities[0]?.title) === act.title
+        ) || bankData.activities[0];
+      if (selectedAct?.questions) {
+        updateCurrentAssessment({ assessmentQuestions: [...selectedAct.questions] });
+        toast.success("उपक्रमाचे मूळ प्रश्न पुन्हा लोड झाले!");
+      }
+    }
   };
 
   // 360-degree update helpers
@@ -982,239 +1025,270 @@ export function HpcAssessmentForm({
 
         {/* ---------------- 4. Assessment Questions (मूल्यमापनासाठी प्रश्न) ---------------- */}
         <div>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2.5">
             <div>
               <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
                 <HelpCircle className="size-4 text-sky-600" />
-                <span>मूल्यमापनासाठी विचारलेले ५ प्रश्न (Assessment Questions)</span>
+                <span>मूल्यमापनासाठी विचारलेले प्रश्न (Assessment Questions)</span>
               </h4>
               <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                निवडलेल्या उपक्रमावर आधारित ५ प्रश्न (शिक्षकांनी विचारून विद्यार्थ्यांचे मूल्यमापन करावे):
+                निवडलेल्या उपक्रमावर आधारित प्रश्न (शिक्षकांनी विचारून विद्यार्थ्यांचे मूल्यमापन करावे):
               </p>
             </div>
-            <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-sky-100 text-sky-800">
-              ५ प्रश्न उपलब्ध (संपादनक्षम)
-            </span>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-sky-100 text-sky-800">
+                {(
+                  currentAssessment.assessmentQuestions && currentAssessment.assessmentQuestions.length > 0
+                    ? currentAssessment.assessmentQuestions
+                    : isFoundational && bankData?.activities?.[0]?.questions
+                    ? bankData.activities[0].questions
+                    : ["", "", "", "", ""]
+                ).length} प्रश्न उपलब्ध
+              </span>
+
+              {bankData?.activities && (
+                <button
+                  type="button"
+                  onClick={handleResetQuestions}
+                  className="px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-full transition-all flex items-center gap-1 cursor-pointer"
+                  title="उपक्रमाचे मूळ प्रश्न पुन्हा लोड करा"
+                >
+                  <RotateCcw className="size-3 text-slate-500" />
+                  <span className="hidden sm:inline">मूळ प्रश्न रिसेट करा</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleAddQuestion}
+                className="px-3.5 py-1.5 text-xs font-black text-white bg-sky-600 hover:bg-sky-700 rounded-full transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Plus className="size-3.5 stroke-[3]" />
+                <span>+ नवीन प्रश्न जोडा</span>
+              </button>
+            </div>
           </div>
 
-          <div className="p-5 sm:p-6 rounded-[28px] border border-slate-200/90 bg-slate-50/50 space-y-3 mt-4">
-            {[0, 1, 2, 3, 4].map((qIndex) => {
-              const questions = currentAssessment.assessmentQuestions || [];
-              const marathiNums = ["१", "२", "३", "४", "५"];
+          <div className="p-4 sm:p-5 rounded-[28px] border border-slate-200/90 bg-slate-50/50 space-y-2.5 mt-4">
+            {(() => {
+              const activeQuestions =
+                currentAssessment.assessmentQuestions && currentAssessment.assessmentQuestions.length > 0
+                  ? currentAssessment.assessmentQuestions
+                  : isFoundational && bankData?.activities?.[0]?.questions
+                  ? bankData.activities[0].questions
+                  : ["", "", "", "", ""];
 
               return (
-                <div
-                  key={qIndex}
-                  className="flex items-center gap-3.5 bg-white p-2.5 sm:p-3 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-sky-300 transition-all"
-                >
-                  <div className="size-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-black text-sm flex items-center justify-center flex-shrink-0 shadow-xs">
-                    {marathiNums[qIndex] || qIndex + 1}
-                  </div>
+                <>
+                  {activeQuestions.map((qText, qIndex) => {
+                    const marathiNums = ["१", "२", "३", "४", "५", "६", "७", "८", "९", "१०"];
+                    const qNumberStr = marathiNums[qIndex] || toMarathiDigits(qIndex + 1);
 
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={questions[qIndex] || ""}
-                      onChange={(e) => {
-                        const updated = [...questions];
-                        while (updated.length <= qIndex) updated.push("");
-                        updated[qIndex] = e.target.value;
-                        updateCurrentAssessment({ assessmentQuestions: updated });
-                      }}
-                      placeholder={`उदा. प्रश्न क्र. ${qIndex + 1}...`}
-                      className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:outline-none"
-                    />
-                  </div>
+                    return (
+                      <div
+                        key={qIndex}
+                        className="flex items-center gap-3 bg-white p-2.5 sm:p-3 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-sky-300 transition-all group"
+                      >
+                        {/* Number Badge */}
+                        <div className="size-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white font-black text-sm flex items-center justify-center flex-shrink-0 shadow-xs">
+                          {qNumberStr}
+                        </div>
 
-                  <span className="text-[11px] font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-100 hidden sm:inline-block flex-shrink-0">
-                    प्रश्न {marathiNums[qIndex] || qIndex + 1}
-                  </span>
-                </div>
+                        {/* Input Question Text */}
+                        <div className="flex-1 min-w-0">
+                          <input
+                            type="text"
+                            value={qText}
+                            onChange={(e) => {
+                              const updated = [...activeQuestions];
+                              updated[qIndex] = e.target.value;
+                              updateCurrentAssessment({ assessmentQuestions: updated });
+                            }}
+                            placeholder={`उदा. प्रश्न क्र. ${qIndex + 1}... (इथे स्वतःचा प्रश्न टाईप करा)`}
+                            className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                          />
+                        </div>
+
+                        {/* Label Badge */}
+                        <span className="text-[11px] font-black text-sky-700 bg-sky-50 px-2 py-0.5 rounded-lg border border-sky-100 hidden sm:inline-block flex-shrink-0">
+                          प्रश्न {qNumberStr}
+                        </span>
+
+                        {/* Delete Question Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteQuestion(qIndex)}
+                          className="size-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all flex items-center justify-center flex-shrink-0 cursor-pointer"
+                          title={`प्रश्न क्र. ${qIndex + 1} हटवा (Delete Question)`}
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add Own Question Card Button */}
+                  <button
+                    type="button"
+                    onClick={handleAddQuestion}
+                    className="w-full py-2.5 px-4 rounded-2xl border-2 border-dashed border-sky-300 hover:border-sky-500 bg-white hover:bg-sky-50/60 text-sky-700 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs mt-2"
+                  >
+                    <Plus className="size-4 stroke-[3]" />
+                    <span>+ स्वतःचा नवीन प्रश्न जोडा (Add Your Own Question)</span>
+                  </button>
+                </>
               );
-            })}
+            })()}
           </div>
         </div>
 
-        {/* ---------------- 5. Performance Dimensions Matrix (३ पैलू व स्तर) ---------------- */}
+        {/* ---------------- 5. Parent & Teacher Feedback (पालक व शिक्षक मूल्यमापन - Image 2) ---------------- */}
         <div>
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
               <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                <Sparkles className="size-4 text-amber-500" />
-                <span>कामगिरी स्तर मूल्यमापन (Performance Dimensions & Rubric Levels)</span>
+                <Users className="size-4 text-amber-600" />
+                <span>पालक व शिक्षक मूल्यमापन (Parent Feedback & Teacher Observation)</span>
               </h4>
               <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                प्रत्येक पैलूसाठी विद्यार्थ्याचा योग्य स्तर निवडा: {levelLabels.beginner} | {levelLabels.proficient} | {levelLabels.advanced}
+                पालकांचे अभिप्राय, अपेक्षा व शिक्षकांचे प्रत्यक्ष निरीक्षण व मार्गदर्शन नोंदी:
               </p>
             </div>
           </div>
 
-          <div className="space-y-5 mt-5">
-            {/* Dimension 1: Awareness */}
-            <div className="p-4 sm:p-5 rounded-2xl border border-blue-200 bg-blue-50/30 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-blue-600 text-white">
-                    पैलू १
-                  </span>
-                  <span className="text-sm font-black text-blue-950">
-                    {HPC_CORE_RUBRICS.awareness.titleMarathi} ({HPC_CORE_RUBRICS.awareness.titleEnglish})
-                  </span>
-                </div>
-                <span className="text-xs font-bold text-blue-700">
-                  निवडलेला स्तर: <b>{currentAssessment.awarenessLevel ? levelLabels[currentAssessment.awarenessLevel] : "निवडला नाही"}</b>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+            {/* 3. Parent Feedback (पालक मूल्यमापन) */}
+            <div className="p-4 sm:p-5 rounded-[28px] border border-amber-200/90 bg-white space-y-4 shadow-xs">
+              <div className="flex items-center gap-2">
+                <span className="size-7 rounded-full bg-amber-500 text-white text-xs font-black flex items-center justify-center shadow-xs">
+                  ३
+                </span>
+                <span className="text-xs sm:text-sm font-black text-slate-800">
+                  पालक मूल्यमापन (Parent Feedback)
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-                {(["beginner", "proficient", "advanced"] as const).map((lvl) => {
-                  const isLvl = currentAssessment.awarenessLevel === lvl;
-                  const rubricInfo = HPC_CORE_RUBRICS.awareness.levels[lvl];
-                  const label = isFoundational ? rubricInfo.labelFoundational : rubricInfo.labelStandard;
+              {/* Ready Parent Remarks Dropdown from Bank */}
+              {bankData && bankData.parentRemarks?.length > 0 && (
+                <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 shadow-2xs">
+                  <label className="block text-[11px] font-black text-amber-900 mb-1.5 flex items-center gap-1.5">
+                    <Sparkles className="size-3.5 text-amber-600" />
+                    <span>तयार पालकांचा अभिप्राय निवडा ({bankData.code} - १० उपलब्ध):</span>
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 rounded-xl border border-amber-300 text-xs font-semibold bg-white text-slate-800 cursor-pointer shadow-xs focus:ring-2 focus:ring-amber-400"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        update360("parentFeedback", "parentObservations", e.target.value);
+                      }
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="">-- तयार पालकांचा अभिप्राय निवडा --</option>
+                    {bankData.parentRemarks.map((remark, idx) => (
+                      <option key={idx} value={remark}>
+                        {idx + 1}. {remark}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-                  return (
-                    <div
-                      key={lvl}
-                      onClick={() => updateCurrentAssessment({ awarenessLevel: lvl })}
-                      className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
-                        isLvl
-                          ? "bg-white border-blue-600 shadow-md ring-2 ring-blue-100"
-                          : "bg-white/80 hover:bg-white border-slate-200 hover:border-blue-300"
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-black text-slate-900">{label}</span>
-                          <div
-                            className={`size-4 rounded-full border flex items-center justify-center ${
-                              isLvl ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300"
-                            }`}
-                          >
-                            {isLvl && <Check className="size-3" />}
-                          </div>
-                        </div>
-                        <p className="text-[11px] font-bold text-slate-500 mb-1.5">{rubricInfo.shortDesc}</p>
-                        <p className="text-[11px] text-slate-600 leading-relaxed font-medium line-clamp-4">
-                          {rubricInfo.detailedDesc}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                  पालकांचे निरीक्षण व अभिप्राय:
+                </label>
+                <input
+                  type="text"
+                  value={currentAssessment.threeSixty?.parentFeedback?.parentObservations || ""}
+                  onChange={(e) => update360("parentFeedback", "parentObservations", e.target.value)}
+                  placeholder="उदा. वागण्यात पूर्वीपेक्षा शांतपणा आलाय / प्रगतीची अपेक्षा आहे."
+                  className="w-full px-5 py-2.5 rounded-full border border-slate-200 text-xs font-medium bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                  पालकांच्या अपेक्षा / सूचना:
+                </label>
+                <input
+                  type="text"
+                  value={currentAssessment.threeSixty?.parentFeedback?.parentExpectations || ""}
+                  onChange={(e) => update360("parentFeedback", "parentExpectations", e.target.value)}
+                  placeholder="उदा. गणितात अधिक सराव करावा अशी अपेक्षा आहे."
+                  className="w-full px-5 py-2.5 rounded-full border border-slate-200 text-xs font-medium bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
               </div>
             </div>
 
-            {/* Dimension 2: Sensitivity */}
-            <div className="p-4 sm:p-5 rounded-2xl border border-rose-200 bg-rose-50/30 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-rose-600 text-white">
-                    पैलू २
-                  </span>
-                  <span className="text-sm font-black text-rose-950">
-                    {HPC_CORE_RUBRICS.sensitivity.titleMarathi} ({HPC_CORE_RUBRICS.sensitivity.titleEnglish})
-                  </span>
-                </div>
-                <span className="text-xs font-bold text-rose-700">
-                  निवडलेला स्तर: <b>{currentAssessment.sensitivityLevel ? levelLabels[currentAssessment.sensitivityLevel] : "निवडला नाही"}</b>
+            {/* 4. Teacher Remarks (शिक्षक मूल्यमापन) */}
+            <div className="p-4 sm:p-5 rounded-[28px] border border-orange-200/90 bg-white space-y-4 shadow-xs">
+              <div className="flex items-center gap-2">
+                <span className="size-7 rounded-full bg-orange-600 text-white text-xs font-black flex items-center justify-center shadow-xs">
+                  ४
+                </span>
+                <span className="text-xs sm:text-sm font-black text-slate-800">
+                  शिक्षक मूल्यमापन व मार्गदर्शन (Teacher Observation)
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-                {(["beginner", "proficient", "advanced"] as const).map((lvl) => {
-                  const isLvl = currentAssessment.sensitivityLevel === lvl;
-                  const rubricInfo = HPC_CORE_RUBRICS.sensitivity.levels[lvl];
-                  const label = isFoundational ? rubricInfo.labelFoundational : rubricInfo.labelStandard;
-
-                  return (
-                    <div
-                      key={lvl}
-                      onClick={() => updateCurrentAssessment({ sensitivityLevel: lvl })}
-                      className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
-                        isLvl
-                          ? "bg-white border-rose-600 shadow-md ring-2 ring-rose-100"
-                          : "bg-white/80 hover:bg-white border-slate-200 hover:border-rose-300"
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-black text-slate-900">{label}</span>
-                          <div
-                            className={`size-4 rounded-full border flex items-center justify-center ${
-                              isLvl ? "bg-rose-600 border-rose-600 text-white" : "border-slate-300"
-                            }`}
-                          >
-                            {isLvl && <Check className="size-3" />}
-                          </div>
-                        </div>
-                        <p className="text-[11px] font-bold text-slate-500 mb-1.5">{rubricInfo.shortDesc}</p>
-                        <p className="text-[11px] text-slate-600 leading-relaxed font-medium line-clamp-4">
-                          {rubricInfo.detailedDesc}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Dimension 3: Creativity */}
-            <div className="p-4 sm:p-5 rounded-2xl border border-purple-200 bg-purple-50/30 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-purple-600 text-white">
-                    पैलू ३
-                  </span>
-                  <span className="text-sm font-black text-purple-950">
-                    {HPC_CORE_RUBRICS.creativity.titleMarathi} ({HPC_CORE_RUBRICS.creativity.titleEnglish})
-                  </span>
+              {/* Ready Teacher Remarks Dropdown from Bank */}
+              {bankData && bankData.teacherRemarks?.length > 0 && (
+                <div className="p-3.5 rounded-2xl bg-orange-50/70 border border-orange-200 shadow-2xs">
+                  <label className="block text-[11px] font-black text-orange-900 mb-1.5 flex items-center gap-1.5">
+                    <Sparkles className="size-3.5 text-orange-600" />
+                    <span>तयार शिक्षकांचा शेरा निवडा ({bankData.code} - १० उपलब्ध):</span>
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 rounded-xl border border-orange-300 text-xs font-semibold bg-white text-slate-800 cursor-pointer shadow-xs focus:ring-2 focus:ring-orange-400"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        update360("teacherRemarks", "observation", e.target.value);
+                      }
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="">-- तयार शिक्षकांचा शेरा निवडा --</option>
+                    {bankData.teacherRemarks.map((remark, idx) => (
+                      <option key={idx} value={remark}>
+                        {idx + 1}. {remark}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <span className="text-xs font-bold text-purple-700">
-                  निवडलेला स्तर: <b>{currentAssessment.creativityLevel ? levelLabels[currentAssessment.creativityLevel] : "निवडला नाही"}</b>
-                </span>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                  शिक्षकांचे प्रत्यक्ष निरीक्षण व शेरा *:
+                </label>
+                <input
+                  type="text"
+                  value={currentAssessment.threeSixty?.teacherRemarks?.observation || ""}
+                  onChange={(e) => update360("teacherRemarks", "observation", e.target.value)}
+                  placeholder="उदा. खेळांच्या माध्यमातून तू छान शिकतोस / रोज उपस्थित राहण्याची सवय कर."
+                  className="w-full px-5 py-2.5 rounded-full border border-slate-200 text-xs font-medium bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-                {(["beginner", "proficient", "advanced"] as const).map((lvl) => {
-                  const isLvl = currentAssessment.creativityLevel === lvl;
-                  const rubricInfo = HPC_CORE_RUBRICS.creativity.levels[lvl];
-                  const label = isFoundational ? rubricInfo.labelFoundational : rubricInfo.labelStandard;
-
-                  return (
-                    <div
-                      key={lvl}
-                      onClick={() => updateCurrentAssessment({ creativityLevel: lvl })}
-                      className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
-                        isLvl
-                          ? "bg-white border-purple-600 shadow-md ring-2 ring-purple-100"
-                          : "bg-white/80 hover:bg-white border-slate-200 hover:border-purple-300"
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-black text-slate-900">{label}</span>
-                          <div
-                            className={`size-4 rounded-full border flex items-center justify-center ${
-                              isLvl ? "bg-purple-600 border-purple-600 text-white" : "border-slate-300"
-                            }`}
-                          >
-                            {isLvl && <Check className="size-3" />}
-                          </div>
-                        </div>
-                        <p className="text-[11px] font-bold text-slate-500 mb-1.5">{rubricInfo.shortDesc}</p>
-                        <p className="text-[11px] text-slate-600 leading-relaxed font-medium line-clamp-4">
-                          {rubricInfo.detailedDesc}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                  पुढील सुधारणेसाठी वैयक्तिक सूचना:
+                </label>
+                <input
+                  type="text"
+                  value={currentAssessment.threeSixty?.teacherRemarks?.guidanceSuggestion || ""}
+                  onChange={(e) => update360("teacherRemarks", "guidanceSuggestion", e.target.value)}
+                  placeholder="उदा. अक्षरे गिरवण्याचा सराव नियमित करावा."
+                  className="w-full px-5 py-2.5 rounded-full border border-slate-200 text-xs font-medium bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
               </div>
             </div>
           </div>
         </div>
 
-        {/* ---------------- 6. 360-DEGREE ASSESSMENT SECTION ---------------- */}
+        {/* ---------------- 6. 360-Degree Assessment: Student & Peer (Image 3) ---------------- */}
         <div>
           <h4 className="text-sm font-black text-slate-900 flex items-center gap-2 pb-3 border-b border-slate-100">
             <Heart className="size-4 text-pink-600" />
@@ -1425,132 +1499,183 @@ export function HpcAssessmentForm({
                 />
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* 3. Parent Feedback (पालक मूल्यमापन) */}
-            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/40 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="size-6 rounded-lg bg-amber-600 text-white text-[11px] font-black flex items-center justify-center">
-                  ३
-                </span>
-                <span className="text-xs font-black text-slate-800">
-                  पालक मूल्यमापन (Parent Feedback)
-                </span>
-              </div>
+        {/* ---------------- 7. Performance Dimensions Matrix (कामगिरी स्तर मूल्यमापन - Image 4) ---------------- */}
+        <div>
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                <Sparkles className="size-4 text-amber-500" />
+                <span>कामगिरी स्तर मूल्यमापन (Performance Dimensions & Rubric Levels)</span>
+              </h4>
+              <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
+                प्रत्येक पैलूसाठी विद्यार्थ्याचा योग्य स्तर निवडा: {levelLabels.beginner} | {levelLabels.proficient} | {levelLabels.advanced}
+              </p>
+            </div>
+          </div>
 
-              {/* Ready Parent Remarks Dropdown from Bank */}
-              {bankData && bankData.parentRemarks?.length > 0 && (
-                <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200 shadow-2xs">
-                  <label className="block text-[11px] font-black text-amber-900 mb-1.5 flex items-center gap-1.5">
-                    <Sparkles className="size-3.5 text-amber-600" />
-                    <span>तयार पालकांचा अभिप्राय निवडा ({bankData.code} - १० उपलब्ध):</span>
-                  </label>
-                  <select
-                    className="w-full px-3 py-2 rounded-xl border border-amber-300 text-xs font-semibold bg-white text-slate-800 cursor-pointer shadow-xs focus:ring-2 focus:ring-amber-400"
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        update360("parentFeedback", "parentObservations", e.target.value);
-                      }
-                    }}
-                    defaultValue=""
-                  >
-                    <option value="">-- तयार पालकांचा अभिप्राय निवडा --</option>
-                    {bankData.parentRemarks.map((remark, idx) => (
-                      <option key={idx} value={remark}>
-                        {idx + 1}. {remark}
-                      </option>
-                    ))}
-                  </select>
+          <div className="space-y-5 mt-5">
+            {/* Dimension 1: Awareness */}
+            <div className="p-4 sm:p-5 rounded-2xl border border-blue-200 bg-blue-50/30 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-blue-600 text-white">
+                    पैलू १
+                  </span>
+                  <span className="text-sm font-black text-blue-950">
+                    {HPC_CORE_RUBRICS.awareness.titleMarathi} ({HPC_CORE_RUBRICS.awareness.titleEnglish})
+                  </span>
                 </div>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  पालकांचे निरीक्षण व अभिप्राय:
-                </label>
-                <input
-                  type="text"
-                  value={currentAssessment.threeSixty?.parentFeedback?.parentObservations || ""}
-                  onChange={(e) => update360("parentFeedback", "parentObservations", e.target.value)}
-                  placeholder="उदा. वागण्यात पूर्वीपेक्षा शांतपणा आलाय / प्रगतीची अपेक्षा आहे."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium bg-white text-slate-800"
-                />
+                <span className="text-xs font-bold text-blue-700">
+                  निवडलेला स्तर: <b>{currentAssessment.awarenessLevel ? levelLabels[currentAssessment.awarenessLevel] : "निवडला नाही"}</b>
+                </span>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  पालकांच्या अपेक्षा / सूचना:
-                </label>
-                <input
-                  type="text"
-                  value={currentAssessment.threeSixty?.parentFeedback?.parentExpectations || ""}
-                  onChange={(e) => update360("parentFeedback", "parentExpectations", e.target.value)}
-                  placeholder="उदा. गणितात अधिक सराव करावा अशी अपेक्षा आहे."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium bg-white text-slate-800"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                {(["beginner", "proficient", "advanced"] as const).map((lvl) => {
+                  const isLvl = currentAssessment.awarenessLevel === lvl;
+                  const rubricInfo = HPC_CORE_RUBRICS.awareness.levels[lvl];
+                  const label = isFoundational ? rubricInfo.labelFoundational : rubricInfo.labelStandard;
+
+                  return (
+                    <div
+                      key={lvl}
+                      onClick={() => updateCurrentAssessment({ awarenessLevel: lvl })}
+                      className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                        isLvl
+                          ? "bg-white border-blue-600 shadow-md ring-2 ring-blue-100"
+                          : "bg-white/80 hover:bg-white border-slate-200 hover:border-blue-300"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-black text-slate-900">{label}</span>
+                          <div
+                            className={`size-4 rounded-full border flex items-center justify-center ${
+                              isLvl ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300"
+                            }`}
+                          >
+                            {isLvl && <Check className="size-3" />}
+                          </div>
+                        </div>
+                        <p className="text-[11px] font-bold text-slate-500 mb-1.5">{rubricInfo.shortDesc}</p>
+                        <p className="text-[11px] text-slate-600 leading-relaxed font-medium line-clamp-4">
+                          {rubricInfo.detailedDesc}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* 4. Teacher Remarks (शिक्षक मूल्यमापन) */}
-            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/40 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="size-6 rounded-lg bg-purple-600 text-white text-[11px] font-black flex items-center justify-center">
-                  ४
-                </span>
-                <span className="text-xs font-black text-slate-800">
-                  शिक्षक मूल्यमापन व मार्गदर्शन (Teacher Observation)
-                </span>
-              </div>
-
-              {/* Ready Teacher Remarks Dropdown from Bank */}
-              {bankData && bankData.teacherRemarks?.length > 0 && (
-                <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-200 shadow-2xs">
-                  <label className="block text-[11px] font-black text-purple-900 mb-1.5 flex items-center gap-1.5">
-                    <Sparkles className="size-3.5 text-purple-600" />
-                    <span>तयार शिक्षकांचा शेरा निवडा ({bankData.code} - १० उपलब्ध):</span>
-                  </label>
-                  <select
-                    className="w-full px-3 py-2 rounded-xl border border-purple-300 text-xs font-semibold bg-white text-slate-800 cursor-pointer shadow-xs focus:ring-2 focus:ring-purple-400"
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        update360("teacherRemarks", "observation", e.target.value);
-                      }
-                    }}
-                    defaultValue=""
-                  >
-                    <option value="">-- तयार शिक्षकांचा शेरा निवडा --</option>
-                    {bankData.teacherRemarks.map((remark, idx) => (
-                      <option key={idx} value={remark}>
-                        {idx + 1}. {remark}
-                      </option>
-                    ))}
-                  </select>
+            {/* Dimension 2: Sensitivity */}
+            <div className="p-4 sm:p-5 rounded-2xl border border-rose-200 bg-rose-50/30 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-rose-600 text-white">
+                    पैलू २
+                  </span>
+                  <span className="text-sm font-black text-rose-950">
+                    {HPC_CORE_RUBRICS.sensitivity.titleMarathi} ({HPC_CORE_RUBRICS.sensitivity.titleEnglish})
+                  </span>
                 </div>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  शिक्षकांचे प्रत्यक्ष निरीक्षण व शेरा *:
-                </label>
-                <input
-                  type="text"
-                  value={currentAssessment.threeSixty?.teacherRemarks?.observation || ""}
-                  onChange={(e) => update360("teacherRemarks", "observation", e.target.value)}
-                  placeholder="उदा. खेळांच्या माध्यमातून तू छान शिकतोस / रोज उपस्थित राहण्याची सवय कर."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium bg-white text-slate-800"
-                />
+                <span className="text-xs font-bold text-rose-700">
+                  निवडलेला स्तर: <b>{currentAssessment.sensitivityLevel ? levelLabels[currentAssessment.sensitivityLevel] : "निवडला नाही"}</b>
+                </span>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                  पुढील सुधारणेसाठी वैयक्तिक सूचना:
-                </label>
-                <input
-                  type="text"
-                  value={currentAssessment.threeSixty?.teacherRemarks?.guidanceSuggestion || ""}
-                  onChange={(e) => update360("teacherRemarks", "guidanceSuggestion", e.target.value)}
-                  placeholder="उदा. अक्षरे गिरवण्याचा सराव नियमित करावा."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium bg-white text-slate-800"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                {(["beginner", "proficient", "advanced"] as const).map((lvl) => {
+                  const isLvl = currentAssessment.sensitivityLevel === lvl;
+                  const rubricInfo = HPC_CORE_RUBRICS.sensitivity.levels[lvl];
+                  const label = isFoundational ? rubricInfo.labelFoundational : rubricInfo.labelStandard;
+
+                  return (
+                    <div
+                      key={lvl}
+                      onClick={() => updateCurrentAssessment({ sensitivityLevel: lvl })}
+                      className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                        isLvl
+                          ? "bg-white border-rose-600 shadow-md ring-2 ring-rose-100"
+                          : "bg-white/80 hover:bg-white border-slate-200 hover:border-rose-300"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-black text-slate-900">{label}</span>
+                          <div
+                            className={`size-4 rounded-full border flex items-center justify-center ${
+                              isLvl ? "bg-rose-600 border-rose-600 text-white" : "border-slate-300"
+                            }`}
+                          >
+                            {isLvl && <Check className="size-3" />}
+                          </div>
+                        </div>
+                        <p className="text-[11px] font-bold text-slate-500 mb-1.5">{rubricInfo.shortDesc}</p>
+                        <p className="text-[11px] text-slate-600 leading-relaxed font-medium line-clamp-4">
+                          {rubricInfo.detailedDesc}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Dimension 3: Creativity */}
+            <div className="p-4 sm:p-5 rounded-2xl border border-purple-200 bg-purple-50/30 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-purple-600 text-white">
+                    पैलू ३
+                  </span>
+                  <span className="text-sm font-black text-purple-950">
+                    {HPC_CORE_RUBRICS.creativity.titleMarathi} ({HPC_CORE_RUBRICS.creativity.titleEnglish})
+                  </span>
+                </div>
+                <span className="text-xs font-bold text-purple-700">
+                  निवडलेला स्तर: <b>{currentAssessment.creativityLevel ? levelLabels[currentAssessment.creativityLevel] : "निवडला नाही"}</b>
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                {(["beginner", "proficient", "advanced"] as const).map((lvl) => {
+                  const isLvl = currentAssessment.creativityLevel === lvl;
+                  const rubricInfo = HPC_CORE_RUBRICS.creativity.levels[lvl];
+                  const label = isFoundational ? rubricInfo.labelFoundational : rubricInfo.labelStandard;
+
+                  return (
+                    <div
+                      key={lvl}
+                      onClick={() => updateCurrentAssessment({ creativityLevel: lvl })}
+                      className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                        isLvl
+                          ? "bg-white border-purple-600 shadow-md ring-2 ring-purple-100"
+                          : "bg-white/80 hover:bg-white border-slate-200 hover:border-purple-300"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-black text-slate-900">{label}</span>
+                          <div
+                            className={`size-4 rounded-full border flex items-center justify-center ${
+                              isLvl ? "bg-purple-600 border-purple-600 text-white" : "border-slate-300"
+                            }`}
+                          >
+                            {isLvl && <Check className="size-3" />}
+                          </div>
+                        </div>
+                        <p className="text-[11px] font-bold text-slate-500 mb-1.5">{rubricInfo.shortDesc}</p>
+                        <p className="text-[11px] text-slate-600 leading-relaxed font-medium line-clamp-4">
+                          {rubricInfo.detailedDesc}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
