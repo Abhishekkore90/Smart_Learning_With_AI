@@ -74,8 +74,26 @@ export function HpcDashboard() {
 
   // Filters State
   const academicYearOptions = useMemo(() => getAcademicYearOptions(), []);
-  const [activeStage, setActiveStage] = useState<HpcStageId>("foundational");
-  const [selectedClass, setSelectedClass] = useState<string>("1st");
+  const [selectedClass, setSelectedClass] = useState<string>(() => {
+    return (
+      (typeof window !== "undefined" && localStorage.getItem("hpc_selected_class")) ||
+      "1st"
+    );
+  });
+  const [activeStage, setActiveStage] = useState<HpcStageId>(() => {
+    const savedClass =
+      typeof window !== "undefined" ? localStorage.getItem("hpc_selected_class") : null;
+    if (savedClass) {
+      if (["1st", "2nd"].includes(savedClass)) return "foundational";
+      if (["3rd", "4th", "5th"].includes(savedClass)) return "preparatory";
+      if (["6th", "7th", "8th"].includes(savedClass)) return "middle";
+    }
+    return (
+      (typeof window !== "undefined" &&
+        (localStorage.getItem("hpc_selected_stage") as HpcStageId)) ||
+      "foundational"
+    );
+  });
   const [academicYear, setAcademicYear] = useState<string>(() => getInitialAcademicYear());
   const [selectedMedium, setSelectedMedium] = useState<string>(() => {
     return localStorage.getItem("cce_selected_medium") || "marathi";
@@ -97,11 +115,22 @@ export function HpcDashboard() {
         setAcademicYear(yr);
       }
     };
+    const handleClassEvent = (e: any) => {
+      if (e.detail?.cls && e.detail.cls !== selectedClass) {
+        setSelectedClass(e.detail.cls);
+      }
+      if (e.detail?.stageId && e.detail.stageId !== activeStage) {
+        setActiveStage(e.detail.stageId);
+      }
+    };
     window.addEventListener("hpc_academic_year_changed", handleYearEvent);
+    window.addEventListener("hpc_class_changed", handleClassEvent);
     return () => {
       window.removeEventListener("hpc_academic_year_changed", handleYearEvent);
+      window.removeEventListener("hpc_class_changed", handleClassEvent);
     };
-  }, [academicYear]);
+  }, [academicYear, selectedClass, activeStage]);
+
   const [selectedDivision, setSelectedDivision] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -120,9 +149,23 @@ export function HpcDashboard() {
   // Sync Class with Stage
   const handleStageSelect = (stageId: HpcStageId) => {
     setActiveStage(stageId);
+    localStorage.setItem("hpc_selected_stage", stageId);
     const classes = CLASSES_BY_STAGE[stageId];
     if (classes && !classes.some((c) => c.id === selectedClass)) {
-      setSelectedClass(classes[0].id);
+      const newCls = classes[0].id;
+      setSelectedClass(newCls);
+      localStorage.setItem("hpc_selected_class", newCls);
+      window.dispatchEvent(
+        new CustomEvent("hpc_class_changed", {
+          detail: { cls: newCls, stageId },
+        })
+      );
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("hpc_class_changed", {
+          detail: { cls: selectedClass, stageId },
+        })
+      );
     }
   };
 
@@ -132,6 +175,10 @@ export function HpcDashboard() {
     try {
       const items = await getHpcProgressForClass(selectedClass, academicYear, selectedMedium);
       setProgressItems(items);
+      if (items.length > 0) {
+        localStorage.setItem(`hpc_last_student_${selectedClass}`, items[0].student.id);
+        localStorage.setItem("hpc_last_student_id", items[0].student.id);
+      }
     } catch (err) {
       console.error("Error loading HPC progress:", err);
       toast.error("HPC प्रगती लोड करताना त्रुटी आली.");
@@ -228,24 +275,34 @@ export function HpcDashboard() {
   const completionPercentage = totalStudents > 0 ? Math.round((completedHpc / totalStudents) * 100) : 0;
 
   return (
-    <div className="space-y-7 max-w-[1360px] mx-auto pb-16">
+    <div className="space-y-8 max-w-[1360px] mx-auto pb-16">
       {/* ---------------- 1. THE THREE STAGES SELECTOR (३ शैक्षणिक स्तर) ---------------- */}
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 px-1 gap-3">
-          <div>
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <Layers className="size-5 text-indigo-600" />
-              <span>शैक्षणिक स्तर निवडा (Select Educational Stage)</span>
-            </h2>
-            <p className="text-xs text-slate-500 font-medium">
-              पायाभूत (१ ली-२ री), पूर्वतयारी (३ री-५ वी) किंवा मध्य स्तर (६ वी-८ वी) निवडून वर्ग निवडा
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="size-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/25">
+              <Layers className="size-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                  शैक्षणिक स्तर निवडा (Select Educational Stage)
+                </h2>
+                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200 hidden sm:inline-block">
+                  NEP 2020
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                पायाभूत (१ ली-२ री), पूर्वतयारी (३ री-५ वी) किंवा मध्य स्तर (६ वी-८ वी) निवडून वर्ग निवडा
+              </p>
+            </div>
           </div>
 
           {/* Quick Medium Info */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-1.5 flex items-center gap-2 shadow-2xs">
-              <span className="text-[11px] font-bold text-slate-500 uppercase">माध्यम:</span>
+            <div className="bg-white/90 backdrop-blur-md border border-slate-200/90 rounded-2xl px-4 py-2 flex items-center gap-2.5 shadow-xs">
+              <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">माध्यम:</span>
               <span className="text-xs font-black text-emerald-700">
                 {selectedMedium === "semi" ? "सेमी इंग्रजी" : "मराठी"}
               </span>
@@ -257,70 +314,92 @@ export function HpcDashboard() {
           {HPC_STAGES_INFO.map((stg) => {
             const isSelected = activeStage === stg.id;
             let IconComp = BookOpen;
-            let themeGradient = "from-amber-500 to-orange-500";
-            let activeBorder = "border-amber-500 ring-4 ring-amber-100";
-            let badgeBg = "bg-amber-50 text-amber-800 border-amber-200";
+            let themeGradient = "from-amber-500 via-orange-500 to-amber-600";
+            let activeBorder = "border-amber-400 ring-4 ring-amber-400/20 shadow-xl shadow-amber-500/15";
+            let cardBg = isSelected
+              ? "bg-gradient-to-b from-amber-500/[0.07] via-orange-50/25 to-white"
+              : "bg-white hover:bg-amber-50/[0.15]";
+            let badgeBg = "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs";
+            let classActivePill = "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-md shadow-orange-500/30 scale-105 font-black ring-2 ring-white";
+            let classInactivePill = "bg-slate-100 hover:bg-amber-100/70 text-slate-700 hover:text-amber-950 font-bold border border-slate-200/60";
 
             if (stg.id === "preparatory") {
               IconComp = Compass;
-              themeGradient = "from-emerald-500 to-teal-600";
-              activeBorder = "border-emerald-600 ring-4 ring-emerald-100";
-              badgeBg = "bg-emerald-50 text-emerald-800 border-emerald-200";
+              themeGradient = "from-emerald-500 via-teal-600 to-emerald-700";
+              activeBorder = "border-emerald-500 ring-4 ring-emerald-500/20 shadow-xl shadow-emerald-500/15";
+              cardBg = isSelected
+                ? "bg-gradient-to-b from-emerald-500/[0.07] via-teal-50/25 to-white"
+                : "bg-white hover:bg-emerald-50/[0.15]";
+              badgeBg = "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs";
+              classActivePill = "bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-700 text-white shadow-md shadow-emerald-500/30 scale-105 font-black ring-2 ring-white";
+              classInactivePill = "bg-slate-100 hover:bg-teal-100/70 text-slate-700 hover:text-teal-950 font-bold border border-slate-200/60";
             } else if (stg.id === "middle") {
               IconComp = GraduationCap;
-              themeGradient = "from-purple-600 to-indigo-600";
-              activeBorder = "border-purple-600 ring-4 ring-purple-100";
-              badgeBg = "bg-purple-50 text-purple-800 border-purple-200";
+              themeGradient = "from-indigo-600 via-purple-600 to-indigo-700";
+              activeBorder = "border-indigo-500 ring-4 ring-indigo-500/20 shadow-xl shadow-indigo-500/15";
+              cardBg = isSelected
+                ? "bg-gradient-to-b from-indigo-500/[0.07] via-purple-50/25 to-white"
+                : "bg-white hover:bg-indigo-50/[0.15]";
+              badgeBg = "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs";
+              classActivePill = "bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white shadow-md shadow-indigo-500/30 scale-105 font-black ring-2 ring-white";
+              classInactivePill = "bg-slate-100 hover:bg-indigo-100/70 text-slate-700 hover:text-indigo-950 font-bold border border-slate-200/60";
             }
 
             return (
               <div
                 key={stg.id}
                 onClick={() => handleStageSelect(stg.id)}
-                className={`p-6 rounded-[28px] border-2 transition-all duration-200 cursor-pointer text-left relative overflow-hidden group ${
+                className={`p-6 rounded-[28px] border-2 transition-all duration-300 cursor-pointer text-left relative overflow-hidden group flex flex-col justify-between ${cardBg} ${
                   isSelected
-                    ? `bg-white ${activeBorder} shadow-xl -translate-y-1`
-                    : "bg-white hover:bg-slate-50/80 border-slate-200/90 hover:border-slate-300 shadow-xs hover:shadow-md"
+                    ? `${activeBorder} -translate-y-1.5`
+                    : "border-slate-200/90 hover:border-slate-300 shadow-sm hover:shadow-lg hover:-translate-y-1"
                 }`}
               >
-                {/* Active corner accent bar */}
+                {/* Active Top Accent Bar */}
                 {isSelected && (
                   <div className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r ${themeGradient}`} />
                 )}
 
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`size-13 rounded-2xl flex items-center justify-center font-black transition-all ${
-                        isSelected
-                          ? `bg-gradient-to-tr ${themeGradient} text-white shadow-md shadow-indigo-500/20 scale-105`
-                          : "bg-slate-100 text-slate-700 group-hover:bg-slate-200"
-                      }`}
-                    >
-                      <IconComp className="size-6" />
+                <div>
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3.5">
+                      <div
+                        className={`size-14 rounded-2xl flex items-center justify-center font-black transition-all ${
+                          isSelected
+                            ? `bg-gradient-to-tr ${themeGradient} text-white shadow-lg shadow-indigo-500/25 scale-105 ring-4 ring-white`
+                            : "bg-slate-100 text-slate-700 group-hover:bg-slate-200"
+                        }`}
+                      >
+                        <IconComp className="size-7" />
+                      </div>
+                      <div>
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${badgeBg}`}>
+                          {stg.partLabelMarathi}
+                        </span>
+                        <h3 className="text-base sm:text-lg font-black text-slate-900 mt-1">
+                          {stg.titleMarathi}
+                        </h3>
+                        <p className="text-xs text-slate-500 font-bold">
+                          {stg.classesLabelMarathi}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeBg}`}>
-                        {stg.partLabelMarathi}
+
+                    {isSelected && (
+                      <span className="size-7 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-md shadow-slate-900/30 flex-shrink-0 animate-in fade-in zoom-in">
+                        <Check className="size-4 stroke-[3]" />
                       </span>
-                      <h3 className="text-base font-black text-slate-900 mt-1">{stg.titleMarathi}</h3>
-                      <p className="text-[11px] text-slate-500 font-bold">{stg.classesLabelMarathi}</p>
-                    </div>
+                    )}
                   </div>
 
-                  {isSelected && (
-                    <span className="size-6 rounded-full bg-slate-950 text-white flex items-center justify-center shadow-xs">
-                      <Check className="size-3.5 stroke-[3]" />
-                    </span>
-                  )}
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed mb-4">
+                    {stg.descriptionMarathi}
+                  </p>
                 </div>
 
-                <p className="text-xs text-slate-600 font-medium line-clamp-2 leading-relaxed">
-                  {stg.descriptionMarathi}
-                </p>
-
                 {/* Class Quick Selection Pills */}
-                <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center gap-2 flex-wrap">
+                <div className="pt-4 border-t border-slate-100/90 flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] font-extrabold text-slate-400 mr-1">वर्ग निवडा:</span>
                   {CLASSES_BY_STAGE[stg.id].map((c) => {
                     const isClassActive = activeStage === stg.id && selectedClass === c.id;
                     return (
@@ -339,10 +418,8 @@ export function HpcDashboard() {
                             })
                           );
                         }}
-                        className={`text-xs font-black px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                          isClassActive
-                            ? "bg-slate-950 text-white shadow-md scale-105"
-                            : "bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900"
+                        className={`text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                          isClassActive ? classActivePill : classInactivePill
                         }`}
                       >
                         {c.labelMarathi}
@@ -356,46 +433,62 @@ export function HpcDashboard() {
         </div>
       </div>
 
-      {/* ---------------- 3. HPC 4-STEP WORKFLOW GUIDE (४ सोप्या पायऱ्या) ---------------- */}
-      <div className="bg-gradient-to-r from-indigo-50/60 via-purple-50/40 to-amber-50/40 rounded-3xl p-5 sm:p-6 border border-indigo-100/80 shadow-xs">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div>
-            <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
-              <Zap className="size-4 text-amber-500" />
-              <span>HPC मूल्यांकन कार्यप्रवाह — ४ सोप्या पायऱ्या (Step-by-Step Flow)</span>
-            </h3>
-            <p className="text-xs text-slate-500 font-medium">
-              प्रत्येक विद्यार्थ्याचे HPC प्रगतिपत्रक तयार करण्यासाठी खालील क्रमाने काम पूर्ण करा
-            </p>
+      {/* ---------------- 2. HPC 4-STEP WORKFLOW GUIDE (४ सोप्या पायऱ्या) ---------------- */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-[32px] p-6 sm:p-7 shadow-2xl shadow-indigo-950/25 text-white relative overflow-hidden border border-indigo-900/40">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex items-center justify-between mb-5 flex-wrap gap-3 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shadow-md">
+              <Zap className="size-5 fill-amber-300" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <span>HPC मूल्यांकन कार्यप्रवाह — ४ सोप्या पायऱ्या (Step-by-Step Flow)</span>
+              </h3>
+              <p className="text-xs text-slate-300 font-medium">
+                प्रत्येक विद्यार्थ्याचे HPC प्रगतिपत्रक तयार करण्यासाठी खालील क्रमाने काम पूर्ण करा
+              </p>
+            </div>
           </div>
-          <span className="text-[11px] font-black text-indigo-700 bg-white px-3 py-1 rounded-full border border-indigo-200 shadow-2xs">
-            मार्गदर्शिका
+          <span className="text-[11px] font-black text-indigo-200 bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15 shadow-xs">
+            अधिकृत SCERT आराखडा • NEP 2020
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
           {/* Step 1 */}
-          <Link
-            to="/teacher/hpc/students"
-            className="p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-indigo-400 hover:shadow-md transition-all group flex flex-col justify-between"
+          <div
+            onClick={() => {
+              const firstStudent = progressItems[0]?.student?.id;
+              if (firstStudent) {
+                navigate({ to: `/teacher/hpc/student/${firstStudent}` as any });
+              } else {
+                navigate({ to: "/teacher/hpc/students" as any });
+              }
+            }}
+            className="p-5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 hover:border-indigo-400/60 shadow-lg hover:shadow-indigo-500/15 transition-all duration-200 hover:-translate-y-1 group flex flex-col justify-between backdrop-blur-md cursor-pointer"
           >
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-200 bg-indigo-500/30 border border-indigo-400/30 px-2.5 py-0.5 rounded-full">
                   पायरी १
                 </span>
-                <Users className="size-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+                <div className="size-8 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="size-4" />
+                </div>
               </div>
-              <h4 className="text-xs font-black text-slate-900 mb-1">विद्यार्थी नोंदी (भाग अ)</h4>
-              <p className="text-[11px] text-slate-500 line-clamp-2">
+              <h4 className="text-sm font-black text-white mb-1.5">विद्यार्थी नोंदी (भाग अ)</h4>
+              <p className="text-xs text-slate-300 font-medium line-clamp-2 leading-relaxed">
                 वैयक्तिक माहिती, आवडीनिवडी, पालक नोंद, आधार व उपस्थिती तपशील.
               </p>
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-black text-indigo-600">
+            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-black text-indigo-300 group-hover:text-white transition-colors">
               <span>नोंदी भरा</span>
-              <ChevronRight className="size-3.5 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight className="size-4 group-hover:translate-x-1.5 transition-transform" />
             </div>
-          </Link>
+          </div>
 
           {/* Step 2 */}
           <div
@@ -410,23 +503,25 @@ export function HpcDashboard() {
                 toast.info("कृपया आधी विद्यार्थी निवडा.");
               }
             }}
-            className="p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-emerald-400 hover:shadow-md transition-all group flex flex-col justify-between cursor-pointer"
+            className="p-5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 hover:border-emerald-400/60 shadow-lg hover:shadow-emerald-500/15 transition-all duration-200 hover:-translate-y-1 group flex flex-col justify-between backdrop-blur-md cursor-pointer"
           >
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-200 bg-emerald-500/30 border border-emerald-400/30 px-2.5 py-0.5 rounded-full">
                   पायरी २
                 </span>
-                <BookOpen className="size-4 text-emerald-600 group-hover:scale-110 transition-transform" />
+                <div className="size-8 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <BookOpen className="size-4" />
+                </div>
               </div>
-              <h4 className="text-xs font-black text-slate-900 mb-1">सत्रनिहाय मूल्यांकन (भाग ब)</h4>
-              <p className="text-[11px] text-slate-500 line-clamp-2">
+              <h4 className="text-sm font-black text-white mb-1.5">सत्रनिहाय मूल्यांकन (भाग ब)</h4>
+              <p className="text-xs text-slate-300 font-medium line-clamp-2 leading-relaxed">
                 ६ विकास क्षेत्रे, उपक्रम बँक, ५ प्रश्न व ३-स्तरीय कामगिरी रूब्रिक्स.
               </p>
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-black text-emerald-600">
+            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-black text-emerald-300 group-hover:text-white transition-colors">
               <span>मूल्यांकन करा</span>
-              <ChevronRight className="size-3.5 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight className="size-4 group-hover:translate-x-1.5 transition-transform" />
             </div>
           </div>
 
@@ -443,78 +538,88 @@ export function HpcDashboard() {
                 toast.info("कृपया आधी विद्यार्थी निवडा.");
               }
             }}
-            className="p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-purple-400 hover:shadow-md transition-all group flex flex-col justify-between cursor-pointer"
+            className="p-5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 hover:border-purple-400/60 shadow-lg hover:shadow-purple-500/15 transition-all duration-200 hover:-translate-y-1 group flex flex-col justify-between backdrop-blur-md cursor-pointer"
           >
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-purple-200 bg-purple-500/30 border border-purple-400/30 px-2.5 py-0.5 rounded-full">
                   पायरी ३
                 </span>
-                <Award className="size-4 text-purple-600 group-hover:scale-110 transition-transform" />
+                <div className="size-8 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Award className="size-4" />
+                </div>
               </div>
-              <h4 className="text-xs font-black text-slate-900 mb-1">वार्षिक गोषवारा (भाग क)</h4>
-              <p className="text-[11px] text-slate-500 line-clamp-2">
+              <h4 className="text-sm font-black text-white mb-1.5">वार्षिक गोषवारा (भाग क)</h4>
+              <p className="text-xs text-slate-300 font-medium line-clamp-2 leading-relaxed">
                 वार्षिक सर्वंकष प्रगती गोषवारा, शिक्षक व पालक अंतिम अभिप्राय.
               </p>
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-black text-purple-600">
+            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-black text-purple-300 group-hover:text-white transition-colors">
               <span>गोषवारा भरा</span>
-              <ChevronRight className="size-3.5 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight className="size-4 group-hover:translate-x-1.5 transition-transform" />
             </div>
           </div>
 
           {/* Step 4 */}
           <Link
             to="/teacher/hpc/reports"
-            className="p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-amber-400 hover:shadow-md transition-all group flex flex-col justify-between"
+            className="p-5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 hover:border-amber-400/60 shadow-lg hover:shadow-amber-500/15 transition-all duration-200 hover:-translate-y-1 group flex flex-col justify-between backdrop-blur-md"
           >
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-200 bg-amber-500/30 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
                   पायरी ४
                 </span>
-                <FileText className="size-4 text-amber-600 group-hover:scale-110 transition-transform" />
+                <div className="size-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="size-4" />
+                </div>
               </div>
-              <h4 className="text-xs font-black text-slate-900 mb-1">HPC अहवाल व ३६०° PDF</h4>
-              <p className="text-[11px] text-slate-500 line-clamp-2">
+              <h4 className="text-sm font-black text-white mb-1.5">HPC अहवाल व ३६०° PDF</h4>
+              <p className="text-xs text-slate-300 font-medium line-clamp-2 leading-relaxed">
                 अधिकृत SCERT मानकानुसार रंगीत व सुबक ३६०° प्रगती अहवाल डाऊनलोड.
               </p>
             </div>
-            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-black text-amber-600">
+            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-black text-amber-300 group-hover:text-white transition-colors">
               <span>PDF डाऊनलोड</span>
-              <ChevronRight className="size-3.5 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight className="size-4 group-hover:translate-x-1.5 transition-transform" />
             </div>
           </Link>
         </div>
       </div>
-
-      {/* ---------------- 4. DASHBOARD METRICS STRIP WITH PROGRESS BAR ---------------- */}
-      <div className="space-y-3">
+      {/* ---------------- 3. DASHBOARD METRICS STRIP WITH PROGRESS BAR ---------------- */}
+      <div className="space-y-4">
         {/* Class Progress Header Bar */}
-        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-black">
-              <TrendingUp className="size-5" />
+        <div className="bg-white/90 backdrop-blur-md p-5 sm:p-6 rounded-[28px] border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative overflow-hidden">
+          <div className="absolute top-0 left-0 bottom-0 w-2 bg-gradient-to-b from-indigo-500 to-emerald-500" />
+
+          <div className="flex items-center gap-4 pl-1">
+            <div className="size-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-emerald-500 text-white flex items-center justify-center font-black shadow-md shadow-indigo-500/20">
+              <TrendingUp className="size-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-black text-slate-900">
-                  इयत्ता {CLASSES_BY_STAGE[activeStage]?.find((c) => c.id === selectedClass)?.labelMarathi} — वर्ग प्रगती
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="text-base sm:text-lg font-black text-slate-900">
+                  इयत्ता {CLASSES_BY_STAGE[activeStage]?.find((c) => c.id === selectedClass)?.labelMarathi} — वर्ग मूल्यमापन प्रगती
                 </span>
-                <span className="text-xs font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  {completionPercentage}% पूर्ण
+                <span className="text-xs font-black px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-emerald-600 animate-ping" />
+                  <span>{completionPercentage}% पूर्ण</span>
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium">
-                {totalStudents} पैकी {completedHpc} विद्यार्थ्यांचे HPC कार्ड पूर्ण झाले आहे.
+              <p className="text-xs text-slate-500 font-semibold mt-1">
+                एकूण <b className="text-slate-800">{totalStudents}</b> पैकी <b className="text-emerald-700">{completedHpc}</b> विद्यार्थ्यांचे HPC कार्ड पूर्ण झाले आहे.
               </p>
             </div>
           </div>
 
-          <div className="w-full sm:w-64">
-            <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+          <div className="w-full sm:w-72 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between text-xs font-black">
+              <span className="text-slate-500 uppercase tracking-wider text-[10px]">प्रगती दर (Rate)</span>
+              <span className="text-indigo-700 font-black">{completionPercentage}%</span>
+            </div>
+            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/80 shadow-inner">
               <div
-                className="h-full bg-gradient-to-r from-indigo-600 to-emerald-500 rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-500 rounded-full transition-all duration-700 shadow-sm"
                 style={{ width: `${completionPercentage}%` }}
               />
             </div>
@@ -522,89 +627,108 @@ export function HpcDashboard() {
         </div>
 
         {/* 6 Metric Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
           {/* Total Students */}
-          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden group hover:border-slate-300 transition-all">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" />
-            <div className="flex items-center justify-between mb-2">
+          <div className="bg-white/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all relative overflow-hidden group">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 to-indigo-600" />
+            <div className="flex items-center justify-between mb-2.5">
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">एकूण विद्यार्थी</p>
-              <Users className="size-4 text-blue-500" />
+              <div className="size-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Users className="size-4" />
+              </div>
             </div>
-            <p className="text-2xl font-black text-slate-900">{totalStudents}</p>
-            <span className="text-[10px] font-bold text-slate-500">इयत्ता {selectedClass}</span>
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{totalStudents}</p>
+            <span className="text-[10px] font-bold text-slate-500 mt-1 block">इयत्ता {selectedClass}</span>
           </div>
 
           {/* Completed HPC */}
-          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden group hover:border-emerald-300 transition-all">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500" />
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wider">पूर्ण HPC कार्ड</p>
-              <CheckCircle2 className="size-4 text-emerald-500" />
+          <div className="bg-white/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-emerald-200 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all relative overflow-hidden group bg-gradient-to-b from-emerald-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500" />
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="text-[10px] font-black text-emerald-700 uppercase tracking-wider">पूर्ण HPC कार्ड</p>
+              <div className="size-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <CheckCircle2 className="size-4 stroke-[2.5]" />
+              </div>
             </div>
-            <p className="text-2xl font-black text-emerald-700">{completedHpc}</p>
-            <span className="text-[10px] font-bold text-emerald-600">
+            <p className="text-2xl sm:text-3xl font-black text-emerald-700 tracking-tight">{completedHpc}</p>
+            <span className="text-[10px] font-black text-emerald-600 mt-1 block">
               {completionPercentage}% पूर्ण
             </span>
           </div>
 
           {/* Pending HPC */}
-          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden group hover:border-amber-300 transition-all">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-black text-amber-600 uppercase tracking-wider">अपूर्ण (Pending)</p>
-              <Clock className="size-4 text-amber-500" />
+          <div className="bg-white/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-amber-200 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all relative overflow-hidden group bg-gradient-to-b from-amber-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 to-orange-500" />
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="text-[10px] font-black text-amber-700 uppercase tracking-wider">अपूर्ण (Pending)</p>
+              <div className="size-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Clock className="size-4" />
+              </div>
             </div>
-            <p className="text-2xl font-black text-amber-700">{pendingHpc}</p>
-            <span className="text-[10px] font-bold text-amber-600">मूल्यांकन बाकी</span>
+            <p className="text-2xl sm:text-3xl font-black text-amber-700 tracking-tight">{pendingHpc}</p>
+            <span className="text-[10px] font-bold text-amber-600 mt-1 block">मूल्यांकन बाकी</span>
           </div>
 
           {/* Session 1 Completed */}
-          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden group hover:border-indigo-300 transition-all">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-500" />
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-black text-indigo-600 uppercase tracking-wider">सत्र १ मूल्यांकन</p>
-              <BookOpen className="size-4 text-indigo-500" />
+          <div className="bg-white/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-indigo-200 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all relative overflow-hidden group bg-gradient-to-b from-indigo-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 to-blue-600" />
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="text-[10px] font-black text-indigo-700 uppercase tracking-wider">सत्र १ मूल्यांकन</p>
+              <div className="size-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <BookOpen className="size-4" />
+              </div>
             </div>
-            <p className="text-2xl font-black text-indigo-700">{session1Count}</p>
-            <span className="text-[10px] font-bold text-slate-500">{session1Count} / {totalStudents}</span>
+            <p className="text-2xl sm:text-3xl font-black text-indigo-700 tracking-tight">{session1Count}</p>
+            <span className="text-[10px] font-bold text-indigo-600 mt-1 block">{session1Count} / {totalStudents} पूर्ण</span>
           </div>
 
           {/* Session 2 Completed */}
-          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden group hover:border-purple-300 transition-all">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-purple-500" />
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-black text-purple-600 uppercase tracking-wider">सत्र २ मूल्यांकन</p>
-              <Layers className="size-4 text-purple-500" />
+          <div className="bg-white/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-purple-200 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all relative overflow-hidden group bg-gradient-to-b from-purple-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-purple-500 to-pink-500" />
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="text-[10px] font-black text-purple-700 uppercase tracking-wider">सत्र २ मूल्यांकन</p>
+              <div className="size-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Layers className="size-4" />
+              </div>
             </div>
-            <p className="text-2xl font-black text-purple-700">{session2Count}</p>
-            <span className="text-[10px] font-bold text-slate-500">{session2Count} / {totalStudents}</span>
+            <p className="text-2xl sm:text-3xl font-black text-purple-700 tracking-tight">{session2Count}</p>
+            <span className="text-[10px] font-bold text-purple-600 mt-1 block">{session2Count} / {totalStudents} पूर्ण</span>
           </div>
 
           {/* Annual Summary Completed */}
-          <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-xs relative overflow-hidden group hover:border-rose-300 transition-all">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500" />
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-black text-rose-600 uppercase tracking-wider">वार्षिक गोषवारा</p>
-              <Award className="size-4 text-rose-500" />
+          <div className="bg-white/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-rose-200 shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all relative overflow-hidden group bg-gradient-to-b from-rose-50/20 to-white">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-500 to-pink-600" />
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="text-[10px] font-black text-rose-700 uppercase tracking-wider">वार्षिक गोषवारा</p>
+              <div className="size-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Award className="size-4" />
+              </div>
             </div>
-            <p className="text-2xl font-black text-rose-700">{annualCount}</p>
-            <span className="text-[10px] font-bold text-slate-500">{annualCount} / {totalStudents}</span>
+            <p className="text-2xl sm:text-3xl font-black text-rose-700 tracking-tight">{annualCount}</p>
+            <span className="text-[10px] font-bold text-rose-600 mt-1 block">{annualCount} / {totalStudents} पूर्ण</span>
           </div>
         </div>
       </div>
 
-      {/* ---------------- 5. STUDENT PROGRESS TABLE WITH FILTERS & ACTIONS ---------------- */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* ---------------- 4. STUDENT PROGRESS TABLE WITH FILTERS & ACTIONS ---------------- */}
+      <div className="bg-white/95 backdrop-blur-md rounded-[32px] border border-slate-200/90 shadow-md overflow-hidden">
         {/* Table Filter Bar */}
-        <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-50/90 via-white to-indigo-50/30">
           <div className="flex items-center gap-3 flex-wrap">
-            <h3 className="text-base font-black text-slate-900">
-              विद्यार्थी HPC प्रगती यादी — {CLASSES_BY_STAGE[activeStage]?.find((c) => c.id === selectedClass)?.labelMarathi}
-            </h3>
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                विद्यार्थी HPC प्रगती यादी — {CLASSES_BY_STAGE[activeStage]?.find((c) => c.id === selectedClass)?.labelMarathi}
+              </h3>
+              <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                प्रत्येक विद्यार्थ्याचे सत्रनिहाय व वार्षिक मूल्यमापन तपशील
+              </p>
+            </div>
+
+            <div className="h-6 w-px bg-slate-200 hidden lg:block mx-1" />
 
             {/* Division Selector */}
-            <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700">
-              <span>तुकडी:</span>
+            <div className="flex items-center gap-1.5 bg-slate-100/90 hover:bg-slate-200/80 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 border border-slate-200/60 shadow-2xs transition-colors">
+              <span className="text-slate-500 font-black">तुकडी:</span>
               <select
                 value={selectedDivision}
                 onChange={(e) => setSelectedDivision(e.target.value)}
@@ -619,8 +743,8 @@ export function HpcDashboard() {
             </div>
 
             {/* Status Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700">
-              <span>स्थिती:</span>
+            <div className="flex items-center gap-1.5 bg-slate-100/90 hover:bg-slate-200/80 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 border border-slate-200/60 shadow-2xs transition-colors">
+              <span className="text-slate-500 font-black">स्थिती:</span>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -634,7 +758,7 @@ export function HpcDashboard() {
 
             <button
               onClick={loadProgress}
-              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+              className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer shadow-2xs"
               title="माहिती रिफ्रेश करा"
             >
               <RefreshCw className="size-3.5" />
@@ -642,14 +766,14 @@ export function HpcDashboard() {
           </div>
 
           {/* Search Box */}
-          <div className="relative w-full md:w-72">
-            <Search className="size-4 text-slate-400 absolute left-3.5 top-3" />
+          <div className="relative w-full md:w-80">
+            <Search className="size-4 text-slate-400 absolute left-3.5 top-3.5" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="नाव किंवा हजेरी क्र. ने शोधा..."
-              className="w-full pl-10 pr-4 py-2 text-xs font-bold rounded-2xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-slate-50/50"
+              className="w-full pl-10 pr-4 py-2.5 text-xs font-bold rounded-2xl border border-slate-200/90 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white shadow-2xs transition-all"
             />
           </div>
         </div>
@@ -672,15 +796,15 @@ export function HpcDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold uppercase tracking-wider text-[11px]">
-                  <th className="p-4 w-16 text-center">हजेरी क्र.</th>
+                <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-extrabold uppercase tracking-wider text-[11px]">
+                  <th className="py-4 px-2 w-12 text-center">हजेरी क्र.</th>
                   <th className="p-4">विद्यार्थ्याचे नाव</th>
                   <th className="p-4 text-center">भाग अ (Profile)</th>
                   <th className="p-4 text-center">सत्र १ (Session 1)</th>
                   <th className="p-4 text-center">सत्र २ (Session 2)</th>
                   <th className="p-4 text-center">भाग क (वार्षिक)</th>
                   <th className="p-4 text-center">एकूण स्थिती</th>
-                  <th className="p-4 text-right">कृती (Actions)</th>
+                  <th className="py-4 px-3 text-center min-w-[270px]">कृती (Actions)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -688,11 +812,15 @@ export function HpcDashboard() {
                   const s = item.student;
 
                   return (
-                    <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="p-4 text-center font-black text-slate-800">{s.rollNo}</td>
+                    <tr key={s.id} className="hover:bg-indigo-50/30 transition-colors">
+                      <td className="py-4 px-2 text-center font-black text-slate-800">
+                        <span className="inline-block size-7 rounded-lg bg-slate-100 font-black text-slate-800 leading-7 text-center text-xs">
+                          {s.rollNo}
+                        </span>
+                      </td>
                       <td className="p-4 font-bold text-slate-900">
                         <div className="flex items-center gap-3">
-                          <div className="size-9 rounded-xl bg-slate-100 font-black text-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                          <div className="size-10 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 font-black text-white flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs">
                             {s.photoUrl ? (
                               <img src={s.photoUrl} alt="" className="w-full h-full object-cover" />
                             ) : (
@@ -701,7 +829,7 @@ export function HpcDashboard() {
                           </div>
                           <div>
                             <span className="block font-black text-slate-900 text-sm">{s.fullName || s.name}</span>
-                            <span className="text-[10px] text-slate-500">
+                            <span className="text-[10px] text-slate-500 font-semibold">
                               तुकडी: {s.division || "अ"} | सरल: {s.saralId || "-"}
                             </span>
                           </div>
@@ -713,9 +841,9 @@ export function HpcDashboard() {
                         <Link
                           to="/teacher/hpc/student/$studentId"
                           params={{ studentId: s.id }}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black cursor-pointer ${
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-black transition-all cursor-pointer shadow-2xs ${
                             item.profileCompleted
-                              ? "bg-emerald-100 text-emerald-800"
+                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
                               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                           }`}
                         >
@@ -729,9 +857,9 @@ export function HpcDashboard() {
                           to="/teacher/hpc/assessment/$studentId"
                           params={{ studentId: s.id }}
                           search={{ session: "session1" } as any}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black cursor-pointer ${
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-black transition-all cursor-pointer shadow-2xs ${
                             item.session1Completed
-                              ? "bg-indigo-100 text-indigo-800"
+                              ? "bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
                               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                           }`}
                         >
@@ -745,9 +873,9 @@ export function HpcDashboard() {
                           to="/teacher/hpc/assessment/$studentId"
                           params={{ studentId: s.id }}
                           search={{ session: "session2" } as any}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black cursor-pointer ${
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-black transition-all cursor-pointer shadow-2xs ${
                             item.session2Completed
-                              ? "bg-purple-100 text-purple-800"
+                              ? "bg-purple-100 text-purple-800 hover:bg-purple-200"
                               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                           }`}
                         >
@@ -761,9 +889,9 @@ export function HpcDashboard() {
                           to="/teacher/hpc/assessment/$studentId"
                           params={{ studentId: s.id }}
                           search={{ tab: "annual" } as any}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black cursor-pointer ${
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-black transition-all cursor-pointer shadow-2xs ${
                             item.annualCompleted
-                              ? "bg-amber-100 text-amber-800"
+                              ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
                               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                           }`}
                         >
@@ -774,39 +902,41 @@ export function HpcDashboard() {
                       {/* Overall Status */}
                       <td className="p-4 text-center">
                         <span
-                          className={`inline-block px-3 py-1 rounded-full text-[11px] font-black ${
+                          className={`inline-block px-3 py-1.5 rounded-full text-[11px] font-black shadow-2xs ${
                             item.overallStatus === "completed"
-                              ? "bg-emerald-600 text-white shadow-xs"
+                              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/20"
                               : item.overallStatus === "in_progress"
-                              ? "bg-amber-500 text-white"
+                              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-orange-500/20"
                               : "bg-slate-200 text-slate-700"
                           }`}
                         >
                           {item.overallStatus === "completed"
-                            ? "पूर्ण (Complete)"
+                            ? "पूर्ण (Complete) ✓"
                             : item.overallStatus === "in_progress"
-                            ? "प्रगतीपथावर"
+                            ? "प्रगतीपथावर ⏳"
                             : "अपूर्ण"}
                         </span>
                       </td>
 
                       {/* Action Buttons */}
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-3 px-3 text-center whitespace-nowrap min-w-[270px]">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => handleOpenPreview(s.id)}
-                            className="p-2 rounded-xl bg-slate-100 hover:bg-indigo-600 text-slate-700 hover:text-white transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white font-bold text-xs transition-all cursor-pointer shadow-2xs border border-indigo-200/80 hover:border-indigo-600"
                             title="HPC कार्ड पहा व डाऊनलोड करा"
                           >
-                            <Eye className="size-4" />
+                            <Eye className="size-3.5" />
+                            <span>View HPC Card</span>
                           </button>
                           <Link
                             to="/teacher/hpc/assessment/$studentId"
                             params={{ studentId: s.id }}
-                            className="p-2 rounded-xl bg-slate-100 hover:bg-emerald-600 text-slate-700 hover:text-white transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white font-bold text-xs transition-all cursor-pointer shadow-2xs border border-emerald-200/80 hover:border-emerald-600"
                             title="मूल्यांकन संपादित करा"
                           >
-                            <Edit className="size-4" />
+                            <Edit className="size-3.5" />
+                            <span>Edit HPC Card</span>
                           </Link>
                         </div>
                       </td>

@@ -23,12 +23,6 @@ function TeacherHpcStudentProfilePage() {
   const academicYear = localStorage.getItem("cce_academic_year") || getCurrentAcademicYear();
 
   useEffect(() => {
-    if (studentId) {
-      localStorage.setItem("hpc_last_student_id", studentId);
-    }
-  }, [studentId]);
-
-  useEffect(() => {
     let isMounted = true;
     async function load() {
       setLoading(true);
@@ -36,6 +30,22 @@ function TeacherHpcStudentProfilePage() {
       if (isMounted) {
         setStudent(st);
         setLoading(false);
+        if (st) {
+          const cls = st.class || "1st";
+          let stg: HpcStageId = "foundational";
+          if (["3rd", "4th", "5th"].includes(cls)) stg = "preparatory";
+          else if (["6th", "7th", "8th"].includes(cls)) stg = "middle";
+
+          localStorage.setItem("hpc_last_student_id", studentId);
+          localStorage.setItem(`hpc_last_student_${cls}`, studentId);
+          localStorage.setItem("hpc_selected_class", cls);
+          localStorage.setItem("hpc_selected_stage", stg);
+          window.dispatchEvent(
+            new CustomEvent("hpc_class_changed", {
+              detail: { cls, stageId: stg },
+            })
+          );
+        }
       }
     }
     load();

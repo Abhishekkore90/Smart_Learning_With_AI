@@ -91,14 +91,18 @@ export function HpcNav({
   const stage =
     HPC_STAGES_INFO.find((s) => s.id === currentStageId) || HPC_STAGES_INFO[0];
 
-  // Extract active studentId from URL if present, or fallback to localStorage
-  const studentMatch = path.match(/\/teacher\/hpc\/(?:assessment|student)\/([^/?#]+)/);
-  const activeStudentId =
-    studentMatch && studentMatch[1]
-      ? studentMatch[1]
-      : typeof window !== "undefined"
-      ? localStorage.getItem("hpc_last_student_id")
+  // Extract active studentId strictly matching currentClass
+  const classSpecificStudent =
+    typeof window !== "undefined"
+      ? localStorage.getItem(`hpc_last_student_${currentClass}`)
       : null;
+
+  const studentMatch = path.match(/\/teacher\/hpc\/(?:assessment|student)\/([^/?#]+)/);
+  const urlStudentId = studentMatch && studentMatch[1] ? studentMatch[1] : null;
+
+  // When on a student/assessment page, urlStudentId is active.
+  // When coming from dashboard or nav tabs, strictly use classSpecificStudent so we never open wrong class!
+  const activeStudentId = urlStudentId || classSpecificStudent;
 
   const currentSearch = (location.search || {}) as Record<string, any>;
   const currentTab = currentSearch?.tab || "assessment";
@@ -126,7 +130,7 @@ export function HpcNav({
     {
       id: "part_b",
       to: activeStudentId ? `/teacher/hpc/assessment/${activeStudentId}` : "/teacher/hpc/students",
-      search: activeStudentId ? { tab: "assessment" } : undefined,
+      search: activeStudentId ? { tab: "assessment", session: "session1" } : undefined,
       label: "भाग ब: सत्रनिहाय मूल्यमापन",
       subLabel: "Part B Assessment",
       icon: BookOpen,

@@ -17,7 +17,7 @@ function TeacherHpcLayout() {
     location.pathname === "/teacher/hpc" || location.pathname === "/teacher/hpc/";
 
   return (
-    <div className="min-h-screen bg-slate-50/70 font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/25 to-purple-50/20 font-sans selection:bg-indigo-600 selection:text-white">
       <TeacherHeader />
       <TeacherSidebar />
 

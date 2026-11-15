@@ -41,6 +41,7 @@ import {
 import {
   getActivitiesForCompetency,
   HpcActivityItem,
+  HpcCompetencyActivitiesData,
 } from "../data/hpcActivitiesBank";
 import {
   HPC_CORE_RUBRICS,
@@ -51,6 +52,7 @@ import {
   saveHpcSessionAssessment,
   getHpcStudentById,
   StudentInfoSummary,
+  getHpcActivityBankForCompetency,
 } from "../services/hpcService";
 
 const HELP_NEEDED_OPTIONS = [
@@ -295,10 +297,33 @@ export function HpcAssessmentForm({
     return "";
   }, [selectedBankCompCode, currentAssessment.selectedCompetencyIds, availableCompetencies]);
 
-  const bankData = useMemo(() => {
-    if (!activeBankCompCode) return undefined;
-    return getActivitiesForCompetency(activeBankCompCode);
-  }, [activeBankCompCode]);
+  const [bankData, setBankData] = useState<HpcCompetencyActivitiesData | undefined>(() => {
+    return activeBankCompCode ? getActivitiesForCompetency(activeBankCompCode) : undefined;
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!activeBankCompCode) {
+      setBankData(undefined);
+      return;
+    }
+    // Set static as immediate default
+    const staticData = getActivitiesForCompetency(activeBankCompCode);
+    setBankData(staticData);
+
+    // Fetch dynamic activities from Firestore if available
+    getHpcActivityBankForCompetency(activeBankCompCode, stageId)
+      .then((data) => {
+        if (isMounted && data) {
+          setBankData(data);
+        }
+      })
+      .catch((err) => console.warn(err));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeBankCompCode, stageId]);
 
   const handleSelectBankActivity = (act: HpcActivityItem) => {
     updateCurrentAssessment({

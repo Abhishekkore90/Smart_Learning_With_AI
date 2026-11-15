@@ -5,16 +5,24 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  deleteDoc,
   query,
   where,
   onSnapshot,
+  writeBatch,
 } from "firebase/firestore";
 import {
   HpcStudentProfile,
   HpcSessionAssessment,
   HpcAnnualSummary,
   HpcStageId,
+  HpcCurricularGoal,
+  HpcCompetency,
+  HpcDynamicActivity,
+  HpcDynamicRubric,
+  HpcDynamicRemark,
 } from "../types/hpc";
+import { HPC_ACTIVITIES_BANK, HpcCompetencyActivitiesData, HpcActivityItem } from "../data/hpcActivitiesBank";
 // @ts-ignore
 import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 // @ts-ignore
@@ -40,6 +48,14 @@ export interface StudentInfoSummary {
   parentEducation?: string;
   teacherName?: string;
   schoolName?: string;
+  grNo?: string;
+  age?: string | number;
+  bloodGroup?: string;
+  caste?: string;
+  category?: string;
+  fatherName?: string;
+  motherName?: string;
+  phone?: string;
 }
 
 export interface HpcStudentProgressItem {
@@ -449,4 +465,383 @@ export async function getHpcProgressForClass(
       overallStatus,
     };
   });
+}
+
+// ===========================================================================
+// DYNAMIC HPC ACTIVITIES & 5 QUESTIONS (Admin & Excel Uploaded)
+// ===========================================================================
+
+/**
+ * Fetch dynamic activities from Firestore 'hpc_activities' collection
+ */
+export async function getHpcDynamicActivities(
+  competencyCode?: string,
+  stageId?: HpcStageId
+): Promise<HpcDynamicActivity[]> {
+  try {
+    const colRef = collection(db, "hpc_activities");
+    let q = query(colRef);
+    if (competencyCode) {
+      q = query(colRef, where("competencyCode", "==", competencyCode));
+    }
+    const snap = await getDocs(q);
+    const list: HpcDynamicActivity[] = [];
+    snap.forEach((d) => {
+      const data = d.data() as HpcDynamicActivity;
+      if (!stageId || data.stageId === stageId) {
+        list.push({ ...data, id: d.id });
+      }
+    });
+
+    return list.sort((a, b) => (a.activityNumber || 1) - (b.activityNumber || 1));
+  } catch (err) {
+    console.error("Error fetching dynamic HPC activities:", err);
+    return [];
+  }
+}
+
+/**
+ * Get unified activity bank data for a competency.
+ * Priority: Dynamic Firestore activities > Hardcoded HPC_ACTIVITIES_BANK
+ */
+export async function getHpcActivityBankForCompetency(
+  competencyCode: string,
+  stageId?: HpcStageId
+): Promise<HpcCompetencyActivitiesData | undefined> {
+  try {
+    const dynamicList = await getHpcDynamicActivities(competencyCode, stageId);
+    if (dynamicList && dynamicList.length > 0) {
+      const first = dynamicList[0];
+      const activities: HpcActivityItem[] = dynamicList.map((d, index) => ({
+        activityNumber: d.activityNumber || index + 1,
+        title: d.activityTitle,
+        description: d.activityDescription,
+        rawText: `${d.activityNumber || index + 1}. ${d.activityTitle}\n\nकृती: ${d.activityDescription}`,
+        questions: d.questions && d.questions.length > 0 ? d.questions : [],
+      }));
+
+      const teacherRemarks = dynamicList
+        .map((d) => d.teacherFeedbackSample)
+        .filter((r): r is string => Boolean(r && r.trim()));
+
+      const parentRemarks = dynamicList
+        .map((d) => d.parentFeedbackSample)
+        .filter((r): r is string => Boolean(r && r.trim()));
+
+      return {
+        code: competencyCode,
+        description: first.competencyTitle || competencyCode,
+        activities,
+        teacherRemarks: teacherRemarks.length > 0 ? teacherRemarks : [
+          "या कृतीत विद्यार्थ्याची कामगिरी समाधानकारक व उत्साहवर्धक आहे.",
+          "विद्यार्थी आत्मविश्वासाने सहभाग घेतो व विचारलेल्या प्रश्नांची योग्य उत्तरे देतो."
+        ],
+        parentRemarks: parentRemarks.length > 0 ? parentRemarks : [
+          "आमच्या निरीक्षणानुसार पाल्याला या उपक्रमात विशेष रुची आहे.",
+          "घरीही विद्यार्थी या उपक्रमातील बाबी आनंदाने सांगतो."
+        ],
+      };
+    }
+  } catch (err) {
+    console.warn("Could not query dynamic activities, falling back to static bank:", err);
+  }
+
+  // Fallback to static bank
+  return HPC_ACTIVITIES_BANK[competencyCode];
+}
+
+/**
+ * Save or update a dynamic HPC activity in Firestore
+ */
+export async function saveHpcDynamicActivity(
+  activity: Partial<HpcDynamicActivity> & { competencyCode: string; activityTitle: string }
+): Promise<string> {
+  const id = activity.id || `act_${activity.competencyCode}_${Date.now()}`;
+  const now = new Date().toISOString();
+  const payload: HpcDynamicActivity = {
+    id,
+    stageId: activity.stageId || "preparatory",
+    subjectOrArea: activity.subjectOrArea || "",
+    goalCode: activity.goalCode || "",
+    goalTitle: activity.goalTitle || "",
+    competencyCode: activity.competencyCode,
+    competencyTitle: activity.competencyTitle || "",
+    activityNumber: activity.activityNumber || 1,
+    activityTitle: activity.activityTitle,
+    activityDescription: activity.activityDescription || "",
+    questions: activity.questions || [],
+    teacherFeedbackSample: activity.teacherFeedbackSample || "",
+    parentFeedbackSample: activity.parentFeedbackSample || "",
+    updatedAt: now,
+    createdAt: activity.createdAt || now,
+  };
+
+  await setDoc(doc(db, "hpc_activities", id), payload);
+  return id;
+}
+
+/**
+ * Delete a dynamic HPC activity from Firestore
+ */
+export async function deleteHpcDynamicActivity(id: string): Promise<boolean> {
+  await deleteDoc(doc(db, "hpc_activities", id));
+  return true;
+}
+
+/**
+ * Delete all dynamic HPC activities (optionally filtered by stage)
+ */
+export async function deleteAllHpcActivities(stageId?: HpcStageId): Promise<number> {
+  const colRef = collection(db, "hpc_activities");
+  const snap = await getDocs(colRef);
+  let count = 0;
+  const docsToDelete = snap.docs.filter((d) => {
+    if (!stageId) return true;
+    return d.data().stageId === stageId;
+  });
+
+  const chunkSize = 400;
+  for (let i = 0; i < docsToDelete.length; i += chunkSize) {
+    const chunk = docsToDelete.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const d of chunk) {
+      batch.delete(d.ref);
+      count++;
+    }
+    await batch.commit();
+  }
+  return count;
+}
+
+/**
+ * Delete all dynamic HPC remarks
+ */
+export async function deleteAllHpcRemarks(): Promise<number> {
+  const colRef = collection(db, "hpc_remarks_bank");
+  const snap = await getDocs(colRef);
+  let count = 0;
+  const chunkSize = 400;
+  for (let i = 0; i < snap.docs.length; i += chunkSize) {
+    const chunk = snap.docs.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const d of chunk) {
+      batch.delete(d.ref);
+      count++;
+    }
+    await batch.commit();
+  }
+  return count;
+}
+
+/**
+ * Reset entire HPC master database (Activities, Remarks, Rubrics)
+ */
+export async function resetEntireHpcDatabase(): Promise<{
+  activitiesDeleted: number;
+  remarksDeleted: number;
+  rubricsDeleted: number;
+}> {
+  const actCount = await deleteAllHpcActivities();
+  const remCount = await deleteAllHpcRemarks();
+
+  const rubSnap = await getDocs(collection(db, "hpc_rubrics"));
+  let rubCount = 0;
+  const chunkSize = 400;
+  for (let i = 0; i < rubSnap.docs.length; i += chunkSize) {
+    const chunk = rubSnap.docs.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const d of chunk) {
+      batch.delete(d.ref);
+      rubCount++;
+    }
+    await batch.commit();
+  }
+
+  return {
+    activitiesDeleted: actCount,
+    remarksDeleted: remCount,
+    rubricsDeleted: rubCount,
+  };
+}
+
+/**
+ * Bulk upload activities in batches of 400
+ */
+export async function bulkUploadHpcActivities(
+  activities: HpcDynamicActivity[],
+  onProgress?: (processed: number, total: number) => void
+): Promise<number> {
+  let count = 0;
+  const chunkSize = 400;
+  for (let i = 0; i < activities.length; i += chunkSize) {
+    const chunk = activities.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const act of chunk) {
+      const docRef = doc(db, "hpc_activities", act.id);
+      batch.set(docRef, act, { merge: true });
+      count++;
+    }
+    await batch.commit();
+    if (onProgress) {
+      onProgress(Math.min(i + chunkSize, activities.length), activities.length);
+    }
+  }
+  return count;
+}
+
+// ===========================================================================
+// DYNAMIC HPC YEAR-END REMARKS (शिक्षकांचा अंतिम सारांश शेरे बँक)
+// ===========================================================================
+
+export async function getHpcDynamicRemarks(
+  subjectOrArea?: string,
+  level?: string
+): Promise<HpcDynamicRemark[]> {
+  try {
+    const colRef = collection(db, "hpc_remarks_bank");
+    let q = query(colRef);
+    if (subjectOrArea) {
+      q = query(colRef, where("subjectOrArea", "==", subjectOrArea));
+    }
+    const snap = await getDocs(q);
+    const list: HpcDynamicRemark[] = [];
+    snap.forEach((d) => {
+      const data = d.data() as HpcDynamicRemark;
+      if (!level || data.level === level) {
+        list.push({ ...data, id: d.id });
+      }
+    });
+    return list;
+  } catch (err) {
+    console.error("Error fetching dynamic HPC remarks:", err);
+    return [];
+  }
+}
+
+export async function saveHpcDynamicRemark(
+  remark: Partial<HpcDynamicRemark> & { subjectOrArea: string; remarkText: string; level: string }
+): Promise<string> {
+  const id = remark.id || `rem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const payload: HpcDynamicRemark = {
+    id,
+    subjectOrArea: remark.subjectOrArea,
+    level: remark.level,
+    remarkText: remark.remarkText,
+    stageId: remark.stageId,
+    createdAt: remark.createdAt || new Date().toISOString(),
+  };
+
+  await setDoc(doc(db, "hpc_remarks_bank", id), payload);
+  return id;
+}
+
+export async function deleteHpcDynamicRemark(id: string): Promise<boolean> {
+  await deleteDoc(doc(db, "hpc_remarks_bank", id));
+  return true;
+}
+
+export async function bulkUploadHpcRemarks(
+  remarks: HpcDynamicRemark[],
+  onProgress?: (processed: number, total: number) => void
+): Promise<number> {
+  let count = 0;
+  const chunkSize = 400;
+  for (let i = 0; i < remarks.length; i += chunkSize) {
+    const chunk = remarks.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const rem of chunk) {
+      const docRef = doc(db, "hpc_remarks_bank", rem.id);
+      batch.set(docRef, rem, { merge: true });
+      count++;
+    }
+    await batch.commit();
+    if (onProgress) {
+      onProgress(Math.min(i + chunkSize, remarks.length), remarks.length);
+    }
+  }
+  return count;
+}
+
+// ===========================================================================
+// DYNAMIC HPC RUBRICS (मूल्यांकन रुब्रिक्स)
+// ===========================================================================
+
+export async function getHpcDynamicRubrics(
+  competencyCode?: string
+): Promise<HpcDynamicRubric[]> {
+  try {
+    const colRef = collection(db, "hpc_rubrics");
+    let q = query(colRef);
+    if (competencyCode) {
+      q = query(colRef, where("competencyCode", "==", competencyCode));
+    }
+    const snap = await getDocs(q);
+    const list: HpcDynamicRubric[] = [];
+    snap.forEach((d) => {
+      list.push({ ...(d.data() as HpcDynamicRubric), id: d.id });
+    });
+    return list;
+  } catch (err) {
+    console.error("Error fetching dynamic rubrics:", err);
+    return [];
+  }
+}
+
+export async function bulkUploadHpcRubrics(
+  rubrics: HpcDynamicRubric[],
+  onProgress?: (processed: number, total: number) => void
+): Promise<number> {
+  let count = 0;
+  const chunkSize = 400;
+  for (let i = 0; i < rubrics.length; i += chunkSize) {
+    const chunk = rubrics.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const rub of chunk) {
+      const docRef = doc(db, "hpc_rubrics", rub.id);
+      batch.set(docRef, rub, { merge: true });
+      count++;
+    }
+    await batch.commit();
+    if (onProgress) {
+      onProgress(Math.min(i + chunkSize, rubrics.length), rubrics.length);
+    }
+  }
+  return count;
+}
+
+export async function bulkUploadHpcGoalsAndCompetencies(
+  goals: HpcCurricularGoal[],
+  competencies: HpcCompetency[],
+  onProgress?: (processed: number, total: number) => void
+): Promise<{ goalsCount: number; compsCount: number }> {
+  let gCount = 0;
+  let cCount = 0;
+  const total = goals.length + competencies.length;
+
+  const chunkSize = 400;
+  for (let i = 0; i < goals.length; i += chunkSize) {
+    const chunk = goals.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const g of chunk) {
+      const docRef = doc(db, "hpc_custom_goals", g.id);
+      batch.set(docRef, g, { merge: true });
+      gCount++;
+    }
+    await batch.commit();
+    if (onProgress) onProgress(gCount, total);
+  }
+
+  for (let i = 0; i < competencies.length; i += chunkSize) {
+    const chunk = competencies.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const c of chunk) {
+      const docRef = doc(db, "hpc_custom_competencies", c.id);
+      batch.set(docRef, c, { merge: true });
+      cCount++;
+    }
+    await batch.commit();
+    if (onProgress) onProgress(gCount + cCount, total);
+  }
+
+  return { goalsCount: gCount, compsCount: cCount };
 }

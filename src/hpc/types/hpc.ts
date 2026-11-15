@@ -64,7 +64,9 @@ export interface HpcStudentProfile {
 
   // Part A(1) - Student & Parent Details
   fullName?: string;
+  englishName?: string; // विद्यार्थ्याचे नाव (इंग्रजी)
   rollNo?: string;
+  grNo?: string; // जन. रजि. नं. (GR No)
   gender?: string;
   dob?: string;
   bloodGroup?: string;
@@ -73,6 +75,49 @@ export interface HpcStudentProfile {
   saralId?: string;
   aadhaar?: string;
   aparId?: string;
+  penNo?: string; // Student PEN (पेन क्रमांक)
+  udidNo?: string; // UDID (दिव्यांग युडीआयडी)
+  regNo?: string; // नोंदणी क्रमांक (Reg. No)
+
+  // Part A - Physical Measurements (उंची व वजन सर्व सत्रे)
+  term1Height?: string; // सत्र १ उंची (सें.मी.)
+  term1Weight?: string; // सत्र १ वजन (कि.ग्रॅ.)
+  term2Height?: string; // सत्र २ उंची (सें.मी.)
+  term2Weight?: string; // सत्र २ वजन (कि.ग्रॅ.)
+
+  // Part A - Social & Category Information (सामाजिक व वैयक्तिक माहिती)
+  religion?: string; // धर्म
+  minority?: string; // अल्पसंख्याक (होय / नाही)
+  cwsn?: string; // दिव्यांग (होय / नाही)
+  bpl?: string; // दारिद्र्यरेषेखालील (होय / नाही)
+  birthPlace?: string; // जन्मगाव / ठिकाण
+  studentTaluka?: string; // तालुका
+  studentDistrict?: string; // जिल्हा
+
+  // Part A - Family & Contact Details (कुटुंब व संपर्क माहिती)
+  motherName?: string;
+  motherEducation?: string;
+  motherOccupation?: string;
+  fatherName?: string;
+  fatherEducation?: string;
+  fatherOccupation?: string;
+  guardianName?: string;
+  guardianRelation?: string;
+  siblingCount?: string;
+  siblingAge?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  fatherPhone?: string;
+  motherPhone?: string;
+  areaType?: string; // ग्रामीण / शहरी
+  motherTongue?: string; // मातृभाषा
+  mediumOfInstruction?: string; // शिक्षणाचे माध्यम
+
+  // Part A - Bank Account Details (बँक खाते माहिती)
+  bankName?: string;
+  bankAccountNo?: string;
+  bankIfscCode?: string;
+
   parentName?: string;
   parentPhone?: string;
   parentOccupation?: string;
@@ -90,6 +135,9 @@ export interface HpcStudentProfile {
   familyDescription?: string;
   ambition?: string; // मोठे होऊन मला व्हायचे आहे
   friends?: string[]; // हे माझे मित्र/मैत्रिणी आहेत
+  bestFriend1?: string; // जवळचा मित्र/मैत्रीण १
+  bestFriend2?: string; // जवळचा मित्र/मैत्रीण २
+  bestFriend3?: string; // जवळचा मित्र/मैत्रीण ३
   
   // Favorites (माझा आवडता)
   favoriteColor?: string; // रंग
@@ -222,4 +270,48 @@ export interface HpcAnnualSummary {
   
   status: "draft" | "completed";
   updatedAt?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Dynamic HPC Activities, Questions, Rubrics & Remarks (Managed via Admin Panel & Excel)
+// ---------------------------------------------------------------------------
+
+export interface HpcDynamicActivity {
+  id: string;
+  stageId: HpcStageId;
+  subjectOrArea: string; // उदा. प्रथम भाषा (R1), गणित, शारीरिक विकास
+  goalCode: string; // उदा. L1CG1, CG-1
+  goalTitle: string;
+  competencyCode: string; // उदा. L1C1.1, C-1.1
+  competencyTitle: string;
+  activityNumber?: number; // 1 ते 5
+  activityTitle: string; // उदा. आपल्या आवडत्या सणाबद्दल पाच वाक्यांत सलग बोला.
+  activityDescription: string; // थोडक्यात कृती
+  questions: string[]; // ५ प्रश्नांची यादी
+  teacherFeedbackSample?: string; // शिक्षकांचा अभिप्राय
+  parentFeedbackSample?: string; // पालकांचा अभिप्राय
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface HpcDynamicRubric {
+  id: string;
+  stageId: HpcStageId;
+  goalCode?: string;
+  competencyCode?: string;
+  activityTitle?: string;
+  dimension: string; // उदा. जाणीवजागृती, संवेदनशीलता, सर्जनशीलता
+  beginner: string; // प्रारंभिक / निर्झर
+  proficient: string; // प्रवीण / पर्वत
+  advanced: string; // प्रगत / आकाश
+  createdAt?: string;
+}
+
+export interface HpcDynamicRemark {
+  id: string;
+  stageId?: HpcStageId;
+  subjectOrArea: string; // विषय किंवा विकास क्षेत्र
+  level: string; // प्रारंभिक / प्रवीण / प्रगत किंवा निर्झर / पर्वत / आकाश
+  remarkText: string; // शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)
+  createdAt?: string;
 }

@@ -61,7 +61,12 @@ const CLASSES_LIST = [
 
 function TeacherHpcReportsPage() {
   const academicYearOptions = useMemo(() => getAcademicYearOptions(), []);
-  const [selectedClass, setSelectedClass] = useState<string>("1st");
+  const [selectedClass, setSelectedClass] = useState<string>(() => {
+    return (
+      (typeof window !== "undefined" && localStorage.getItem("hpc_selected_class")) ||
+      "1st"
+    );
+  });
   const [academicYear, setAcademicYear] = useState<string>(() => getInitialAcademicYear());
   const [selectedMedium, setSelectedMedium] = useState<string>(() => {
     return localStorage.getItem("cce_selected_medium") || "marathi";
@@ -92,12 +97,29 @@ function TeacherHpcReportsPage() {
   const stageInfo = HPC_STAGES_INFO.find((s) => s.id === stageId) || HPC_STAGES_INFO[0];
 
   useEffect(() => {
+    const handleClassChange = (e: any) => {
+      if (e.detail?.cls && e.detail.cls !== selectedClass) {
+        setSelectedClass(e.detail.cls);
+      }
+    };
+    window.addEventListener("hpc_class_changed", handleClassChange);
+    return () => {
+      window.removeEventListener("hpc_class_changed", handleClassChange);
+    };
+  }, [selectedClass]);
+
+  useEffect(() => {
     let isMounted = true;
     async function load() {
       setLoading(true);
       try {
         const list = await getHpcStudents(selectedClass, selectedMedium);
-        if (isMounted) setStudents(list);
+        if (isMounted) {
+          setStudents(list);
+          if (list.length > 0) {
+            localStorage.setItem(`hpc_last_student_${selectedClass}`, list[0].id);
+          }
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -303,7 +325,19 @@ function TeacherHpcReportsPage() {
             <span className="text-xs font-bold text-slate-500">इयत्ता:</span>
             <select
               value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
+              onChange={(e) => {
+                const cls = e.target.value;
+                setSelectedClass(cls);
+                localStorage.setItem("hpc_selected_class", cls);
+                const match = CLASSES_LIST.find((c) => c.id === cls);
+                const stg = (match?.stageId as HpcStageId) || "foundational";
+                localStorage.setItem("hpc_selected_stage", stg);
+                window.dispatchEvent(
+                  new CustomEvent("hpc_class_changed", {
+                    detail: { cls, stageId: stg },
+                  })
+                );
+              }}
               className="bg-transparent text-xs font-black text-slate-900 outline-none cursor-pointer"
             >
               {CLASSES_LIST.map((c) => (
