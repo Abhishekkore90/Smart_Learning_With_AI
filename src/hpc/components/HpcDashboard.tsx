@@ -28,10 +28,12 @@ import {
   ChevronRight,
   ShieldCheck,
   Zap,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { HpcStageId } from "../types/hpc";
 import { HPC_STAGES_INFO } from "../data/hpcCurricularGoals";
+import { HpcAddStudentModal } from "./HpcAddStudentModal";
 import {
   getHpcProgressForClass,
   HpcStudentProgressItem,
@@ -54,18 +56,18 @@ import {
 
 const CLASSES_BY_STAGE: Record<HpcStageId, { id: string; labelMarathi: string }[]> = {
   foundational: [
-    { id: "1st", labelMarathi: "इयत्ता १ ली (1st)" },
-    { id: "2nd", labelMarathi: "इयत्ता २ री (2nd)" },
+    { id: "1st", labelMarathi: "इयत्ता १ ली" },
+    { id: "2nd", labelMarathi: "इयत्ता २ री" },
   ],
   preparatory: [
-    { id: "3rd", labelMarathi: "इयत्ता ३ री (3rd)" },
-    { id: "4th", labelMarathi: "इयत्ता ४ थी (4th)" },
-    { id: "5th", labelMarathi: "इयत्ता ५ वी (5th)" },
+    { id: "3rd", labelMarathi: "इयत्ता ३ री" },
+    { id: "4th", labelMarathi: "इयत्ता ४ थी" },
+    { id: "5th", labelMarathi: "इयत्ता ५ वी" },
   ],
   middle: [
-    { id: "6th", labelMarathi: "इयत्ता ६ वी (6th)" },
-    { id: "7th", labelMarathi: "इयत्ता ७ वी (7th)" },
-    { id: "8th", labelMarathi: "इयत्ता ८ वी (8th)" },
+    { id: "6th", labelMarathi: "इयत्ता ६ वी" },
+    { id: "7th", labelMarathi: "इयत्ता ७ वी" },
+    { id: "8th", labelMarathi: "इयत्ता ८ वी" },
   ],
 };
 
@@ -138,6 +140,9 @@ export function HpcDashboard() {
   // Data State
   const [loading, setLoading] = useState(true);
   const [progressItems, setProgressItems] = useState<HpcStudentProgressItem[]>([]);
+
+  // Add Student Modal State
+  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
 
   // Preview & Download Modal State
   const [previewStudent, setPreviewStudent] = useState<any | null>(null);
@@ -397,9 +402,9 @@ export function HpcDashboard() {
                   </p>
                 </div>
 
-                {/* Class Quick Selection Pills */}
-                <div className="pt-4 border-t border-slate-100/90 flex items-center gap-2 flex-wrap">
-                  <span className="text-[11px] font-extrabold text-slate-400 mr-1">वर्ग निवडा:</span>
+                {/* Class Quick Selection Pills - Fits in one single line */}
+                <div className="pt-3 border-t border-slate-100/90 flex items-center gap-1.5 flex-nowrap overflow-x-auto no-scrollbar">
+                  <span className="text-[11px] font-extrabold text-slate-400 shrink-0 whitespace-nowrap">वर्ग निवडा:</span>
                   {CLASSES_BY_STAGE[stg.id].map((c) => {
                     const isClassActive = activeStage === stg.id && selectedClass === c.id;
                     return (
@@ -418,7 +423,7 @@ export function HpcDashboard() {
                             })
                           );
                         }}
-                        className={`text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                        className={`text-xs px-2.5 py-1 rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 font-bold ${
                           isClassActive ? classActivePill : classInactivePill
                         }`}
                       >
@@ -433,159 +438,7 @@ export function HpcDashboard() {
         </div>
       </div>
 
-      {/* ---------------- 2. HPC 4-STEP WORKFLOW GUIDE (४ सोप्या पायऱ्या) ---------------- */}
-      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-[32px] p-6 sm:p-7 shadow-2xl shadow-indigo-950/25 text-white relative overflow-hidden border border-indigo-900/40">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="flex items-center justify-between mb-5 flex-wrap gap-3 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="size-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shadow-md">
-              <Zap className="size-5 fill-amber-300" />
-            </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
-                <span>HPC मूल्यांकन कार्यप्रवाह — ४ सोप्या पायऱ्या (Step-by-Step Flow)</span>
-              </h3>
-              <p className="text-xs text-slate-300 font-medium">
-                प्रत्येक विद्यार्थ्याचे HPC प्रगतिपत्रक तयार करण्यासाठी खालील क्रमाने काम पूर्ण करा
-              </p>
-            </div>
-          </div>
-          <span className="text-[11px] font-black text-indigo-200 bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15 shadow-xs">
-            अधिकृत SCERT आराखडा • NEP 2020
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
-          {/* Step 1 */}
-          <div
-            onClick={() => {
-              const firstStudent = progressItems[0]?.student?.id;
-              if (firstStudent) {
-                navigate({ to: `/teacher/hpc/student/${firstStudent}` as any });
-              } else {
-                navigate({ to: "/teacher/hpc/students" as any });
-              }
-            }}
-            className="p-5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 hover:border-indigo-400/60 shadow-lg hover:shadow-indigo-500/15 transition-all duration-200 hover:-translate-y-1 group flex flex-col justify-between backdrop-blur-md cursor-pointer"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-200 bg-indigo-500/30 border border-indigo-400/30 px-2.5 py-0.5 rounded-full">
-                  पायरी १
-                </span>
-                <div className="size-8 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="size-4" />
-                </div>
-              </div>
-              <h4 className="text-sm font-black text-white mb-1.5">विद्यार्थी नोंदी (भाग अ)</h4>
-              <p className="text-xs text-slate-300 font-medium line-clamp-2 leading-relaxed">
-                वैयक्तिक माहिती, आवडीनिवडी, पालक नोंद, आधार व उपस्थिती तपशील.
-              </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-black text-indigo-300 group-hover:text-white transition-colors">
-              <span>नोंदी भरा</span>
-              <ChevronRight className="size-4 group-hover:translate-x-1.5 transition-transform" />
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div
-            onClick={() => {
-              const firstStudent = progressItems[0]?.student?.id;
-              if (firstStudent) {
-                navigate({
-                  to: `/teacher/hpc/assessment/${firstStudent}` as any,
-                  search: { tab: "assessment", session: "session1" } as any,
-                });
-              } else {
-                toast.info("कृपया आधी विद्यार्थी निवडा.");
-              }
-            }}
-            className="p-5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 hover:border-emerald-400/60 shadow-lg hover:shadow-emerald-500/15 transition-all duration-200 hover:-translate-y-1 group flex flex-col justify-between backdrop-blur-md cursor-pointer"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-200 bg-emerald-500/30 border border-emerald-400/30 px-2.5 py-0.5 rounded-full">
-                  पायरी २
-                </span>
-                <div className="size-8 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <BookOpen className="size-4" />
-                </div>
-              </div>
-              <h4 className="text-sm font-black text-white mb-1.5">सत्रनिहाय मूल्यांकन (भाग ब)</h4>
-              <p className="text-xs text-slate-300 font-medium line-clamp-2 leading-relaxed">
-                ६ विकास क्षेत्रे, उपक्रम बँक, ५ प्रश्न व ३-स्तरीय कामगिरी रूब्रिक्स.
-              </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-black text-emerald-300 group-hover:text-white transition-colors">
-              <span>मूल्यांकन करा</span>
-              <ChevronRight className="size-4 group-hover:translate-x-1.5 transition-transform" />
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div
-            onClick={() => {
-              const firstStudent = progressItems[0]?.student?.id;
-              if (firstStudent) {
-                navigate({
-                  to: `/teacher/hpc/assessment/${firstStudent}` as any,
-                  search: { tab: "annual" } as any,
-                });
-              } else {
-                toast.info("कृपया आधी विद्यार्थी निवडा.");
-              }
-            }}
-            className="p-5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 hover:border-purple-400/60 shadow-lg hover:shadow-purple-500/15 transition-all duration-200 hover:-translate-y-1 group flex flex-col justify-between backdrop-blur-md cursor-pointer"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black uppercase tracking-wider text-purple-200 bg-purple-500/30 border border-purple-400/30 px-2.5 py-0.5 rounded-full">
-                  पायरी ३
-                </span>
-                <div className="size-8 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Award className="size-4" />
-                </div>
-              </div>
-              <h4 className="text-sm font-black text-white mb-1.5">वार्षिक गोषवारा (भाग क)</h4>
-              <p className="text-xs text-slate-300 font-medium line-clamp-2 leading-relaxed">
-                वार्षिक सर्वंकष प्रगती गोषवारा, शिक्षक व पालक अंतिम अभिप्राय.
-              </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-black text-purple-300 group-hover:text-white transition-colors">
-              <span>गोषवारा भरा</span>
-              <ChevronRight className="size-4 group-hover:translate-x-1.5 transition-transform" />
-            </div>
-          </div>
-
-          {/* Step 4 */}
-          <Link
-            to="/teacher/hpc/reports"
-            className="p-5 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 hover:border-amber-400/60 shadow-lg hover:shadow-amber-500/15 transition-all duration-200 hover:-translate-y-1 group flex flex-col justify-between backdrop-blur-md"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-200 bg-amber-500/30 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
-                  पायरी ४
-                </span>
-                <div className="size-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <FileText className="size-4" />
-                </div>
-              </div>
-              <h4 className="text-sm font-black text-white mb-1.5">HPC अहवाल व ३६०° PDF</h4>
-              <p className="text-xs text-slate-300 font-medium line-clamp-2 leading-relaxed">
-                अधिकृत SCERT मानकानुसार रंगीत व सुबक ३६०° प्रगती अहवाल डाऊनलोड.
-              </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs font-black text-amber-300 group-hover:text-white transition-colors">
-              <span>PDF डाऊनलोड</span>
-              <ChevronRight className="size-4 group-hover:translate-x-1.5 transition-transform" />
-            </div>
-          </Link>
-        </div>
-      </div>
       {/* ---------------- 3. DASHBOARD METRICS STRIP WITH PROGRESS BAR ---------------- */}
       <div className="space-y-4">
         {/* Class Progress Header Bar */}
@@ -599,7 +452,7 @@ export function HpcDashboard() {
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <span className="text-base sm:text-lg font-black text-slate-900">
-                  इयत्ता {CLASSES_BY_STAGE[activeStage]?.find((c) => c.id === selectedClass)?.labelMarathi} — वर्ग मूल्यमापन प्रगती
+                  {CLASSES_BY_STAGE[activeStage]?.find((c) => c.id === selectedClass)?.labelMarathi} — वर्ग मूल्यमापन प्रगती
                 </span>
                 <span className="text-xs font-black px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs flex items-center gap-1.5">
                   <span className="size-2 rounded-full bg-emerald-600 animate-ping" />
@@ -765,16 +618,28 @@ export function HpcDashboard() {
             </button>
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-full md:w-80">
-            <Search className="size-4 text-slate-400 absolute left-3.5 top-3.5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="नाव किंवा हजेरी क्र. ने शोधा..."
-              className="w-full pl-10 pr-4 py-2.5 text-xs font-bold rounded-2xl border border-slate-200/90 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white shadow-2xs transition-all"
-            />
+          {/* Actions: Add Student & Search Box */}
+          <div className="flex items-center gap-2.5 w-full md:w-auto flex-wrap sm:flex-nowrap">
+            <button
+              onClick={() => setIsAddStudentOpen(true)}
+              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-black text-xs shadow-md shadow-orange-600/20 hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 shrink-0"
+              title="या वर्गात नवीन विद्यार्थी जोडा"
+            >
+              <UserPlus className="size-4" />
+              <span>+ विद्यार्थी जोडा</span>
+            </button>
+
+            {/* Search Box */}
+            <div className="relative w-full sm:w-64 md:w-72">
+              <Search className="size-4 text-slate-400 absolute left-3.5 top-3.5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="नाव किंवा हजेरी क्र. ने शोधा..."
+                className="w-full pl-10 pr-4 py-2.5 text-xs font-bold rounded-2xl border border-slate-200/90 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 bg-white shadow-2xs transition-all"
+              />
+            </div>
           </div>
         </div>
 
@@ -785,12 +650,25 @@ export function HpcDashboard() {
             <p className="text-sm font-bold text-slate-600">विद्यार्थी नोंदी लोड होत आहेत...</p>
           </div>
         ) : filteredStudents.length === 0 ? (
-          <div className="p-16 text-center space-y-3">
-            <Users className="size-12 text-slate-300 mx-auto" />
-            <p className="text-base font-bold text-slate-700">कोणतेही विद्यार्थी सापडले नाहीत.</p>
-            <p className="text-xs text-slate-500 max-w-md mx-auto">
-              या वर्गात अद्याप विद्यार्थी नोंदवलेले नाहीत किंवा फिल्टरनुसार माहिती जुळत नाही. CCE विभागात विद्यार्थी उपलब्ध असल्यास ते येथे आपोआप दिसतील.
-            </p>
+          <div className="p-16 text-center space-y-4">
+            <div className="size-16 rounded-3xl bg-orange-100 text-orange-600 flex items-center justify-center mx-auto shadow-sm">
+              <Users className="size-8" />
+            </div>
+            <div>
+              <p className="text-base font-black text-slate-800">
+                {CLASSES_BY_STAGE[activeStage]?.find((c) => c.id === selectedClass)?.labelMarathi} मध्ये कोणतेही विद्यार्थी सापडले नाहीत.
+              </p>
+              <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto mt-1">
+                या वर्गाचे HPC मूल्यांकन सुरू करण्यासाठी खालील बटणावर क्लिक करून विद्यार्थी जोडा व माहिती जतन करा.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsAddStudentOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-black text-xs shadow-md shadow-orange-600/25 transition-all cursor-pointer active:scale-95"
+            >
+              <UserPlus className="size-4" />
+              <span>+ या वर्गात नवीन विद्यार्थी जोडा</span>
+            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -923,20 +801,20 @@ export function HpcDashboard() {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => handleOpenPreview(s.id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white font-bold text-xs transition-all cursor-pointer shadow-2xs border border-indigo-200/80 hover:border-indigo-600"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-orange-50/80 hover:bg-orange-500 text-orange-700 hover:text-white font-bold text-xs transition-all cursor-pointer shadow-2xs border border-orange-300 hover:border-orange-500 group"
                             title="HPC कार्ड पहा व डाऊनलोड करा"
                           >
-                            <Eye className="size-3.5" />
-                            <span>View HPC Card</span>
+                            <Eye className="size-3.5 text-orange-600 group-hover:text-white transition-colors" />
+                            <span>HPC कार्ड पहा</span>
                           </button>
                           <Link
                             to="/teacher/hpc/assessment/$studentId"
                             params={{ studentId: s.id }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white font-bold text-xs transition-all cursor-pointer shadow-2xs border border-emerald-200/80 hover:border-emerald-600"
-                            title="मूल्यांकन संपादित करा"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50/80 hover:bg-emerald-600 text-emerald-700 hover:text-white font-bold text-xs transition-all cursor-pointer shadow-2xs border border-emerald-300 hover:border-emerald-600 group"
+                            title="HPC कार्ड भरा"
                           >
-                            <Edit className="size-3.5" />
-                            <span>Edit HPC Card</span>
+                            <Edit className="size-3.5 text-emerald-600 group-hover:text-white transition-colors" />
+                            <span>HPC कार्ड भरा</span>
                           </Link>
                         </div>
                       </td>
@@ -1034,6 +912,23 @@ export function HpcDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ---------------- 6. ADD STUDENT MODAL ---------------- */}
+      {isAddStudentOpen && (
+        <HpcAddStudentModal
+          isOpen={isAddStudentOpen}
+          onClose={() => setIsAddStudentOpen(false)}
+          defaultClass={selectedClass}
+          defaultDivision={selectedDivision === "all" ? "अ" : selectedDivision}
+          academicYear={academicYear}
+          medium={selectedMedium}
+          nextRollNo={String(progressItems.length + 1)}
+          onStudentAdded={() => {
+            setIsAddStudentOpen(false);
+            loadProgress();
+          }}
+        />
       )}
     </div>
   );

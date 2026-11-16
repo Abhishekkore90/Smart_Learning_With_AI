@@ -5,12 +5,14 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  addDoc,
   deleteDoc,
   query,
   where,
   onSnapshot,
   writeBatch,
 } from "firebase/firestore";
+import { getCurrentAcademicYear } from "../utils/academicYear";
 import {
   HpcStudentProfile,
   HpcSessionAssessment,
@@ -167,6 +169,127 @@ export async function getHpcStudentById(studentId: string): Promise<StudentInfoS
   } catch (err) {
     console.error("Error fetching student by ID:", err);
     return null;
+  }
+}
+
+export interface CreateStudentParams {
+  name: string;
+  fullName?: string;
+  rollNo?: string;
+  class: string;
+  division?: string;
+  gender?: string;
+  medium?: string;
+  academicYear?: string;
+  teacherId?: string;
+  dob?: string;
+  saralId?: string;
+  aadhaar?: string;
+  aparId?: string;
+  fatherName?: string;
+  motherName?: string;
+  parentPhone?: string;
+  address?: string;
+  grNo?: string;
+  caste?: string;
+  religion?: string;
+}
+
+/**
+ * Add a new student to Firestore (`users`, `student_details`, and initialize `hpc_student_profiles`)
+ * Saves class-wise, medium-wise, and teacher-isolated properly.
+ */
+export async function createHpcStudent(data: CreateStudentParams): Promise<string> {
+  try {
+    const activeTeacherId =
+      data.teacherId ||
+      (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null) ||
+      getTeacherId() ||
+      "global";
+
+    const cleanName = (data.fullName || data.name || "").trim();
+    const cleanRollNo = (data.rollNo || "").trim();
+    const cleanClass = (data.class || "").trim();
+    const cleanDivision = (data.division || "अ").trim();
+    const cleanMedium = data.medium || "marathi";
+    const cleanYear = data.academicYear || getCurrentAcademicYear();
+
+    // 1. Save to `users` collection (main identity & queryable in list)
+    const userPayload: any = {
+      fullName: cleanName,
+      name: cleanName,
+      studentName: cleanName,
+      rollNo: cleanRollNo,
+      srNo: cleanRollNo,
+      gender: data.gender || "male",
+      class: cleanClass,
+      currentClass: cleanClass,
+      className: cleanClass,
+      division: cleanDivision,
+      medium: cleanMedium,
+      isSemiEnglish: cleanMedium === "semi",
+      teacherId: activeTeacherId,
+      createdById: activeTeacherId,
+      userId: activeTeacherId,
+      academicYear: cleanYear,
+      role: "student",
+      createdAt: new Date().toISOString(),
+    };
+
+    const docRef = await addDoc(collection(db, "users"), userPayload);
+
+    // 2. Save extended details in `student_details` collection
+    const detailsPayload: any = {
+      id: docRef.id,
+      fullName: cleanName,
+      name: cleanName,
+      rollNo: cleanRollNo,
+      gender: data.gender || "male",
+      class: cleanClass,
+      currentClass: cleanClass,
+      division: cleanDivision,
+      medium: cleanMedium,
+      dob: data.dob || "",
+      birthDate: data.dob || "",
+      studentId: data.saralId || "",
+      saralId: data.saralId || "",
+      aadhar: data.aadhaar || "",
+      aparId: data.aparId || "",
+      fatherName: data.fatherName || "",
+      motherName: data.motherName || "",
+      phone: data.parentPhone || "",
+      parentPhone: data.parentPhone || "",
+      address: data.address || "",
+      grNo: data.grNo || "",
+      caste: data.caste || "",
+      religion: data.religion || "",
+      teacherId: activeTeacherId,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await setDoc(doc(db, "student_details", docRef.id), detailsPayload, { merge: true });
+
+    // 3. Initialize blank HPC profile in `hpc_student_profiles`
+    const profileDocId = `${docRef.id}_${cleanYear}`;
+    await setDoc(
+      doc(db, "hpc_student_profiles", profileDocId),
+      {
+        studentId: docRef.id,
+        academicYear: cleanYear,
+        class: cleanClass,
+        division: cleanDivision,
+        interestsHobbies: "",
+        generalObservations: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    return docRef.id;
+  } catch (err) {
+    console.error("Error creating student in HPC backend:", err);
+    throw err;
   }
 }
 

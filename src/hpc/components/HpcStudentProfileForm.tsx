@@ -34,6 +34,17 @@ import {
   HpcStageId,
 } from "../types/hpc";
 import {
+  DIVISION_OPTIONS,
+  CASTE_OPTIONS,
+  MAHARASHTRA_DISTRICTS,
+  TALUKA_OPTIONS,
+  PARENT_EDUCATION_OPTIONS,
+  MOTHER_OCCUPATION_OPTIONS,
+  FATHER_OCCUPATION_OPTIONS,
+  MOTHER_TONGUE_OPTIONS,
+  SmartOption,
+} from "../data/studentProfileOptions";
+import {
   getHpcStudentById,
   getHpcStudentProfile,
   saveHpcStudentProfile,
@@ -237,14 +248,20 @@ function SmartDropdownField({
   onChange,
   options,
   placeholder = "-- यादीतून निवडा किंवा खाली लिहा --",
+  customPlaceholder = "येथे स्वतःचे उत्तर टाईप करा... (उदा. स्वतःचे नाव किंवा शब्द)",
 }: {
   label: string;
   value: string;
   onChange: (val: string) => void;
-  options: { label: string; value: string }[];
+  options: (SmartOption | { label: string; value: string } | string)[];
   placeholder?: string;
+  customPlaceholder?: string;
 }) {
-  const isPreset = options.some((opt) => opt.value === value);
+  const normalizedOptions: SmartOption[] = useMemo(() => {
+    return options.map((opt) => (typeof opt === "string" ? { label: opt, value: opt } : opt));
+  }, [options]);
+
+  const isPreset = normalizedOptions.some((opt) => opt.value === value);
   const [isCustom, setIsCustom] = useState<boolean>(() => Boolean(value && !isPreset));
 
   // Sync isCustom when value arrives from outside (e.g. loaded student profile)
@@ -281,7 +298,6 @@ function SmartDropdownField({
             const val = e.target.value;
             if (val === "__custom__") {
               setIsCustom(true);
-              if (isPreset) onChange("");
             } else {
               setIsCustom(false);
               onChange(val);
@@ -290,7 +306,7 @@ function SmartDropdownField({
           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
         >
           <option value="">{placeholder}</option>
-          {options.map((opt) => (
+          {normalizedOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
@@ -304,7 +320,7 @@ function SmartDropdownField({
               type="text"
               value={value}
               onChange={(e) => onChange(e.target.value)}
-              placeholder="येथे स्वतःचे उत्तर टाईप करा... (उदा. स्वतःचे नाव किंवा शब्द)"
+              placeholder={customPlaceholder}
               autoFocus
               className="w-full px-3.5 py-2.5 rounded-xl border border-emerald-500 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/25 bg-emerald-50/40 placeholder:text-slate-400 shadow-xs"
             />
@@ -1026,15 +1042,13 @@ export function HpcStudentProfileForm({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    तुकडी (Section)
-                  </label>
-                  <input
-                    type="text"
+                  <SmartDropdownField
+                    label="तुकडी (Section)"
                     value={division}
-                    onChange={(e) => setDivision(e.target.value)}
-                    placeholder="उदा. अ"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                    onChange={setDivision}
+                    options={DIVISION_OPTIONS}
+                    placeholder="-- तुकडी निवडा --"
+                    customPlaceholder="उदा. अ, ब, क किंवा स्वतः लिहा..."
                   />
                 </div>
 
@@ -1364,15 +1378,13 @@ export function HpcStudentProfileForm({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  जात (Caste)
-                </label>
-                <input
-                  type="text"
+                <SmartDropdownField
+                  label="जात (Caste)"
                   value={caste}
-                  onChange={(e) => setCaste(e.target.value)}
-                  placeholder="उदा. मराठा, महार, इत्यादी"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                  onChange={setCaste}
+                  options={CASTE_OPTIONS}
+                  placeholder="-- जात निवडा --"
+                  customPlaceholder="उदा. मराठा, कुणबी, बौद्ध किंवा स्वतःची जात लिहा..."
                 />
               </div>
 
@@ -1449,28 +1461,24 @@ export function HpcStudentProfileForm({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  तालुका
-                </label>
-                <input
-                  type="text"
+                <SmartDropdownField
+                  label="तालुका"
                   value={studentTaluka}
-                  onChange={(e) => setStudentTaluka(e.target.value)}
-                  placeholder="तालुक्याचे नाव"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                  onChange={setStudentTaluka}
+                  options={TALUKA_OPTIONS}
+                  placeholder="-- तालुका निवडा --"
+                  customPlaceholder="उदा. शिरूर, हवेली किंवा स्वतः तालुका लिहा..."
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  जिल्हा
-                </label>
-                <input
-                  type="text"
+                <SmartDropdownField
+                  label="जिल्हा"
                   value={studentDistrict}
-                  onChange={(e) => setStudentDistrict(e.target.value)}
-                  placeholder="जिल्ह्याचे नाव"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                  onChange={setStudentDistrict}
+                  options={MAHARASHTRA_DISTRICTS}
+                  placeholder="-- जिल्हा निवडा --"
+                  customPlaceholder="उदा. पुणे, नाशिक किंवा स्वतः जिल्हा लिहा..."
                 />
               </div>
             </div>
@@ -1505,28 +1513,24 @@ export function HpcStudentProfileForm({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    आईचे शिक्षण
-                  </label>
-                  <input
-                    type="text"
+                  <SmartDropdownField
+                    label="आईचे शिक्षण"
                     value={motherEducation}
-                    onChange={(e) => setMotherEducation(e.target.value)}
-                    placeholder="उदा. १० वी, पदवी"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                    onChange={setMotherEducation}
+                    options={PARENT_EDUCATION_OPTIONS}
+                    placeholder="-- आईचे शिक्षण निवडा --"
+                    customPlaceholder="उदा. १० वी, पदवी किंवा स्वतः शिक्षण लिहा..."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    आईचा व्यवसाय
-                  </label>
-                  <input
-                    type="text"
+                  <SmartDropdownField
+                    label="आईचा व्यवसाय"
                     value={motherOccupation}
-                    onChange={(e) => setMotherOccupation(e.target.value)}
-                    placeholder="उदा. गृहिणी, नोकरी, शेती"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                    onChange={setMotherOccupation}
+                    options={MOTHER_OCCUPATION_OPTIONS}
+                    placeholder="-- आईचा व्यवसाय निवडा --"
+                    customPlaceholder="उदा. गृहिणी, नोकरी, शेती किंवा व्यवसाय लिहा..."
                   />
                 </div>
               </div>
@@ -1547,28 +1551,24 @@ export function HpcStudentProfileForm({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    वडिलांचे शिक्षण
-                  </label>
-                  <input
-                    type="text"
+                  <SmartDropdownField
+                    label="वडिलांचे शिक्षण"
                     value={fatherEducation}
-                    onChange={(e) => setFatherEducation(e.target.value)}
-                    placeholder="उदा. १२ वी, पदवी"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                    onChange={setFatherEducation}
+                    options={PARENT_EDUCATION_OPTIONS}
+                    placeholder="-- वडिलांचे शिक्षण निवडा --"
+                    customPlaceholder="उदा. १२ वी, पदवी किंवा स्वतः शिक्षण लिहा..."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    वडिलांचा व्यवसाय
-                  </label>
-                  <input
-                    type="text"
+                  <SmartDropdownField
+                    label="वडिलांचा व्यवसाय"
                     value={fatherOccupation}
-                    onChange={(e) => setFatherOccupation(e.target.value)}
-                    placeholder="उदा. शेती, नोकरी, व्यवसाय"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                    onChange={setFatherOccupation}
+                    options={FATHER_OCCUPATION_OPTIONS}
+                    placeholder="-- वडिलांचा व्यवसाय निवडा --"
+                    customPlaceholder="उदा. शेती, नोकरी, व्यवसाय किंवा काम लिहा..."
                   />
                 </div>
               </div>
@@ -1713,15 +1713,13 @@ export function HpcStudentProfileForm({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    मातृभाषा
-                  </label>
-                  <input
-                    type="text"
+                  <SmartDropdownField
+                    label="मातृभाषा"
                     value={motherTongue}
-                    onChange={(e) => setMotherTongue(e.target.value)}
-                    placeholder="उदा. मराठी"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                    onChange={setMotherTongue}
+                    options={MOTHER_TONGUE_OPTIONS}
+                    placeholder="-- मातृभाषा निवडा --"
+                    customPlaceholder="उदा. मराठी, हिंदी किंवा मातृभाषा लिहा..."
                   />
                 </div>
 
