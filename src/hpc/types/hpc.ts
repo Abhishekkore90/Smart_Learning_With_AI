@@ -183,6 +183,7 @@ export interface Hpc360Assessment {
   teacherRemarks: {
     observation: string;
     guidanceSuggestion?: string;
+    level?: "nirjhar" | "parvat" | "aakash" | string;
   };
 }
 
@@ -287,6 +288,7 @@ export interface HpcDynamicActivity {
   activityNumber?: number; // 1 ते 5
   activityTitle: string; // उदा. आपल्या आवडत्या सणाबद्दल पाच वाक्यांत सलग बोला.
   activityDescription: string; // थोडक्यात कृती
+  description?: string; // पर्यायी alias
   questions: string[]; // ५ प्रश्नांची यादी
   teacherFeedbackSample?: string; // शिक्षकांचा अभिप्राय
   parentFeedbackSample?: string; // पालकांचा अभिप्राय
@@ -313,5 +315,7 @@ export interface HpcDynamicRemark {
   subjectOrArea: string; // विषय किंवा विकास क्षेत्र
   level: string; // प्रारंभिक / प्रवीण / प्रगत किंवा निर्झर / पर्वत / आकाश
   remarkText: string; // शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)
+  recommendationText?: string; // पुढील इयत्तेसाठी मार्गदर्शन/शिफारस
+  type?: string; // final_comprehensive किंवा next_class_recommendation
   createdAt?: string;
 }

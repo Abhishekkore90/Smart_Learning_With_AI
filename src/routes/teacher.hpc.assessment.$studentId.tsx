@@ -27,12 +27,22 @@ function TeacherHpcAssessmentPage() {
 
   const [student, setStudent] = useState<StudentInfoSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"assessment" | "annual">(
-    search.tab || "assessment"
-  );
-  const [activeSession, setActiveSession] = useState<"session1" | "session2">(
-    search.session || "session1"
-  );
+
+  // Directly derive activeTab and activeSession from URL search params so navigation buttons NEVER fail or desync!
+  const activeTab: "assessment" | "annual" = search.tab === "annual" ? "annual" : "assessment";
+  const activeSession: "session1" | "session2" = search.session === "session2" ? "session2" : "session1";
+
+  const handleTabChange = (newTab: "assessment" | "annual", newSession?: "session1" | "session2") => {
+    navigate({
+      to: "/teacher/hpc/assessment/$studentId",
+      params: { studentId },
+      search: {
+        tab: newTab,
+        session: newSession || activeSession,
+      } as any,
+    });
+    window.scrollTo({ top: 100, behavior: "smooth" });
+  };
 
   const academicYear = localStorage.getItem("cce_academic_year") || getCurrentAcademicYear();
 
@@ -114,15 +124,7 @@ function TeacherHpcAssessmentPage() {
           session={activeSession}
           onBack={() => navigate({ to: "/teacher/hpc" })}
           onSaved={() => {}}
-          onProceedToPartC={() => {
-            setActiveTab("annual");
-            navigate({
-              to: "/teacher/hpc/assessment/$studentId",
-              params: { studentId },
-              search: { tab: "annual" } as any,
-            });
-            window.scrollTo({ top: 120, behavior: "smooth" });
-          }}
+          onProceedToPartC={() => handleTabChange("annual")}
         />
       ) : (
         <HpcAnnualSummaryForm
@@ -130,7 +132,7 @@ function TeacherHpcAssessmentPage() {
           academicYear={academicYear}
           stageId={stageId}
           classId={classId}
-          onBack={() => setActiveTab("assessment")}
+          onBack={() => handleTabChange("assessment")}
           onSaved={() => {
             navigate({ to: "/teacher/hpc/reports" });
           }}

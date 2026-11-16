@@ -74,8 +74,15 @@ import {
   resetEntireHpcDatabase,
   bulkUploadHpcRemarks,
   getHpcDynamicRubrics,
+  saveHpcDynamicRubric,
+  deleteHpcDynamicRubric,
+  deleteAllHpcRubrics,
   bulkUploadHpcRubrics,
   bulkUploadHpcGoalsAndCompetencies,
+  deleteHpcGoal,
+  deleteHpcCompetency,
+  deleteAllHpcGoals,
+  deleteAllHpcCompetencies,
 } from "@/hpc/services/hpcService";
 import { HPC_ACTIVITIES_BANK } from "@/hpc/data/hpcActivitiesBank";
 
@@ -99,6 +106,7 @@ function AdminHpcManagementPage() {
   const [customGoals, setCustomGoals] = useState<HpcCurricularGoal[]>([]);
   const [customCompetencies, setCustomCompetencies] = useState<HpcCompetency[]>([]);
   const [loading, setLoading] = useState(false);
+  const [compGoalFilter, setCompGoalFilter] = useState<string>("all");
 
   // Dynamic Activities from Firestore
   const [activitiesList, setActivitiesList] = useState<HpcDynamicActivity[]>([]);
@@ -164,36 +172,54 @@ function AdminHpcManagementPage() {
   const [actTeacherFeedback, setActTeacherFeedback] = useState("");
   const [actParentFeedback, setActParentFeedback] = useState("");
 
+  // Dynamic Rubrics from Firestore
+  const [rubricsList, setRubricsList] = useState<HpcDynamicRubric[]>([]);
+  const [rubricsLoading, setRubricsLoading] = useState(false);
+  const [rubricDimensionFilter, setRubricDimensionFilter] = useState<string>("all");
+
+  // New/Edit Rubric Modal
+  const [showRubricModal, setShowRubricModal] = useState(false);
+  const [editingRubricId, setEditingRubricId] = useState<string | null>(null);
+  const [rubStage, setRubStage] = useState<HpcStageId>("preparatory");
+  const [rubDimension, setRubDimension] = useState("जाणीवजागृती");
+  const [rubCompCode, setRubCompCode] = useState("");
+  const [rubActTitle, setRubActTitle] = useState("");
+  const [rubBeginner, setRubBeginner] = useState("");
+  const [rubProficient, setRubProficient] = useState("");
+  const [rubAdvanced, setRubAdvanced] = useState("");
+
   // New/Edit Remark Modal
   const [showRemarkModal, setShowRemarkModal] = useState(false);
   const [editingRemarkId, setEditingRemarkId] = useState<string | null>(null);
   const [remSubject, setRemSubject] = useState("");
   const [remLevel, setRemLevel] = useState<string>("प्रगत");
   const [remText, setRemText] = useState("");
+  const [remarkAreaFilter, setRemarkAreaFilter] = useState<string>("all");
 
   const areas = getAreasForStage(selectedStage);
 
-  // Load Goals & Competencies
-  useEffect(() => {
-    async function loadCustom() {
-      setLoading(true);
-      try {
-        const goalsSnap = await getDocs(collection(db, "hpc_custom_goals"));
-        const gList: HpcCurricularGoal[] = [];
-        goalsSnap.forEach((d) => gList.push({ id: d.id, ...d.data() } as any));
-        setCustomGoals(gList);
+  // Load Goals & Competencies from Firestore
+  const fetchGoalsAndCompetencies = async () => {
+    setLoading(true);
+    try {
+      const goalsSnap = await getDocs(collection(db, "hpc_custom_goals"));
+      const gList: HpcCurricularGoal[] = [];
+      goalsSnap.forEach((d) => gList.push({ id: d.id, ...d.data() } as any));
+      setCustomGoals(gList);
 
-        const compSnap = await getDocs(collection(db, "hpc_custom_competencies"));
-        const cList: HpcCompetency[] = [];
-        compSnap.forEach((d) => cList.push({ id: d.id, ...d.data() } as any));
-        setCustomCompetencies(cList);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+      const compSnap = await getDocs(collection(db, "hpc_custom_competencies"));
+      const cList: HpcCompetency[] = [];
+      compSnap.forEach((d) => cList.push({ id: d.id, ...d.data() } as any));
+      setCustomCompetencies(cList);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    loadCustom();
+  };
+
+  useEffect(() => {
+    fetchGoalsAndCompetencies();
   }, []);
 
   // Load Activities from Firestore
@@ -230,19 +256,121 @@ function AdminHpcManagementPage() {
     fetchRemarks();
   }, []);
 
-  // Combined goals
-  const allGoals = useMemo(() => {
-    return [...HPC_CURRICULAR_GOALS, ...customGoals].filter(
-      (g) => g.stageId === selectedStage
-    );
-  }, [selectedStage, customGoals]);
+  // Load Dynamic Rubrics from Firestore
+  const fetchRubrics = async () => {
+    setRubricsLoading(true);
+    try {
+      const list = await getHpcDynamicRubrics();
+      setRubricsList(list);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRubricsLoading(false);
+    }
+  };
 
-  // Combined competencies
+  useEffect(() => {
+    fetchRubrics();
+  }, []);
+
+  // SHOW ONLY UPLOADED / CUSTOM GOALS (Dheya)
+  const allGoals = useMemo(() => {
+    const list: HpcCurricularGoal[] = customGoals.map((g) => ({
+      ...g,
+      titleMarathi: g.titleMarathi || (g as any).nameMarathi || g.code || "",
+    }));
+    // Also include goals from uploaded activities if not already present
+    activitiesList.forEach((act) => {
+      if (act.goalCode) {
+        const cleanCode = act.goalCode.trim();
+        const gId = `CUSTOM-${cleanCode}`;
+        if (!list.some((g) => g.code === cleanCode || g.id === gId)) {
+          list.push({
+            id: gId,
+            code: cleanCode,
+            titleMarathi: act.goalTitle || cleanCode,
+            stageId: act.stageId,
+            areaOrSubjectId: act.subjectOrArea || "general",
+          });
+        }
+      }
+    });
+
+    return list.filter((g) => g.stageId === selectedStage);
+  }, [selectedStage, customGoals, activitiesList]);
+
+  // SHOW ONLY UPLOADED / CUSTOM COMPETENCIES (Kshmata)
   const allCompetencies = useMemo(() => {
-    return [...HPC_COMPETENCIES, ...customCompetencies].filter(
-      (c) => c.stageId === selectedStage
-    );
-  }, [selectedStage, customCompetencies]);
+    const list: HpcCompetency[] = customCompetencies.map((c) => ({
+      ...c,
+      titleMarathi: c.titleMarathi || (c as any).nameMarathi || c.code || "",
+      goalId: c.goalId || ((c as any).goalCode ? `CUSTOM-${(c as any).goalCode}` : ""),
+    }));
+    activitiesList.forEach((act) => {
+      if (act.competencyCode) {
+        const cleanCode = act.competencyCode.trim();
+        const cId = `CUSTOM-${cleanCode}`;
+        if (!list.some((c) => c.code === cleanCode || c.id === cId)) {
+          list.push({
+            id: cId,
+            code: cleanCode,
+            titleMarathi: act.competencyTitle || cleanCode,
+            goalId: act.goalCode ? `CUSTOM-${act.goalCode.trim()}` : "",
+            stageId: act.stageId,
+            applicableClassIds:
+              act.stageId === "foundational"
+                ? ["1st", "2nd"]
+                : act.stageId === "preparatory"
+                ? ["3rd", "4th", "5th"]
+                : ["6th", "7th", "8th"],
+            applicableSession: "both",
+          });
+        }
+      }
+    });
+
+    return list.filter((c) => c.stageId === selectedStage);
+  }, [selectedStage, customCompetencies, activitiesList]);
+
+  // Filtered Competencies for Tab 5
+  const filteredCompetencies = useMemo(() => {
+    return allCompetencies.filter((c) => {
+      if (compGoalFilter !== "all") {
+        const cleanCompGoal = (c.goalId || "").replace(/^CUSTOM[-_]/i, "").trim().toLowerCase();
+        const cleanFilter = compGoalFilter.replace(/^CUSTOM[-_]/i, "").trim().toLowerCase();
+        if (cleanCompGoal !== cleanFilter) return false;
+      }
+      const q = searchQuery.toLowerCase().trim();
+      if (q) {
+        return (
+          (c.code || "").toLowerCase().includes(q) ||
+          (c.titleMarathi || (c as any).nameMarathi || "").toLowerCase().includes(q) ||
+          (c.goalId && c.goalId.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+  }, [allCompetencies, compGoalFilter, searchQuery]);
+
+  // Filtered Rubrics
+  const filteredRubrics = useMemo(() => {
+    return rubricsList.filter((rub) => {
+      const matchesStage = !rub.stageId || rub.stageId === selectedStage;
+      const matchesDim =
+        rubricDimensionFilter === "all" ||
+        rub.dimension?.trim().toLowerCase() === rubricDimensionFilter.trim().toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
+      const matchesQuery =
+        !q ||
+        (rub.activityTitle && rub.activityTitle.toLowerCase().includes(q)) ||
+        (rub.dimension && rub.dimension.toLowerCase().includes(q)) ||
+        (rub.competencyCode && rub.competencyCode.toLowerCase().includes(q)) ||
+        (rub.beginner && rub.beginner.toLowerCase().includes(q)) ||
+        (rub.proficient && rub.proficient.toLowerCase().includes(q)) ||
+        (rub.advanced && rub.advanced.toLowerCase().includes(q));
+      return matchesStage && matchesDim && matchesQuery;
+    });
+  }, [rubricsList, selectedStage, rubricDimensionFilter, searchQuery]);
 
   // Filtered Activities
   const filteredActivities = useMemo(() => {
@@ -264,14 +392,15 @@ function AdminHpcManagementPage() {
   const filteredRemarks = useMemo(() => {
     return remarksList.filter((rem) => {
       const matchesLevel = remarkLevelFilter === "all" || rem.level === remarkLevelFilter;
+      const matchesArea = remarkAreaFilter === "all" || rem.subjectOrArea === remarkAreaFilter;
       const q = searchQuery.toLowerCase().trim();
       const matchesQuery =
         !q ||
-        rem.subjectOrArea.toLowerCase().includes(q) ||
-        rem.remarkText.toLowerCase().includes(q);
-      return matchesLevel && matchesQuery;
+        (rem.subjectOrArea && rem.subjectOrArea.toLowerCase().includes(q)) ||
+        (rem.remarkText && rem.remarkText.toLowerCase().includes(q));
+      return matchesLevel && matchesArea && matchesQuery;
     });
-  }, [remarksList, remarkLevelFilter, searchQuery]);
+  }, [remarksList, remarkLevelFilter, remarkAreaFilter, searchQuery]);
 
   // Handle Add Goal
   const handleAddGoal = async () => {
@@ -503,9 +632,133 @@ function AdminHpcManagementPage() {
     }
   };
 
+  const handleDeleteGoal = async (id: string, code: string) => {
+    if (!window.confirm(`खरोखर ध्येय "${code}" डेटाबेसमधून हटवायचे आहे का?`)) return;
+    try {
+      await deleteHpcGoal(id);
+      toast.success("ध्येय यशस्वीरीत्या हटवले गेले!");
+      fetchGoalsAndCompetencies();
+    } catch (err: any) {
+      toast.error("ध्येय हटवताना त्रुटी: " + err.message);
+    }
+  };
+
+  const handleClearStageGoals = async (stage: HpcStageId) => {
+    if (!window.confirm(`सावधान: खरोखर या स्तरातील सर्व अभ्यासक्रम ध्येये (CG) हटवायची आहेत का?`)) return;
+    try {
+      setLoading(true);
+      const count = await deleteAllHpcGoals(stage);
+      toast.success(`${count} ध्येये यशस्वीरीत्या हटवली गेली!`);
+      fetchGoalsAndCompetencies();
+    } catch (err: any) {
+      toast.error("ध्येये हटवताना त्रुटी: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCompetency = async (id: string, code: string) => {
+    if (!window.confirm(`खरोखर क्षमता "${code}" डेटाबेसमधून हटवायची आहे का?`)) return;
+    try {
+      await deleteHpcCompetency(id);
+      toast.success("क्षमता यशस्वीरीत्या हटवली गेली!");
+      fetchGoalsAndCompetencies();
+    } catch (err: any) {
+      toast.error("क्षमता हटवताना त्रुटी: " + err.message);
+    }
+  };
+
+  const handleClearStageCompetencies = async (stage: HpcStageId) => {
+    if (!window.confirm(`सावधान: खरोखर या स्तरातील सर्व क्षमता (C) हटवायच्या आहेत का?`)) return;
+    try {
+      setLoading(true);
+      const count = await deleteAllHpcCompetencies(stage);
+      toast.success(`${count} क्षमता यशस्वीरीत्या हटवल्या गेल्या!`);
+      fetchGoalsAndCompetencies();
+    } catch (err: any) {
+      toast.error("क्षमता हटवताना त्रुटी: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open Rubric Modal
+  const handleOpenAddRubric = () => {
+    setEditingRubricId(null);
+    setRubStage(selectedStage);
+    setRubDimension("जाणीवजागृती");
+    setRubCompCode("");
+    setRubActTitle("");
+    setRubBeginner("");
+    setRubProficient("");
+    setRubAdvanced("");
+    setShowRubricModal(true);
+  };
+
+  const handleOpenEditRubric = (rub: HpcDynamicRubric) => {
+    setEditingRubricId(rub.id);
+    setRubStage(rub.stageId || selectedStage);
+    setRubDimension(rub.dimension || "जाणीवजागृती");
+    setRubCompCode(rub.competencyCode || "");
+    setRubActTitle(rub.activityTitle || "");
+    setRubBeginner(rub.beginner || "");
+    setRubProficient(rub.proficient || "");
+    setRubAdvanced(rub.advanced || "");
+    setShowRubricModal(true);
+  };
+
+  const handleSaveRubric = async () => {
+    if (!rubDimension.trim() || (!rubBeginner.trim() && !rubProficient.trim() && !rubAdvanced.trim())) {
+      toast.error("कृपया परिमाण/पैलू आणि किमान एक कामगिरी स्तर मजकूर प्रविष्ट करा.");
+      return;
+    }
+    try {
+      await saveHpcDynamicRubric({
+        id: editingRubricId || undefined,
+        stageId: rubStage,
+        competencyCode: rubCompCode.trim(),
+        activityTitle: rubActTitle.trim(),
+        dimension: rubDimension.trim(),
+        beginner: rubBeginner.trim(),
+        proficient: rubProficient.trim(),
+        advanced: rubAdvanced.trim(),
+      });
+      toast.success(editingRubricId ? "मूल्यांकन निकष संपादित झाला!" : "नवीन मूल्यांकन निकष जोडला गेला!");
+      setShowRubricModal(false);
+      fetchRubrics();
+    } catch (err: any) {
+      toast.error("निकष सेव्ह करताना त्रुटी: " + err.message);
+    }
+  };
+
+  const handleDeleteRubric = async (id: string) => {
+    if (!window.confirm("खरोखर हा निकष हटवायचा आहे का?")) return;
+    try {
+      await deleteHpcDynamicRubric(id);
+      toast.success("निकष हटवला गेला!");
+      setRubricsList((prev) => prev.filter((r) => r.id !== id));
+    } catch (err: any) {
+      toast.error("हटवताना त्रुटी: " + err.message);
+    }
+  };
+
+  const handleClearAllRubrics = async () => {
+    if (!window.confirm("सावधान: खरोखर सर्व मूल्यांकन रुब्रिक्स डेटाबेसमधून कायमचे हटवायचे आहेत का?")) return;
+    try {
+      setRubricsLoading(true);
+      const count = await deleteAllHpcRubrics();
+      toast.success(`${count} रुब्रिक्स यशस्वीरीत्या हटवले गेले!`);
+      fetchRubrics();
+    } catch (err: any) {
+      toast.error("हटवताना त्रुटी: " + err.message);
+    } finally {
+      setRubricsLoading(false);
+    }
+  };
+
   const handleResetEntireDatabase = async () => {
     const confirmation = window.prompt(
-      "सावधान: यामुळे सर्व उपक्रम, ५ प्रश्न, मूल्यांकन रुब्रिक्स आणि वार्षिक शेरे डेटाबेसमधून कायमचे डिलीट होतील!\n\nसहमतीसाठी खाली 'RESET' टाइप करा आणि OK दाबा:"
+      "सावधान: यामुळे सर्व उपक्रम, ५ प्रश्न, मूल्यांकन रुब्रिक्स, वार्षिक शेरे, अभ्यासक्रम ध्येये आणि क्षमता डेटाबेसमधून कायमचे डिलीट होतील!\n\nसहमतीसाठी खाली 'RESET' टाइप करा आणि OK दाबा:"
     );
     if (confirmation !== "RESET") {
       toast.info("रीसेट रद्द केले.");
@@ -514,17 +767,23 @@ function AdminHpcManagementPage() {
     try {
       setActivitiesLoading(true);
       setRemarksLoading(true);
+      setRubricsLoading(true);
+      setLoading(true);
       const res = await resetEntireHpcDatabase();
       toast.success(
-        `डेटाबेस पूर्णपणे स्वच्छ केला गेला! (उपक्रम: ${res.activitiesDeleted}, शेरे: ${res.remarksDeleted}, रुब्रिक्स: ${res.rubricsDeleted})`
+        `डेटाबेस पूर्णपणे स्वच्छ केला गेला! (उपक्रम: ${res.activitiesDeleted}, शेरे: ${res.remarksDeleted}, रुब्रिक्स: ${res.rubricsDeleted}, ध्येये: ${res.goalsDeleted}, क्षमता: ${res.compsDeleted})`
       );
       fetchActivities();
       fetchRemarks();
+      fetchRubrics();
+      fetchGoalsAndCompetencies();
     } catch (err: any) {
       toast.error("डेटाबेस रीसेट करताना त्रुटी: " + err.message);
     } finally {
       setActivitiesLoading(false);
       setRemarksLoading(false);
+      setRubricsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -549,13 +808,8 @@ function AdminHpcManagementPage() {
         setWorkbook(wb);
         setSheetNames(wb.SheetNames);
 
-        // Auto select best sheet
-        const defaultSheet =
-          wb.SheetNames.find((s) => s.includes("ध्येय") || s.includes("उपक्रम")) ||
-          wb.SheetNames[0] ||
-          "";
-        setSelectedSheetName(defaultSheet);
-        parseWorkbookSheet(wb, defaultSheet);
+        // Auto parse entire workbook across all sheets
+        parseEntireWorkbook(wb);
       } catch (err: any) {
         toast.error("एक्सेल फाईल वाचताना त्रुटी: " + err.message);
       } finally {
@@ -565,55 +819,107 @@ function AdminHpcManagementPage() {
     reader.readAsBinaryString(file);
   };
 
-  const parseWorkbookSheet = (wb: XLSX.WorkBook, sheetName: string) => {
-    const sheet = wb.Sheets[sheetName];
-    if (!sheet) return;
+  const cleanActivityTitle = (text: string): string => {
+    if (!text) return "";
+    return text
+      .trim()
+      .replace(/^([०-९0-9]+[.:)\-\s]+)+/, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
 
-    setIsParsing(true);
-    try {
+  const parseEntireWorkbook = (wb: XLSX.WorkBook) => {
+    const allActivities: HpcDynamicActivity[] = [];
+    const allRemarks: HpcDynamicRemark[] = [];
+    const allRubrics: HpcDynamicRubric[] = [];
+    const goalsMap = new Map<string, HpcCurricularGoal>();
+    const compsMap = new Map<string, HpcCompetency>();
+
+    wb.SheetNames.forEach((sheetName) => {
+      const sheet = wb.Sheets[sheetName];
+      if (!sheet) return;
+
       const rawRows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-      const isRubricSheet = sheetName.includes("रुब्रिक");
+      if (rawRows.length === 0) return;
+
+      const lowerName = sheetName.toLowerCase();
+      const isRubricSheet =
+        lowerName.includes("रुब्रिक") ||
+        lowerName.includes("निकष") ||
+        lowerName.includes("rubric") ||
+        lowerName.includes("मूल्यांकन");
+
+      const isFinalRemarksSheet =
+        lowerName.includes("अंतिम") ||
+        lowerName.includes("सर्वंकष") ||
+        lowerName.includes("final") ||
+        lowerName.includes("comprehensive") ||
+        lowerName.includes("शीट 4") ||
+        lowerName.includes("sheet 4");
+
+      const isRecommendationsSheet =
+        lowerName.includes("शिफारस") ||
+        lowerName.includes("मार्गदर्शन") ||
+        lowerName.includes("recommendation") ||
+        lowerName.includes("शीट 5") ||
+        lowerName.includes("sheet 5");
+
       const isRemarksSheet =
-        sheetName.includes("वार्षिक") ||
-        sheetName.includes("सारांश") ||
-        sheetName.includes("अभिप्राय");
+        !isFinalRemarksSheet &&
+        !isRecommendationsSheet &&
+        (lowerName.includes("वार्षिक") ||
+          lowerName.includes("सारांश") ||
+          lowerName.includes("अभिप्राय") ||
+          lowerName.includes("remark") ||
+          lowerName.includes("विकासक्षेत्र"));
+
       const hasActivityCol = rawRows.some(
         (r) => r["उपक्रम (थोडक्यात कृतीसह)"] || (r["उपक्रम"] && !isRubricSheet)
       );
-      const hasGoalsAndCompsOnly =
-        rawRows.some(
-          (r) =>
-            r["ध्येय क्रमांक व ध्येयाचे संपूर्ण वर्णन"] &&
-            r["क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन"]
-        ) && !hasActivityCol;
 
       // 1. RUBRICS SHEET
       if (isRubricSheet) {
-        const headerRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-        const rubrics: HpcDynamicRubric[] = [];
+        let currAct = "";
         let currGoal = "";
         let currComp = "";
-        let currAct = "";
 
-        headerRows.forEach((rowArr, rIdx) => {
-          if (rIdx === 0) return; // skip header
+        // Header array parser for format: ['उपक्रम', 'क्षमता', 'निर्झर', 'पर्वत', 'आकाश']
+        const headerRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        for (let rIdx = 1; rIdx < headerRows.length; rIdx++) {
+          const rowArr = headerRows[rIdx];
+          if (!rowArr || rowArr.length === 0) continue;
+
           const c0 = String(rowArr[0] || "").trim();
           const c1 = String(rowArr[1] || "").trim();
           const c2 = String(rowArr[2] || "").trim();
           const c3 = String(rowArr[3] || "").trim();
           const c4 = String(rowArr[4] || "").trim();
 
-          if (c0.startsWith("ध्येय:")) currGoal = c0.replace("ध्येय:", "").trim();
-          else if (c0.startsWith("क्षमता:")) currComp = c0.replace("क्षमता:", "").trim();
-          else if (c0) currAct = c0;
+          // Goal header row e.g. "ध्येय: CG-1 ..."
+          if (c0.startsWith("ध्येय:") || c0.startsWith("ध्येय :") || /^(CG-[0-9]+|ध्येय)/.test(c0)) {
+            const gMatch = c0.match(/CG-[0-9]+/);
+            if (gMatch) currGoal = gMatch[0];
+            continue;
+          }
+
+          // Competency header row e.g. "क्षमता: C-1.1 ..."
+          if (c0.startsWith("क्षमता:") || c0.startsWith("क्षमता :") || /^(C-[0-9]+(\.[0-9]+)?|क्षमता)/.test(c0)) {
+            const cMatch = c0.match(/C-[0-9]+(\.[0-9]+)?/);
+            if (cMatch) currComp = cMatch[0];
+            continue;
+          }
+
+          if (c0) {
+            currAct = c0;
+          }
 
           if (c1 && (c2 || c3 || c4)) {
-            rubrics.push({
-              id: `rub_${Date.now()}_${rIdx}`,
+            allRubrics.push({
+              id: `rub_${currComp || "comp"}_${rIdx}_${Date.now()}`,
               stageId: selectedStage,
-              goalCode: currGoal.match(/^([A-Za-z0-9\-\.]+)/)?.[1] || "",
-              competencyCode: currComp.match(/^([A-Za-z0-9\-\.]+)/)?.[1] || "",
-              activityTitle: currAct,
+              goalCode: currGoal,
+              competencyCode: currComp,
+              activityTitle: cleanActivityTitle(currAct) || currAct,
               dimension: c1,
               beginner: c2,
               proficient: c3,
@@ -621,49 +927,240 @@ function AdminHpcManagementPage() {
               createdAt: new Date().toISOString(),
             });
           }
-        });
+        }
 
-        setParsedRubrics(rubrics);
-        toast.success(`'${sheetName}' मधून सर्व ${rubrics.length} रुब्रिक्स यशस्वीरीत्या वाचले गेले!`);
-      }
-      // 2. REMARKS SHEET
-      else if (isRemarksSheet) {
-        const remarks: HpcDynamicRemark[] = [];
-        let currSub = "";
+        // Object-based fallback if headerRows didn't match
+        if (allRubrics.length === 0) {
+          rawRows.forEach((row, idx) => {
+            const act = String(row["उपक्रम"] || row["उपक्रमाचे नाव"] || row["Activity"] || "").trim();
+            const goal = String(row["ध्येय"] || row["ध्येय कोड"] || row["Goal"] || "").trim();
+            const comp = String(row["क्षमता कोड"] || row["क्षमता"] || row["Competency"] || "").trim();
+            const dim = String(
+              row["क्षमता / पैलू"] ||
+                row["पैलू"] ||
+                row["निकष"] ||
+                row["परिमाण"] ||
+                row["Dimension"] ||
+                row["क्षमता"] ||
+                ""
+            ).trim();
+            const beg = String(row["प्रारंभिक"] || row["प्रवाह"] || row["निर्झर"] || row["Beginner"] || "").trim();
+            const pro = String(row["प्रवीण"] || row["पर्वत"] || row["Proficient"] || "").trim();
+            const adv = String(row["प्रगत"] || row["आकाश"] || row["Advanced"] || "").trim();
 
-        rawRows.forEach((row, idx) => {
-          const sub = String(row["विषय"] || row["विकास क्षेत्र"] || "").trim();
-          if (sub && !sub.startsWith("विषय:") && !sub.startsWith("विकास क्षेत्र:")) {
-            currSub = sub;
-          }
-          const level = String(row["कामगिरी स्तर"] || "").trim();
-          const remarkText = String(
-            row["शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)"] || row["अभिप्राय"] || ""
-          ).trim();
+            if (act.startsWith("ध्येय:") || act.startsWith("ध्येय :")) {
+              const gMatch = act.match(/CG-[0-9]+/);
+              if (gMatch) currGoal = gMatch[0];
+              return;
+            }
+            if (goal) {
+              const gMatch = goal.match(/CG-[0-9]+/);
+              if (gMatch) currGoal = gMatch[0];
+            }
 
-          if (!remarkText || !level) return;
+            if (act.startsWith("क्षमता:") || act.startsWith("क्षमता :")) {
+              const cMatch = act.match(/C-[0-9]+(\.[0-9]+)?/);
+              if (cMatch) currComp = cMatch[0];
+              return;
+            }
+            if (comp && !["जाणीवजागृती", "संवेदनशीलता", "सर्जनशीलता"].includes(comp)) {
+              const cMatch = comp.match(/C-[0-9]+(\.[0-9]+)?/);
+              if (cMatch) currComp = cMatch[0];
+            }
 
-          remarks.push({
-            id: `rem_${Date.now()}_${idx}`,
-            stageId: selectedStage,
-            subjectOrArea: currSub || sub,
-            level,
-            remarkText,
-            createdAt: new Date().toISOString(),
+            if (act && !act.startsWith("ध्येय:") && !act.startsWith("क्षमता:")) currAct = act;
+
+            if (dim && (beg || pro || adv)) {
+              allRubrics.push({
+                id: `rub_${currComp || "comp"}_${idx}_${Date.now()}`,
+                stageId: selectedStage,
+                goalCode: currGoal,
+                competencyCode: currComp,
+                activityTitle: cleanActivityTitle(currAct) || currAct,
+                dimension: dim,
+                beginner: beg,
+                proficient: pro,
+                advanced: adv,
+                createdAt: new Date().toISOString(),
+              });
+            }
           });
-        });
-
-        setParsedRemarks(remarks);
-        toast.success(`'${sheetName}' मधून सर्व ${remarks.length} शेरे यशस्वीरीत्या वाचले गेले!`);
+        }
       }
-      // 3. ACTIVITIES & 5 QUESTIONS SHEET (With carry-over for merged/blank cells!)
-      else if (hasActivityCol) {
-        const activities: HpcDynamicActivity[] = [];
+      // 2. FINAL COMPREHENSIVE REMARKS SHEET (Sheet 4)
+      else if (isFinalRemarksSheet) {
+        const headerRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        for (let rIdx = 1; rIdx < headerRows.length; rIdx++) {
+          const rowArr = headerRows[rIdx];
+          if (!rowArr || rowArr.length === 0) continue;
+
+          const level = String(rowArr[1] || rowArr[0] || "").trim();
+          const remarkText = String(rowArr[2] || rowArr[1] || "").trim();
+
+          if (level && remarkText && remarkText !== level) {
+            const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+            allRemarks.push({
+              id: `final_rem_${cleanLvl}_${rIdx}`,
+              stageId: selectedStage,
+              subjectOrArea: "अंतिम सर्वंकष वार्षिक अभिप्राय",
+              level,
+              remarkText,
+              type: "final_comprehensive" as any,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+
+        if (allRemarks.filter((r) => r.subjectOrArea === "अंतिम सर्वंकष वार्षिक अभिप्राय").length === 0) {
+          rawRows.forEach((row, idx) => {
+            const level = String(row["कामगिरी स्तर"] || row["स्तर"] || "").trim();
+            const remarkText = String(
+              row["शिक्षकांचा अंतिम सर्वंकष वार्षिक अभिप्राय"] ||
+                row["शिक्षकांचा अभिप्राय"] ||
+                row["अभिप्राय"] ||
+                ""
+            ).trim();
+
+            if (level && remarkText) {
+              const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+              allRemarks.push({
+                id: `final_rem_${cleanLvl}_${idx}`,
+                stageId: selectedStage,
+                subjectOrArea: "अंतिम सर्वंकष वार्षिक अभिप्राय",
+                level,
+                remarkText,
+                type: "final_comprehensive" as any,
+                createdAt: new Date().toISOString(),
+              });
+            }
+          });
+        }
+      }
+      // 3. NEXT CLASS RECOMMENDATIONS SHEET (Sheet 5)
+      else if (isRecommendationsSheet) {
+        const headerRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        for (let rIdx = 1; rIdx < headerRows.length; rIdx++) {
+          const rowArr = headerRows[rIdx];
+          if (!rowArr || rowArr.length === 0) continue;
+
+          const level = String(rowArr[1] || rowArr[0] || "").trim();
+          const remarkText = String(rowArr[2] || rowArr[1] || "").trim();
+
+          if (level && remarkText && remarkText !== level) {
+            const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+            allRemarks.push({
+              id: `next_rec_${cleanLvl}_${rIdx}`,
+              stageId: selectedStage,
+              subjectOrArea: "पुढील इयत्तेसाठी मार्गदर्शन व शिफारस",
+              level,
+              remarkText,
+              recommendationText: remarkText,
+              type: "next_class_recommendation" as any,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+
+        if (allRemarks.filter((r) => r.subjectOrArea === "पुढील इयत्तेसाठी मार्गदर्शन व शिफारस").length === 0) {
+          rawRows.forEach((row, idx) => {
+            const level = String(row["कामगिरी स्तर"] || row["स्तर"] || "").trim();
+            const remarkText = String(
+              row["पुढील इयत्तेसाठी विद्यार्थ्यास मार्गदर्शन, शिफारस व सुधारावयाच्या बाबी"] ||
+                row["पुढील इयत्तेसाठी मार्गदर्शन व शिफारस"] ||
+                row["मार्गदर्शन"] ||
+                row["शिफारस"] ||
+                ""
+            ).trim();
+
+            if (level && remarkText) {
+              const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+              allRemarks.push({
+                id: `next_rec_${cleanLvl}_${idx}`,
+                stageId: selectedStage,
+                subjectOrArea: "पुढील इयत्तेसाठी मार्गदर्शन व शिफारस",
+                level,
+                remarkText,
+                recommendationText: remarkText,
+                type: "next_class_recommendation" as any,
+                createdAt: new Date().toISOString(),
+              });
+            }
+          });
+        }
+      }
+      // 4. DEVELOPMENTAL AREA REMARKS SHEET (Sheet 3)
+      else if (isRemarksSheet) {
         let currSub = "";
-        let currGoalRaw = "";
+        const headerRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        for (let rIdx = 1; rIdx < headerRows.length; rIdx++) {
+          const rowArr = headerRows[rIdx];
+          if (!rowArr || rowArr.length === 0) continue;
+
+          const c0 = String(rowArr[0] || "").trim();
+          const c1 = String(rowArr[1] || "").trim();
+          const c2 = String(rowArr[2] || "").trim();
+          const c3 = String(rowArr[3] || "").trim();
+
+          if (c0.startsWith("विकास क्षेत्र:") || c0.startsWith("विकास क्षेत्र :")) {
+            currSub = c0.replace(/^विकास\s*क्षेत्र\s*:\s*/, "").trim();
+            continue;
+          }
+
+          const area = c1 || currSub;
+          const level = c2;
+          const remarkText = c3;
+
+          if (area) currSub = area;
+
+          if (currSub && level && remarkText) {
+            const cleanAreaId = (currSub || "area").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+            const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+            allRemarks.push({
+              id: `rem_${cleanAreaId}_${cleanLvl}_${rIdx}`,
+              stageId: selectedStage,
+              subjectOrArea: currSub,
+              level,
+              remarkText,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+
+        // Fallback for object format
+        if (allRemarks.length === 0) {
+          rawRows.forEach((row, idx) => {
+            const sub = String(row["विषय"] || row["विकास क्षेत्र"] || "").trim();
+            if (sub && !sub.startsWith("विषय:") && !sub.startsWith("विकास क्षेत्र:")) {
+              currSub = sub;
+            }
+            const level = String(row["कामगिरी स्तर"] || row["स्तर"] || "").trim();
+            const remarkText = String(
+              row["शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)"] ||
+                row["शिक्षकांचा अभिप्राय"] ||
+                row["अभिप्राय"] ||
+                ""
+            ).trim();
+
+            if (!remarkText || !level) return;
+
+            const cleanAreaId = (currSub || sub || "area").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+            const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+            allRemarks.push({
+              id: `rem_${cleanAreaId}_${cleanLvl}_${idx}`,
+              stageId: selectedStage,
+              subjectOrArea: currSub || sub,
+              level,
+              remarkText,
+              createdAt: new Date().toISOString(),
+            });
+          });
+        }
+      }
+      // 3. ACTIVITIES SHEET (And Extract Goals, Competencies, and Rubrics from rows!)
+      else if (hasActivityCol) {
+        let currSub = "";
         let currGoalCode = "";
         let currGoalTitle = "";
-        let currCompRaw = "";
         let currCompCode = "";
         let currCompTitle = "";
         let lastAct: HpcDynamicActivity | null = null;
@@ -681,16 +1178,61 @@ function AdminHpcManagementPage() {
 
           if (rowSub) currSub = rowSub;
           if (rowGoal) {
-            currGoalRaw = rowGoal;
             const gm = rowGoal.match(/^([A-Za-z0-9\-\.]+)\s*(.*)/);
             currGoalCode = gm ? gm[1] : rowGoal.slice(0, 10);
             currGoalTitle = gm && gm[2] ? gm[2] : rowGoal;
           }
           if (rowComp) {
-            currCompRaw = rowComp;
             const cm = rowComp.match(/^([A-Za-z0-9\-\.]+)\s*(.*)/);
             currCompCode = cm ? cm[1] : rowComp.slice(0, 10);
             currCompTitle = cm && cm[2] ? cm[2] : rowComp;
+          }
+
+          let stage: HpcStageId = selectedStage;
+          if (currCompCode.startsWith("CG-") || currCompCode.startsWith("C-")) {
+            stage = "foundational";
+          } else if (
+            currCompCode.startsWith("L1") ||
+            currCompCode.startsWith("MC") ||
+            currCompCode.startsWith("TWC") ||
+            currCompCode.startsWith("VA")
+          ) {
+            stage = "preparatory";
+          }
+
+          // EXTRACT GOALS INTO GOALSMAP
+          if (currGoalCode) {
+            const gId = `CUSTOM-${currGoalCode}`;
+            if (!goalsMap.has(gId)) {
+              goalsMap.set(gId, {
+                id: gId,
+                code: currGoalCode,
+                titleMarathi: currGoalTitle || currGoalCode,
+                stageId: stage,
+                areaOrSubjectId: currSub || "general",
+              });
+            }
+          }
+
+          // EXTRACT COMPETENCIES INTO COMPSMAP
+          if (currCompCode) {
+            const cId = `CUSTOM-${currCompCode}`;
+            if (!compsMap.has(cId)) {
+              compsMap.set(cId, {
+                id: cId,
+                code: currCompCode,
+                titleMarathi: currCompTitle || currCompCode,
+                goalId: currGoalCode ? `CUSTOM-${currGoalCode}` : "",
+                stageId: stage,
+                applicableClassIds:
+                  stage === "foundational"
+                    ? ["1st", "2nd"]
+                    : stage === "preparatory"
+                    ? ["3rd", "4th", "5th"]
+                    : ["6th", "7th", "8th"],
+                applicableSession: "both",
+              });
+            }
           }
 
           const actRaw = String(row["उपक्रम (थोडक्यात कृतीसह)"] || row["उपक्रम"] || "").trim();
@@ -699,7 +1241,6 @@ function AdminHpcManagementPage() {
           const parentFeedback = String(row["पालकांचा अभिप्राय"] || "").trim();
 
           if (actRaw) {
-            // New activity row
             let activityTitle = actRaw;
             let activityDesc = "";
             let activityNum = 1;
@@ -729,19 +1270,7 @@ function AdminHpcManagementPage() {
               .map((q) => q.replace(/^[0-9\u0966-\u096F]+[\.\)\-]\s*/, "").trim())
               .filter(Boolean);
 
-            let stage: HpcStageId = selectedStage;
-            if (currCompCode.startsWith("CG-") || currCompCode.startsWith("C-")) {
-              stage = "foundational";
-            } else if (
-              currCompCode.startsWith("L1") ||
-              currCompCode.startsWith("MC") ||
-              currCompCode.startsWith("TWC") ||
-              currCompCode.startsWith("VA")
-            ) {
-              stage = "preparatory";
-            }
-
-            const docId = `act_${currCompCode}_${activityNum}_${idx}`;
+            const docId = `act_${currCompCode}_${activityNum}`;
 
             lastAct = {
               id: docId,
@@ -754,15 +1283,35 @@ function AdminHpcManagementPage() {
               activityNumber: activityNum,
               activityTitle,
               activityDescription: activityDesc,
+              description: activityDesc,
               questions,
               teacherFeedbackSample: teacherFeedback,
               parentFeedbackSample: parentFeedback,
               createdAt: new Date().toISOString(),
             };
 
-            activities.push(lastAct);
+            allActivities.push(lastAct);
+
+            // ALSO EXTRACT RUBRICS FROM ROW IF RUBRIC COLUMNS EXIST
+            const rBeg = String(row["प्रारंभिक"] || row["प्रवाह"] || row["निर्झर"] || "").trim();
+            const rPro = String(row["प्रवीण"] || row["पर्वत"] || "").trim();
+            const rAdv = String(row["प्रगत"] || row["आकाश"] || "").trim();
+            const rDim = String(row["क्षमता"] || row["पैलू"] || row["निकष"] || "सर्वसाधारण").trim();
+            if (rBeg || rPro || rAdv) {
+              allRubrics.push({
+                id: `rub_${Date.now()}_${idx}`,
+                stageId: stage,
+                goalCode: currGoalCode,
+                competencyCode: currCompCode,
+                activityTitle,
+                dimension: rDim,
+                beginner: rBeg,
+                proficient: rPro,
+                advanced: rAdv,
+                createdAt: new Date().toISOString(),
+              });
+            }
           } else if (lastAct && (teacherFeedback || parentFeedback)) {
-            // Second row with alternative sample remarks for the previous activity
             if (teacherFeedback && !lastAct.teacherFeedbackSample?.includes(teacherFeedback)) {
               lastAct.teacherFeedbackSample = lastAct.teacherFeedbackSample
                 ? `${lastAct.teacherFeedbackSample} | ${teacherFeedback}`
@@ -775,21 +1324,16 @@ function AdminHpcManagementPage() {
             }
           }
         });
-
-        setParsedActivities(activities);
-        toast.success(`'${sheetName}' मधून सर्व ${activities.length} उपक्रम व ५ प्रश्न अचूक वाचले गेले!`);
       }
-      // 4. GOALS & COMPETENCIES ONLY (File 1 case)
-      else if (hasGoalsAndCompsOnly) {
-        const goalsMap = new Map<string, HpcCurricularGoal>();
-        const compList: HpcCompetency[] = [];
+      // 4. GOALS & COMPETENCIES ONLY SHEET
+      else {
         let currSub = "";
         let currGoalRaw = "";
 
-        rawRows.forEach((row, idx) => {
-          const sub = String(row["विकास क्षेत्र / विषय"] || "").trim();
-          const goalStr = String(row["ध्येय क्रमांक व ध्येयाचे संपूर्ण वर्णन"] || "").trim();
-          const compStr = String(row["क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन"] || "").trim();
+        rawRows.forEach((row) => {
+          const sub = String(row["विकास क्षेत्र / विषय"] || row["विषय"] || "").trim();
+          const goalStr = String(row["ध्येय क्रमांक व ध्येयाचे संपूर्ण वर्णन"] || row["ध्येय"] || "").trim();
+          const compStr = String(row["क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन"] || row["क्षमता"] || "").trim();
 
           if (sub) currSub = sub;
           if (goalStr) {
@@ -815,33 +1359,38 @@ function AdminHpcManagementPage() {
             const cTitle = cm && cm[2] ? cm[2] : compStr;
             const cId = `CUSTOM-${cCode}`;
             const currentGoalCode = currGoalRaw.match(/^([A-Za-z0-9\-\.]+)/)?.[1] || "";
-            compList.push({
-              id: cId,
-              code: cCode,
-              titleMarathi: cTitle,
-              goalId: `CUSTOM-${currentGoalCode}`,
-              stageId: selectedStage,
-              applicableClassIds:
-                selectedStage === "foundational" ? ["1st", "2nd"] : ["3rd", "4th", "5th"],
-              applicableSession: "both",
-            });
+            if (!compsMap.has(cId)) {
+              compsMap.set(cId, {
+                id: cId,
+                code: cCode,
+                titleMarathi: cTitle,
+                goalId: `CUSTOM-${currentGoalCode}`,
+                stageId: selectedStage,
+                applicableClassIds:
+                  selectedStage === "foundational" ? ["1st", "2nd"] : ["3rd", "4th", "5th"],
+                applicableSession: "both",
+              });
+            }
           }
         });
-
-        const goalsList = Array.from(goalsMap.values());
-        setParsedGoals(goalsList);
-        setParsedCompetencies(compList);
-        toast.success(
-          `'${sheetName}' मधून ${goalsList.length} ध्येये व ${compList.length} क्षमता वाचल्या गेल्या!`
-        );
-      } else {
-        toast.info(`शीट '${sheetName}' वाचली गेली (${rawRows.length} पंक्ती).`);
       }
-    } catch (err: any) {
-      toast.error("शीट प्रोसेस करताना त्रुटी: " + err.message);
-    } finally {
-      setIsParsing(false);
-    }
+    });
+
+    setParsedActivities(allActivities);
+    setParsedRemarks(allRemarks);
+    setParsedRubrics(allRubrics);
+    const parsedG = Array.from(goalsMap.values());
+    const parsedC = Array.from(compsMap.values());
+    setParsedGoals(parsedG);
+    setParsedCompetencies(parsedC);
+
+    const defaultSheet =
+      wb.SheetNames.find((s) => s.includes("ध्येय") || s.includes("उपक्रम")) || wb.SheetNames[0] || "";
+    setSelectedSheetName(defaultSheet);
+
+    toast.success(
+      `एक्सेल फाईलमधून डेटा अचूक वाचला गेला! (उपक्रम: ${allActivities.length}, ध्येये: ${parsedG.length}, क्षमता: ${parsedC.length}, रुब्रिक्स: ${allRubrics.length}, शेरे: ${allRemarks.length})`
+    );
   };
 
   const handleSyncToFirestore = async () => {
@@ -867,11 +1416,13 @@ function AdminHpcManagementPage() {
       if (parsedRubrics.length > 0) {
         const rubCount = await bulkUploadHpcRubrics(parsedRubrics);
         toast.success(`${rubCount} रुब्रिक्स डेटाबेसमध्ये सिंक झाले!`);
+        fetchRubrics();
       }
 
       if (parsedGoals.length > 0 || parsedCompetencies.length > 0) {
         const res = await bulkUploadHpcGoalsAndCompetencies(parsedGoals, parsedCompetencies);
         toast.success(`${res.goalsCount} ध्येये व ${res.compsCount} क्षमता डेटाबेसमध्ये सिंक झाल्या!`);
+        fetchGoalsAndCompetencies();
       }
 
       if (
@@ -1076,7 +1627,7 @@ function AdminHpcManagementPage() {
               }`}
             >
               <BookOpen className="size-3.5" />
-              ४. अभ्यासक्रम ध्येये (CG)
+              ४. अभ्यासक्रम ध्येये (CG) ({allGoals.length})
             </button>
             <button
               onClick={() => setActiveTab("competencies")}
@@ -1087,7 +1638,7 @@ function AdminHpcManagementPage() {
               }`}
             >
               <Award className="size-3.5" />
-              ५. क्षमता यादी (C)
+              ५. क्षमता यादी (C) ({allCompetencies.length})
             </button>
             <button
               onClick={() => setActiveTab("rubrics")}
@@ -1098,7 +1649,7 @@ function AdminHpcManagementPage() {
               }`}
             >
               <Compass className="size-3.5" />
-              ६. निकषसंच (Rubrics)
+              ६. निकषसंच (Rubrics) ({rubricsList.length})
             </button>
           </div>
 
@@ -1331,7 +1882,7 @@ function AdminHpcManagementPage() {
                   <option value="all">सर्व क्षमता (All Competencies)</option>
                   {allCompetencies.map((c) => (
                     <option key={c.code} value={c.code}>
-                      {c.code}: {c.titleMarathi.slice(0, 45)}...
+                      {c.code}: {(c.titleMarathi || (c as any).nameMarathi || c.code || "").slice(0, 45)}...
                     </option>
                   ))}
                 </select>
@@ -1596,7 +2147,6 @@ function AdminHpcManagementPage() {
                           key={name}
                           onClick={() => {
                             setSelectedSheetName(name);
-                            if (workbook) parseWorkbookSheet(workbook, name);
                           }}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                             selectedSheetName === name
@@ -1884,7 +2434,7 @@ function AdminHpcManagementPage() {
             </div>
 
             {/* Filter */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <div className="relative">
                 <Search className="size-4 absolute left-3 top-3 text-slate-400" />
                 <input
@@ -1894,6 +2444,21 @@ function AdminHpcManagementPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800"
                 />
+              </div>
+
+              <div>
+                <select
+                  value={remarkAreaFilter}
+                  onChange={(e) => setRemarkAreaFilter(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
+                >
+                  <option value="all">सर्व विकास क्षेत्र / विषय (All Areas)</option>
+                  {Array.from(new Set(remarksList.map((r) => r.subjectOrArea).filter(Boolean))).map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -1986,51 +2551,89 @@ function AdminHpcManagementPage() {
                   अभ्यासक्रमाची ध्येये (Curricular Goals) — {HPC_STAGES_INFO.find((s) => s.id === selectedStage)?.titleMarathi}
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  एकूण ध्येये: {allGoals.length} (अधिकृत SCERT + कस्टमाईज्ड)
+                  फक्त एक्सेल शीटद्वारे अपलोड केलेली व जोडलेली ध्येये (एकूण: {allGoals.length})
                 </p>
               </div>
 
-              <button
-                onClick={() => {
-                  setNewGoalArea(areas[0]?.id || "");
-                  setShowAddGoal(true);
-                }}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Plus className="size-3.5" />
-                <span>नवीन ध्येय जोडा (Add CG)</span>
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {allGoals.map((g) => {
-                const area = areas.find((a) => a.id === g.areaOrSubjectId);
-                return (
-                  <div
-                    key={g.id}
-                    className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={fetchGoalsAndCompetencies}
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                  title="रिफ्रेश करा"
+                >
+                  <RefreshCw className="size-4" />
+                </button>
+                {allGoals.length > 0 && (
+                  <button
+                    onClick={() => handleClearStageGoals(selectedStage)}
+                    className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5"
+                    title="या स्तरातील सर्व ध्येये हटवा"
                   >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-900 font-mono">
-                          {g.code}
-                        </span>
-                        <span className="text-xs font-bold text-slate-500">
-                          विषय / क्षेत्र: <b>{area?.nameMarathi || g.areaOrSubjectId}</b>
-                        </span>
-                      </div>
-                      <p className="text-sm font-bold text-slate-900 mt-1 leading-relaxed">
-                        {g.titleMarathi}
-                      </p>
-                    </div>
-
-                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 self-start sm:self-auto">
-                      सक्रिय (Active)
-                    </span>
-                  </div>
-                );
-              })}
+                    <Trash2 className="size-3.5" />
+                    <span>सर्व ध्येये साफ करा</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setNewGoalArea(areas[0]?.id || "");
+                    setShowAddGoal(true);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Plus className="size-3.5" />
+                  <span>नवीन ध्येय जोडा (Add CG)</span>
+                </button>
+              </div>
             </div>
+
+            {allGoals.length === 0 ? (
+              <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
+                <AlertCircle className="size-8 text-amber-500 mx-auto" />
+                <p className="text-sm font-bold text-slate-700">या स्तरासाठी अद्याप कोणतेही ध्येय (CG) जोडलेले नाही.</p>
+                <p className="text-xs text-slate-500">
+                  तुम्ही 'एक्सेल अपलोड व सिंक' टॅबमधून एक्सेल फाईल अपलोड करू शकता किंवा वरून "नवीन ध्येय जोडा" वापरू शकता.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {allGoals.map((g) => {
+                  const area = areas.find((a) => a.id === g.areaOrSubjectId);
+                  return (
+                    <div
+                      key={g.id}
+                      className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-indigo-300 transition-all shadow-xs"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-900 font-mono">
+                            {g.code}
+                          </span>
+                          <span className="text-xs font-bold text-slate-500">
+                            विषय / क्षेत्र: <b>{area?.nameMarathi || g.areaOrSubjectId}</b>
+                          </span>
+                        </div>
+                        <p className="text-sm font-bold text-slate-900 mt-1 leading-relaxed">
+                          {g.titleMarathi}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                        <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                          सक्रिय
+                        </span>
+                        <button
+                          onClick={() => handleDeleteGoal(g.id, g.code)}
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 transition-all cursor-pointer"
+                          title="ध्येय हटवा"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -2045,57 +2648,134 @@ function AdminHpcManagementPage() {
                   क्षमता यादी (Competencies) — {HPC_STAGES_INFO.find((s) => s.id === selectedStage)?.titleMarathi}
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  एकूण क्षमता: {allCompetencies.length} (ध्येयानुसार वर्गवारी)
+                  फक्त एक्सेल शीटद्वारे अपलोड केलेल्या व जोडलेल्या क्षमता (एकूण: {allCompetencies.length})
                 </p>
               </div>
 
-              <button
-                onClick={() => {
-                  setNewCompGoalId(allGoals[0]?.id || "");
-                  setShowAddComp(true);
-                }}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Plus className="size-3.5" />
-                <span>नवीन क्षमता जोडा (Add C)</span>
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {allCompetencies.map((c) => (
-                <div
-                  key={c.id}
-                  className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={fetchGoalsAndCompetencies}
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                  title="रिफ्रेश करा"
                 >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-mono">
-                        {c.code}
-                      </span>
-                      <span className="text-xs font-bold text-slate-500">
-                        ध्येय: <b>{c.goalId}</b>
-                      </span>
-                      {c.applicableSession && (
-                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
-                          {c.applicableSession === "session1"
-                            ? "सत्र १"
-                            : c.applicableSession === "session2"
-                            ? "सत्र २"
-                            : "दोन्ही सत्रे"}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm font-bold text-slate-900 mt-1 leading-relaxed">
-                      {c.titleMarathi}
-                    </p>
-                  </div>
-
-                  <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 self-start sm:self-auto">
-                    सक्रिय (Active)
-                  </span>
-                </div>
-              ))}
+                  <RefreshCw className="size-4" />
+                </button>
+                {allCompetencies.length > 0 && (
+                  <button
+                    onClick={() => handleClearStageCompetencies(selectedStage)}
+                    className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5"
+                    title="या स्तरातील सर्व क्षमता हटवा"
+                  >
+                    <Trash2 className="size-3.5" />
+                    <span>सर्व क्षमता साफ करा</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setNewCompGoalId(allGoals[0]?.id || "");
+                    setShowAddComp(true);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Plus className="size-3.5" />
+                  <span>नवीन क्षमता जोडा (Add C)</span>
+                </button>
+              </div>
             </div>
+
+            {/* Filter & Search Bar */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="relative">
+                <Search className="size-4 absolute left-3 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="क्षमता कोड किंवा नाव शोधा..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <select
+                  value={compGoalFilter}
+                  onChange={(e) => setCompGoalFilter(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
+                >
+                  <option value="all">सर्व अभ्यासक्रम ध्येये (All Goals)</option>
+                  {allGoals.map((g) => (
+                    <option key={g.id} value={g.code}>
+                      {g.code}: {(g.titleMarathi || (g as any).nameMarathi || g.code || "").slice(0, 40)}...
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end text-xs font-bold text-slate-500">
+                दाखवत आहे: {filteredCompetencies.length} क्षमता
+              </div>
+            </div>
+
+            {allCompetencies.length === 0 ? (
+              <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
+                <AlertCircle className="size-8 text-amber-500 mx-auto" />
+                <p className="text-sm font-bold text-slate-700">या स्तरासाठी अद्याप कोणतीही क्षमता (C) जोडलेली नाही.</p>
+                <p className="text-xs text-slate-500">
+                  तुम्ही 'एक्सेल अपलोड व सिंक' टॅबमधून एक्सेल फाईल अपलोड करू शकता किंवा वरून "नवीन क्षमता जोडा" वापरू शकता.
+                </p>
+              </div>
+            ) : filteredCompetencies.length === 0 ? (
+              <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
+                <AlertCircle className="size-8 text-amber-500 mx-auto" />
+                <p className="text-sm font-bold text-slate-700">निवडलेल्या ध्येयासाठी कोणतीही क्षमता आढळली नाही.</p>
+                <p className="text-xs text-slate-500">कृपया वरील फिल्टर तपासा किंवा नवीन क्षमता जोडा.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredCompetencies.map((c) => (
+                  <div
+                    key={c.id}
+                    className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-purple-300 transition-all shadow-xs"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-mono">
+                          {c.code}
+                        </span>
+                        <span className="text-xs font-bold text-slate-500">
+                          ध्येय: <b>{c.goalId}</b>
+                        </span>
+                        {c.applicableSession && (
+                          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                            {c.applicableSession === "session1"
+                              ? "सत्र १"
+                              : c.applicableSession === "session2"
+                              ? "सत्र २"
+                              : "दोन्ही सत्रे"}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-bold text-slate-900 mt-1 leading-relaxed">
+                        {c.titleMarathi}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                        सक्रिय
+                      </span>
+                      <button
+                        onClick={() => handleDeleteCompetency(c.id, c.code)}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 transition-all cursor-pointer"
+                        title="क्षमता हटवा"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -2103,53 +2783,182 @@ function AdminHpcManagementPage() {
         {/* TAB 6: RUBRICS */}
         {/* ========================================================================= */}
         {activeTab === "rubrics" && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-8">
-            <div>
-              <h3 className="text-lg font-black text-slate-900">
-                कामगिरी स्तर निकषसंच (Performance Indicators & Rubrics)
-              </h3>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                NEP 2020 व SCERT TOT २०२६ मार्गदर्शक तत्त्वांनुसार ३ परिमाणे व त्यांचे स्तर
-              </p>
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">
+                  कामगिरी स्तर निकषसंच (Performance Indicators & Rubrics)
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  फक्त एक्सेल शीटद्वारे अपलोड केलेले व जोडलेले मूल्यांकन रुब्रिक्स (एकूण: {rubricsList.length})
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={fetchRubrics}
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                  title="रिफ्रेश करा"
+                >
+                  <RefreshCw className="size-4" />
+                </button>
+                {rubricsList.length > 0 && (
+                  <button
+                    onClick={handleClearAllRubrics}
+                    className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5"
+                    title="सर्व रुब्रिक्स हटवा"
+                  >
+                    <Trash2 className="size-3.5" />
+                    <span>सर्व रुब्रिक्स साफ करा</span>
+                  </button>
+                )}
+                <button
+                  onClick={handleOpenAddRubric}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Plus className="size-3.5" />
+                  <span>नवीन निकष जोडा (Add Rubric)</span>
+                </button>
+              </div>
             </div>
 
-            {Object.values(HPC_CORE_RUBRICS).map((dim) => (
-              <div
-                key={dim.id}
-                className="p-5 rounded-2xl border border-slate-200 bg-slate-50/40 space-y-4"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-black px-3 py-1 rounded-xl bg-slate-900 text-white">
-                    {dim.titleMarathi} ({dim.titleEnglish})
-                  </span>
-                </div>
+            {/* Rubrics Filter */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="relative">
+                <Search className="size-4 absolute left-3 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="उपक्रम किंवा निकष मजकूर शोधा..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800"
+                />
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {(["beginner", "proficient", "advanced"] as const).map((lvl) => {
-                    const lInfo = dim.levels[lvl];
-                    return (
-                      <div
-                        key={lvl}
-                        className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-2"
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-black text-xs text-indigo-900">
-                            {lInfo.labelStandard}
+              <div>
+                <select
+                  value={rubricDimensionFilter}
+                  onChange={(e) => setRubricDimensionFilter(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
+                >
+                  <option value="all">सर्व परिमाणे (All Dimensions)</option>
+                  <option value="जाणीवजागृती">जाणीवजागृती (Awareness)</option>
+                  <option value="संवेदनशीलता">संवेदनशीलता (Sensitivity)</option>
+                  <option value="सर्जनशीलता">सर्जनशीलता (Creativity)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end text-xs font-bold text-slate-500">
+                दाखवत आहे: {filteredRubrics.length} निकष
+              </div>
+            </div>
+
+            {/* Rubrics Cards List */}
+            {rubricsLoading ? (
+              <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
+                <Loader2 className="size-6 animate-spin" />
+                <span className="text-xs font-bold">रुब्रिक्स लोड होत आहेत...</span>
+              </div>
+            ) : filteredRubrics.length === 0 ? (
+              <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
+                <AlertCircle className="size-8 text-amber-500 mx-auto" />
+                <p className="text-sm font-bold text-slate-700">अद्याप कोणताही निकष (Rubric) डेटाबेसमध्ये अपलोड केलेला नाही.</p>
+                <p className="text-xs text-slate-500">
+                  तुम्ही वरून "नवीन निकष जोडा" वापरू शकता किंवा 'एक्सेल अपलोड व सिंक' टॅबमधून 'मूल्यांकन रुब्रिक' शीट थेट अपलोड करू शकता.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredRubrics.map((rub) => (
+                  <div
+                    key={rub.id}
+                    className="p-5 rounded-2xl border border-slate-200 bg-white hover:border-indigo-300 transition-all shadow-xs space-y-3"
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-indigo-900 text-white">
+                          {rub.dimension}
+                        </span>
+                        {rub.activityTitle && (
+                          <span className="text-xs font-bold text-slate-800">
+                            उपक्रम: <b>{rub.activityTitle}</b>
                           </span>
-                          <span className="text-[10px] text-slate-400 font-bold">
-                            {lInfo.labelFoundational}
+                        )}
+                        {rub.competencyCode && (
+                          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-900">
+                            {rub.competencyCode}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => handleOpenEditRubric(rub)}
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-800 transition-all cursor-pointer"
+                          title="संपादित करा"
+                        >
+                          <Edit2 className="size-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteRubric(rub.id)}
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-800 transition-all cursor-pointer"
+                          title="हटवा"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Beginner */}
+                      <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/30 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-amber-900">
+                            {selectedStage === "foundational" ? "प्रवाह / निर्झर" : "प्रारंभिक (Beginner)"}
+                          </span>
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                            स्तर १
                           </span>
                         </div>
-                        <p className="text-[11px] font-bold text-slate-600">{lInfo.shortDesc}</p>
-                        <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
-                          {lInfo.detailedDesc}
+                        <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                          {rub.beginner || "-"}
                         </p>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      {/* Proficient */}
+                      <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/30 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-emerald-900">
+                            {selectedStage === "foundational" ? "पर्वत" : "प्रवीण (Proficient)"}
+                          </span>
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                            स्तर २
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                          {rub.proficient || "-"}
+                        </p>
+                      </div>
+
+                      {/* Advanced */}
+                      <div className="p-3.5 rounded-xl border border-blue-200 bg-blue-50/30 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-blue-900">
+                            {selectedStage === "foundational" ? "आकाश" : "प्रगत (Advanced)"}
+                          </span>
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
+                            स्तर ३
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                          {rub.advanced || "-"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
       </main>
@@ -2471,7 +3280,7 @@ function AdminHpcManagementPage() {
               >
                 {allGoals.map((g) => (
                   <option key={g.id} value={g.id}>
-                    {g.code}: {g.titleMarathi.slice(0, 40)}...
+                    {g.code}: {(g.titleMarathi || (g as any).nameMarathi || g.code || "").slice(0, 40)}...
                   </option>
                 ))}
               </select>
@@ -2498,6 +3307,131 @@ function AdminHpcManagementPage() {
                 className="px-5 py-2 rounded-xl bg-purple-600 text-white text-xs font-black cursor-pointer shadow-xs"
               >
                 जोडा (Add)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Add/Edit Rubric */}
+      {showRubricModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full space-y-4 shadow-2xl my-8">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-900">
+                {editingRubricId ? "मूल्यांकन निकष संपादित करा (Edit Rubric)" : "नवीन मूल्यांकन निकष जोडा (Add Rubric)"}
+              </h3>
+              <button
+                onClick={() => setShowRubricModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">शैक्षणिक स्तर (Stage):</label>
+                  <select
+                    value={rubStage}
+                    onChange={(e) => setRubStage(e.target.value as HpcStageId)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
+                  >
+                    <option value="foundational">पायाभूत स्तर (इ. १ली व २री)</option>
+                    <option value="preparatory">पूर्वतयारी स्तर (इ. ३री ते ५वी)</option>
+                    <option value="middle">मध्य स्तर (इ. ६वी ते ८वी)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">परिमाण / पैलू (Dimension) *:</label>
+                  <input
+                    type="text"
+                    value={rubDimension}
+                    onChange={(e) => setRubDimension(e.target.value)}
+                    placeholder="उदा. जाणीवजागृती / संवेदनशीलता / सर्जनशीलता"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">क्षमता कोड (ऐच्छिक):</label>
+                  <input
+                    type="text"
+                    value={rubCompCode}
+                    onChange={(e) => setRubCompCode(e.target.value)}
+                    placeholder="उदा. L1C1.1 किंवा C-1.1"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">उपक्रमाचे नाव / कृती (ऐच्छिक):</label>
+                  <input
+                    type="text"
+                    value={rubActTitle}
+                    onChange={(e) => setRubActTitle(e.target.value)}
+                    placeholder="उदा. आपल्या आवडत्या सणाबद्दल बोला"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-amber-800 mb-1">
+                  स्तर १: {rubStage === "foundational" ? "प्रवाह / निर्झर" : "प्रारंभिक (Beginner)"} निकष वर्णन:
+                </label>
+                <textarea
+                  rows={2}
+                  value={rubBeginner}
+                  onChange={(e) => setRubBeginner(e.target.value)}
+                  placeholder="विद्यार्थ्याला कृती करताना मदतीची गरज लागते..."
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-emerald-800 mb-1">
+                  स्तर २: {rubStage === "foundational" ? "पर्वत" : "प्रवीण (Proficient)"} निकष वर्णन:
+                </label>
+                <textarea
+                  rows={2}
+                  value={rubProficient}
+                  onChange={(e) => setRubProficient(e.target.value)}
+                  placeholder="विद्यार्थी बहुतांश टप्पे योग्यरीतीने पार पाडतो..."
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-blue-800 mb-1">
+                  स्तर ३: {rubStage === "foundational" ? "आकाश" : "प्रगत (Advanced)"} निकष वर्णन:
+                </label>
+                <textarea
+                  rows={2}
+                  value={rubAdvanced}
+                  onChange={(e) => setRubAdvanced(e.target.value)}
+                  placeholder="विद्यार्थी स्वतंत्रपणे, आत्मविश्वासाने भावना व्यक्त करतो..."
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium text-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setShowRubricModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold cursor-pointer"
+              >
+                रद्द करा
+              </button>
+              <button
+                onClick={handleSaveRubric}
+                className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-black cursor-pointer shadow-xs"
+              >
+                सेव्ह करा (Save Rubric)
               </button>
             </div>
           </div>

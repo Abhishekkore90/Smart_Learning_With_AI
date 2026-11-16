@@ -23,6 +23,12 @@ import {
   HpcDynamicRemark,
 } from "../types/hpc";
 import { HPC_ACTIVITIES_BANK, HpcCompetencyActivitiesData, HpcActivityItem } from "../data/hpcActivitiesBank";
+import {
+  HPC_CURRICULAR_GOALS,
+  HPC_COMPETENCIES,
+  HpcAreaDefinition,
+  getAreasForStage,
+} from "../data/hpcCurricularGoals";
 // @ts-ignore
 import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 // @ts-ignore
@@ -476,24 +482,72 @@ export async function getHpcProgressForClass(
  */
 export async function getHpcDynamicActivities(
   competencyCode?: string,
-  stageId?: HpcStageId
+  stageId?: HpcStageId,
+  subjectOrArea?: string
 ): Promise<HpcDynamicActivity[]> {
   try {
     const colRef = collection(db, "hpc_activities");
     let q = query(colRef);
     if (competencyCode) {
-      q = query(colRef, where("competencyCode", "==", competencyCode));
+      q = query(colRef, where("competencyCode", "==", competencyCode.trim()));
     }
     const snap = await getDocs(q);
-    const list: HpcDynamicActivity[] = [];
+    const rawList: HpcDynamicActivity[] = [];
     snap.forEach((d) => {
-      const data = d.data() as HpcDynamicActivity;
-      if (!stageId || data.stageId === stageId) {
-        list.push({ ...data, id: d.id });
+      const raw = d.data() as any;
+      const desc = raw.activityDescription || raw.description || "";
+      const teacherSample = raw.teacherFeedbackSample || raw.teacherFeedbackBank?.[0] || "";
+      const parentSample = raw.parentFeedbackSample || raw.parentFeedbackBank?.[0] || "";
+
+      const data: HpcDynamicActivity = {
+        ...raw,
+        id: d.id,
+        activityDescription: desc,
+        description: desc,
+        teacherFeedbackSample: teacherSample,
+        parentFeedbackSample: parentSample,
+      };
+
+      const matchesStage = !stageId || !data.stageId || data.stageId === stageId;
+      const matchesSubject = !subjectOrArea || data.subjectOrArea === subjectOrArea;
+      if (matchesStage && matchesSubject) {
+        rawList.push(data);
       }
     });
 
-    return list.sort((a, b) => (a.activityNumber || 1) - (b.activityNumber || 1));
+    const cleanTitle = (t?: string) =>
+      (t || "")
+        .trim()
+        .toLowerCase()
+        .replace(/^([०-९0-9]+[.:)\-\s]+)+/, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    // Deduplicate by competencyCode + clean activityTitle
+    const dedupedMap = new Map<string, HpcDynamicActivity>();
+    rawList.forEach((act) => {
+      const cCode = (act.competencyCode || "").trim().toLowerCase();
+      const cleanT = cleanTitle(act.activityTitle);
+      const key = `${cCode}___${cleanT}`;
+
+      if (!dedupedMap.has(key)) {
+        dedupedMap.set(key, act);
+      } else {
+        const existing = dedupedMap.get(key)!;
+        const existingScore = (existing.activityDescription?.length || 0) + (existing.questions?.length || 0) * 10;
+        const currentScore = (act.activityDescription?.length || 0) + (act.questions?.length || 0) * 10;
+        if (currentScore > existingScore) {
+          dedupedMap.set(key, act);
+        }
+      }
+    });
+
+    const uniqueList = Array.from(dedupedMap.values());
+    uniqueList.sort((a, b) => (a.activityNumber || 1) - (b.activityNumber || 1));
+    return uniqueList.map((a, idx) => ({
+      ...a,
+      activityNumber: idx + 1,
+    }));
   } catch (err) {
     console.error("Error fetching dynamic HPC activities:", err);
     return [];
@@ -512,41 +566,82 @@ export async function getHpcActivityBankForCompetency(
     const dynamicList = await getHpcDynamicActivities(competencyCode, stageId);
     if (dynamicList && dynamicList.length > 0) {
       const first = dynamicList[0];
-      const activities: HpcActivityItem[] = dynamicList.map((d, index) => ({
-        activityNumber: d.activityNumber || index + 1,
-        title: d.activityTitle,
-        description: d.activityDescription,
-        rawText: `${d.activityNumber || index + 1}. ${d.activityTitle}\n\nकृती: ${d.activityDescription}`,
-        questions: d.questions && d.questions.length > 0 ? d.questions : [],
-      }));
+      const activities: HpcActivityItem[] = dynamicList.map((d, index) => {
+        const desc = d.activityDescription || (d as any).description || "";
+        return {
+          activityNumber: index + 1,
+          title: d.activityTitle,
+          description: desc,
+          rawText: `${index + 1}. ${d.activityTitle}${desc ? `\n\nकृती: ${desc}` : ""}`,
+          questions: d.questions && d.questions.length > 0 ? d.questions : [],
+        };
+      });
 
+      const staticData = HPC_ACTIVITIES_BANK[competencyCode];
       const teacherRemarks = dynamicList
-        .map((d) => d.teacherFeedbackSample)
+        .map((d) => d.teacherFeedbackSample || (d as any).teacherFeedbackBank?.[0])
         .filter((r): r is string => Boolean(r && r.trim()));
 
       const parentRemarks = dynamicList
-        .map((d) => d.parentFeedbackSample)
+        .map((d) => d.parentFeedbackSample || (d as any).parentFeedbackBank?.[0])
         .filter((r): r is string => Boolean(r && r.trim()));
 
       return {
         code: competencyCode,
         description: first.competencyTitle || competencyCode,
         activities,
-        teacherRemarks: teacherRemarks.length > 0 ? teacherRemarks : [
+        teacherRemarks: teacherRemarks.length > 0 ? teacherRemarks : (staticData?.teacherRemarks || [
           "या कृतीत विद्यार्थ्याची कामगिरी समाधानकारक व उत्साहवर्धक आहे.",
           "विद्यार्थी आत्मविश्वासाने सहभाग घेतो व विचारलेल्या प्रश्नांची योग्य उत्तरे देतो."
-        ],
-        parentRemarks: parentRemarks.length > 0 ? parentRemarks : [
+        ]),
+        parentRemarks: parentRemarks.length > 0 ? parentRemarks : (staticData?.parentRemarks || [
           "आमच्या निरीक्षणानुसार पाल्याला या उपक्रमात विशेष रुची आहे.",
           "घरीही विद्यार्थी या उपक्रमातील बाबी आनंदाने सांगतो."
-        ],
+        ]),
       };
     }
+
+    // Check if ANY dynamic activities exist in this stage
+    const allStageActivities = await getHpcDynamicActivities(undefined, stageId);
+    if (allStageActivities && allStageActivities.length > 0) {
+      const cleanTarget = (competencyCode || "").trim().toLowerCase();
+      const matched = allStageActivities.filter(
+        (a) => (a.competencyCode || "").trim().toLowerCase() === cleanTarget
+      );
+      if (matched.length > 0) {
+        const first = matched[0];
+        const staticData = HPC_ACTIVITIES_BANK[competencyCode];
+        const matchedTeachers = matched
+          .map((d) => d.teacherFeedbackSample || (d as any).teacherFeedbackBank?.[0])
+          .filter(Boolean) as string[];
+        const matchedParents = matched
+          .map((d) => d.parentFeedbackSample || (d as any).parentFeedbackBank?.[0])
+          .filter(Boolean) as string[];
+
+        return {
+          code: competencyCode,
+          description: first.competencyTitle || competencyCode,
+          activities: matched.map((d, index) => {
+            const desc = d.activityDescription || (d as any).description || "";
+            return {
+              activityNumber: index + 1,
+              title: d.activityTitle,
+              description: desc,
+              rawText: `${index + 1}. ${d.activityTitle}${desc ? `\n\nकृती: ${desc}` : ""}`,
+              questions: d.questions && d.questions.length > 0 ? d.questions : [],
+            };
+          }),
+          teacherRemarks: matchedTeachers.length > 0 ? matchedTeachers : (staticData?.teacherRemarks || []),
+          parentRemarks: matchedParents.length > 0 ? matchedParents : (staticData?.parentRemarks || []),
+        };
+      }
+      return undefined;
+    }
   } catch (err) {
-    console.warn("Could not query dynamic activities, falling back to static bank:", err);
+    console.warn("Could not query dynamic activities:", err);
   }
 
-  // Fallback to static bank
+  // Fallback to static bank only when no dynamic activities exist in the database for this stage
   return HPC_ACTIVITIES_BANK[competencyCode];
 }
 
@@ -634,33 +729,26 @@ export async function deleteAllHpcRemarks(): Promise<number> {
 }
 
 /**
- * Reset entire HPC master database (Activities, Remarks, Rubrics)
+ * Reset entire HPC master database (Activities, Remarks, Rubrics, Custom Goals, Custom Competencies)
  */
 export async function resetEntireHpcDatabase(): Promise<{
   activitiesDeleted: number;
   remarksDeleted: number;
   rubricsDeleted: number;
+  goalsDeleted: number;
+  compsDeleted: number;
 }> {
   const actCount = await deleteAllHpcActivities();
   const remCount = await deleteAllHpcRemarks();
-
-  const rubSnap = await getDocs(collection(db, "hpc_rubrics"));
-  let rubCount = 0;
-  const chunkSize = 400;
-  for (let i = 0; i < rubSnap.docs.length; i += chunkSize) {
-    const chunk = rubSnap.docs.slice(i, i + chunkSize);
-    const batch = writeBatch(db);
-    for (const d of chunk) {
-      batch.delete(d.ref);
-      rubCount++;
-    }
-    await batch.commit();
-  }
+  const rubCount = await deleteAllHpcRubrics();
+  const goalsRes = await deleteAllHpcGoalsAndCompetencies();
 
   return {
     activitiesDeleted: actCount,
     remarksDeleted: remCount,
     rubricsDeleted: rubCount,
+    goalsDeleted: goalsRes.goalsDeleted,
+    compsDeleted: goalsRes.compsDeleted,
   };
 }
 
@@ -767,24 +855,96 @@ export async function bulkUploadHpcRemarks(
 // ===========================================================================
 
 export async function getHpcDynamicRubrics(
-  competencyCode?: string
+  competencyCode?: string,
+  activityTitle?: string,
+  stageId?: HpcStageId
 ): Promise<HpcDynamicRubric[]> {
   try {
     const colRef = collection(db, "hpc_rubrics");
     let q = query(colRef);
     if (competencyCode) {
-      q = query(colRef, where("competencyCode", "==", competencyCode));
+      q = query(colRef, where("competencyCode", "==", competencyCode.trim()));
     }
     const snap = await getDocs(q);
     const list: HpcDynamicRubric[] = [];
+    const cleanStr = (s?: string) =>
+      (s || "")
+        .trim()
+        .toLowerCase()
+        .replace(/^([०-९0-9]+[.:)\-\s]+)+/, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const targetActClean = cleanStr(activityTitle);
+
     snap.forEach((d) => {
-      list.push({ ...(d.data() as HpcDynamicRubric), id: d.id });
+      const data = d.data() as HpcDynamicRubric;
+      const matchesStage = !stageId || !data.stageId || data.stageId === stageId;
+      const dataActClean = cleanStr(data.activityTitle);
+      const matchesAct =
+        !targetActClean ||
+        !dataActClean ||
+        dataActClean === targetActClean ||
+        (targetActClean.length > 5 && dataActClean.includes(targetActClean)) ||
+        (dataActClean.length > 5 && targetActClean.includes(dataActClean));
+
+      if (matchesStage && matchesAct) {
+        list.push({ ...data, id: d.id });
+      }
     });
     return list;
   } catch (err) {
     console.error("Error fetching dynamic rubrics:", err);
     return [];
   }
+}
+
+export async function saveHpcDynamicRubric(
+  rubric: Partial<HpcDynamicRubric> & { dimension: string }
+): Promise<string> {
+  const id = rubric.id || `rub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const payload: HpcDynamicRubric = {
+    id,
+    stageId: rubric.stageId || "preparatory",
+    goalCode: rubric.goalCode || "",
+    competencyCode: rubric.competencyCode || "",
+    activityTitle: rubric.activityTitle || "",
+    dimension: rubric.dimension,
+    beginner: rubric.beginner || "",
+    proficient: rubric.proficient || "",
+    advanced: rubric.advanced || "",
+    createdAt: rubric.createdAt || new Date().toISOString(),
+  };
+
+  await setDoc(doc(db, "hpc_rubrics", id), payload);
+  return id;
+}
+
+export async function deleteHpcDynamicRubric(id: string): Promise<boolean> {
+  await deleteDoc(doc(db, "hpc_rubrics", id));
+  return true;
+}
+
+export async function deleteAllHpcRubrics(stageId?: HpcStageId): Promise<number> {
+  const colRef = collection(db, "hpc_rubrics");
+  const snap = await getDocs(colRef);
+  let count = 0;
+  const docsToDelete = snap.docs.filter((d) => {
+    if (!stageId) return true;
+    return d.data().stageId === stageId;
+  });
+
+  const chunkSize = 400;
+  for (let i = 0; i < docsToDelete.length; i += chunkSize) {
+    const chunk = docsToDelete.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const d of chunk) {
+      batch.delete(d.ref);
+      count++;
+    }
+    await batch.commit();
+  }
+  return count;
 }
 
 export async function bulkUploadHpcRubrics(
@@ -807,6 +967,223 @@ export async function bulkUploadHpcRubrics(
     }
   }
   return count;
+}
+
+// ===========================================================================
+// DYNAMIC HPC GOALS & COMPETENCIES (Admin & Excel Uploaded)
+// ===========================================================================
+
+export async function getHpcCurricularGoals(stageId?: HpcStageId): Promise<HpcCurricularGoal[]> {
+  try {
+    const customSnap = await getDocs(collection(db, "hpc_custom_goals"));
+    const customList: HpcCurricularGoal[] = [];
+    customSnap.forEach((d) => {
+      const raw = d.data() as any;
+      const data: HpcCurricularGoal = {
+        id: d.id,
+        code: raw.code || d.id.replace("CUSTOM-", ""),
+        titleMarathi: raw.titleMarathi || raw.nameMarathi || raw.title || raw.code || "",
+        titleEnglish: raw.titleEnglish || raw.nameEnglish || "",
+        stageId: raw.stageId || "foundational",
+        areaOrSubjectId: raw.areaOrSubjectId || raw.subjectOrArea || "general",
+      };
+      if (!stageId || data.stageId === stageId) {
+        customList.push(data);
+      }
+    });
+
+    // Also extract any unique goals from hpc_activities
+    const actSnap = await getDocs(collection(db, "hpc_activities"));
+    actSnap.forEach((d) => {
+      const data = d.data() as HpcDynamicActivity;
+      if (data.goalCode && (!stageId || data.stageId === stageId)) {
+        const cleanCode = data.goalCode.trim();
+        const gId = `CUSTOM-${cleanCode}`;
+        if (!customList.some((g) => g.code === cleanCode || g.id === gId)) {
+          customList.push({
+            id: gId,
+            code: cleanCode,
+            titleMarathi: data.goalTitle || cleanCode,
+            stageId: data.stageId,
+            areaOrSubjectId: data.subjectOrArea || "general",
+          });
+        }
+      }
+    });
+
+    // If uploaded/custom goals exist, return ONLY those!
+    if (customList.length > 0) {
+      return customList;
+    }
+  } catch (err) {
+    console.error("Error fetching custom goals:", err);
+  }
+  // Fallback to static goals ONLY if no uploaded goals exist at all
+  return HPC_CURRICULAR_GOALS.filter((g) => !stageId || g.stageId === stageId);
+}
+
+export async function getHpcCompetencies(
+  stageId?: HpcStageId,
+  goalId?: string,
+  classId?: string,
+  session?: "session1" | "session2"
+): Promise<HpcCompetency[]> {
+  try {
+    const customSnap = await getDocs(collection(db, "hpc_custom_competencies"));
+    const customList: HpcCompetency[] = [];
+    customSnap.forEach((d) => {
+      const raw = d.data() as any;
+      const data: HpcCompetency = {
+        id: d.id,
+        code: raw.code || d.id.replace("CUSTOM-", ""),
+        titleMarathi: raw.titleMarathi || raw.nameMarathi || raw.title || raw.code || "",
+        titleEnglish: raw.titleEnglish || raw.nameEnglish || "",
+        goalId: raw.goalId || (raw.goalCode ? `CUSTOM-${raw.goalCode}` : ""),
+        stageId: raw.stageId || "foundational",
+        applicableClassIds:
+          raw.applicableClassIds ||
+          (raw.stageId === "foundational"
+            ? ["1st", "2nd"]
+            : raw.stageId === "preparatory"
+            ? ["3rd", "4th", "5th"]
+            : ["6th", "7th", "8th"]),
+        applicableSession: raw.applicableSession || "both",
+      };
+      if (!stageId || data.stageId === stageId) {
+        customList.push(data);
+      }
+    });
+
+    // Also extract any unique competencies from hpc_activities
+    const actSnap = await getDocs(collection(db, "hpc_activities"));
+    actSnap.forEach((d) => {
+      const data = d.data() as HpcDynamicActivity;
+      if (data.competencyCode && (!stageId || data.stageId === stageId)) {
+        const cleanCode = data.competencyCode.trim();
+        const cId = `CUSTOM-${cleanCode}`;
+        if (!customList.some((c) => c.code === cleanCode || c.id === cId)) {
+          customList.push({
+            id: cId,
+            code: cleanCode,
+            titleMarathi: data.competencyTitle || cleanCode,
+            goalId: data.goalCode ? `CUSTOM-${data.goalCode.trim()}` : "",
+            stageId: data.stageId,
+            applicableClassIds:
+              data.stageId === "foundational"
+                ? ["1st", "2nd"]
+                : data.stageId === "preparatory"
+                ? ["3rd", "4th", "5th"]
+                : ["6th", "7th", "8th"],
+            applicableSession: "both",
+          });
+        }
+      }
+    });
+
+    // If uploaded/custom competencies exist, filter and return ONLY those!
+    if (customList.length > 0) {
+      return customList.filter((c) => {
+        if (goalId) {
+          const cleanGoalId = goalId.replace("CUSTOM-", "").trim().toLowerCase();
+          const cleanCompGoalId = (c.goalId || "").replace("CUSTOM-", "").trim().toLowerCase();
+          if (cleanCompGoalId && cleanCompGoalId !== cleanGoalId) return false;
+        }
+        if (classId && c.applicableClassIds?.length > 0 && !c.applicableClassIds.includes(classId)) {
+          return false;
+        }
+        if (session && c.applicableSession && c.applicableSession !== "both" && c.applicableSession !== session) {
+          return false;
+        }
+        return true;
+      });
+    }
+  } catch (err) {
+    console.error("Error fetching custom competencies:", err);
+  }
+
+  // Fallback ONLY if no custom competencies exist at all
+  return HPC_COMPETENCIES.filter((c) => {
+    if (stageId && c.stageId !== stageId) return false;
+    if (goalId && c.goalId !== goalId) return false;
+    if (classId && c.applicableClassIds?.length > 0 && !c.applicableClassIds.includes(classId)) return false;
+    if (session && c.applicableSession && c.applicableSession !== "both" && c.applicableSession !== session) return false;
+    return true;
+  });
+}
+
+export async function saveHpcGoal(goal: HpcCurricularGoal): Promise<string> {
+  const id = goal.id || `CUSTOM-${goal.code.replace(/\s+/g, "_")}`;
+  await setDoc(doc(db, "hpc_custom_goals", id), { ...goal, id });
+  return id;
+}
+
+export async function deleteHpcGoal(id: string): Promise<boolean> {
+  await deleteDoc(doc(db, "hpc_custom_goals", id));
+  return true;
+}
+
+export async function deleteAllHpcGoals(stageId?: HpcStageId): Promise<number> {
+  const colRef = collection(db, "hpc_custom_goals");
+  const snap = await getDocs(colRef);
+  let count = 0;
+  const docsToDelete = snap.docs.filter((d) => {
+    if (!stageId) return true;
+    return d.data().stageId === stageId;
+  });
+
+  const chunkSize = 400;
+  for (let i = 0; i < docsToDelete.length; i += chunkSize) {
+    const chunk = docsToDelete.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const d of chunk) {
+      batch.delete(d.ref);
+      count++;
+    }
+    await batch.commit();
+  }
+  return count;
+}
+
+export async function saveHpcCompetency(comp: HpcCompetency): Promise<string> {
+  const id = comp.id || `CUSTOM-${comp.code.replace(/\s+/g, "_")}`;
+  await setDoc(doc(db, "hpc_custom_competencies", id), { ...comp, id });
+  return id;
+}
+
+export async function deleteHpcCompetency(id: string): Promise<boolean> {
+  await deleteDoc(doc(db, "hpc_custom_competencies", id));
+  return true;
+}
+
+export async function deleteAllHpcCompetencies(stageId?: HpcStageId): Promise<number> {
+  const colRef = collection(db, "hpc_custom_competencies");
+  const snap = await getDocs(colRef);
+  let count = 0;
+  const docsToDelete = snap.docs.filter((d) => {
+    if (!stageId) return true;
+    return d.data().stageId === stageId;
+  });
+
+  const chunkSize = 400;
+  for (let i = 0; i < docsToDelete.length; i += chunkSize) {
+    const chunk = docsToDelete.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const d of chunk) {
+      batch.delete(d.ref);
+      count++;
+    }
+    await batch.commit();
+  }
+  return count;
+}
+
+export async function deleteAllHpcGoalsAndCompetencies(stageId?: HpcStageId): Promise<{
+  goalsDeleted: number;
+  compsDeleted: number;
+}> {
+  const gCount = await deleteAllHpcGoals(stageId);
+  const cCount = await deleteAllHpcCompetencies(stageId);
+  return { goalsDeleted: gCount, compsDeleted: cCount };
 }
 
 export async function bulkUploadHpcGoalsAndCompetencies(
@@ -844,4 +1221,53 @@ export async function bulkUploadHpcGoalsAndCompetencies(
   }
 
   return { goalsCount: gCount, compsCount: cCount };
+}
+
+/**
+ * Helper to get dynamic areas/subjects for a stage.
+ * If dynamic goals or dynamic activities exist, extracts the subjects/areas from them.
+ * Otherwise falls back to official default areas.
+ */
+export function getHpcAreasForStage(
+  stageId: HpcStageId,
+  dynamicGoals?: HpcCurricularGoal[],
+  dynamicActivities?: HpcDynamicActivity[]
+): HpcAreaDefinition[] {
+  const subjectSet = new Set<string>();
+
+  if (dynamicGoals && dynamicGoals.length > 0) {
+    dynamicGoals.forEach((g) => {
+      if (g.areaOrSubjectId && g.areaOrSubjectId !== "general") {
+        subjectSet.add(g.areaOrSubjectId.trim());
+      }
+    });
+  }
+
+  if (dynamicActivities && dynamicActivities.length > 0) {
+    dynamicActivities.forEach((a) => {
+      if (a.subjectOrArea && a.stageId === stageId) {
+        subjectSet.add(a.subjectOrArea.trim());
+      }
+    });
+  }
+
+  if (subjectSet.size > 0) {
+    const defaultAreas = getAreasForStage(stageId);
+    return Array.from(subjectSet).map((sub, index) => {
+      const matchDefault = defaultAreas.find(
+        (a) => a.id === sub || a.nameMarathi === sub || a.code === sub
+      );
+      if (matchDefault) return matchDefault;
+      return {
+        id: sub,
+        code: `विषय ${index + 1}`,
+        nameMarathi: sub,
+        nameEnglish: sub,
+        stageId,
+        order: index + 1,
+      };
+    });
+  }
+
+  return getAreasForStage(stageId);
 }

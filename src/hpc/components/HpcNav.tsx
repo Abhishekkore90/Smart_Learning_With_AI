@@ -204,10 +204,10 @@ export function HpcNav({
         </div>
       </div>
 
-      {/* Downside Dedicated Navigation Bar (Separate Clean Line as in Image 2) */}
-      <div className="bg-slate-50/70 py-2 border-t border-slate-50">
+      {/* Downside Dedicated Navigation Bar (With Clearly Visible Light-Coloured Background Line) */}
+      <div className="bg-slate-100 border-t border-b border-slate-200 py-2.5">
         <div className="max-w-[1360px] mx-auto px-4 sm:px-6 flex items-center justify-center">
-          <div className="inline-flex items-center gap-1 sm:gap-2 p-1.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs overflow-x-auto max-w-full">
+          <div className="inline-flex items-center gap-1 sm:gap-2 p-1.5 rounded-2xl bg-indigo-50 border border-indigo-200 shadow-xs overflow-x-auto max-w-full">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -215,20 +215,20 @@ export function HpcNav({
                   key={item.id}
                   to={item.to as any}
                   search={item.search as any}
-                  className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                     item.active
                       ? "bg-slate-950 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                      : "text-slate-700 hover:text-slate-950 hover:bg-white/90"
                   }`}
                 >
-                  <Icon className={`size-3.5 ${item.active ? "text-amber-400" : "text-slate-400"}`} />
+                  <Icon className={`size-3.5 ${item.active ? "text-amber-400" : "text-slate-500"}`} />
                   <span>{item.label}</span>
                 </Link>
               );
             })}
 
             {/* Elegant Separator */}
-            <div className="h-6 w-px bg-slate-200 mx-1 flex-shrink-0" />
+            <div className="h-6 w-px bg-indigo-200/80 mx-1 flex-shrink-0" />
 
             {/* Academic Year Selection Dropdown (थेट नेव्हिगेशन बारमध्ये वर्ष निवड) */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200/90 text-xs font-black text-amber-950 transition-all flex-shrink-0 shadow-2xs group cursor-pointer">
