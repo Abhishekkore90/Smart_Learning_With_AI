@@ -467,13 +467,10 @@ export function HpcDashboard() {
 
                 {/* Class Quick Selection - "वर्ग निवडा:" clearly ABOVE, and classes DOWNSIDE */}
                 <div className="pt-3.5 border-t border-slate-200/90 space-y-2 mt-auto">
-                  <div className="flex items-center justify-between">
-                    <span className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                      <span className="size-2.5 rounded-full bg-orange-500 ring-2 ring-orange-200"></span>
+                  <div className="flex items-center justify-center text-center">
+                    <span className="text-xs sm:text-sm font-extrabold text-slate-800 tracking-tight flex items-center justify-center gap-1.5">
+                      <span className="size-2 rounded-full bg-orange-500 ring-2 ring-orange-200"></span>
                       <span>वर्ग निवडा:</span>
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-400">
-                      (खालील वर्ग निवडा)
                     </span>
                   </div>
                   <div className="flex items-center gap-2 flex-nowrap w-full">

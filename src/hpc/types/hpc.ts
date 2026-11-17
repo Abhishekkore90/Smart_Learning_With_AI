@@ -215,6 +215,10 @@ export interface HpcAreaAssessment {
   sensitivityLevel: "beginner" | "proficient" | "advanced" | ""; // संवेदनशीलता
   creativityLevel: "beginner" | "proficient" | "advanced" | ""; // सर्जनशीलता
   
+  // Independent level selections for each and every rubric dimension / aspect
+  rubricLevels?: Record<string, "beginner" | "proficient" | "advanced" | "">;
+  rubricTexts?: Record<string, string>;
+  
   // Optional custom text for dimensions if edited
   awarenessText?: string;
   sensitivityText?: string;

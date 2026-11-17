@@ -503,15 +503,15 @@ export function HpcAssessmentForm({
     };
   }, [activeBankCompCode, stageId, currentClass]);
 
-  // Specific class learning outcomes for active competency
+  // Specific class learning outcomes for active competency (Deduplicated)
   const learningOutcomes = useMemo(() => {
+    let raw: string[] = [];
     if (bankData?.learningOutcomes && bankData.learningOutcomes.length > 0) {
-      return bankData.learningOutcomes;
+      raw = bankData.learningOutcomes;
+    } else if (activeBankCompCode) {
+      raw = getHpcClassLearningOutcomes(activeBankCompCode, currentClass);
     }
-    if (activeBankCompCode) {
-      return getHpcClassLearningOutcomes(activeBankCompCode, currentClass);
-    }
-    return [];
+    return Array.from(new Set(raw.map((s) => s.trim()))).filter(Boolean);
   }, [bankData, activeBankCompCode, currentClass]);
 
   // Always available Parent Remarks list (Bank + Static Fallback)
@@ -722,6 +722,7 @@ export function HpcAssessmentForm({
   }, [activeBankCompCode, stageId]);
 
   // Dynamic Rubrics matching selected activity, competency, or stage
+  // Dynamic Rubrics matching selected activity, competency, or stage (Deduplicated so each dimension shows ONCE)
   const dynamicRubricsForAssessment = useMemo(() => {
     if (!stageRubrics || stageRubrics.length === 0 || !activeBankCompCode) return [];
 
@@ -735,9 +736,54 @@ export function HpcAssessmentForm({
 
     const compClean = activeBankCompCode.trim().toLowerCase();
 
+    // Deduplicate so each dimension (Awareness, Sensitivity, Creativity) is returned ONCE only
+    const deduplicateRubrics = (list: HpcDynamicRubric[]): HpcDynamicRubric[] => {
+      // First prioritize currentClass
+      const classFiltered = list.filter((r) => !r.classId || r.classId === currentClass);
+      const candidates = classFiltered.length > 0 ? classFiltered : list;
+
+      const seen = new Map<string, HpcDynamicRubric>();
+      candidates.forEach((r) => {
+        const rawDim = (r.dimension || "").trim().toLowerCase();
+        let key = rawDim;
+        if (rawDim.includes("जाणीव") || rawDim.includes("awareness")) {
+          key = "awareness";
+        } else if (rawDim.includes("संवेदन") || rawDim.includes("sensitivity")) {
+          key = "sensitivity";
+        } else if (rawDim.includes("सर्जन") || rawDim.includes("creativity")) {
+          key = "creativity";
+        } else if (!key) {
+          key = `dim_${seen.size}`;
+        }
+        if (!seen.has(key)) {
+          seen.set(key, r);
+        }
+      });
+      return Array.from(seen.values());
+    };
+
     // 1. Try matching by competencyCode AND clean activity title
     if (currentAssessment.activity1Title) {
       const actClean = cleanTitle(currentAssessment.activity1Title);
+
+      // 1a. First try exact title and competency match (prevents merging multiple activities)
+      const exactMatches = stageRubrics.filter((r) => {
+        if (!r.activityTitle) return false;
+        const matchesComp = !r.competencyCode || r.competencyCode.trim().toLowerCase() === compClean;
+        const rClean = cleanTitle(r.activityTitle);
+        return matchesComp && rClean === actClean;
+      });
+      if (exactMatches.length > 0) return deduplicateRubrics(exactMatches);
+
+      // 1b. Exact match by title alone
+      const exactTitleMatches = stageRubrics.filter((r) => {
+        if (!r.activityTitle) return false;
+        const rClean = cleanTitle(r.activityTitle);
+        return rClean === actClean;
+      });
+      if (exactTitleMatches.length > 0) return deduplicateRubrics(exactTitleMatches);
+
+      // 1c. Substring match
       const actMatches = stageRubrics.filter((r) => {
         if (!r.activityTitle) return false;
         const matchesComp = !r.competencyCode || r.competencyCode.trim().toLowerCase() === compClean;
@@ -748,7 +794,7 @@ export function HpcAssessmentForm({
           (rClean.length > 5 && actClean.includes(rClean));
         return matchesComp && titleMatch;
       });
-      if (actMatches.length > 0) return actMatches;
+      if (actMatches.length > 0) return deduplicateRubrics(actMatches);
 
       // Also try matching by title across all rubrics in case competencyCode differs
       const titleOnlyMatches = stageRubrics.filter((r) => {
@@ -760,7 +806,7 @@ export function HpcAssessmentForm({
           (rClean.length > 5 && actClean.includes(rClean))
         );
       });
-      if (titleOnlyMatches.length > 0) return titleOnlyMatches;
+      if (titleOnlyMatches.length > 0) return deduplicateRubrics(titleOnlyMatches);
     }
 
     // 2. Try matching by active competency code
@@ -768,16 +814,11 @@ export function HpcAssessmentForm({
       (r) => r.competencyCode && r.competencyCode.trim().toLowerCase() === compClean
     );
     if (compMatches.length > 0) {
-      const uniqueDims = new Map<string, HpcDynamicRubric>();
-      compMatches.forEach((r) => {
-        const key = (r.dimension || "").trim().toLowerCase();
-        if (!uniqueDims.has(key)) uniqueDims.set(key, r);
-      });
-      return Array.from(uniqueDims.values());
+      return deduplicateRubrics(compMatches);
     }
 
     return [];
-  }, [stageRubrics, currentAssessment.activity1Title, activeBankCompCode]);
+  }, [stageRubrics, currentAssessment.activity1Title, activeBankCompCode, currentClass]);
 
   const handleSelectBankActivity = (act: HpcActivityItem) => {
     const prevLOs = currentAssessment.selectedLearningOutcomes || [];
@@ -1825,33 +1866,38 @@ export function HpcAssessmentForm({
             {dynamicRubricsForAssessment.length > 0 ? (
               dynamicRubricsForAssessment.map((rub, rIdx) => {
                 const dimLower = (rub.dimension || "").toLowerCase();
+                const rubKey = rub.id || `rubric_${rIdx}`;
+
                 let levelKey: "awarenessLevel" | "sensitivityLevel" | "creativityLevel" = "awarenessLevel";
                 let textKey: "awarenessText" | "sensitivityText" | "creativityText" = "awarenessText";
                 let dimEnglish = "Awareness";
 
-                if (dimLower.includes("संवेदन") || dimLower.includes("sensitivity")) {
+                if (dimLower.includes("संवेदन") || dimLower.includes("sensitivity") || rIdx === 1) {
                   levelKey = "sensitivityLevel";
                   textKey = "sensitivityText";
                   dimEnglish = "Sensitivity";
-                } else if (dimLower.includes("सर्जन") || dimLower.includes("creativity")) {
+                } else if (dimLower.includes("सर्जन") || dimLower.includes("creativity") || rIdx === 2) {
                   levelKey = "creativityLevel";
                   textKey = "creativityText";
                   dimEnglish = "Creativity";
-                } else if (dimLower.includes("जाणीव") || dimLower.includes("awareness")) {
+                } else {
                   levelKey = "awarenessLevel";
                   textKey = "awarenessText";
                   dimEnglish = "Awareness";
-                } else if (rIdx === 1) {
-                  levelKey = "sensitivityLevel";
-                  textKey = "sensitivityText";
-                  dimEnglish = "Sensitivity";
-                } else if (rIdx === 2) {
-                  levelKey = "creativityLevel";
-                  textKey = "creativityText";
-                  dimEnglish = "Creativity";
                 }
 
-                const currentLevel = currentAssessment[levelKey];
+                // Each rubric has its own independent selected level
+                const currentLevel =
+                  currentAssessment.rubricLevels?.[rubKey] !== undefined
+                    ? currentAssessment.rubricLevels[rubKey]
+                    : rIdx === 0
+                    ? currentAssessment.awarenessLevel
+                    : rIdx === 1
+                    ? currentAssessment.sensitivityLevel
+                    : rIdx === 2
+                    ? currentAssessment.creativityLevel
+                    : "";
+
                 const colorThemes = [
                   {
                     border: "border-blue-200",
@@ -1912,7 +1958,7 @@ export function HpcAssessmentForm({
                       </div>
                       <span className={`text-xs font-bold ${theme.subText}`}>
                         निवडलेला स्तर:{" "}
-                        <b>{currentLevel ? levelLabels[currentLevel] : "निवडला नाही"}</b>
+                        <b>{currentLevel ? levelLabels[currentLevel as keyof typeof levelLabels] || currentLevel : "निवडला नाही"}</b>
                       </span>
                     </div>
 
@@ -1925,12 +1971,32 @@ export function HpcAssessmentForm({
                         return (
                           <div
                             key={lvl}
-                            onClick={() =>
-                              updateCurrentAssessment({
-                                [levelKey]: lvl,
-                                [textKey]: desc,
-                              } as any)
-                            }
+                            onClick={() => {
+                              const updatedRubricLevels = {
+                                ...(currentAssessment.rubricLevels || {}),
+                                [rubKey]: lvl,
+                              };
+                              const updatedRubricTexts = {
+                                ...(currentAssessment.rubricTexts || {}),
+                                [rubKey]: desc,
+                              };
+                              const updates: any = {
+                                rubricLevels: updatedRubricLevels,
+                                rubricTexts: updatedRubricTexts,
+                              };
+                              // Also sync primary keys for report consistency
+                              if (rIdx === 0) {
+                                updates.awarenessLevel = lvl;
+                                updates.awarenessText = desc;
+                              } else if (rIdx === 1) {
+                                updates.sensitivityLevel = lvl;
+                                updates.sensitivityText = desc;
+                              } else if (rIdx === 2) {
+                                updates.creativityLevel = lvl;
+                                updates.creativityText = desc;
+                              }
+                              updateCurrentAssessment(updates);
+                            }}
                             className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                               isLvl
                                 ? `bg-white ${theme.activeBorder} shadow-md ring-2 ${theme.ring}`
@@ -2379,20 +2445,6 @@ export function HpcAssessmentForm({
                   })}
                 </div>
               </div>
-
-              {/* Student Remark Input */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
-                  विद्यार्थ्याचा स्वतःचा शेरा / मत:
-                </label>
-                <input
-                  type="text"
-                  value={currentAssessment.threeSixty?.selfAssessment?.customRemark || ""}
-                  onChange={(e) => update360("selfAssessment", "customRemark", e.target.value)}
-                  placeholder="उदा. मला चित्र काढायला खूप आवडते / वाचनाचा सराव करतो."
-                  className="w-full px-5 py-2.5 rounded-full border border-slate-200 text-xs font-medium bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-orange-400"
-                />
-              </div>
             </div>
 
             {/* 2. Peer Assessment (सहकारी मूल्यमापन) */}
@@ -2480,20 +2532,6 @@ export function HpcAssessmentForm({
                     );
                   })}
                 </div>
-              </div>
-
-              {/* Peer Remark Input */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
-                  मित्राचा अभिप्राय / शेरा (Peer Remark):
-                </label>
-                <input
-                  type="text"
-                  value={currentAssessment.threeSixty?.peerAssessment?.peerRemarks || ""}
-                  onChange={(e) => update360("peerAssessment", "peerRemarks", e.target.value)}
-                  placeholder="उदा. याचे चित्र चांगले असते / आम्ही याला सोबत खेळात घेतो."
-                  className="w-full px-5 py-2.5 rounded-full border border-slate-200 text-xs font-medium bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-teal-400"
-                />
               </div>
             </div>
           </div>
@@ -2630,32 +2668,17 @@ export function HpcAssessmentForm({
               </select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
-                  पालकांचे निरीक्षण व अभिप्राय:
-                </label>
-                <input
-                  type="text"
-                  value={currentAssessment.threeSixty?.parentFeedback?.parentObservations || ""}
-                  onChange={(e) => update360("parentFeedback", "parentObservations", e.target.value)}
-                  placeholder="उदा. वागण्यात पूर्वीपेक्षा शांतपणा आलाय / प्रगतीची अपेक्षा आहे."
-                  className="w-full px-5 py-2.5 rounded-full border border-slate-200 text-xs font-medium bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
-                  पालकांच्या अपेक्षा / सूचना:
-                </label>
-                <input
-                  type="text"
-                  value={currentAssessment.threeSixty?.parentFeedback?.parentExpectations || ""}
-                  onChange={(e) => update360("parentFeedback", "parentExpectations", e.target.value)}
-                  placeholder="उदा. गणितात अधिक सराव करावा अशी अपेक्षा आहे."
-                  className="w-full px-5 py-2.5 rounded-full border border-slate-200 text-xs font-medium bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-              </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                पालकांचे निरीक्षण व अभिप्राय:
+              </label>
+              <input
+                type="text"
+                value={currentAssessment.threeSixty?.parentFeedback?.parentObservations || ""}
+                onChange={(e) => update360("parentFeedback", "parentObservations", e.target.value)}
+                placeholder="उदा. वागण्यात पूर्वीपेक्षा शांतपणा आलाय / प्रगतीची अपेक्षा आहे."
+                className="w-full px-5 py-2.5 rounded-full border border-slate-200 text-xs font-medium bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
             </div>
           </div>
         </div>

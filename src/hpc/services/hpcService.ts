@@ -743,8 +743,17 @@ export async function getHpcActivityBankForCompetency(
   try {
     const dynamicList = await getHpcDynamicActivities(competencyCode, stageId, undefined, classId);
     if (dynamicList && dynamicList.length > 0) {
-      const first = dynamicList[0];
-      const activities: HpcActivityItem[] = dynamicList.map((d, index) => {
+      // Deduplicate dynamic activities by title
+      const uniqueActivitiesMap = new Map<string, HpcDynamicActivity>();
+      dynamicList.forEach((d) => {
+        const cleanT = (d.activityTitle || "").trim().toLowerCase();
+        if (cleanT && !uniqueActivitiesMap.has(cleanT)) {
+          uniqueActivitiesMap.set(cleanT, d);
+        }
+      });
+      const dedupedList = Array.from(uniqueActivitiesMap.values());
+      const first = dedupedList[0] || dynamicList[0];
+      const activities: HpcActivityItem[] = dedupedList.map((d, index) => {
         const desc = d.activityDescription || (d as any).description || "";
         return {
           activityNumber: index + 1,
