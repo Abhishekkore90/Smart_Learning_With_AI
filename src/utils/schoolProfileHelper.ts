@@ -1,3 +1,5 @@
+import { auth } from "@/lib/firebase";
+
 export interface UnifiedSchoolProfile {
   schoolName: string;
   udise: string;
@@ -138,7 +140,6 @@ export const getUnifiedSchoolProfile = (targetUserId?: string): UnifiedSchoolPro
 
   // 3. Check auth.currentUser displayName if user account was created with school name
   try {
-    const { auth } = require("@/lib/firebase");
     if (!profile.schoolName && auth?.currentUser?.displayName) {
       const dName = auth.currentUser.displayName.trim();
       if (isCleanSchool(dName) && dName !== "Educator" && dName !== "Teacher") {

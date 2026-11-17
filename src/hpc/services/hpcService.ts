@@ -1,4 +1,4 @@
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import {
   collection,
   doc,
@@ -327,11 +327,163 @@ export async function createHpcStudent(data: CreateStudentParams): Promise<strin
 
 /**
  * Fetch School General Settings (School name, cluster, HM, etc.)
+ * Strictly prioritizes the currently logged-in teacher's account, profile,
+ * and user-specific settings before falling back to generic settings.
  */
 export async function getHpcSchoolSettings(): Promise<any> {
   try {
-    const snap = await getDoc(doc(db, "school_settings", "general"));
-    return snap.exists() ? snap.data() : {};
+    const tid = getTeacherId();
+    const isCleanSchool = (val?: string | null): boolean => {
+      if (!val || typeof val !== "string") return false;
+      const s = val.trim();
+      if (!s || s.includes("___") || s.toLowerCase().includes("willingdon")) return false;
+      if (/[-_.~=—–•\.]{4,}/.test(s)) return false;
+      return true;
+    };
+
+    let schoolName = "";
+    let udise = "";
+    let cluster = "";
+    let taluka = "";
+    let district = "";
+    let headmaster = "";
+    let teacherName = "";
+    let address = "";
+    let pincode = "";
+
+    // 1. Check users collection first (the currently logged-in teacher profile)
+    if (tid && tid !== "default_teacher") {
+      try {
+        const uSnap = await getDoc(doc(db, "users", tid));
+        if (uSnap.exists()) {
+          const ud = uSnap.data();
+          const cand = ud.schoolName || ud.school || ud.institutionName;
+          if (isCleanSchool(cand)) schoolName = cand.trim();
+          if (ud.udise || ud.udiseNumber) udise = String(ud.udise || ud.udiseNumber);
+          if (ud.kendra || ud.centerName) cluster = ud.kendra || ud.centerName;
+          if (ud.taluka) taluka = ud.taluka;
+          if (ud.district || ud.jilha) district = ud.district || ud.jilha;
+          if (ud.headmaster || ud.principalName) headmaster = ud.headmaster || ud.principalName;
+          if (ud.fullName || ud.displayName || ud.teacherName) teacherName = ud.fullName || ud.displayName || ud.teacherName;
+          if (ud.address) address = ud.address;
+          if (ud.pincode) pincode = String(ud.pincode);
+        }
+      } catch (e) {}
+
+      // 2. Check Teacher-Specific Firestore School Settings: school_settings/${tid}_general or school_settings/${tid}
+      try {
+        const sSnap = await getDoc(doc(db, "school_settings", `${tid}_general`));
+        if (sSnap.exists()) {
+          const sd = sSnap.data();
+          if (isCleanSchool(sd.schoolName)) schoolName = sd.schoolName.trim();
+          if (sd.udiseCode || sd.udise) udise = String(sd.udiseCode || sd.udise);
+          if (sd.kendra || sd.cluster) cluster = sd.kendra || sd.cluster;
+          if (sd.taluka) taluka = sd.taluka;
+          if (sd.district || sd.jilha) district = sd.district || sd.jilha;
+          if (sd.principalName || sd.headmasterName || sd.headMaster) headmaster = sd.principalName || sd.headmasterName || sd.headMaster;
+          if (sd.teacherName || sd.classTeacher) teacherName = sd.teacherName || sd.classTeacher;
+          if (sd.address) address = sd.address;
+          if (sd.pincode) pincode = String(sd.pincode);
+        } else {
+          const sSnap2 = await getDoc(doc(db, "school_settings", tid));
+          if (sSnap2.exists()) {
+            const sd2 = sSnap2.data();
+            if (isCleanSchool(sd2.schoolName)) schoolName = sd2.schoolName.trim();
+            if (sd2.udiseCode || sd2.udise) udise = String(sd2.udiseCode || sd2.udise);
+            if (sd2.kendra || sd2.cluster) cluster = sd2.kendra || sd2.cluster;
+            if (sd2.taluka) taluka = sd2.taluka;
+            if (sd2.district || sd2.jilha) district = sd2.district || sd2.jilha;
+            if (sd2.principalName || sd2.headmasterName || sd2.headMaster) headmaster = sd2.principalName || sd2.headmasterName || sd2.headMaster;
+            if (sd2.teacherName || sd2.classTeacher) teacherName = sd2.teacherName || sd2.classTeacher;
+            if (sd2.address) address = sd2.address;
+            if (sd2.pincode) pincode = String(sd2.pincode);
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 3. Check Unified School Profile helper as fallback if fields are still missing
+    if (!schoolName) {
+      try {
+        const { getUnifiedSchoolProfile, fetchUnifiedSchoolProfile } = await import("@/utils/schoolProfileHelper");
+        let uni = getUnifiedSchoolProfile(tid !== "default_teacher" ? tid : undefined);
+        if ((!uni?.schoolName || !isCleanSchool(uni.schoolName)) && tid && tid !== "default_teacher") {
+          uni = await fetchUnifiedSchoolProfile(tid);
+        }
+        if (uni && isCleanSchool(uni.schoolName)) {
+          schoolName = uni.schoolName.trim();
+          if (!udise) udise = uni.udise || "";
+          if (!cluster) cluster = uni.kendra || uni.centerName || "";
+          if (!taluka) taluka = uni.taluka || "";
+          if (!district) district = uni.jilha || uni.district || "";
+          if (!headmaster) headmaster = uni.headmaster || "";
+          if (!teacherName) teacherName = uni.teacherName || "";
+          if (!address) address = uni.address || "";
+          if (!pincode) pincode = (uni as any).pincode || "";
+        }
+      } catch (e) {
+        console.warn("Unified school profile fetch in getHpcSchoolSettings:", e);
+      }
+    }
+
+    // 4. Check auth.currentUser displayName (e.g. if account was created with school name)
+    if (!schoolName && auth?.currentUser?.displayName) {
+      const dName = auth.currentUser.displayName.trim();
+      if (isCleanSchool(dName) && dName !== "Educator" && dName !== "Teacher") {
+        schoolName = dName;
+      }
+    }
+
+    // 5. Fallback only if no teacher school name was found: generic school_settings/general
+    let generalSettings: any = {};
+    try {
+      const snap = await getDoc(doc(db, "school_settings", "general"));
+      if (snap.exists()) {
+        generalSettings = snap.data();
+      }
+    } catch (err) {}
+
+    // If teacher has set their own school name, do NOT contaminate it with generic "लिंबा तांडा" address/pincode!
+    const isUsingGeneral = !schoolName;
+    if (isUsingGeneral) {
+      schoolName = generalSettings.schoolName || "";
+      address = generalSettings.address || "";
+      pincode = String(generalSettings.pincode || "");
+      udise = String(generalSettings.udiseNumber || generalSettings.udise || "");
+      cluster = generalSettings.cluster || generalSettings.kendra || "";
+      taluka = generalSettings.taluka || "";
+      district = generalSettings.district || "";
+      headmaster = generalSettings.headMaster || generalSettings.headmaster || "";
+      teacherName = generalSettings.classTeacher || generalSettings.teacherName || "";
+    } else {
+      if (!udise && (generalSettings.udiseNumber || generalSettings.udise) && generalSettings.schoolName === schoolName) {
+        udise = String(generalSettings.udiseNumber || generalSettings.udise);
+      }
+      if (!cluster) cluster = generalSettings.cluster || generalSettings.kendra || "";
+      if (!taluka) taluka = generalSettings.taluka || "";
+      if (!district) district = generalSettings.district || "";
+      if (!headmaster) headmaster = generalSettings.headMaster || generalSettings.headmaster || "";
+      if (!teacherName) teacherName = generalSettings.classTeacher || generalSettings.teacherName || "";
+    }
+
+    return {
+      ...generalSettings,
+      schoolName,
+      name: schoolName,
+      udiseNumber: udise,
+      udise,
+      cluster,
+      kendra: cluster,
+      taluka,
+      district,
+      jilha: district,
+      headMaster: headmaster,
+      headmaster,
+      teacherName,
+      classTeacher: teacherName,
+      address,
+      pincode,
+    };
   } catch (err) {
     console.error("Error fetching school settings:", err);
     return {};

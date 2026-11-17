@@ -91,6 +91,28 @@ function ProficiencyBadge({ level = "पर्वत" }: { level?: string }) {
   );
 }
 
+function ArrowInputBox({ value }: { value: string }) {
+  return (
+    <div className="relative flex-1 h-7 flex items-center">
+      <svg
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        viewBox="0 0 160 28"
+        preserveAspectRatio="none"
+      >
+        <path
+          d="M 12 1.5 L 2 14 L 12 26.5 L 147 26.5 A 12.5 12.5 0 0 0 147 1.5 Z"
+          fill="#ffffff"
+          stroke="#000000"
+          strokeWidth="1.2"
+        />
+      </svg>
+      <div className="relative z-10 pl-5 pr-4 text-xs font-bold text-slate-900 truncate">
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function SmileyOptions({
   selected = "yes",
 }: {
@@ -235,6 +257,35 @@ export function FoundationalHpcPdf({
     student?.schoolName ||
     "जिल्हा परिषद शाळा";
 
+  // Split long school name / address gracefully across the two official lines
+  let schoolNameLine = schoolName;
+  let schoolAddressLine = schoolSettings?.address || "";
+  if (!schoolAddressLine && schoolName.includes(",")) {
+    const parts = schoolName.split(",");
+    schoolNameLine = parts[0].trim();
+    schoolAddressLine = parts.slice(1).join(",").trim();
+  } else if (!schoolAddressLine && schoolName.length > 35) {
+    const words = schoolName.split(" ");
+    const mid = Math.ceil(words.length / 2);
+    schoolNameLine = words.slice(0, mid).join(" ");
+    schoolAddressLine = words.slice(mid).join(" ");
+  }
+
+  const rawTeacherId = String(
+    (profile as any)?.teacherIdNumber ||
+    (schoolSettings as any)?.teacherIdNumber ||
+    (schoolSettings as any)?.shalarthId ||
+    ""
+  );
+  const teacherIdDisplay =
+    rawTeacherId &&
+    !rawTeacherId.includes("वर्ग") &&
+    !rawTeacherId.includes("शिक्षक") &&
+    !rawTeacherId.includes("teacher") &&
+    rawTeacherId.length <= 15
+      ? rawTeacherId
+      : "";
+
   const teacherName =
     schoolSettings?.classTeacher ||
     schoolSettings?.teacherName ||
@@ -288,134 +339,117 @@ export function FoundationalHpcPdf({
         }
       `}</style>
       {/* =========================================================================
-          PAGE 1: COVER PAGE (मुद्रित मुखपृष्ठ - SCERT Official Replica)
+          PAGE 1: COVER PAGE (मुद्रित मुखपृष्ठ - SCERT Official 100% Replica)
       ========================================================================= */}
-      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden mx-auto bg-[#ffb988] flex flex-col justify-between border border-slate-300 relative box-border">
-        {/* Top Peach Half with Official Government Headers & Logos */}
-        <div className="px-8 pt-5 pb-3 flex flex-col justify-between flex-shrink-0">
+      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden mx-auto bg-[#ffb988] flex flex-col justify-between relative box-border shadow-md">
+        {/* Top Peach Portion */}
+        <div className="px-10 pt-7 pb-4 flex flex-col items-center justify-between flex-shrink-0">
           {/* Top Header: Right aligned 'पथदर्शी प्रकल्प' */}
-          <div className="flex justify-end pr-1">
-            <span className="text-sm font-black text-slate-900 tracking-wider">
+          <div className="w-full flex justify-end pr-2">
+            <span className="text-base font-black text-slate-900 tracking-wider">
               पथदर्शी प्रकल्प
             </span>
           </div>
 
           {/* Project Tag: 'STARS' प्रकल्पांतर्गत */}
-          <div className="text-center mt-0.5 mb-1.5">
-            <span className="inline-block text-xs font-black border-2 border-slate-900 px-6 py-0.5 rounded-full tracking-wider bg-transparent text-slate-900">
+          <div className="my-2">
+            <span className="inline-block text-xs font-black border border-slate-900 px-5 py-0.5 rounded-full tracking-wider bg-transparent text-slate-900">
               'STARS' प्रकल्पांतर्गत
             </span>
           </div>
 
           {/* Emblems Row: 3 Official Logos */}
-          <div className="flex items-center justify-between px-6 my-2">
+          <div className="w-full flex items-center justify-around px-2 my-2">
             {/* NCERT / PARAKH */}
             <div className="text-center w-36 flex flex-col items-center">
               <img
                 src={HPC_BASE64_IMAGES.ncertParakhLogo}
                 alt="NCERT PARAKH"
-                className="h-18 w-auto object-contain drop-shadow-xs"
+                className="h-20 w-auto object-contain"
               />
             </div>
 
             {/* Maharashtra Shasan Seal */}
-            <div className="text-center w-32 flex flex-col items-center">
+            <div className="text-center w-36 flex flex-col items-center">
               <img
                 src={HPC_BASE64_IMAGES.maharashtraSealLogo}
                 alt="महाराष्ट्र शासन"
-                className="h-18 w-auto object-contain drop-shadow-xs"
+                className="h-20 w-auto object-contain"
               />
             </div>
 
             {/* SCERT Pune */}
-            <div className="text-center w-36 flex flex-col items-center">
+            <div className="text-center w-44 flex flex-col items-center">
               <img
                 src={HPC_BASE64_IMAGES.scertPuneLogo}
                 alt="SCERT Pune"
-                className="h-18 w-auto object-contain drop-shadow-xs"
+                className="h-20 w-auto object-contain"
               />
             </div>
           </div>
 
           {/* Main Titles */}
-          <div className="text-center my-1.5">
-            <h1 className="text-[36px] font-black text-[#d61a7f] tracking-tight leading-tight drop-shadow-xs">
+          <div className="text-center my-3">
+            <h1 className="text-[44px] font-black text-[#e6006e] tracking-tight leading-none drop-shadow-2xs">
               समग्र प्रगतिपत्रक (HPC)
             </h1>
-            <h2 className="text-[26px] font-black text-slate-900 tracking-wide mt-0.5">
+            <h2 className="text-[32px] font-black text-slate-900 tracking-wider mt-2.5">
               पायाभूत स्तर
             </h2>
           </div>
         </div>
 
-        {/* Orange Dividing Accent Line */}
-        <div className="w-full h-1.5 bg-[#e87738] shrink-0" />
+        {/* Orange Horizontal Stripe Divider */}
+        <div className="w-full h-3 bg-[#e86b24] shrink-0" />
 
-        {/* Full-Bleed Classroom Learning Photo at Bottom Half */}
+        {/* Full-Bleed Classroom Learning Photo Filling Lower Half */}
         <div className="w-full flex-1 relative overflow-hidden bg-amber-100 flex items-center justify-center">
           <img
             src={HPC_BASE64_IMAGES.foundationalCoverKids}
             alt="Foundational Stage Students"
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-cover object-top"
           />
-
-          {/* Elegant Official Report Metadata Card Overlaid at Bottom */}
-          <div className="absolute bottom-4 inset-x-6 z-10">
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl px-5 py-3 border-2 border-[#e87738] shadow-lg flex items-center justify-between text-slate-900 text-xs">
-              <div className="flex-1 min-w-0 pr-4">
-                <span className="text-[10px] font-bold text-[#e87738] uppercase tracking-wider block">शाळेचे नाव</span>
-                <span className="font-black text-sm text-slate-900 truncate block">
-                  {schoolName}
-                </span>
-              </div>
-              <div className="px-4 border-x border-slate-300 text-center shrink-0">
-                <span className="text-[10px] font-bold text-[#e87738] uppercase tracking-wider block">शैक्षणिक वर्ष</span>
-                <span className="font-black text-sm text-slate-900 block">{academicYear}</span>
-              </div>
-              <div className="flex-1 min-w-0 pl-4 text-right">
-                <span className="text-[10px] font-bold text-[#e87738] uppercase tracking-wider block">विद्यार्थी</span>
-                <span className="font-black text-sm text-slate-900 truncate block">
-                  {student.fullName || student.name}
-                </span>
-                <span className="text-[11px] font-bold text-slate-700 block">
-                  इ. {student.class === "2nd" ? "२ री" : "१ ली"} | तुकडी: {student.division || "अ"} | हजेरी क्र.: {student.rollNo || "१"}
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
+
+        {/* Bottom Orange Base Bar */}
+        <div className="w-full h-4 bg-[#e86b24] shrink-0" />
       </div>
 
       {/* =========================================================================
-          PAGE 2: STUDENT INFORMATION & ATTENDANCE (भाग अ (१) सर्वसाधारण माहिती व उपस्थिती)
+          PAGE 2: STUDENT INFORMATION & ATTENDANCE (भाग अ (१) - 100% Exact Match)
       ========================================================================= */}
-      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden p-8 mx-auto bg-white flex flex-col justify-between border border-slate-300 relative box-border text-[11px] font-sans leading-normal">
+      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden px-12 pt-7 pb-5 mx-auto bg-white flex flex-col justify-between relative box-border text-[11px] font-sans leading-normal">
         {/* Title: भाग अ (१) */}
-        <div className="text-center pt-0.5">
-          <h2 className="text-xl font-black text-[#d61a7f] tracking-wide">
+        <div className="text-center mb-1">
+          <h2 className="text-xl font-black text-[#e6006e] tracking-wide">
             भाग अ (१)
           </h2>
         </div>
 
-        {/* School & Identification Details with Crisp Box Alignments */}
-        <div className="space-y-1.5 border-b border-slate-800 pb-2">
-          {/* Row 1: शाळेचे नाव व पत्ता + पिन कोड */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 flex-1 min-w-0">
-              <span className="font-black text-slate-900 whitespace-nowrap">शाळेचे नाव व पत्ता :</span>
-              <span className="font-bold text-slate-900 truncate border-b border-slate-700 flex-1 px-1 min-h-[18px]">
-                {schoolName} {schoolSettings?.address ? `, ${schoolSettings.address}` : ""}
-              </span>
+        {/* Top School & Identification Details matching Image 3 */}
+        <div className="space-y-1.5 pb-1">
+          {/* Row 1: शाळेचे नाव व पत्ता : with full-width underline */}
+          <div className="flex items-center w-full gap-2">
+            <span className="font-bold text-slate-900 whitespace-nowrap">शाळेचे नाव व पत्ता :</span>
+            <span className="border-b border-black flex-1 font-bold px-2 pb-0.5 min-h-[19px] truncate text-slate-900">
+              {schoolNameLine}
+            </span>
+          </div>
+
+          {/* Row 2: Second address line on left + Right-aligned पिन कोड : with 6 boxes */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="border-b border-black flex-1 min-h-[19px] px-2 pb-0.5 font-bold text-slate-900 truncate">
+              {schoolAddressLine}
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="font-black text-slate-900 whitespace-nowrap">पिन कोड :</span>
-              <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="font-bold text-slate-900 whitespace-nowrap">पिन कोड :</span>
+              <div className="flex items-center">
                 {Array.from({ length: 6 }).map((_, i) => {
-                  const pinChars = (schoolSettings?.pincode || "412210").replace(/\D/g, "").split("");
+                  const pinChars = String(schoolSettings?.pincode || "").replace(/\D/g, "").split("");
                   return (
                     <span
                       key={i}
-                      className="size-5 border border-slate-900 font-mono font-bold text-xs flex items-center justify-center text-slate-900 bg-white"
+                      className="w-5.5 h-5.5 border border-black font-mono font-bold text-xs flex items-center justify-center text-slate-900 bg-white -ml-px first:ml-0"
                     >
                       {pinChars[i] || ""}
                     </span>
@@ -425,19 +459,19 @@ export function FoundationalHpcPdf({
             </div>
           </div>
 
-          {/* Row 2: युडायस नंबर + अंगणवाडी सेविका / शिक्षक आय.डी. */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="font-black text-slate-900 whitespace-nowrap">युडायस नंबर :</span>
-              <div className="flex items-center gap-0.5">
+          {/* Row 3: युडायस नंबर : with 11 boxes & अंगणवाडी सेविका/शिक्षक आय.डी. with wide box */}
+          <div className="flex items-center justify-between gap-4 pt-0.5">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 whitespace-nowrap">युडायस नंबर :</span>
+              <div className="flex items-center">
                 {Array.from({ length: 11 }).map((_, i) => {
-                  const udiseChars = (profile?.udiseNumber || schoolSettings?.udiseNumber || "27210200123")
+                  const udiseChars = String(profile?.udiseNumber || schoolSettings?.udiseNumber || schoolSettings?.udise || "")
                     .replace(/\D/g, "")
                     .split("");
                   return (
                     <span
                       key={i}
-                      className="size-5 border border-slate-900 font-mono font-bold text-xs flex items-center justify-center text-slate-900 bg-white"
+                      className="w-5.5 h-5.5 border border-black font-mono font-bold text-xs flex items-center justify-center text-slate-900 bg-white -ml-px first:ml-0"
                     >
                       {udiseChars[i] || ""}
                     </span>
@@ -446,28 +480,29 @@ export function FoundationalHpcPdf({
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 flex-1 max-w-[280px]">
-              <span className="font-black text-slate-900 whitespace-nowrap text-[10px]">
-                अंगणवाडी सेविका / शिक्षक आय.डी. :
-              </span>
-              <span className="border border-slate-900 px-2 py-0.5 font-bold text-slate-900 flex-1 text-center bg-white min-h-[20px] text-[10.5px]">
-                {profile?.teacherName && profile.teacherName !== "-" ? profile.teacherName : teacherName}
-              </span>
+            <div className="flex items-center gap-2">
+              <div className="text-right leading-tight">
+                <span className="font-bold text-slate-900 text-[10px] block">अंगणवाडी सेविका / शिक्षक</span>
+                <span className="font-bold text-slate-900 text-[10px] block">आय.डी. :</span>
+              </div>
+              <div className="w-44 h-6 border border-black flex items-center justify-center font-mono font-bold text-slate-900 text-xs px-2 truncate bg-white">
+                {teacherIdDisplay}
+              </div>
             </div>
           </div>
 
-          {/* Row 3: अपार आय.डी. */}
-          <div className="flex items-center gap-2">
-            <span className="font-black text-slate-900 whitespace-nowrap">अपार आय.डी. :</span>
-            <div className="flex items-center gap-0.5">
+          {/* Row 4: अपार आय.डी. : with 12 boxes */}
+          <div className="flex items-center gap-2 pt-0.5">
+            <span className="font-bold text-slate-900 whitespace-nowrap">अपार आय.डी. :</span>
+            <div className="flex items-center">
               {Array.from({ length: 12 }).map((_, i) => {
-                const aparChars = (profile?.aparId || student.aparId || "202401020304")
+                const aparChars = String(profile?.aparId || (student as any)?.aparId || "")
                   .replace(/\D/g, "")
                   .split("");
                 return (
                   <span
                     key={i}
-                    className="size-5 border border-slate-900 font-mono font-bold text-xs flex items-center justify-center text-slate-900 bg-white"
+                    className="w-5.5 h-5.5 border border-black font-mono font-bold text-xs flex items-center justify-center text-slate-900 bg-white -ml-px first:ml-0"
                   >
                     {aparChars[i] || ""}
                   </span>
@@ -478,263 +513,273 @@ export function FoundationalHpcPdf({
         </div>
 
         {/* Subheader: सर्वसाधारण माहिती */}
-        <div className="text-center my-0.5">
-          <h3 className="font-black text-[#d61a7f] text-sm tracking-wide">
+        <div className="text-center my-1.5">
+          <h3 className="font-black text-[#e6006e] text-base tracking-wide">
             सर्वसाधारण माहिती
           </h3>
-          <p className="text-[10px] text-slate-600 font-bold">
+          <p className="text-[10px] font-bold text-slate-800">
             (पालकांशी चर्चा करून शिक्षकांनी भरावे.)
           </p>
         </div>
 
-        {/* Student Form Section: Left Details, Right Photo */}
-        <div className="flex items-start justify-between gap-4">
-          {/* Left Form Lines */}
-          <div className="flex-1 space-y-1.5 text-[11px]">
-            {/* विद्यार्थ्याचे नाव */}
-            <div className="flex items-center gap-2">
-              <span className="font-black text-slate-900 whitespace-nowrap">विद्यार्थ्याचे नाव :</span>
-              <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 min-h-[18px]">
-                {profile?.fullName || student.fullName || student.name}
-              </span>
-            </div>
-
-            {/* हजेरी क्र. + सरल आय. डी. */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 w-36">
-                <span className="font-black text-slate-900 whitespace-nowrap">हजेरी क्र. :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 text-center min-h-[18px]">
-                  {profile?.rollNo || student.rollNo || "१"}
-                </span>
+        {/* Student Form Section matching Photo 3 */}
+        <div className="space-y-1.5">
+          {/* Top 4 Rows beside Photo Box */}
+          <div className="flex items-start justify-between gap-5">
+            {/* Left 4 lines */}
+            <div className="flex-1 space-y-1.5 text-[11px]">
+              {/* Row 1: विद्यार्थ्याचे नाव */}
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-900 whitespace-nowrap">विद्यार्थ्याचे नाव :</span>
+                <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+                  {profile?.fullName || student.fullName || student.name}
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 flex-1">
-                <span className="font-black text-slate-900 whitespace-nowrap">सरल आय. डी. :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 font-mono min-h-[18px]">
-                  {profile?.saralId && profile.saralId !== "-" ? profile.saralId : student.saralId || ""}
-                </span>
-              </div>
-            </div>
 
-            {/* इयत्ता Checkboxes: बालवाटिका १ [ ] बालवाटिका २ [ ] बालवाटिका ३ [ ] इ. पहिली [✓] इ. दुसरी [ ] */}
-            <div className="flex items-center gap-2 flex-wrap text-[10.5px]">
-              <span className="font-black text-slate-900 whitespace-nowrap">इयत्ता :</span>
-              <label className="inline-flex items-center gap-1">
-                <span>बालवाटिका १</span>
-                <span className="size-4 border border-slate-900 inline-flex items-center justify-center font-bold text-xs bg-white">
-                  {student.class === "balvatika_1" ? "✓" : ""}
-                </span>
-              </label>
-              <label className="inline-flex items-center gap-1">
-                <span>बालवाटिका २</span>
-                <span className="size-4 border border-slate-900 inline-flex items-center justify-center font-bold text-xs bg-white">
-                  {student.class === "balvatika_2" ? "✓" : ""}
-                </span>
-              </label>
-              <label className="inline-flex items-center gap-1">
-                <span>बालवाटिका ३</span>
-                <span className="size-4 border border-slate-900 inline-flex items-center justify-center font-bold text-xs bg-white">
-                  {student.class === "balvatika_3" ? "✓" : ""}
-                </span>
-              </label>
-              <label className="inline-flex items-center gap-1 font-bold">
-                <span>इ. पहिली</span>
-                <span className="size-4 border border-slate-900 inline-flex items-center justify-center font-bold text-xs bg-white">
-                  {student.class === "1st" || (!student.class?.includes("2nd") && !student.class?.includes("bal")) ? "✓" : ""}
-                </span>
-              </label>
-              <label className="inline-flex items-center gap-1 font-bold">
-                <span>इ. दुसरी</span>
-                <span className="size-4 border border-slate-900 inline-flex items-center justify-center font-bold text-xs bg-white">
-                  {student.class === "2nd" ? "✓" : ""}
-                </span>
-              </label>
-            </div>
-
-            {/* तुकडी + जन्म दिनांक */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 w-36">
-                <span className="font-black text-slate-900 whitespace-nowrap">तुकडी :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 text-center min-h-[18px]">
-                  {profile?.division || student.division || "अ"}
-                </span>
+              {/* Row 2: हजेरी क्र. + सरल आय. डी. */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 w-36">
+                  <span className="font-bold text-slate-900 whitespace-nowrap">हजेरी क्र. :</span>
+                  <div className="border-b border-black flex-1 min-h-[19px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
+                    {profile?.rollNo || student.rollNo || "१"}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="font-bold text-slate-900 whitespace-nowrap">सरल आय. डी. :</span>
+                  <div className="border-b border-black flex-1 min-h-[19px] px-2 font-mono font-bold text-slate-900 flex items-end">
+                    {profile?.saralId && profile.saralId !== "-" ? profile.saralId : student.saralId || ""}
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 flex-1">
-                <span className="font-black text-slate-900 whitespace-nowrap">जन्म दिनांक :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 min-h-[18px]">
-                  {profile?.dob || student.dob || "DD / MM / YYYY"}
-                </span>
-              </div>
-            </div>
 
-            {/* पत्ता */}
-            <div className="flex items-center gap-2">
-              <span className="font-black text-slate-900 whitespace-nowrap">पत्ता :</span>
-              <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 truncate min-h-[18px]">
-                {profile?.homeAddress && profile.homeAddress !== "-"
-                  ? profile.homeAddress
-                  : profile?.addressLine1 && profile.addressLine1 !== "-"
-                  ? profile.addressLine1
-                  : student.address && student.address !== "-"
-                  ? student.address
-                  : ""}
-              </span>
-            </div>
-
-            {/* वजन + उंची */}
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-1.5">
-                <span className="font-black text-slate-900 whitespace-nowrap">वजन :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 w-24 px-1 text-center min-h-[18px]">
-                  {profile?.term1Weight ? `${profile.term1Weight} कि.ग्रॅ.` : ""}
-                </span>
+              {/* Row 3: इयत्ता Checkboxes */}
+              <div className="flex items-center gap-2 flex-wrap text-[10px] pt-0.5">
+                <span className="font-bold text-slate-900 whitespace-nowrap">इयत्ता :</span>
+                <label className="inline-flex items-center gap-1 cursor-pointer">
+                  <span>बालवाटिका १</span>
+                  <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
+                    {student.class === "balvatika_1" ? "✓" : ""}
+                  </span>
+                </label>
+                <label className="inline-flex items-center gap-1 cursor-pointer">
+                  <span>बालवाटिका २</span>
+                  <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
+                    {student.class === "balvatika_2" ? "✓" : ""}
+                  </span>
+                </label>
+                <label className="inline-flex items-center gap-1 cursor-pointer">
+                  <span>बालवाटिका ३</span>
+                  <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
+                    {student.class === "balvatika_3" ? "✓" : ""}
+                  </span>
+                </label>
+                <label className="inline-flex items-center gap-1 cursor-pointer font-bold">
+                  <span>इ. पहिली</span>
+                  <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
+                    {student.class === "1st" || (!student.class?.includes("2nd") && !student.class?.includes("bal")) ? "✓" : ""}
+                  </span>
+                </label>
+                <label className="inline-flex items-center gap-1 cursor-pointer font-bold">
+                  <span>इ. दुसरी</span>
+                  <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
+                    {student.class === "2nd" ? "✓" : ""}
+                  </span>
+                </label>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-black text-slate-900 whitespace-nowrap">उंची :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 w-24 px-1 text-center min-h-[18px]">
-                  {profile?.term1Height ? `${profile.term1Height} सें.मी.` : ""}
-                </span>
+
+              {/* Row 4: तुकडी + जन्म दिनांक */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5 w-36">
+                  <span className="font-bold text-slate-900 whitespace-nowrap">तुकडी :</span>
+                  <div className="border-b border-black flex-1 min-h-[19px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
+                    {profile?.division || student.division || "अ"}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-1">
+                  <span className="font-bold text-slate-900 whitespace-nowrap">जन्म दिनांक :</span>
+                  <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+                    {profile?.dob && profile.dob !== "-" ? (
+                      profile.dob
+                    ) : student.dob && student.dob !== "-" ? (
+                      student.dob
+                    ) : (
+                      <span className="text-slate-400 font-mono text-xs">DD / MM / YYYY</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* आईचे/पालकांचे नाव + भ्रमणध्वनी */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 flex-1">
-                <span className="font-black text-slate-900 whitespace-nowrap">आईचे/पालकांचे नाव :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 truncate min-h-[18px]">
-                  {profile?.motherName && profile.motherName !== "-" ? profile.motherName : ""}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 w-52">
-                <span className="font-black text-slate-900 whitespace-nowrap text-[10px]">
-                  भ्रमणध्वनी (मोबाइल क्र.) :
-                </span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 min-h-[18px]">
-                  {profile?.motherPhone && profile.motherPhone !== "-"
-                    ? profile.motherPhone
-                    : student.parentPhone && student.parentPhone !== "-"
-                    ? student.parentPhone
-                    : ""}
-                </span>
-              </div>
-            </div>
-
-            {/* आईचे शिक्षण + आईचा व्यवसाय */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 flex-1">
-                <span className="font-black text-slate-900 whitespace-nowrap">आईचे/पालकांचे शिक्षण :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 min-h-[18px]">
-                  {profile?.motherEducation && profile.motherEducation !== "-" ? profile.motherEducation : ""}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 flex-1">
-                <span className="font-black text-slate-900 whitespace-nowrap">आई/पालकांचा व्यवसाय :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 min-h-[18px]">
-                  {profile?.motherOccupation && profile.motherOccupation !== "-" ? profile.motherOccupation : ""}
-                </span>
-              </div>
-            </div>
-
-            {/* वडिलांचे/पालकांचे नाव + वडिलांचा व्यवसाय */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 flex-1">
-                <span className="font-black text-slate-900 whitespace-nowrap">वडिलांचे/पालकांचे नाव :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 truncate min-h-[18px]">
-                  {profile?.fatherName && profile.fatherName !== "-" ? profile.fatherName : ""}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 flex-1">
-                <span className="font-black text-slate-900 whitespace-nowrap">वडील/पालकांचा व्यवसाय :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 min-h-[18px]">
-                  {profile?.fatherOccupation && profile.fatherOccupation !== "-" ? profile.fatherOccupation : ""}
-                </span>
-              </div>
-            </div>
-
-            {/* वडिलांचे शिक्षण */}
-            <div className="flex items-center gap-2">
-              <span className="font-black text-slate-900 whitespace-nowrap">वडिलांचे/पालकांचे शिक्षण :</span>
-              <span className="font-bold text-slate-900 border-b border-slate-700 w-80 px-1 min-h-[18px]">
-                {profile?.fatherEducation && profile.fatherEducation !== "-" ? profile.fatherEducation : ""}
-              </span>
-            </div>
-
-            {/* भावंडांची संख्या + भावंडांचे वय */}
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-1.5">
-                <span className="font-black text-slate-900 whitespace-nowrap">भावंडांची संख्या :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 w-24 px-1 text-center min-h-[18px]">
-                  {profile?.siblingCount && profile.siblingCount !== "-" ? profile.siblingCount : "०"}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 flex-1">
-                <span className="font-black text-slate-900 whitespace-nowrap">भावंडांचे वय :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 min-h-[18px]">
-                  {profile?.siblingAge && profile.siblingAge !== "-" ? profile.siblingAge : ""}
-                </span>
-              </div>
-            </div>
-
-            {/* मातृभाषा + शिक्षणाचे माध्यम */}
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-1.5 flex-1">
-                <span className="font-black text-slate-900 whitespace-nowrap">मातृभाषा :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 min-h-[18px]">
-                  {profile?.motherTongue || "मराठी"}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 flex-1">
-                <span className="font-black text-slate-900 whitespace-nowrap">शिक्षणाचे माध्यम :</span>
-                <span className="font-bold text-slate-900 border-b border-slate-700 flex-1 px-1 min-h-[18px]">
-                  {profile?.mediumOfInstruction || "मराठी"}
-                </span>
-              </div>
-            </div>
-
-            {/* ग्रामीण / शहरी */}
-            <div className="flex items-center gap-2">
-              <span className="font-black text-slate-900 whitespace-nowrap">ग्रामीण / शहरी :</span>
-              <span className="font-bold text-slate-900 border-b border-slate-700 w-44 px-1 min-h-[18px]">
-                {profile?.areaType || "ग्रामीण"}
-              </span>
+            {/* Right Photo Frame matching Image 3 */}
+            <div className="w-32 h-38 border border-black flex flex-col items-center justify-center text-slate-800 font-bold text-base shrink-0 overflow-hidden bg-white shadow-2xs">
+              <SafePhoto
+                src={profile?.photoUrl || student.photoUrl}
+                alt="विद्यार्थी फोटो"
+                className="w-full h-full object-cover object-top"
+                fallback={<span className="text-slate-800 font-bold text-lg">फोटो</span>}
+              />
             </div>
           </div>
 
-          {/* Right Photo Box */}
-          <div className="w-28 h-36 border-2 border-slate-800 flex flex-col items-center justify-center text-slate-500 font-bold text-xs shrink-0 overflow-hidden bg-slate-50 shadow-xs">
-            <SafePhoto
-              src={profile?.photoUrl || student.photoUrl}
-              alt="Student Photo"
-              className="w-full h-full object-cover"
-              fallback={<span className="text-slate-600 font-bold">फोटो</span>}
-            />
+          {/* Remaining Lines: 100% Full-Width spanning under the photo box matching Image 3 */}
+          {/* Row 5: पत्ता */}
+          <div className="flex items-center gap-2 w-full">
+            <span className="font-bold text-slate-900 whitespace-nowrap">पत्ता :</span>
+            <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 truncate flex items-end">
+              {profile?.homeAddress && profile.homeAddress !== "-"
+                ? profile.homeAddress
+                : profile?.addressLine1 && profile.addressLine1 !== "-"
+                ? profile.addressLine1
+                : student.address && student.address !== "-"
+                ? student.address
+                : ""}
+            </div>
+          </div>
+
+          {/* Row 6: वजन + उंची */}
+          <div className="flex items-center gap-8 w-full">
+            <div className="flex items-center gap-1.5 w-52">
+              <span className="font-bold text-slate-900 whitespace-nowrap">वजन :</span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
+                {profile?.term1Weight ? `${profile.term1Weight} कि.ग्रॅ.` : ""}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 w-52">
+              <span className="font-bold text-slate-900 whitespace-nowrap">उंची :</span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
+                {profile?.term1Height ? `${profile.term1Height} सें.मी.` : ""}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 7: आईचे/पालकांचे नाव + भ्रमणध्वनी */}
+          <div className="flex items-center gap-6 w-full">
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">आईचे/पालकांचे नाव :</span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 truncate flex items-end">
+                {profile?.motherName && profile.motherName !== "-" ? profile.motherName : ""}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 w-72">
+              <span className="font-bold text-slate-900 whitespace-nowrap text-[10.5px]">
+                भ्रमणध्वनी (मोबाइल क्र.) :
+              </span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+                {profile?.motherPhone && profile.motherPhone !== "-"
+                  ? profile.motherPhone
+                  : student.parentPhone && student.parentPhone !== "-"
+                  ? student.parentPhone
+                  : ""}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 8: आईचे शिक्षण + आईचा व्यवसाय */}
+          <div className="flex items-center gap-6 w-full">
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">आईचे/पालकांचे शिक्षण :</span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+                {profile?.motherEducation && profile.motherEducation !== "-" ? profile.motherEducation : ""}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">आई/पालकांचा व्यवसाय :</span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+                {profile?.motherOccupation && profile.motherOccupation !== "-" ? profile.motherOccupation : ""}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 9: वडिलांचे/पालकांचे नाव + वडिलांचा व्यवसाय */}
+          <div className="flex items-center gap-6 w-full">
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">वडिलांचे/पालकांचे नाव :</span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 truncate flex items-end">
+                {profile?.fatherName && profile.fatherName !== "-" ? profile.fatherName : ""}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">वडील/पालकांचा व्यवसाय :</span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+                {profile?.fatherOccupation && profile.fatherOccupation !== "-" ? profile.fatherOccupation : ""}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 10: वडिलांचे शिक्षण */}
+          <div className="flex items-center gap-2 w-full">
+            <span className="font-bold text-slate-900 whitespace-nowrap">वडिलांचे/पालकांचे शिक्षण :</span>
+            <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+              {profile?.fatherEducation && profile.fatherEducation !== "-" ? profile.fatherEducation : ""}
+            </div>
+          </div>
+
+          {/* Row 11: भावंडांची संख्या + भावंडांचे वय */}
+          <div className="flex items-center gap-8 w-full">
+            <div className="flex items-center gap-1.5 w-52">
+              <span className="font-bold text-slate-900 whitespace-nowrap">भावंडांची संख्या :</span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
+                {profile?.siblingCount && profile.siblingCount !== "-" ? profile.siblingCount : "०"}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">भावंडांचे वय :</span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+                {profile?.siblingAge && profile.siblingAge !== "-" ? profile.siblingAge : "/ /"}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 12: मातृभाषा + शिक्षणाचे माध्यम */}
+          <div className="flex items-center gap-8 w-full">
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">मातृभाषा :</span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+                {profile?.motherTongue || "मराठी"}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">शिक्षणाचे माध्यम :</span>
+              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+                {profile?.mediumOfInstruction || "मराठी"}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 13: ग्रामीण / शहरी */}
+          <div className="flex items-center gap-2 w-full">
+            <span className="font-bold text-slate-900 whitespace-nowrap">ग्रामीण/शहरी :</span>
+            <div className="border-b border-black w-56 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+              {profile?.areaType || "ग्रामीण"}
+            </div>
           </div>
         </div>
 
-        {/* Section: उपस्थिती (13 Month Single-Table Layout with Magenta Borders) */}
-        <div className="mt-2 pt-1">
-          <h3 className="font-black text-[#d61a7f] text-sm mb-1.5">
+        {/* Section: उपस्थिती Table Matching Image 3 & Image 5 100% */}
+        <div className="mt-1">
+          <h3 className="font-black text-[#e6006e] text-sm mb-1">
             उपस्थिती
           </h3>
 
-          <table className="w-full border-collapse border-2 border-[#d61a7f] text-center text-[10px]">
+          <table className="w-full table-fixed border-collapse border border-[#e6006e] text-center text-[10px]">
             <thead>
-              <tr className="border-b-2 border-[#d61a7f] bg-[#fdf2f7] text-[#d61a7f] font-black">
-                <th className="border-r border-[#d61a7f] p-1.5 w-24 text-left pl-2">महिने</th>
+              <tr className="border-b border-[#e6006e] bg-[#fef2e6] text-[#e6006e] font-black">
+                <th className="border-r border-[#e6006e] p-1 w-[16%] text-left pl-2">महिने</th>
                 {["जून", "जुलै", "ऑगस्ट", "सप्टें.", "ऑक्टो.", "नोव्हें.", "डिसें.", "जाने.", "फेब्रु.", "मार्च", "एप्रिल", "मे"].map((m) => (
-                  <th key={m} className="border-r border-[#d61a7f] last:border-r-0 p-1">
+                  <th key={m} className="border-r border-[#e6006e] last:border-r-0 p-1 w-[7%] font-black whitespace-nowrap">
                     {m}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#d61a7f] text-slate-900 font-bold">
+            <tbody className="divide-y divide-[#e6006e] text-slate-900 font-bold">
               {/* Row 1: कामाचे दिवस */}
               <tr>
-                <td className="border-r border-[#d61a7f] p-1 text-left pl-2 font-black text-slate-800 bg-[#fafafa]">
+                <td className="border-r border-[#e6006e] bg-[#fef2e6] p-1 w-[16%] text-left pl-2 font-black text-slate-900 whitespace-nowrap">
                   कामाचे दिवस
                 </td>
                 {[20, 24, 22, 21, 18, 19, 24, 22, 20, 24, 6, 0].map((def, i) => (
-                  <td key={i} className="border-r border-[#d61a7f] last:border-r-0 p-1">
+                  <td key={i} className="border-r border-[#e6006e] last:border-r-0 p-1 w-[7%]">
                     {def > 0 ? def : ""}
                   </td>
                 ))}
@@ -742,70 +787,76 @@ export function FoundationalHpcPdf({
 
               {/* Row 2: उपस्थित दिवस */}
               <tr>
-                <td className="border-r border-[#d61a7f] p-1 text-left pl-2 font-black text-slate-800 bg-[#fafafa]">
+                <td className="border-r border-[#e6006e] bg-[#fef2e6] p-1 w-[16%] text-left pl-2 font-black text-slate-900 whitespace-nowrap">
                   उपस्थित दिवस
                 </td>
                 {[19, 23, 21, 20, 17, 18, 23, 21, 19, 23, 6, 0].map((def, i) => (
-                  <td key={i} className="border-r border-[#d61a7f] last:border-r-0 p-1 font-black text-slate-900">
+                  <td key={i} className="border-r border-[#e6006e] last:border-r-0 p-1 w-[7%] font-black text-slate-900">
                     {def > 0 ? def : ""}
                   </td>
                 ))}
               </tr>
 
-              {/* Row 3: उपस्थिती (% मध्ये) */}
+              {/* Row 3: उपस्थिती (% मध्ये) in PINK font matching Image 5 */}
               <tr>
-                <td className="border-r border-[#d61a7f] p-1 text-left pl-2 font-black text-slate-800 bg-[#fafafa]">
+                <td className="border-r border-[#e6006e] bg-[#fef2e6] p-1 w-[16%] text-left pl-2 font-black text-slate-900 whitespace-nowrap">
                   उपस्थिती (% मध्ये)
                 </td>
                 {[95, 96, 95, 95, 94, 95, 96, 95, 95, 96, 100, 0].map((def, i) => (
-                  <td key={i} className="border-r border-[#d61a7f] last:border-r-0 p-1 font-black text-[#d61a7f]">
+                  <td key={i} className="border-r border-[#e6006e] last:border-r-0 p-1 w-[7%] font-black text-[#e6006e]">
                     {def > 0 ? `${def}%` : ""}
                   </td>
                 ))}
               </tr>
+
+              {/* Row 4: उपस्थिती कमी असल्यास त्याची कारणे */}
+              <tr>
+                <td className="border-r border-[#e6006e] bg-[#fef2e6] p-1 w-[16%] text-left pl-2 font-black text-slate-900 leading-tight">
+                  <div>उपस्थिती कमी असल्यास</div>
+                  <div>त्याची कारणे</div>
+                </td>
+                <td colSpan={12} className="p-1 px-3 align-middle bg-white w-[84%]">
+                  <div className="space-y-1.5 py-1">
+                    <div className="border-b border-black h-3.5 w-full" />
+                    <div className="border-b border-black h-3.5 w-full" />
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
-
-          {/* उपस्थिती कमी असल्यास त्याची कारणे */}
-          <div className="mt-2 space-y-1">
-            <span className="font-bold text-slate-800 text-[10.5px]">
-              उपस्थिती कमी असल्यास त्याची कारणे :
-            </span>
-            <div className="border-b border-slate-600 h-4.5" />
-            <div className="border-b border-slate-600 h-4.5" />
-          </div>
         </div>
 
-        {/* Footer: Page 2 with Cyan Accent Line */}
-        <div className="pt-2 border-t-2 border-[#00a0dc] flex items-center justify-between text-xs font-bold text-slate-700">
-          <span className="font-mono text-slate-900 font-bold">१</span>
-          <span>{student.fullName || student.name} (इ. {student.class === "2nd" ? "२ री" : "१ ली"})</span>
+        {/* Footer: Cyan Rule with Page Number 1 on the Right matching Image 3 */}
+        <div className="mt-auto pt-2">
+          <div className="w-full h-0.5 bg-[#00a0dc]" />
+          <div className="flex justify-end pr-1 pt-1 text-xs font-bold text-slate-800">
+            <span>1</span>
+          </div>
         </div>
       </div>
 
       {/* =========================================================================
-          PAGE 3: ME & MY SURROUNDINGS (भाग - अ (२) : मी व माझा परिसर)
+          PAGE 3: ME & MY SURROUNDINGS (भाग - अ (२) : मी व माझा परिसर - 100% Exact Match)
       ========================================================================= */}
-      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden p-7 mx-auto bg-white flex flex-col justify-between border border-slate-300 relative box-border text-slate-900 text-xs">
+      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden px-10 pt-7 pb-5 mx-auto bg-white flex flex-col justify-between border border-slate-300 relative box-border text-slate-900 text-xs">
         {/* Top Header */}
         <div className="text-center">
-          <div className="text-sm font-black text-[#d61a7f] tracking-wide mb-1">
+          <div className="text-sm font-bold text-[#e6006e] tracking-wide mb-1">
             भाग - अ (२)
           </div>
-          <div className="inline-flex items-center justify-center gap-3 bg-[#c85a28] text-white px-10 py-1.5 rounded-full font-black text-xl tracking-wider shadow-sm">
+          <div className="inline-flex items-center justify-center gap-2 bg-[#c85a28] text-white px-14 py-1.5 rounded-full font-black text-xl tracking-wider shadow-xs">
             <span className="text-white text-base">★</span>
             <span>मी व माझा परिसर</span>
-            <span className="text-white text-base">★</span>
           </div>
         </div>
 
-        {/* Section 1: Photo & Age & Birthday & Address */}
-        <div className="grid grid-cols-12 gap-4 items-start pt-1">
-          {/* Tilted Photo Frame (col-span-5) */}
-          <div className="col-span-5 relative pt-3 pl-2">
-            <div className="relative -rotate-2 border-2 border-slate-900 rounded-3xl w-52 h-44 bg-white p-2 flex flex-col items-center justify-center shadow-xs">
+        {/* Section 1: Photo & Age & Birthday & Address matching Image 4 */}
+        <div className="grid grid-cols-12 gap-5 items-start pt-1">
+          {/* Tilted Cartoon Photo Frame (col-span-5) */}
+          <div className="col-span-5 relative pt-4 pl-1">
+            <div className="relative -rotate-3 border-2 border-black rounded-3xl w-50 h-42 bg-white p-2 flex flex-col items-center justify-center shadow-xs">
               {/* Tilted label on top border */}
-              <div className="absolute -top-3.5 left-3 flex items-center gap-1 bg-white px-1.5 text-sm font-black text-slate-900">
+              <div className="absolute -top-3.5 left-2 flex items-center gap-1 bg-white px-1 text-sm font-black text-slate-900 whitespace-nowrap">
                 <span className="text-amber-400 text-base">★</span>
                 <span className="tracking-wide">माझा फोटो</span>
                 <span className="text-rose-600 text-base">★</span>
@@ -814,11 +865,11 @@ export function FoundationalHpcPdf({
               <SafePhoto
                 src={student.photoUrl}
                 alt="Student"
-                className="w-full h-full object-cover rounded-2xl"
+                className="w-full h-full object-cover object-top rounded-2xl"
                 fallback={
-                  <div className="w-full h-full border border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center text-slate-400 bg-slate-50/60">
+                  <div className="w-full h-full border border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center text-slate-400 bg-slate-50/50">
                     <span className="text-2xl mb-1">📷</span>
-                    <span className="text-[11px] font-bold text-slate-600">फोटो येथे लावावा</span>
+                    <span className="text-[11px] font-bold text-slate-500">फोटो येथे लावावा</span>
                   </div>
                 }
               />
@@ -826,15 +877,15 @@ export function FoundationalHpcPdf({
           </div>
 
           {/* Age, Birthday Balloon, Address (col-span-7) */}
-          <div className="col-span-7 flex flex-col justify-between h-44 pl-2">
-            <div className="flex items-center justify-between gap-2">
+          <div className="col-span-7 flex flex-col justify-between h-42 pl-1">
+            <div className="flex items-center justify-between gap-3">
               {/* Age Info */}
               <div className="flex items-center gap-2">
                 <div className="text-sm font-black text-slate-900 leading-tight">
                   <div>माझे</div>
                   <div>वय</div>
                 </div>
-                <div className="w-16 h-9 rounded-full border-2 border-[#e67324] bg-white flex items-center justify-center text-sm font-black text-slate-900 shadow-2xs">
+                <div className="w-16 h-9 rounded-full border-2 border-[#c85a28] bg-white flex items-center justify-center text-sm font-black text-slate-900 shadow-2xs">
                   {profile?.age || "७"}
                 </div>
                 <div className="text-sm font-black text-slate-900 leading-tight">
@@ -846,26 +897,27 @@ export function FoundationalHpcPdf({
                 </div>
               </div>
 
-              {/* Birthday Balloon */}
+              {/* Birthday Balloon matching Image 4 */}
               <div className="relative flex flex-col items-center shrink-0 pr-3">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-b from-[#4b207e] to-[#250d42] text-white flex flex-col items-center justify-center text-center p-2 shadow-sm relative">
-                  <div className="text-[10px] font-medium leading-none">माझा</div>
+                <div className="w-24 h-24 rounded-full bg-[#350e5e] text-white flex flex-col items-center justify-center text-center p-2 shadow-sm relative">
+                  <div className="w-2 h-2 rounded-full bg-white mb-0.5 opacity-90" />
+                  <div className="text-[10px] font-bold leading-none">माझा</div>
                   <div className="text-xs font-black leading-tight mt-0.5">वाढदिवस</div>
-                  <div className="text-xs font-black text-amber-300 my-0.5">
+                  <div className="text-[11px] font-black text-amber-300 my-0.5">
                     {profile?.birthday && profile.birthday !== "-" ? profile.birthday : student.dob || "१५ ऑगस्ट"}
                   </div>
-                  <div className="text-[9px] font-bold leading-none opacity-90">या दिवशी असतो.</div>
+                  <div className="text-[9px] font-bold leading-none opacity-95">या दिवशी असतो.</div>
                 </div>
-                {/* Balloon string SVG */}
+                {/* Curved balloon thread looping down to house */}
                 <svg
-                  className="w-8 h-8 absolute -bottom-6 right-3 text-slate-700 pointer-events-none"
-                  viewBox="0 0 30 30"
+                  className="w-10 h-10 absolute -bottom-8 right-2 text-slate-800 pointer-events-none"
+                  viewBox="0 0 40 40"
                   fill="none"
                 >
                   <path
-                    d="M 12 0 C 14 10, 8 18, 20 28"
+                    d="M 16 0 C 22 14, 6 22, 28 36"
                     stroke="currentColor"
-                    strokeWidth="1.5"
+                    strokeWidth="1.6"
                   />
                 </svg>
               </div>
@@ -875,9 +927,9 @@ export function FoundationalHpcPdf({
             <div className="mt-1">
               <div className="flex items-center justify-between mb-0.5">
                 <span className="text-sm font-black text-slate-900">माझ्या घराचा पत्ता</span>
-                {/* Blue line house icon */}
+                {/* Cyan house outline icon matching Image 4 */}
                 <svg
-                  className="size-7 text-[#00a0dc]"
+                  className="size-8 text-[#00a0dc]"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -890,36 +942,39 @@ export function FoundationalHpcPdf({
                 </svg>
               </div>
               <div className="space-y-1">
-                <div className="border-b border-slate-800 h-5 flex items-end px-1 text-xs font-bold text-slate-900">
+                <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900">
                   {profile?.homeAddress && profile.homeAddress !== "-" ? profile.homeAddress : student.address || ""}
                 </div>
-                <div className="border-b border-slate-800 h-5 flex items-end px-1 text-xs font-bold text-slate-900" />
+                <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Family & Ambition vs Friends Notepad */}
-        <div className="grid grid-cols-12 gap-4 items-stretch pt-2">
+        {/* Section 2: Family & Ambition vs Friends Notepad matching Image 4 */}
+        <div className="grid grid-cols-12 gap-5 items-stretch pt-1">
           {/* Family & Ambition Column (col-span-7) */}
           <div className="col-span-7 flex flex-col justify-between">
             {/* Family Frame */}
             <div className="relative">
               {/* Smileys & Star on Frame Header */}
-              <div className="absolute -top-3.5 left-3 flex items-center gap-1 z-10">
+              <div className="absolute -top-3.5 left-2 flex items-center gap-1 z-10">
                 {/* Yellow smiley face */}
-                <div className="size-8 rounded-full bg-[#fdd835] border border-amber-500 flex items-center justify-center shadow-xs">
-                  <span className="text-base leading-none">😊</span>
+                <div className="w-8 h-8 rounded-full bg-[#fdd835] border border-amber-500 flex items-center justify-center text-base shadow-xs">
+                  😊
                 </div>
                 {/* Red smiley face */}
-                <div className="size-7 rounded-full bg-[#e53935] border border-red-600 flex items-center justify-center shadow-xs">
-                  <span className="text-sm leading-none">😄</span>
+                <div className="w-7 h-7 rounded-full bg-[#e53935] border border-red-600 flex items-center justify-center text-sm shadow-xs">
+                  😄
                 </div>
               </div>
-              <span className="absolute -top-2 right-4 text-indigo-600 text-lg z-10">★</span>
+              <span className="absolute -top-2.5 right-4 text-indigo-700 text-xl z-10">★</span>
 
-              {/* Nested Green Frame */}
-              <div className="border-4 border-[#009b4d] rounded-3xl p-3 pt-4 bg-white min-h-[92px] flex flex-col justify-center">
+              {/* Nested Green Double Border Frame */}
+              <div
+                className="rounded-2xl p-3 pt-4 bg-white min-h-[90px] flex flex-col justify-center"
+                style={{ border: "4px double #009b4d" }}
+              >
                 <p className="text-xs font-bold text-slate-800 leading-relaxed text-center px-2">
                   {profile?.familyDescription && profile.familyDescription !== "-"
                     ? profile.familyDescription
@@ -932,11 +987,11 @@ export function FoundationalHpcPdf({
             </div>
 
             {/* Ambition Box */}
-            <div className="relative mt-2">
-              <span className="absolute -top-3 right-3 text-sky-500 text-2xl z-10">★</span>
+            <div className="relative mt-1">
+              <span className="absolute -top-3.5 right-4 text-sky-500 text-2xl z-10">★</span>
               <div className="border-4 border-[#8e237b] rounded-2xl p-2.5 bg-white">
                 <div className="text-sm font-black text-slate-900">मोठे होऊन मला</div>
-                <div className="border-b border-dotted border-slate-700 my-1 h-6 flex items-end px-2 text-xs font-black text-indigo-950">
+                <div className="border-b border-dotted border-slate-700 my-1 h-5 flex items-end px-2 text-xs font-black text-indigo-950">
                   {profile?.ambition && profile.ambition !== "-" ? profile.ambition : "शिक्षक / डॉक्टर / सैनिक"}
                 </div>
                 <div className="text-right text-sm font-black text-slate-900">व्हायचे आहे.</div>
@@ -944,20 +999,20 @@ export function FoundationalHpcPdf({
             </div>
           </div>
 
-          {/* Friends Notepad Card (col-span-5) */}
+          {/* Friends Notepad Card (col-span-5) matching Image 4 */}
           <div className="col-span-5 flex flex-col justify-between relative pt-1">
-            <span className="absolute -top-2 left-6 text-rose-600 text-2xl z-10">★</span>
+            <span className="absolute -top-2 left-4 text-rose-600 text-2xl z-10">★</span>
             <span className="absolute top-12 -right-1 text-sky-500 text-xl z-10">★</span>
 
             {/* Cyan Border Card */}
-            <div className="border-[6px] border-[#009fd9] bg-white p-3 rounded-none flex-1 flex flex-col justify-between min-h-[195px] relative">
-              <div className="space-y-2">
+            <div className="border-[5px] border-[#009fd9] bg-white p-3 rounded-none flex-1 flex flex-col justify-between min-h-[190px] relative">
+              <div className="space-y-2.5">
                 {[0, 1, 2, 3, 4].map((idx) => {
                   const frName = (profile?.friends || [])[idx] || "";
                   return (
                     <div key={idx} className="flex items-center gap-2">
-                      <span className="size-3 rounded-full bg-[#c8237b] shrink-0" />
-                      <div className="border-b border-dotted border-slate-700 flex-1 h-5 flex items-end px-1 text-xs font-bold text-slate-900">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#8e237b] shrink-0" />
+                      <div className="border-b border-dotted border-slate-700 flex-1 h-4 flex items-end px-1 text-xs font-bold text-slate-900">
                         {frName}
                       </div>
                     </div>
@@ -966,9 +1021,8 @@ export function FoundationalHpcPdf({
               </div>
 
               {/* Starburst Banner attached at bottom */}
-              <div className="relative mt-2 -mb-5 -mx-3.5 z-20">
-                <div className="bg-[#e65c00] text-white px-3 py-1.5 rounded-md text-xs font-black tracking-wide text-center shadow-md border border-amber-300 flex items-center justify-center gap-1">
-                  <span>💥</span>
+              <div className="relative mt-2 -mb-5 -mx-4 z-20">
+                <div className="bg-[#e65c00] text-white px-3 py-1.5 rounded-sm text-xs font-black tracking-wide text-center shadow-md flex items-center justify-center gap-1 border-t border-b border-amber-300">
                   <span>हे माझे मित्र/मैत्रिणी आहेत.</span>
                 </div>
               </div>
@@ -976,42 +1030,42 @@ export function FoundationalHpcPdf({
           </div>
         </div>
 
-        {/* Section 3: My Favorites (माझा आवडता) */}
-        <div className="pt-4">
-          <div className="text-center font-black text-base text-slate-900 mb-1.5 flex items-center justify-center gap-2">
+        {/* Section 3: My Favorites (माझा आवडता) matching Image 4 */}
+        <div className="pt-2">
+          <div className="text-center font-black text-base text-slate-900 mb-1 flex items-center justify-center gap-2">
             <span className="text-lime-600 text-lg">★</span>
             <span>माझा आवडता</span>
             <span className="text-amber-400 text-lg">★</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
             {/* Left Column: रंग, अन्नपदार्थ, प्राणी */}
             <div className="space-y-1.5">
               {/* Color */}
               <div className="flex items-center gap-2">
                 <span className="text-base w-6 text-center">🎨</span>
                 <span className="w-20 text-xs font-black text-slate-900">रंग</span>
-                <div className="flex-1 h-7 border border-slate-800 rounded-full px-3 flex items-center text-xs font-bold text-slate-900 bg-white shadow-2xs">
-                  {profile?.favoriteColor && profile.favoriteColor !== "-" ? profile.favoriteColor : "निळा"}
-                </div>
+                <ArrowInputBox
+                  value={profile?.favoriteColor && profile.favoriteColor !== "-" ? profile.favoriteColor : "निळा"}
+                />
               </div>
 
               {/* Food */}
               <div className="flex items-center gap-2">
                 <span className="text-base w-6 text-center">🍲</span>
                 <span className="w-20 text-xs font-black text-slate-900">अन्नपदार्थ</span>
-                <div className="flex-1 h-7 border border-slate-800 rounded-full px-3 flex items-center text-xs font-bold text-slate-900 bg-white shadow-2xs">
-                  {profile?.favoriteFood && profile.favoriteFood !== "-" ? profile.favoriteFood : "वरणभात"}
-                </div>
+                <ArrowInputBox
+                  value={profile?.favoriteFood && profile.favoriteFood !== "-" ? profile.favoriteFood : "वरणभात"}
+                />
               </div>
 
               {/* Animal */}
               <div className="flex items-center gap-2">
-                <span className="text-base w-6 text-center">🦌</span>
+                <span className="text-base w-6 text-center">🦒</span>
                 <span className="w-20 text-xs font-black text-slate-900">प्राणी</span>
-                <div className="flex-1 h-7 border border-slate-800 rounded-full px-3 flex items-center text-xs font-bold text-slate-900 bg-white shadow-2xs">
-                  {profile?.favoriteAnimal && profile.favoriteAnimal !== "-" ? profile.favoriteAnimal : "मांजर"}
-                </div>
+                <ArrowInputBox
+                  value={profile?.favoriteAnimal && profile.favoriteAnimal !== "-" ? profile.favoriteAnimal : "मांजर"}
+                />
               </div>
             </div>
 
@@ -1021,81 +1075,102 @@ export function FoundationalHpcPdf({
               <div className="flex items-center gap-2">
                 <span className="text-base w-6 text-center">🌸</span>
                 <span className="w-16 text-xs font-black text-slate-900">फूल</span>
-                <div className="flex-1 h-7 border border-slate-800 rounded-full px-3 flex items-center text-xs font-bold text-slate-900 bg-white shadow-2xs">
-                  {profile?.favoriteFlower && profile.favoriteFlower !== "-" ? profile.favoriteFlower : "गुलाब"}
-                </div>
+                <ArrowInputBox
+                  value={profile?.favoriteFlower && profile.favoriteFlower !== "-" ? profile.favoriteFlower : "गुलाब"}
+                />
               </div>
 
               {/* Game */}
               <div className="flex items-center gap-2">
                 <span className="text-base w-6 text-center">🎾</span>
                 <span className="w-16 text-xs font-black text-slate-900">खेळ</span>
-                <div className="flex-1 h-7 border border-slate-800 rounded-full px-3 flex items-center text-xs font-bold text-slate-900 bg-white shadow-2xs">
-                  {profile?.favoriteGame && profile.favoriteGame !== "-" ? profile.favoriteGame : "लपंडाव"}
-                </div>
+                <ArrowInputBox
+                  value={profile?.favoriteGame && profile.favoriteGame !== "-" ? profile.favoriteGame : "लपंडाव"}
+                />
               </div>
 
               {/* Subject */}
               <div className="flex items-center gap-2">
                 <span className="text-base w-6 text-center">📚</span>
                 <span className="w-16 text-xs font-black text-slate-900">विषय</span>
-                <div className="flex-1 h-7 border border-slate-800 rounded-full px-3 flex items-center text-xs font-bold text-slate-900 bg-white shadow-2xs">
-                  {profile?.favoriteSubject && profile.favoriteSubject !== "-" ? profile.favoriteSubject : "भाषा"}
-                </div>
+                <ArrowInputBox
+                  value={profile?.favoriteSubject && profile.favoriteSubject !== "-" ? profile.favoriteSubject : "भाषा"}
+                />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Section 4: Hobbies & Home Chores */}
-        <div className="pt-2">
-          <div className="text-xs font-black text-[#d61a7f] mb-1">
+        {/* Section 4: Hobbies & Home Chores matching Image 4 (NO TRUNCATION!) */}
+        <div className="pt-1">
+          <div className="text-xs font-black text-[#e6006e] mb-1">
             माझी आवड आहे :
           </div>
 
-          <div className="border-2 border-[#d61a7f] bg-[#fdeee4] p-2.5 rounded-none space-y-2">
-            {/* 12 Hobbies Grid: 2 rows of 6 */}
-            <div className="grid grid-cols-6 gap-x-2 gap-y-1.5 text-xs">
-              {[
-                "वाचन",
-                "नृत्य",
-                "गायन",
-                "वादन",
-                "क्रीडा / खेळ",
-                "सर्जनशील लेखन",
-                "बागकाम",
-                "योगाभ्यास",
-                "कला",
-                "हस्तकला",
-                "पाककला",
-                "इतर",
-              ].map((h) => {
-                const checked = (
-                  profile?.hobbies || ["वाचन", "क्रीडा / खेळ", "कला"]
-                ).some((hobby) => hobby.includes(h) || h.includes(hobby));
-                return (
-                  <div key={h} className="flex items-center justify-between gap-1">
-                    <span className="font-bold text-slate-900 truncate text-[11.5px]">{h}</span>
-                    <span className="size-5 border-2 border-slate-900 bg-white inline-flex items-center justify-center font-black text-rose-600 text-xs shrink-0">
-                      {checked ? "✓" : ""}
-                    </span>
-                  </div>
-                );
-              })}
+          <div className="border border-[#e6006e] bg-[#fdeee4] p-2.5 rounded-none space-y-2">
+            {/* 12 Hobbies: 2 rows with clean flex spacing - full text, zero truncation */}
+            <div className="space-y-1.5 text-xs">
+              {/* Row 1 */}
+              <div className="flex items-center justify-between gap-1">
+                {[
+                  { name: "वाचन" },
+                  { name: "नृत्य" },
+                  { name: "गायन" },
+                  { name: "वादन" },
+                  { name: "क्रीडा किंवा खेळ" },
+                  { name: "सर्जनशील लेखन" },
+                ].map(({ name }) => {
+                  const checked = (
+                    profile?.hobbies || ["वाचन", "क्रीडा किंवा खेळ", "कला"]
+                  ).some((h) => h.includes(name) || name.includes(h));
+                  return (
+                    <div key={name} className="flex items-center gap-1.5 shrink-0">
+                      <span className="font-bold text-slate-900 text-[11px] whitespace-nowrap">{name}</span>
+                      <span className="w-4.5 h-4.5 border border-black bg-white inline-flex items-center justify-center font-black text-rose-600 text-xs shrink-0">
+                        {checked ? "✓" : ""}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Row 2 */}
+              <div className="flex items-center justify-between gap-1">
+                {[
+                  { name: "बागकाम" },
+                  { name: "योगाभ्यास" },
+                  { name: "कला" },
+                  { name: "हस्तकला" },
+                  { name: "पाककला" },
+                  { name: "इतर" },
+                ].map(({ name }) => {
+                  const checked = (
+                    profile?.hobbies || ["वाचन", "क्रीडा किंवा खेळ", "कला"]
+                  ).some((h) => h.includes(name) || name.includes(h));
+                  return (
+                    <div key={name} className="flex items-center gap-1.5 shrink-0">
+                      <span className="font-bold text-slate-900 text-[11px] whitespace-nowrap">{name}</span>
+                      <span className="w-4.5 h-4.5 border border-black bg-white inline-flex items-center justify-center font-black text-rose-600 text-xs shrink-0">
+                        {checked ? "✓" : ""}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Chores Section */}
-            <div className="pt-1">
+            <div className="pt-0.5">
               <div className="text-xs font-bold text-slate-900">
                 इतर व्यक्तींसोबत (वडील, आई, पालक, भावंड इ.) घरातील खालील कामे नियमित करतो/करते.
               </div>
               <div className="space-y-1 mt-1">
-                <div className="border-b border-slate-800 h-5 flex items-end px-1 text-xs font-bold text-slate-900">
+                <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900">
                   {profile?.regularHomeChores && profile.regularHomeChores !== "-"
                     ? profile.regularHomeChores
                     : "स्वतःचे दप्तर जागेवर ठेवणे, जेवणानंतर ताट उचलून ठेवणे, झाडांना पाणी देणे."}
                 </div>
-                <div className="border-b border-slate-800 h-5 flex items-end px-1 text-xs font-bold text-slate-900" />
+                <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900" />
               </div>
             </div>
           </div>
@@ -1106,10 +1181,12 @@ export function FoundationalHpcPdf({
           </div>
         </div>
 
-        {/* Footer: Page 3 with Cyan Accent Line on the Left */}
-        <div className="pt-2 border-t-2 border-[#00a0dc] flex items-center justify-between text-xs font-bold text-slate-700">
-          <span className="font-mono text-slate-900 font-bold">२</span>
-          <span>{student.fullName || student.name} (इ. {student.class === "2nd" ? "२ री" : "१ ली"})</span>
+        {/* Footer: Page 3 with Cyan Accent Line & 2 on the Left matching Image 4 */}
+        <div className="mt-auto pt-1">
+          <div className="w-full h-0.5 bg-[#00a0dc]" />
+          <div className="flex justify-start pl-1 pt-1 text-xs font-bold text-slate-800">
+            <span>2</span>
+          </div>
         </div>
       </div>
 
