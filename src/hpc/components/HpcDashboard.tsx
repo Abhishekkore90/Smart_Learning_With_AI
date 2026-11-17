@@ -402,35 +402,41 @@ export function HpcDashboard() {
                   </p>
                 </div>
 
-                {/* Class Quick Selection Pills - Fits in one single line */}
-                <div className="pt-3 border-t border-slate-100/90 flex items-center gap-1.5 flex-nowrap overflow-x-auto no-scrollbar">
-                  <span className="text-[11px] font-extrabold text-slate-400 shrink-0 whitespace-nowrap">वर्ग निवडा:</span>
-                  {CLASSES_BY_STAGE[stg.id].map((c) => {
-                    const isClassActive = activeStage === stg.id && selectedClass === c.id;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveStage(stg.id);
-                          setSelectedClass(c.id);
-                          localStorage.setItem("hpc_selected_class", c.id);
-                          localStorage.setItem("hpc_selected_stage", stg.id);
-                          window.dispatchEvent(
-                            new CustomEvent("hpc_class_changed", {
-                              detail: { cls: c.id, stageId: stg.id },
-                            })
-                          );
-                        }}
-                        className={`text-xs px-2.5 py-1 rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 font-bold ${
-                          isClassActive ? classActivePill : classInactivePill
-                        }`}
-                      >
-                        {c.labelMarathi}
-                      </button>
-                    );
-                  })}
+                {/* Class Quick Selection Pills - Label above, classes downside */}
+                <div className="pt-3 border-t border-slate-100/90 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-black text-slate-800 tracking-wide flex items-center gap-1.5">
+                      <span>वर्ग निवडा:</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {CLASSES_BY_STAGE[stg.id].map((c) => {
+                      const isClassActive = activeStage === stg.id && selectedClass === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveStage(stg.id);
+                            setSelectedClass(c.id);
+                            localStorage.setItem("hpc_selected_class", c.id);
+                            localStorage.setItem("hpc_selected_stage", stg.id);
+                            window.dispatchEvent(
+                              new CustomEvent("hpc_class_changed", {
+                                detail: { cls: c.id, stageId: stg.id },
+                              })
+                            );
+                          }}
+                          className={`flex-1 min-w-[70px] text-center text-xs sm:text-[13px] px-2.5 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap font-black shadow-2xs ${
+                            isClassActive ? classActivePill : classInactivePill
+                          }`}
+                        >
+                          {c.labelMarathi}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             );
@@ -674,15 +680,15 @@ export function HpcDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-extrabold uppercase tracking-wider text-[11px]">
-                  <th className="py-4 px-2 w-12 text-center">हजेरी क्र.</th>
-                  <th className="p-4">विद्यार्थ्याचे नाव</th>
-                  <th className="p-4 text-center">भाग अ (Profile)</th>
-                  <th className="p-4 text-center">सत्र १ (Session 1)</th>
-                  <th className="p-4 text-center">सत्र २ (Session 2)</th>
-                  <th className="p-4 text-center">भाग क (वार्षिक)</th>
-                  <th className="p-4 text-center">एकूण स्थिती</th>
-                  <th className="py-4 px-3 text-center min-w-[270px]">कृती (Actions)</th>
+                <tr className="bg-slate-100 border-b-2 border-slate-300 text-slate-800 font-black text-sm tracking-wide">
+                  <th className="py-4 px-3 w-16 text-center font-black text-slate-800 text-sm whitespace-nowrap">हजेरी क्र.</th>
+                  <th className="p-4 font-black text-slate-800 text-sm whitespace-nowrap">विद्यार्थ्याचे नाव</th>
+                  <th className="p-4 text-center font-black text-slate-800 text-sm whitespace-nowrap">भाग अ (Profile)</th>
+                  <th className="p-4 text-center font-black text-slate-800 text-sm whitespace-nowrap">सत्र १ (Session 1)</th>
+                  <th className="p-4 text-center font-black text-slate-800 text-sm whitespace-nowrap">सत्र २ (Session 2)</th>
+                  <th className="p-4 text-center font-black text-slate-800 text-sm whitespace-nowrap">भाग क (वार्षिक)</th>
+                  <th className="p-4 text-center font-black text-slate-800 text-sm whitespace-nowrap">एकूण स्थिती</th>
+                  <th className="py-4 px-4 text-center min-w-[270px] font-black text-slate-800 text-sm whitespace-nowrap">कृती (Actions)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
