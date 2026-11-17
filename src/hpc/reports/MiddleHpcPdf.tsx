@@ -9,6 +9,7 @@ import {
   MIDDLE_AREAS,
   getGoalsForArea,
 } from "../data/hpcCurricularGoals";
+import { SafePhoto } from "./SafePhoto";
 
 interface MiddleHpcPdfProps {
   student: StudentInfoSummary;
@@ -22,7 +23,7 @@ interface MiddleHpcPdfProps {
 }
 
 export function MiddleHpcPdf({
-  student,
+  student: rawStudent,
   schoolSettings = {},
   profile,
   session1,
@@ -31,6 +32,15 @@ export function MiddleHpcPdf({
   attendance,
   academicYear = "२०२५ - २०२६",
 }: MiddleHpcPdfProps) {
+  const student = rawStudent || ({
+    id: "default",
+    name: "विद्यार्थी",
+    fullName: "विद्यार्थी",
+    rollNo: "1",
+    gender: "male",
+    class: "6th",
+    division: "अ",
+  } as any);
   const schoolName =
     schoolSettings?.schoolName ||
     schoolSettings?.name ||
@@ -52,7 +62,25 @@ export function MiddleHpcPdf({
   const attendancePct = attendance?.attendancePercentage || "0.0";
 
   return (
-    <div className="hpc-pdf-document font-sans text-slate-900 bg-white">
+    <div className="hpc-pdf-document font-sans text-slate-900 bg-transparent flex flex-col items-center">
+      <style>{`
+        @media screen {
+          .hpc-pdf-document .pdf-page {
+            margin-bottom: 32px !important;
+            box-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
+            border-radius: 4px !important;
+          }
+        }
+        @media print {
+          .hpc-pdf-document .pdf-page {
+            margin: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            page-break-after: always !important;
+            break-after: page !important;
+          }
+        }
+      `}</style>
       {/* =========================================================================
           PAGE 1: COVER & PROFILE & ATTENDANCE
       ========================================================================= */}
@@ -141,11 +169,12 @@ export function MiddleHpcPdf({
 
             {/* Photo Box */}
             <div className="w-24 h-32 border-2 border-slate-700 rounded-xl bg-white flex flex-col items-center justify-center text-slate-400 overflow-hidden flex-shrink-0 shadow-xs">
-              {student.photoUrl ? (
-                <img src={student.photoUrl} alt="ID" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-[10px] font-bold text-center p-1">ID Photo</span>
-              )}
+              <SafePhoto
+                src={profile?.photoUrl || student.photoUrl}
+                alt="ID"
+                className="w-full h-full object-cover"
+                fallback={<span className="text-[10px] font-bold text-center p-1">ID Photo</span>}
+              />
             </div>
           </div>
         </div>

@@ -24,7 +24,16 @@ import {
   HpcDynamicRubric,
   HpcDynamicRemark,
 } from "../types/hpc";
-import { HPC_ACTIVITIES_BANK, HpcCompetencyActivitiesData, HpcActivityItem } from "../data/hpcActivitiesBank";
+import {
+  HPC_ACTIVITIES_BANK,
+  HpcCompetencyActivitiesData,
+  HpcActivityItem,
+  getActivitiesForCompetency,
+} from "../data/hpcActivitiesBank";
+import {
+  CLASSWISE_ACTIVITIES,
+  CLASSWISE_LEARNING_OUTCOMES,
+} from "../data/hpcClasswiseCurricularData";
 import {
   HPC_CURRICULAR_GOALS,
   HPC_COMPETENCIES,
@@ -193,6 +202,13 @@ export interface CreateStudentParams {
   grNo?: string;
   caste?: string;
   religion?: string;
+  taluka?: string;
+  district?: string;
+  motherTongue?: string;
+  fatherOccupation?: string;
+  motherOccupation?: string;
+  fatherEducation?: string;
+  motherEducation?: string;
 }
 
 /**
@@ -263,6 +279,15 @@ export async function createHpcStudent(data: CreateStudentParams): Promise<strin
       grNo: data.grNo || "",
       caste: data.caste || "",
       religion: data.religion || "",
+      taluka: data.taluka || "",
+      studentTaluka: data.taluka || "",
+      district: data.district || "",
+      studentDistrict: data.district || "",
+      motherTongue: data.motherTongue || "",
+      fatherOccupation: data.fatherOccupation || "",
+      motherOccupation: data.motherOccupation || "",
+      fatherEducation: data.fatherEducation || "",
+      motherEducation: data.motherEducation || "",
       teacherId: activeTeacherId,
       updatedAt: new Date().toISOString(),
     };
@@ -278,6 +303,13 @@ export async function createHpcStudent(data: CreateStudentParams): Promise<strin
         academicYear: cleanYear,
         class: cleanClass,
         division: cleanDivision,
+        studentTaluka: data.taluka || "",
+        studentDistrict: data.district || "",
+        motherTongue: data.motherTongue || "",
+        fatherOccupation: data.fatherOccupation || "",
+        motherOccupation: data.motherOccupation || "",
+        fatherEducation: data.fatherEducation || "",
+        motherEducation: data.motherEducation || "",
         interestsHobbies: "",
         generalObservations: "",
         createdAt: new Date().toISOString(),
@@ -606,7 +638,8 @@ export async function getHpcProgressForClass(
 export async function getHpcDynamicActivities(
   competencyCode?: string,
   stageId?: HpcStageId,
-  subjectOrArea?: string
+  subjectOrArea?: string,
+  classId?: string
 ): Promise<HpcDynamicActivity[]> {
   try {
     const colRef = collection(db, "hpc_activities");
@@ -633,44 +666,65 @@ export async function getHpcDynamicActivities(
 
       const matchesStage = !stageId || !data.stageId || data.stageId === stageId;
       const matchesSubject = !subjectOrArea || data.subjectOrArea === subjectOrArea;
-      if (matchesStage && matchesSubject) {
+      const matchesClass = !classId || !data.classId || data.classId === classId;
+      if (matchesStage && matchesSubject && matchesClass) {
         rawList.push(data);
       }
     });
 
-    const cleanTitle = (t?: string) =>
-      (t || "")
-        .trim()
-        .toLowerCase()
-        .replace(/^([०-९0-9]+[.:)\-\s]+)+/, "")
-        .replace(/\s+/g, " ")
-        .trim();
+    // If Firestore has activities for this query, return deduped
+    if (rawList.length > 0) {
+      const cleanTitle = (t?: string) =>
+        (t || "")
+          .trim()
+          .toLowerCase()
+          .replace(/^([०-९0-9]+[.:)\-\s]+)+/, "")
+          .replace(/\s+/g, " ")
+          .trim();
 
-    // Deduplicate by competencyCode + clean activityTitle
-    const dedupedMap = new Map<string, HpcDynamicActivity>();
-    rawList.forEach((act) => {
-      const cCode = (act.competencyCode || "").trim().toLowerCase();
-      const cleanT = cleanTitle(act.activityTitle);
-      const key = `${cCode}___${cleanT}`;
+      // Deduplicate by competencyCode + clean activityTitle + classId
+      const dedupedMap = new Map<string, HpcDynamicActivity>();
+      rawList.forEach((act) => {
+        const cCode = (act.competencyCode || "").trim().toLowerCase();
+        const cleanT = cleanTitle(act.activityTitle);
+        const cls = act.classId || "all";
+        const key = `${cCode}___${cls}___${cleanT}`;
 
-      if (!dedupedMap.has(key)) {
-        dedupedMap.set(key, act);
-      } else {
-        const existing = dedupedMap.get(key)!;
-        const existingScore = (existing.activityDescription?.length || 0) + (existing.questions?.length || 0) * 10;
-        const currentScore = (act.activityDescription?.length || 0) + (act.questions?.length || 0) * 10;
-        if (currentScore > existingScore) {
+        if (!dedupedMap.has(key)) {
           dedupedMap.set(key, act);
+        } else {
+          const existing = dedupedMap.get(key)!;
+          const existingScore = (existing.activityDescription?.length || 0) + (existing.questions?.length || 0) * 10;
+          const currentScore = (act.activityDescription?.length || 0) + (act.questions?.length || 0) * 10;
+          if (currentScore > existingScore) {
+            dedupedMap.set(key, act);
+          }
         }
-      }
-    });
+      });
 
-    const uniqueList = Array.from(dedupedMap.values());
-    uniqueList.sort((a, b) => (a.activityNumber || 1) - (b.activityNumber || 1));
-    return uniqueList.map((a, idx) => ({
-      ...a,
-      activityNumber: idx + 1,
-    }));
+      const uniqueList = Array.from(dedupedMap.values());
+      uniqueList.sort((a, b) => (a.activityNumber || 1) - (b.activityNumber || 1));
+      return uniqueList.map((a, idx) => ({
+        ...a,
+        activityNumber: idx + 1,
+      }));
+    }
+
+    // Fallback to built-in class-specific activities for foundational stage
+    const targetClass = classId || (stageId === "foundational" ? "1st" : undefined);
+    if (targetClass && CLASSWISE_ACTIVITIES[targetClass]) {
+      let builtIn = CLASSWISE_ACTIVITIES[targetClass];
+      if (competencyCode) {
+        const cleanComp = competencyCode.trim().toLowerCase();
+        builtIn = builtIn.filter((a) => a.competencyCode.trim().toLowerCase() === cleanComp);
+      }
+      if (subjectOrArea) {
+        builtIn = builtIn.filter((a) => a.subjectOrArea === subjectOrArea);
+      }
+      return builtIn as any[];
+    }
+
+    return [];
   } catch (err) {
     console.error("Error fetching dynamic HPC activities:", err);
     return [];
@@ -678,15 +732,16 @@ export async function getHpcDynamicActivities(
 }
 
 /**
- * Get unified activity bank data for a competency.
- * Priority: Dynamic Firestore activities > Hardcoded HPC_ACTIVITIES_BANK
+ * Get unified activity bank data for a competency including class-specific learning outcomes.
+ * Priority: Dynamic Firestore activities > Classwise built-in data > Hardcoded HPC_ACTIVITIES_BANK
  */
 export async function getHpcActivityBankForCompetency(
   competencyCode: string,
-  stageId?: HpcStageId
+  stageId?: HpcStageId,
+  classId?: string
 ): Promise<HpcCompetencyActivitiesData | undefined> {
   try {
-    const dynamicList = await getHpcDynamicActivities(competencyCode, stageId);
+    const dynamicList = await getHpcDynamicActivities(competencyCode, stageId, undefined, classId);
     if (dynamicList && dynamicList.length > 0) {
       const first = dynamicList[0];
       const activities: HpcActivityItem[] = dynamicList.map((d, index) => {
@@ -709,9 +764,18 @@ export async function getHpcActivityBankForCompetency(
         .map((d) => d.parentFeedbackSample || (d as any).parentFeedbackBank?.[0])
         .filter((r): r is string => Boolean(r && r.trim()));
 
+      const targetCls = classId || (stageId === "foundational" ? "1st" : "all");
+      const loList =
+        dynamicList.find((d) => d.learningOutcomes && d.learningOutcomes.length > 0)?.learningOutcomes ||
+        CLASSWISE_LEARNING_OUTCOMES[targetCls]?.[competencyCode] ||
+        CLASSWISE_LEARNING_OUTCOMES["1st"]?.[competencyCode] ||
+        CLASSWISE_LEARNING_OUTCOMES["2nd"]?.[competencyCode] ||
+        [];
+
       return {
         code: competencyCode,
         description: first.competencyTitle || competencyCode,
+        learningOutcomes: loList,
         activities,
         teacherRemarks: teacherRemarks.length > 0 ? teacherRemarks : (staticData?.teacherRemarks || [
           "या कृतीत विद्यार्थ्याची कामगिरी समाधानकारक व उत्साहवर्धक आहे.",
@@ -725,7 +789,7 @@ export async function getHpcActivityBankForCompetency(
     }
 
     // Check if ANY dynamic activities exist in this stage
-    const allStageActivities = await getHpcDynamicActivities(undefined, stageId);
+    const allStageActivities = await getHpcDynamicActivities(undefined, stageId, undefined, classId);
     if (allStageActivities && allStageActivities.length > 0) {
       const cleanTarget = (competencyCode || "").trim().toLowerCase();
       const matched = allStageActivities.filter(
@@ -741,9 +805,16 @@ export async function getHpcActivityBankForCompetency(
           .map((d) => d.parentFeedbackSample || (d as any).parentFeedbackBank?.[0])
           .filter(Boolean) as string[];
 
+        const targetCls = classId || (stageId === "foundational" ? "1st" : "all");
+        const loList =
+          matched.find((d) => d.learningOutcomes && d.learningOutcomes.length > 0)?.learningOutcomes ||
+          CLASSWISE_LEARNING_OUTCOMES[targetCls]?.[competencyCode] ||
+          [];
+
         return {
           code: competencyCode,
           description: first.competencyTitle || competencyCode,
+          learningOutcomes: loList,
           activities: matched.map((d, index) => {
             const desc = d.activityDescription || (d as any).description || "";
             return {
@@ -758,14 +829,25 @@ export async function getHpcActivityBankForCompetency(
           parentRemarks: matchedParents.length > 0 ? matchedParents : (staticData?.parentRemarks || []),
         };
       }
-      return undefined;
     }
   } catch (err) {
     console.warn("Could not query dynamic activities:", err);
   }
 
-  // Fallback to static bank only when no dynamic activities exist in the database for this stage
-  return HPC_ACTIVITIES_BANK[competencyCode];
+  // Fallback to class-specific built-in data or static bank
+  return getActivitiesForCompetency(competencyCode, classId);
+}
+
+/**
+ * Get learning outcomes for a specific class and competency
+ */
+export function getHpcClassLearningOutcomes(competencyCode: string, classId?: string): string[] {
+  const cCode = (competencyCode || "").trim();
+  const cls = classId || "1st";
+  if (CLASSWISE_LEARNING_OUTCOMES[cls]?.[cCode]) {
+    return CLASSWISE_LEARNING_OUTCOMES[cls][cCode];
+  }
+  return CLASSWISE_LEARNING_OUTCOMES["1st"]?.[cCode] || CLASSWISE_LEARNING_OUTCOMES["2nd"]?.[cCode] || [];
 }
 
 /**

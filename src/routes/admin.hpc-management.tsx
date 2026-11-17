@@ -131,6 +131,7 @@ function AdminHpcManagementPage() {
 
   // Excel Upload & Sync State
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedUploadClass, setSelectedUploadClass] = useState<string>("all");
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string>("");
   const [sheetNames, setSheetNames] = useState<string[]>([]);
@@ -1163,6 +1164,8 @@ function AdminHpcManagementPage() {
         let currGoalTitle = "";
         let currCompCode = "";
         let currCompTitle = "";
+        let currLoList: string[] = [];
+        let currLoText = "";
         let lastAct: HpcDynamicActivity | null = null;
 
         rawRows.forEach((row, idx) => {
@@ -1175,6 +1178,9 @@ function AdminHpcManagementPage() {
           const rowComp = String(
             row["क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन"] || row["क्षमता"] || ""
           ).trim();
+          const rowLo = String(
+            row["अध्ययन निष्पत्ती"] || row["निष्पत्ती"] || row["अध्ययन निष्पत्ती (LO)"] || ""
+          ).trim();
 
           if (rowSub) currSub = rowSub;
           if (rowGoal) {
@@ -1186,6 +1192,13 @@ function AdminHpcManagementPage() {
             const cm = rowComp.match(/^([A-Za-z0-9\-\.]+)\s*(.*)/);
             currCompCode = cm ? cm[1] : rowComp.slice(0, 10);
             currCompTitle = cm && cm[2] ? cm[2] : rowComp;
+          }
+          if (rowLo) {
+            currLoText = rowLo;
+            currLoList = rowLo
+              .split("\n")
+              .map((l) => l.trim())
+              .filter(Boolean);
           }
 
           let stage: HpcStageId = selectedStage;
@@ -1225,13 +1238,21 @@ function AdminHpcManagementPage() {
                 goalId: currGoalCode ? `CUSTOM-${currGoalCode}` : "",
                 stageId: stage,
                 applicableClassIds:
-                  stage === "foundational"
+                  selectedUploadClass !== "all"
+                    ? [selectedUploadClass]
+                    : stage === "foundational"
                     ? ["1st", "2nd"]
                     : stage === "preparatory"
                     ? ["3rd", "4th", "5th"]
                     : ["6th", "7th", "8th"],
                 applicableSession: "both",
+                learningOutcomes: currLoList,
               });
+            } else if (currLoList.length > 0) {
+              const existing = compsMap.get(cId)!;
+              existing.learningOutcomes = Array.from(
+                new Set([...(existing.learningOutcomes || []), ...currLoList])
+              );
             }
           }
 
@@ -1270,10 +1291,12 @@ function AdminHpcManagementPage() {
               .map((q) => q.replace(/^[0-9\u0966-\u096F]+[\.\)\-]\s*/, "").trim())
               .filter(Boolean);
 
-            const docId = `act_${currCompCode}_${activityNum}`;
+            const classPrefix = selectedUploadClass !== "all" ? selectedUploadClass : stage;
+            const docId = `act_${classPrefix}_${currCompCode}_${activityNum}`;
 
             lastAct = {
               id: docId,
+              classId: selectedUploadClass !== "all" ? selectedUploadClass : undefined,
               stageId: stage,
               subjectOrArea: currSub,
               goalCode: currGoalCode,
@@ -1284,6 +1307,8 @@ function AdminHpcManagementPage() {
               activityTitle,
               activityDescription: activityDesc,
               description: activityDesc,
+              learningOutcomes: currLoList,
+              learningOutcomeText: currLoText,
               questions,
               teacherFeedbackSample: teacherFeedback,
               parentFeedbackSample: parentFeedback,
@@ -1299,7 +1324,8 @@ function AdminHpcManagementPage() {
             const rDim = String(row["क्षमता"] || row["पैलू"] || row["निकष"] || "सर्वसाधारण").trim();
             if (rBeg || rPro || rAdv) {
               allRubrics.push({
-                id: `rub_${Date.now()}_${idx}`,
+                id: `rub_${selectedUploadClass !== "all" ? selectedUploadClass : "stage"}_${Date.now()}_${idx}`,
+                classId: selectedUploadClass !== "all" ? selectedUploadClass : undefined,
                 stageId: stage,
                 goalCode: currGoalCode,
                 competencyCode: currCompCode,
@@ -1454,6 +1480,7 @@ function AdminHpcManagementPage() {
           "विकास क्षेत्र / विषय": "प्रथम भाषा (R1)",
           "ध्येय क्रमांक व ध्येयाचे संपूर्ण वर्णन": "L1CG1 सुसंगतपणे कल्पना समजून घेण्यासाठी आणि संवाद साधण्यासाठी मौखिक भाषा कौशल्य विकसित करतो.",
           "क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन": "L1C1.1 विविध संदर्भांत अखंडित आणि अर्थपूर्ण संवाद साधतो.",
+          "अध्ययन निष्पत्ती": "L1C1.1.1: परिचित संदर्भात स्पष्ट व ओघवते बोलतो.\nL1C1.1.2: सणांची माहिती स्वतःच्या शब्दांत सांगतो.",
           "उपक्रम (थोडक्यात कृतीसह)": "1. आपल्या आवडत्या सणाबद्दल पाच वाक्यांत सलग बोला.\n\nकृती: विद्यार्थ्यांनी आवडत्या सणाबद्दल पाच वाक्ये सलगपणे सांगावीत. शिक्षकांनी बोलण्यातील क्रम व स्पष्टता यावर अभिप्राय द्यावा.",
           "उपक्रमावर आधारित प्रश्न": "1. तुमचा आवडता सण कोणता?\n2. तो कधी येतो?\n3. त्या दिवशी तुम्ही काय करता?\n4. तुम्हाला त्यातील सर्वात काय आवडते?\n5. हा सण इतरांसोबत का साजरा करतात?",
           "शिक्षकांचा अभिप्राय": "विद्यार्थी आत्मविश्वासाने बोलतो व विचारलेल्या प्रश्नांची अचूक उत्तरे देतो.",
@@ -2026,6 +2053,33 @@ function AdminHpcManagementPage() {
                       </p>
                     )}
 
+                    {/* Learning Outcomes for this activity/competency */}
+                    {((act.learningOutcomes && act.learningOutcomes.length > 0) || act.learningOutcomeText) && (
+                      <div className="text-xs bg-indigo-50/70 p-3 rounded-xl border border-indigo-200/70 space-y-1">
+                        <span className="text-[11px] font-black text-indigo-900 flex items-center gap-1.5 flex-wrap">
+                          <GraduationCap className="size-3.5 text-indigo-700" />
+                          <span>अध्ययन निष्पत्ती (Learning Outcomes):</span>
+                          {act.classId && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-200/80 text-indigo-900 font-bold">
+                              {act.classId === "1st" ? "इयत्ता १ ली" : act.classId === "2nd" ? "इयत्ता २ री" : `इयत्ता ${act.classId}`}
+                            </span>
+                          )}
+                        </span>
+                        <div className="text-[11px] text-slate-800 space-y-0.5 pl-2 leading-relaxed font-medium">
+                          {act.learningOutcomes && act.learningOutcomes.length > 0 ? (
+                            act.learningOutcomes.map((lo, lIdx) => (
+                              <div key={lIdx} className="flex items-start gap-1.5">
+                                <span className="text-indigo-600 font-bold">•</span>
+                                <span>{lo}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <p>{act.learningOutcomeText}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* 5 Questions */}
                     {act.questions && act.questions.length > 0 && (
                       <div className="space-y-1.5 pt-1">
@@ -2095,6 +2149,48 @@ function AdminHpcManagementPage() {
                   <span>संपूर्ण डेटाबेस रीसेट करा (Reset Entire Master Database)</span>
                 </button>
               )}
+            </div>
+
+            {/* Class Selector for Upload */}
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-indigo-50/40 rounded-2xl border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="size-2.5 rounded-full bg-orange-500 animate-pulse" />
+                  <span className="text-xs sm:text-sm font-black text-slate-900">
+                    इयत्ता निवडा (Select Class for Excel Upload & Fetching):
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 font-semibold">
+                  प्रत्येक इयत्तेच्या अध्ययन निष्पत्ती वेगळ्या असल्याने, ज्या इयत्तेची फाईल अपलोड करत आहात ती इयत्ता निवडा
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {[
+                  { id: "all", label: "सर्व वर्ग (All)" },
+                  { id: "1st", label: "इयत्ता १ ली" },
+                  { id: "2nd", label: "इयत्ता २ री" },
+                  { id: "3rd", label: "इयत्ता ३ री" },
+                  { id: "4th", label: "इयत्ता ४ थी" },
+                  { id: "5th", label: "इयत्ता ५ वी" },
+                  { id: "6th", label: "इयत्ता ६ वी" },
+                  { id: "7th", label: "इयत्ता ७ वी" },
+                  { id: "8th", label: "इयत्ता ८ वी" },
+                ].map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedUploadClass(c.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      selectedUploadClass === c.id
+                        ? "bg-orange-600 text-white shadow-xs scale-105"
+                        : "bg-white text-slate-700 hover:bg-orange-100/50 border border-slate-200"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Upload Area */}
@@ -2230,6 +2326,7 @@ function AdminHpcManagementPage() {
                           <th className="p-3 w-12 text-center">क्र.</th>
                           <th className="p-3 w-36">विषय / क्षेत्र</th>
                           <th className="p-3 w-28">क्षमता कोड</th>
+                          <th className="p-3 min-w-[200px]">अध्ययन निष्पत्ती (LO)</th>
                           <th className="p-3 min-w-[200px]">उपक्रम नाव</th>
                           <th className="p-3 min-w-[220px]">५ प्रश्न नमुना</th>
                           <th className="p-3 min-w-[160px]">शिक्षकांचा अभिप्राय</th>
@@ -2244,6 +2341,22 @@ function AdminHpcManagementPage() {
                               <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-mono font-bold text-[11px]">
                                 {act.competencyCode}
                               </span>
+                            </td>
+                            <td className="p-3 text-[11px] text-indigo-900 font-medium">
+                              {act.learningOutcomes && act.learningOutcomes.length > 0 ? (
+                                <ul className="space-y-0.5 list-disc list-inside">
+                                  {act.learningOutcomes.slice(0, 2).map((lo, li) => (
+                                    <li key={li} className="truncate max-w-xs">{lo}</li>
+                                  ))}
+                                  {act.learningOutcomes.length > 2 && (
+                                    <span className="text-[10px] text-indigo-600 font-bold block">
+                                      +{act.learningOutcomes.length - 2} आणखी...
+                                    </span>
+                                  )}
+                                </ul>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
                             </td>
                             <td className="p-3 font-bold text-slate-900">{act.activityTitle}</td>
                             <td className="p-3 text-[11px] text-slate-600">

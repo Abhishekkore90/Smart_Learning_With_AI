@@ -1,8 +1,33 @@
-import React, { useState } from "react";
-import { X, UserPlus, Save, Loader2, User, Phone, MapPin, Calendar, Hash, IdCard } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import {
+  X,
+  UserPlus,
+  Save,
+  Loader2,
+  User,
+  Phone,
+  MapPin,
+  Calendar,
+  Hash,
+  IdCard,
+  BookOpen,
+  Briefcase,
+  Globe,
+  Home,
+} from "lucide-react";
 import { toast } from "sonner";
 import { createHpcStudent } from "../services/hpcService";
-import { CASTE_OPTIONS } from "../data/studentProfileOptions";
+import {
+  DIVISION_OPTIONS,
+  CASTE_OPTIONS,
+  MAHARASHTRA_DISTRICTS,
+  TALUKA_OPTIONS,
+  PARENT_EDUCATION_OPTIONS,
+  MOTHER_OCCUPATION_OPTIONS,
+  FATHER_OCCUPATION_OPTIONS,
+  MOTHER_TONGUE_OPTIONS,
+  SmartOption,
+} from "../data/studentProfileOptions";
 
 interface HpcAddStudentModalProps {
   isOpen: boolean;
@@ -26,7 +51,91 @@ const ALL_CLASSES = [
   { id: "8th", labelMarathi: "इयत्ता ८ वी" },
 ];
 
-const DIVISIONS = ["अ", "ब", "क", "ड", "इ", "फ"];
+/**
+ * Reusable dropdown field that offers standard presets + allows typing a custom value
+ */
+function SmartSelectField({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = "-- यादीतून निवडा --",
+  customPlaceholder = "येथे स्वतःचे उत्तर टाईप करा...",
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  options: (SmartOption | { label: string; value: string } | string)[];
+  placeholder?: string;
+  customPlaceholder?: string;
+  icon?: any;
+}) {
+  const normalized: SmartOption[] = useMemo(() => {
+    return options.map((opt) => (typeof opt === "string" ? { label: opt, value: opt } : opt));
+  }, [options]);
+
+  const isPreset = normalized.some((o) => o.value === value);
+  const [isCustom, setIsCustom] = useState<boolean>(() => Boolean(value && !isPreset));
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <label className="block text-[11px] font-bold text-slate-700 flex items-center gap-1">
+          {Icon && <Icon className="size-3 text-slate-500" />}
+          <span>{label}</span>
+        </label>
+        {value && (
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              setIsCustom(false);
+            }}
+            className="text-[10px] text-slate-400 hover:text-red-500 font-bold transition-colors cursor-pointer"
+          >
+            काढा
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <select
+          value={isCustom ? "__custom__" : isPreset ? value : ""}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === "__custom__") {
+              setIsCustom(true);
+            } else {
+              setIsCustom(false);
+              onChange(val);
+            }
+          }}
+          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 shadow-2xs focus:ring-2 focus:ring-orange-400 focus:border-orange-400 bg-white cursor-pointer"
+        >
+          <option value="">{placeholder}</option>
+          {normalized.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+          <option value="__custom__">✍️ इतर (स्वतः टाईप करा / Type Custom)</option>
+        </select>
+
+        {isCustom && (
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={customPlaceholder}
+            autoFocus
+            className="w-full px-3 py-1.5 rounded-xl border border-orange-400 text-xs font-bold text-slate-900 bg-orange-50/50 shadow-2xs focus:ring-2 focus:ring-orange-400 outline-none animate-in fade-in"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
 
 export const HpcAddStudentModal: React.FC<HpcAddStudentModalProps> = ({
   isOpen,
@@ -56,6 +165,13 @@ export const HpcAddStudentModal: React.FC<HpcAddStudentModalProps> = ({
   const [parentPhone, setParentPhone] = useState("");
   const [address, setAddress] = useState("");
   const [caste, setCaste] = useState("");
+  const [motherTongue, setMotherTongue] = useState("मराठी");
+  const [taluka, setTaluka] = useState("");
+  const [district, setDistrict] = useState("");
+  const [motherEducation, setMotherEducation] = useState("");
+  const [motherOccupation, setMotherOccupation] = useState("");
+  const [fatherEducation, setFatherEducation] = useState("");
+  const [fatherOccupation, setFatherOccupation] = useState("");
 
   if (!isOpen) return null;
 
@@ -93,6 +209,13 @@ export const HpcAddStudentModal: React.FC<HpcAddStudentModalProps> = ({
         address: address.trim(),
         grNo: grNo.trim(),
         caste: caste.trim(),
+        taluka: taluka.trim(),
+        district: district.trim(),
+        motherTongue: motherTongue.trim(),
+        motherEducation: motherEducation.trim(),
+        motherOccupation: motherOccupation.trim(),
+        fatherEducation: fatherEducation.trim(),
+        fatherOccupation: fatherOccupation.trim(),
       });
 
       toast.success(`${fullName.trim()} - विद्यार्थी यशस्वीरीत्या जोडला गेला!`);
@@ -156,18 +279,14 @@ export const HpcAddStudentModal: React.FC<HpcAddStudentModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">तुकडी *</label>
-                <select
+                <SmartSelectField
+                  label="तुकडी (Section) *"
                   value={division}
-                  onChange={(e) => setDivision(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-orange-300 text-xs font-black bg-white text-slate-800 cursor-pointer shadow-2xs focus:ring-2 focus:ring-orange-400"
-                >
-                  {DIVISIONS.map((d) => (
-                    <option key={d} value={d}>
-                      तुकडी {d}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setDivision}
+                  options={DIVISION_OPTIONS}
+                  placeholder="-- तुकडी निवडा --"
+                  customPlaceholder="उदा. अ, ब, क किंवा स्वतः लिहा..."
+                />
               </div>
 
               <div>
@@ -281,70 +400,64 @@ export const HpcAddStudentModal: React.FC<HpcAddStudentModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">जात / प्रवर्ग (Caste / Category)</label>
-                <input
-                  type="text"
-                  list="add-student-caste-list"
+                <SmartSelectField
+                  label="जात (Caste)"
                   value={caste}
-                  onChange={(e) => setCaste(e.target.value)}
-                  placeholder="उदा. मराठा, कुणबी, बौद्ध किंवा निवडा..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 shadow-2xs focus:ring-2 focus:ring-orange-400"
+                  onChange={setCaste}
+                  options={CASTE_OPTIONS}
+                  placeholder="-- जात निवडा --"
+                  customPlaceholder="उदा. मराठा, महार, इत्यादी किंवा स्वतः लिहा..."
                 />
-                <datalist id="add-student-caste-list">
-                  {CASTE_OPTIONS.map((c) => (
-                    <option key={c.value} value={c.value} />
-                  ))}
-                </datalist>
+              </div>
+
+              <div>
+                <SmartSelectField
+                  label="मातृभाषा (Mother Tongue)"
+                  value={motherTongue}
+                  onChange={setMotherTongue}
+                  options={MOTHER_TONGUE_OPTIONS}
+                  placeholder="-- मातृभाषा निवडा --"
+                  customPlaceholder="उदा. मराठी, हिंदी किंवा स्वतःची भाषा लिहा..."
+                  icon={Globe}
+                />
               </div>
             </div>
           </div>
 
-          {/* Section 3: Parents & Contact Info */}
+          {/* Section 3: Taluka & District Address */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-black text-slate-800 border-b border-slate-200 pb-2">
-              <Phone className="size-3.5 text-emerald-600" />
-              <span>पालक व संपर्क माहिती</span>
+              <MapPin className="size-3.5 text-blue-600" />
+              <span>पत्ता, तालुका व जिल्हा</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">वडिलांचे / पालकांचे नाव</label>
-                <input
-                  type="text"
-                  value={fatherName}
-                  onChange={(e) => setFatherName(e.target.value)}
-                  placeholder="उदा. नंदकुमार जाधव"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 shadow-2xs focus:ring-2 focus:ring-orange-400"
+                <SmartSelectField
+                  label="तालुका"
+                  value={taluka}
+                  onChange={setTaluka}
+                  options={TALUKA_OPTIONS}
+                  placeholder="-- तालुका निवडा --"
+                  customPlaceholder="तालुक्याचे नाव प्रविष्ट करा..."
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">आईचे नाव</label>
-                <input
-                  type="text"
-                  value={motherName}
-                  onChange={(e) => setMotherName(e.target.value)}
-                  placeholder="उदा. सुनिता जाधव"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 shadow-2xs focus:ring-2 focus:ring-orange-400"
+                <SmartSelectField
+                  label="जिल्हा"
+                  value={district}
+                  onChange={setDistrict}
+                  options={MAHARASHTRA_DISTRICTS}
+                  placeholder="-- जिल्हा निवडा --"
+                  customPlaceholder="जिल्ह्याचे नाव प्रविष्ट करा..."
                 />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">पालकांचा मोबाईल नंबर</label>
-                <input
-                  type="tel"
-                  value={parentPhone}
-                  onChange={(e) => setParentPhone(e.target.value)}
-                  placeholder="उदा. 9876543210"
-                  maxLength={10}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 shadow-2xs focus:ring-2 focus:ring-orange-400"
-                />
-              </div>
-
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                  <MapPin className="size-3 text-slate-500" />
-                  <span>पत्ता (Address)</span>
+                  <Home className="size-3 text-slate-500" />
+                  <span>पूर्ण पत्ता (Full Address)</span>
                 </label>
                 <input
                   type="text"
@@ -357,8 +470,100 @@ export const HpcAddStudentModal: React.FC<HpcAddStudentModalProps> = ({
             </div>
           </div>
 
+          {/* Section 4: Parents & Education / Occupation Info */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-800 border-b border-slate-200 pb-2">
+              <Phone className="size-3.5 text-emerald-600" />
+              <span>पालक तपशील (शिक्षण व व्यवसाय)</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">आईचे नाव (Mother's Name)</label>
+                <input
+                  type="text"
+                  value={motherName}
+                  onChange={(e) => setMotherName(e.target.value)}
+                  placeholder="उदा. सुनिता जाधव"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 shadow-2xs focus:ring-2 focus:ring-orange-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">वडिलांचे / पालकांचे नाव</label>
+                <input
+                  type="text"
+                  value={fatherName}
+                  onChange={(e) => setFatherName(e.target.value)}
+                  placeholder="उदा. नंदकुमार जाधव"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 shadow-2xs focus:ring-2 focus:ring-orange-400"
+                />
+              </div>
+
+              <div>
+                <SmartSelectField
+                  label="आईचे शिक्षण"
+                  value={motherEducation}
+                  onChange={setMotherEducation}
+                  options={PARENT_EDUCATION_OPTIONS}
+                  placeholder="-- आईचे शिक्षण निवडा --"
+                  customPlaceholder="उदा. १० वी, पदवी किंवा स्वतः शिक्षण लिहा..."
+                  icon={BookOpen}
+                />
+              </div>
+
+              <div>
+                <SmartSelectField
+                  label="आईचा व्यवसाय"
+                  value={motherOccupation}
+                  onChange={setMotherOccupation}
+                  options={MOTHER_OCCUPATION_OPTIONS}
+                  placeholder="-- आईचा व्यवसाय निवडा --"
+                  customPlaceholder="उदा. गृहिणी, नोकरी, शेती किंवा स्वतः लिहा..."
+                  icon={Briefcase}
+                />
+              </div>
+
+              <div>
+                <SmartSelectField
+                  label="वडिलांचे शिक्षण"
+                  value={fatherEducation}
+                  onChange={setFatherEducation}
+                  options={PARENT_EDUCATION_OPTIONS}
+                  placeholder="-- वडिलांचे शिक्षण निवडा --"
+                  customPlaceholder="उदा. १२ वी, पदवी किंवा स्वतः शिक्षण लिहा..."
+                  icon={BookOpen}
+                />
+              </div>
+
+              <div>
+                <SmartSelectField
+                  label="वडिलांचा व्यवसाय"
+                  value={fatherOccupation}
+                  onChange={setFatherOccupation}
+                  options={FATHER_OCCUPATION_OPTIONS}
+                  placeholder="-- वडिलांचा व्यवसाय निवडा --"
+                  customPlaceholder="उदा. शेती, नोकरी, व्यवसाय किंवा स्वतः लिहा..."
+                  icon={Briefcase}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">पालकांचा मोबाईल नंबर (Mobile No.)</label>
+                <input
+                  type="tel"
+                  value={parentPhone}
+                  onChange={(e) => setParentPhone(e.target.value)}
+                  placeholder="उदा. 9876543210"
+                  maxLength={10}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-800 shadow-2xs focus:ring-2 focus:ring-orange-400"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Form Actions Footer */}
-          <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3 sticky bottom-0 bg-white/95 backdrop-blur py-2">
             <button
               type="button"
               onClick={onClose}
@@ -380,7 +585,7 @@ export const HpcAddStudentModal: React.FC<HpcAddStudentModalProps> = ({
               ) : (
                 <>
                   <Save className="size-4" />
-                  <span>विद्यार्थी जतन करा</span>
+                  <span>विद्यार्थी जोडा (माहिती जतन करा)</span>
                 </>
               )}
             </button>

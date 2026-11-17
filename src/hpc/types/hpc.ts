@@ -32,6 +32,7 @@ export interface HpcCompetency {
   stageId: HpcStageId;
   applicableClassIds: string[];
   applicableSession?: "session1" | "session2" | "both";
+  learningOutcomes?: string[]; // अध्ययन निष्पत्ती
 }
 
 export interface HpcRubricDescriptor {
@@ -202,6 +203,10 @@ export interface HpcAreaAssessment {
   activity2Description?: string;
   activity2Outcome?: string; // निष्पत्ती
   
+  // Selected Learning Outcomes (अध्ययन निष्पत्ती)
+  selectedLearningOutcomes?: string[];
+  learningOutcomeNotes?: string;
+  
   assessmentQuestions?: string[];
   assessmentEvidence?: string;
   
@@ -256,6 +261,7 @@ export interface HpcAnnualSummary {
   >;
   
   finalTeacherRemarks: string; // शिक्षकांचा अंतिम सर्वंकष वार्षिक अभिप्राय
+  finalParentRemarks?: string; // पालकांचा अंतिम अभिप्राय
   specialAchievements?: string;
   recommendationsForNextClass?: string;
   
@@ -279,6 +285,7 @@ export interface HpcAnnualSummary {
 
 export interface HpcDynamicActivity {
   id: string;
+  classId?: string; // e.g. "1st", "2nd", etc.
   stageId: HpcStageId;
   subjectOrArea: string; // उदा. प्रथम भाषा (R1), गणित, शारीरिक विकास
   goalCode: string; // उदा. L1CG1, CG-1
@@ -289,6 +296,8 @@ export interface HpcDynamicActivity {
   activityTitle: string; // उदा. आपल्या आवडत्या सणाबद्दल पाच वाक्यांत सलग बोला.
   activityDescription: string; // थोडक्यात कृती
   description?: string; // पर्यायी alias
+  learningOutcomes?: string[]; // अध्ययन निष्पत्ती
+  learningOutcomeText?: string;
   questions: string[]; // ५ प्रश्नांची यादी
   teacherFeedbackSample?: string; // शिक्षकांचा अभिप्राय
   parentFeedbackSample?: string; // पालकांचा अभिप्राय
@@ -298,6 +307,7 @@ export interface HpcDynamicActivity {
 
 export interface HpcDynamicRubric {
   id: string;
+  classId?: string;
   stageId: HpcStageId;
   goalCode?: string;
   competencyCode?: string;
@@ -311,6 +321,7 @@ export interface HpcDynamicRubric {
 
 export interface HpcDynamicRemark {
   id: string;
+  classId?: string;
   stageId?: HpcStageId;
   subjectOrArea: string; // विषय किंवा विकास क्षेत्र
   level: string; // प्रारंभिक / प्रवीण / प्रगत किंवा निर्झर / पर्वत / आकाश

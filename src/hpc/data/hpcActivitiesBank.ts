@@ -13,6 +13,7 @@ export interface HpcActivityItem {
 export interface HpcCompetencyActivitiesData {
   code: string;
   description: string;
+  learningOutcomes?: string[];
   activities: HpcActivityItem[];
   teacherRemarks: string[];
   parentRemarks: string[];
@@ -6481,6 +6482,68 @@ export const HPC_ACTIVITIES_BANK: Record<string, HpcCompetencyActivitiesData> = 
   }
 };
 
-export function getActivitiesForCompetency(competencyCode: string): HpcCompetencyActivitiesData | undefined {
-  return HPC_ACTIVITIES_BANK[competencyCode];
+import {
+  CLASSWISE_ACTIVITIES,
+  CLASSWISE_LEARNING_OUTCOMES,
+} from "./hpcClasswiseCurricularData";
+
+export function getActivitiesForCompetency(
+  competencyCode: string,
+  classId?: string
+): HpcCompetencyActivitiesData | undefined {
+  const cCode = (competencyCode || "").trim();
+
+  // If classId is specified and we have class-specific activities for it
+  if (classId && CLASSWISE_ACTIVITIES[classId]) {
+    const classActs = CLASSWISE_ACTIVITIES[classId].filter(
+      (a) => a.competencyCode.trim().toLowerCase() === cCode.toLowerCase()
+    );
+    if (classActs.length > 0) {
+      const first = classActs[0];
+      const loList = CLASSWISE_LEARNING_OUTCOMES[classId]?.[cCode] || first.learningOutcomes || [];
+      const teacherRemarks = classActs
+        .map((a) => a.teacherFeedbackSample)
+        .filter(Boolean);
+      const parentRemarks = classActs
+        .map((a) => a.parentFeedbackSample)
+        .filter(Boolean);
+
+      return {
+        code: cCode,
+        description: first.competencyTitle || cCode,
+        learningOutcomes: loList,
+        activities: classActs.map((a, idx) => ({
+          activityNumber: a.activityNumber || idx + 1,
+          title: a.activityTitle,
+          description: a.activityDescription || a.description || "",
+          rawText: `${a.activityNumber || idx + 1}. ${a.activityTitle}\n\nकृती: ${a.activityDescription || a.description || ""}`,
+          questions: a.questions || [],
+        })),
+        teacherRemarks:
+          teacherRemarks.length > 0
+            ? teacherRemarks
+            : HPC_ACTIVITIES_BANK[cCode]?.teacherRemarks || [],
+        parentRemarks:
+          parentRemarks.length > 0
+            ? parentRemarks
+            : HPC_ACTIVITIES_BANK[cCode]?.parentRemarks || [],
+      };
+    }
+  }
+
+  // Fallback to static bank
+  const staticData = HPC_ACTIVITIES_BANK[cCode];
+  if (staticData) {
+    const loList =
+      (classId && CLASSWISE_LEARNING_OUTCOMES[classId]?.[cCode]) ||
+      CLASSWISE_LEARNING_OUTCOMES["1st"]?.[cCode] ||
+      CLASSWISE_LEARNING_OUTCOMES["2nd"]?.[cCode] ||
+      [];
+    return {
+      ...staticData,
+      learningOutcomes: loList,
+    };
+  }
+
+  return undefined;
 }

@@ -56,6 +56,17 @@ export const RELIGION_OPTIONS = [
 ];
 
 export const CASTE_OPTIONS = [
+  "मराठा",
+  "कुणबी",
+  "बौद्ध",
+  "महार",
+  "मातंग",
+  "चांभार",
+  "धनगर",
+  "वंजारी",
+  "माळी",
+  "ब्राह्मण",
+  "मुस्लिम",
   "OPEN (ओपन)",
   "SC (अनुसूचित जाती)",
   "ST (अनुसूचित जमाती)",
@@ -73,6 +84,55 @@ export const DIVISION_OPTIONS = [
   "ब",
   "क",
   "ड",
+  "इ",
+  "फ",
+];
+
+export const MOTHER_TONGUE_OPTIONS = [
+  "मराठी",
+  "हिंदी",
+  "उर्दू",
+  "इंग्रजी",
+  "गुजराती",
+  "कन्नड",
+  "तेलुगू",
+  "तामिळ",
+  "बंजारी / लमाणी",
+];
+
+export const PARENT_EDUCATION_OPTIONS = [
+  "१० वी खालील",
+  "१० वी (SSC)",
+  "१२ वी (HSC)",
+  "पदविका (Diploma)",
+  "पदवी (Graduate - B.A./B.Com/B.Sc)",
+  "पदव्युत्तर (Post Graduate - M.A./M.Com/M.Sc)",
+  "व्यावसायिक पदवी (Engineering / Medical / B.Ed)",
+  "अशिक्षित / साक्षर",
+];
+
+export const MOTHER_OCCUPATION_OPTIONS = [
+  "गृहिणी",
+  "शेती / शेतमजूर",
+  "खाजगी नोकरी",
+  "शासकीय नोकरी",
+  "अंगणवाडी / आशा सेविका",
+  "सिलाई काम / टेलरिंग",
+  "व्यवसाय / दुकान",
+  "दैनिक मजुरी",
+];
+
+export const FATHER_OCCUPATION_OPTIONS = [
+  "शेती (शेतकरी)",
+  "शेतमजूर",
+  "खाजगी नोकरी",
+  "शासकीय नोकरी",
+  "व्यापारी / दुकानदार / व्यवसाय",
+  "दैनिक मजुरी / बांधकाम कामगार",
+  "चालक (Driver)",
+  "कारागीर / सुतार / गवंडी",
+  "इलेक्ट्रीशियन / प्लंबर / मेकॅनिक",
+  "शिक्षक / प्राध्यापक",
 ];
 
 interface StudentRecord {
@@ -210,7 +270,7 @@ function FloatInput({
   );
 }
 
-// Floating label select component for Religion and Caste dropdowns
+// Floating label select component for Religion, Caste, Education, Occupation dropdowns with custom input capability
 function FloatSelect({
   label,
   value,
@@ -231,57 +291,88 @@ function FloatSelect({
   const [focused, setFocused] = useState(false);
   const filled = value !== undefined && value !== null && value.toString().length > 0;
 
-  const allOptions = useMemo(() => {
+  const isPreset = options.includes(value);
+  const [isCustom, setIsCustom] = useState<boolean>(() => Boolean(value && !isPreset));
+
+  useEffect(() => {
     if (value && !options.includes(value)) {
-      return [value, ...options];
+      setIsCustom(true);
     }
-    return options;
   }, [value, options]);
 
   return (
     <div className="relative mb-4">
-      <label
-        className="absolute left-3.5 transition-all pointer-events-none font-bold z-10 rounded-md px-1.5"
-        style={{
-          top: focused || filled ? "-10px" : "16px",
-          fontSize: focused || filled ? "12px" : "14px",
-          color: focused ? "#2563eb" : filled ? "#1e293b" : "#64748b",
-          background: "white",
-        }}
-      >
-        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
-      </label>
-      <div className="relative flex items-center">
-        {Icon && (
-          <div className="absolute left-4 text-slate-400 pointer-events-none z-10">
-            <Icon className="size-4" />
-          </div>
-        )}
-        <select
-          value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          className={`w-full ${Icon ? "pl-11" : "px-4"} pr-10 py-4 rounded-2xl text-sm font-semibold outline-none transition-all appearance-none cursor-pointer`}
-          style={{
-            background: focused ? "#f8fafc" : "#ffffff",
-            border: `1.5px solid ${focused ? "#3b82f6" : "#cbd5e1"}`,
-            boxShadow: focused ? "0 0 0 4px rgba(59, 130, 246, 0.12)" : "none",
-            color: value ? "#0f172a" : "#94a3b8",
-          }}
+      <div className="flex items-center justify-between mb-1">
+        <label
+          className="font-bold text-xs text-slate-700 flex items-center gap-1"
         >
-          <option value="">
-            {placeholder ? `-- निवडा (${placeholder}) --` : "-- निवडा --"}
-          </option>
-          {allOptions.map((opt) => (
-            <option key={opt} value={opt} className="text-slate-900 font-semibold py-1">
-              {opt}
+          {Icon && <Icon className="size-3.5 text-blue-600" />}
+          <span>{label}</span>
+          {required && <span className="text-red-500 ml-0.5">*</span>}
+        </label>
+        {value && (
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              setIsCustom(false);
+            }}
+            className="text-[10px] text-slate-400 hover:text-red-600 font-bold transition-colors cursor-pointer"
+          >
+            रिसेट
+          </button>
+        )}
+      </div>
+
+      <div className="relative flex flex-col gap-1.5">
+        <div className="relative flex items-center">
+          <select
+            value={isCustom ? "__custom__" : isPreset ? value : ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "__custom__") {
+                setIsCustom(true);
+              } else {
+                setIsCustom(false);
+                onChange(val);
+              }
+            }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            className="w-full px-4 pr-10 py-3.5 rounded-2xl text-sm font-semibold outline-none transition-all appearance-none cursor-pointer bg-white"
+            style={{
+              border: `1.5px solid ${focused ? "#3b82f6" : "#cbd5e1"}`,
+              boxShadow: focused ? "0 0 0 4px rgba(59, 130, 246, 0.12)" : "none",
+              color: value ? "#0f172a" : "#94a3b8",
+            }}
+          >
+            <option value="">
+              {placeholder ? `-- निवडा (${placeholder}) --` : "-- निवडा --"}
             </option>
-          ))}
-        </select>
-        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10">
-          <ChevronDown className="size-4" />
+            {options.map((opt) => (
+              <option key={opt} value={opt} className="text-slate-900 font-semibold py-1">
+                {opt}
+              </option>
+            ))}
+            <option value="__custom__" className="text-blue-700 font-bold">
+              ✍️ इतर (स्वतः लिहा / Type Custom)
+            </option>
+          </select>
+          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10">
+            <ChevronDown className="size-4" />
+          </div>
         </div>
+
+        {isCustom && (
+          <input
+            type="text"
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="येथे स्वतःचे नाव/तपशील टाईप करा..."
+            autoFocus
+            className="w-full px-4 py-2.5 rounded-xl border border-blue-400 text-sm font-bold text-slate-900 bg-blue-50/50 outline-none focus:ring-2 focus:ring-blue-400/30 animate-in fade-in"
+          />
+        )}
       </div>
     </div>
   );
@@ -755,7 +846,14 @@ export function CCEStudentInfo({
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <FloatInput label="मातृभाषा (Mother Tongue)" value={currentDetails.motherTongue} onChange={(v) => updateFn("motherTongue", v)} icon={Globe} placeholder="उदा. मराठी" />
+          <FloatSelect
+            label="मातृभाषा (Mother Tongue)"
+            value={currentDetails.motherTongue}
+            onChange={(v) => updateFn("motherTongue", v)}
+            options={MOTHER_TONGUE_OPTIONS}
+            icon={Globe}
+            placeholder="उदा. मराठी"
+          />
           <div>
             <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-2">प्रदेश प्रकार (Area Type)</label>
             <div className="flex items-center gap-3">
@@ -803,16 +901,40 @@ export function CCEStudentInfo({
           <p className="text-xs font-extrabold text-blue-900 flex items-center gap-1">👩 आईची माहिती</p>
           <FloatInput label="आईचे नाव (Mother Name)" value={currentDetails.motherName} onChange={(v) => updateFn("motherName", v)} placeholder="उदा. सुनिता" />
           <div className="grid grid-cols-2 gap-2">
-            <FloatInput label="शिक्षण" value={currentDetails.motherEducation} onChange={(v) => updateFn("motherEducation", v)} placeholder="उदा. B.A." />
-            <FloatInput label="व्यवसाय" value={currentDetails.motherOccupation} onChange={(v) => updateFn("motherOccupation", v)} placeholder="उदा. गृहिणी" />
+            <FloatSelect
+              label="आईचे शिक्षण"
+              value={currentDetails.motherEducation}
+              onChange={(v) => updateFn("motherEducation", v)}
+              options={PARENT_EDUCATION_OPTIONS}
+              placeholder="उदा. १० वी, पदवी"
+            />
+            <FloatSelect
+              label="आईचा व्यवसाय"
+              value={currentDetails.motherOccupation}
+              onChange={(v) => updateFn("motherOccupation", v)}
+              options={MOTHER_OCCUPATION_OPTIONS}
+              placeholder="उदा. गृहिणी, नोकरी"
+            />
           </div>
         </div>
         <div className="space-y-2 pt-3 border-t border-slate-200">
           <p className="text-xs font-extrabold text-blue-900 flex items-center gap-1">👨 वडिलांची माहिती</p>
           <FloatInput label="वडिलांचे नाव (Father Name)" value={currentDetails.fatherName} onChange={(v) => updateFn("fatherName", v)} placeholder="उदा. वडिलांचे पूर्ण नाव" />
           <div className="grid grid-cols-2 gap-2">
-            <FloatInput label="शिक्षण" value={currentDetails.fatherEducation} onChange={(v) => updateFn("fatherEducation", v)} placeholder="उदा. B.Com" />
-            <FloatInput label="व्यवसाय" value={currentDetails.fatherOccupation} onChange={(v) => updateFn("fatherOccupation", v)} placeholder="उदा. शेतकरी / नोकरी" />
+            <FloatSelect
+              label="वडिलांचे शिक्षण"
+              value={currentDetails.fatherEducation}
+              onChange={(v) => updateFn("fatherEducation", v)}
+              options={PARENT_EDUCATION_OPTIONS}
+              placeholder="उदा. १२ वी, पदवी"
+            />
+            <FloatSelect
+              label="वडिलांचा व्यवसाय"
+              value={currentDetails.fatherOccupation}
+              onChange={(v) => updateFn("fatherOccupation", v)}
+              options={FATHER_OCCUPATION_OPTIONS}
+              placeholder="उदा. शेती, नोकरी, व्यवसाय"
+            />
           </div>
         </div>
       </div>

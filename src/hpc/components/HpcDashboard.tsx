@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   Zap,
   UserPlus,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { HpcStageId } from "../types/hpc";
@@ -43,6 +44,7 @@ import {
   getHpcAnnualSummary,
   getHpcStudentAttendance,
   getHpcSchoolSettings,
+  StudentInfoSummary,
 } from "../services/hpcService";
 import { generateHpcPdf, downloadBlob } from "../reports/HpcPdfGenerator";
 import { FoundationalHpcPdf } from "../reports/FoundationalHpcPdf";
@@ -146,7 +148,7 @@ export function HpcDashboard() {
 
   // Preview & Download Modal State
   const [previewStudent, setPreviewStudent] = useState<any | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0, message: "" });
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -226,17 +228,41 @@ export function HpcDashboard() {
   const session2Count = progressItems.filter((p) => p.session2Completed).length;
   const annualCount = progressItems.filter((p) => p.annualCompleted).length;
 
-  // Open Preview Modal
+  // Open Preview Modal with Promise.allSettled for ultra-reliable loading
   const handleOpenPreview = async (studentId: string) => {
-    setPreviewLoading(true);
+    setPreviewLoadingId(studentId);
     try {
-      const st = await getHpcStudentById(studentId);
-      const prof = await getHpcStudentProfile(studentId, academicYear);
-      const s1 = await getHpcSessionAssessment(studentId, academicYear, "session1");
-      const s2 = await getHpcSessionAssessment(studentId, academicYear, "session2");
-      const ann = await getHpcAnnualSummary(studentId, academicYear);
-      const att = await getHpcStudentAttendance(selectedClass, academicYear, studentId);
-      const school = await getHpcSchoolSettings();
+      const existingStudent = progressItems.find((p) => p.student.id === studentId)?.student;
+
+      const [stRes, profRes, s1Res, s2Res, annRes, attRes, schoolRes] = await Promise.allSettled([
+        getHpcStudentById(studentId),
+        getHpcStudentProfile(studentId, academicYear),
+        getHpcSessionAssessment(studentId, academicYear, "session1"),
+        getHpcSessionAssessment(studentId, academicYear, "session2"),
+        getHpcAnnualSummary(studentId, academicYear),
+        getHpcStudentAttendance(selectedClass, academicYear, studentId),
+        getHpcSchoolSettings(),
+      ]);
+
+      const st =
+        (stRes.status === "fulfilled" && stRes.value) ||
+        existingStudent ||
+        ({
+          id: studentId,
+          name: "विद्यार्थी",
+          fullName: "विद्यार्थी",
+          rollNo: "1",
+          gender: "male",
+          class: selectedClass,
+          division: "अ",
+        } as StudentInfoSummary);
+
+      const prof = profRes.status === "fulfilled" ? profRes.value : null;
+      const s1 = s1Res.status === "fulfilled" ? s1Res.value : null;
+      const s2 = s2Res.status === "fulfilled" ? s2Res.value : null;
+      const ann = annRes.status === "fulfilled" ? annRes.value : null;
+      const att = attRes.status === "fulfilled" ? attRes.value : null;
+      const school = schoolRes.status === "fulfilled" ? schoolRes.value : {};
 
       setPreviewStudent({
         student: st,
@@ -248,10 +274,47 @@ export function HpcDashboard() {
         schoolSettings: school,
       });
     } catch (err: any) {
-      toast.error("माहिती लोड करताना त्रुटी: " + err.message);
+      console.error("Preview load error:", err);
+      toast.error("माहिती लोड करताना त्रुटी आली.");
     } finally {
-      setPreviewLoading(false);
+      setPreviewLoadingId(null);
     }
+  };
+
+  // Direct Browser Print / Save as PDF
+  const handlePrint = () => {
+    if (!previewContainerRef.current) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    const htmlContent = previewContainerRef.current.innerHTML;
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>HPC_${previewStudent?.student?.name || "Report"}</title>
+          <style>
+            @page { size: A4 portrait; margin: 0; }
+            body { margin: 0; padding: 0; font-family: 'Noto Sans Devanagari', 'Nirmala UI', sans-serif; background: #fff; }
+            .pdf-page { width: 794px; height: 1123px; page-break-after: always; box-sizing: border-box; overflow: hidden; margin: 0 auto; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .pdf-page { page-break-after: always; }
+            }
+          </style>
+          <link rel="stylesheet" href="/src/styles.css">
+        </head>
+        <body>
+          ${htmlContent}
+          <script>
+            setTimeout(() => { window.print(); window.close(); }, 500);
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   // Download PDF
@@ -402,14 +465,18 @@ export function HpcDashboard() {
                   </p>
                 </div>
 
-                {/* Class Quick Selection Pills - Label above, classes downside */}
-                <div className="pt-3 border-t border-slate-100/90 space-y-2">
+                {/* Class Quick Selection - "वर्ग निवडा:" clearly ABOVE, and classes DOWNSIDE */}
+                <div className="pt-3.5 border-t border-slate-200/90 space-y-2 mt-auto">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-black text-slate-800 tracking-wide flex items-center gap-1.5">
+                    <span className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+                      <span className="size-2.5 rounded-full bg-orange-500 ring-2 ring-orange-200"></span>
                       <span>वर्ग निवडा:</span>
                     </span>
+                    <span className="text-[11px] font-bold text-slate-400">
+                      (खालील वर्ग निवडा)
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-nowrap w-full">
                     {CLASSES_BY_STAGE[stg.id].map((c) => {
                       const isClassActive = activeStage === stg.id && selectedClass === c.id;
                       return (
@@ -428,7 +495,7 @@ export function HpcDashboard() {
                               })
                             );
                           }}
-                          className={`flex-1 min-w-[70px] text-center text-xs sm:text-[13px] px-2.5 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap font-black shadow-2xs ${
+                          className={`flex-1 min-w-0 text-center text-xs sm:text-sm py-2.5 px-2 rounded-xl transition-all cursor-pointer whitespace-nowrap font-black shadow-xs ${
                             isClassActive ? classActivePill : classInactivePill
                           }`}
                         >
@@ -680,15 +747,15 @@ export function HpcDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-100 border-b-2 border-slate-300 text-slate-800 font-black text-sm tracking-wide">
-                  <th className="py-4 px-3 w-16 text-center font-black text-slate-800 text-sm whitespace-nowrap">हजेरी क्र.</th>
-                  <th className="p-4 font-black text-slate-800 text-sm whitespace-nowrap">विद्यार्थ्याचे नाव</th>
-                  <th className="p-4 text-center font-black text-slate-800 text-sm whitespace-nowrap">भाग अ (Profile)</th>
-                  <th className="p-4 text-center font-black text-slate-800 text-sm whitespace-nowrap">सत्र १ (Session 1)</th>
-                  <th className="p-4 text-center font-black text-slate-800 text-sm whitespace-nowrap">सत्र २ (Session 2)</th>
-                  <th className="p-4 text-center font-black text-slate-800 text-sm whitespace-nowrap">भाग क (वार्षिक)</th>
-                  <th className="p-4 text-center font-black text-slate-800 text-sm whitespace-nowrap">एकूण स्थिती</th>
-                  <th className="py-4 px-4 text-center min-w-[270px] font-black text-slate-800 text-sm whitespace-nowrap">कृती (Actions)</th>
+                <tr className="bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 border-b-2 border-slate-300 text-slate-950 font-black text-sm sm:text-base tracking-wider uppercase">
+                  <th className="py-4.5 px-3 w-20 text-center font-black text-slate-950 text-sm sm:text-base whitespace-nowrap">हजेरी क्र.</th>
+                  <th className="py-4.5 px-4 font-black text-slate-950 text-sm sm:text-base whitespace-nowrap">विद्यार्थ्याचे नाव</th>
+                  <th className="py-4.5 px-4 text-center font-black text-slate-950 text-sm sm:text-base whitespace-nowrap">भाग अ (PROFILE)</th>
+                  <th className="py-4.5 px-4 text-center font-black text-slate-950 text-sm sm:text-base whitespace-nowrap">सत्र १ (SESSION 1)</th>
+                  <th className="py-4.5 px-4 text-center font-black text-slate-950 text-sm sm:text-base whitespace-nowrap">सत्र २ (SESSION 2)</th>
+                  <th className="py-4.5 px-4 text-center font-black text-slate-950 text-sm sm:text-base whitespace-nowrap">भाग क (वार्षिक)</th>
+                  <th className="py-4.5 px-4 text-center font-black text-slate-950 text-sm sm:text-base whitespace-nowrap">एकूण स्थिती</th>
+                  <th className="py-4.5 px-4 text-center min-w-[280px] font-black text-slate-950 text-sm sm:text-base whitespace-nowrap">कृती (ACTIONS)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -807,10 +874,15 @@ export function HpcDashboard() {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => handleOpenPreview(s.id)}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-orange-50/80 hover:bg-orange-500 text-orange-700 hover:text-white font-bold text-xs transition-all cursor-pointer shadow-2xs border border-orange-300 hover:border-orange-500 group"
+                            disabled={previewLoadingId === s.id}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-orange-50/80 hover:bg-orange-500 text-orange-700 hover:text-white font-bold text-xs transition-all cursor-pointer shadow-2xs border border-orange-300 hover:border-orange-500 group disabled:opacity-50"
                             title="HPC कार्ड पहा व डाऊनलोड करा"
                           >
-                            <Eye className="size-3.5 text-orange-600 group-hover:text-white transition-colors" />
+                            {previewLoadingId === s.id ? (
+                              <Loader2 className="size-3.5 animate-spin text-orange-600 group-hover:text-white" />
+                            ) : (
+                              <Eye className="size-3.5 text-orange-600 group-hover:text-white transition-colors" />
+                            )}
                             <span>HPC कार्ड पहा</span>
                           </button>
                           <Link
@@ -850,6 +922,14 @@ export function HpcDashboard() {
 
               <div className="flex items-center gap-2">
                 <button
+                  onClick={handlePrint}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer border border-slate-700 shadow-xs"
+                  title="थेट प्रिंट करा किंवा PDF सेव्ह करा"
+                >
+                  <Printer className="size-3.5" />
+                  <span>प्रिंट / PDF सेव्ह</span>
+                </button>
+                <button
                   onClick={handleDownloadPdf}
                   disabled={pdfGenerating}
                   className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
@@ -875,10 +955,14 @@ export function HpcDashboard() {
             </div>
 
             {/* Modal Body / Report Container */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 flex justify-center">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-200/90 flex flex-col items-center">
+              <div className="mb-5 px-5 py-2.5 bg-white/95 backdrop-blur rounded-full text-xs font-black text-slate-800 border border-slate-300 shadow-xs flex items-center gap-2">
+                <FileText className="size-4 text-indigo-600" />
+                <span>HPC समग्र प्रगतिपत्रक (एकूण १९ पृष्ठे) — खाली स्क्रोल करून सर्व पृष्ठे तपासा</span>
+              </div>
               <div
                 ref={previewContainerRef}
-                className="bg-white shadow-xl rounded-2xl overflow-hidden scale-[0.9] sm:scale-100 origin-top"
+                className="scale-[0.9] sm:scale-100 origin-top flex flex-col items-center"
               >
                 {activeStage === "foundational" ? (
                   <FoundationalHpcPdf

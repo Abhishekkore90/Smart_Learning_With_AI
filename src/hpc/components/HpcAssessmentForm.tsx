@@ -28,6 +28,7 @@ import {
   Globe,
   Gamepad2,
   Smartphone,
+  GraduationCap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { toMarathiDigits } from "../utils/academicYear";
@@ -64,6 +65,7 @@ import {
   getHpcStudentById,
   StudentInfoSummary,
   getHpcActivityBankForCompetency,
+  getHpcClassLearningOutcomes,
   getHpcCurricularGoals,
   getHpcCompetencies,
   getHpcDynamicActivities,
@@ -473,6 +475,8 @@ export function HpcAssessmentForm({
 
   const [bankData, setBankData] = useState<HpcCompetencyActivitiesData | undefined>(undefined);
 
+  const currentClass = classId || student?.class || "1st";
+
   useEffect(() => {
     let isMounted = true;
     if (!activeBankCompCode) {
@@ -480,24 +484,35 @@ export function HpcAssessmentForm({
       return;
     }
 
-    // Fetch dynamic activities from Firestore if available
-    getHpcActivityBankForCompetency(activeBankCompCode, stageId)
+    // Fetch dynamic activities and class-specific learning outcomes from Firestore or built-in bank
+    getHpcActivityBankForCompetency(activeBankCompCode, stageId, currentClass)
       .then((data) => {
         if (isMounted) {
-          setBankData(data || getActivitiesForCompetency(activeBankCompCode));
+          setBankData(data || getActivitiesForCompetency(activeBankCompCode, currentClass));
         }
       })
       .catch((err) => {
         console.warn("Could not load dynamic activities for bank:", err);
         if (isMounted) {
-          setBankData(getActivitiesForCompetency(activeBankCompCode));
+          setBankData(getActivitiesForCompetency(activeBankCompCode, currentClass));
         }
       });
 
     return () => {
       isMounted = false;
     };
-  }, [activeBankCompCode, stageId]);
+  }, [activeBankCompCode, stageId, currentClass]);
+
+  // Specific class learning outcomes for active competency
+  const learningOutcomes = useMemo(() => {
+    if (bankData?.learningOutcomes && bankData.learningOutcomes.length > 0) {
+      return bankData.learningOutcomes;
+    }
+    if (activeBankCompCode) {
+      return getHpcClassLearningOutcomes(activeBankCompCode, currentClass);
+    }
+    return [];
+  }, [bankData, activeBankCompCode, currentClass]);
 
   // Always available Parent Remarks list (Bank + Static Fallback)
   const effectiveParentRemarks = useMemo(() => {
@@ -765,10 +780,13 @@ export function HpcAssessmentForm({
   }, [stageRubrics, currentAssessment.activity1Title, activeBankCompCode]);
 
   const handleSelectBankActivity = (act: HpcActivityItem) => {
+    const prevLOs = currentAssessment.selectedLearningOutcomes || [];
+    const losToSet = prevLOs.length > 0 ? prevLOs : learningOutcomes;
     updateCurrentAssessment({
       activity1Title: act.title,
       activity1Description: act.description,
       assessmentQuestions: [...act.questions],
+      selectedLearningOutcomes: losToSet,
     });
     toast.success(`उपक्रम ${act.activityNumber}: "${act.title.slice(0, 30)}..." निवडला व ५ प्रश्न आपोआप भरले गेले!`);
   };
@@ -1315,11 +1333,108 @@ export function HpcAssessmentForm({
                 कृपया वरीलपैकी मूल्यमापनासाठी एक क्षमता (C) निवडा.
               </p>
               <p className="text-[11px] text-slate-500 font-medium">
-                तुम्ही क्षमता निवडल्यानंतर, केवळ त्या क्षमतेसाठी असलेले उपक्रम व त्यांचे ५ प्रश्न खाली दिसतील.
+                तुम्ही क्षमता निवडल्यानंतर, त्या क्षमतेसाठी असलेल्या अध्ययन निष्पत्ती व उपक्रम खाली दिसतील.
               </p>
             </div>
-          ) : bankData && bankData.activities?.length > 0 ? (
-            <div className="space-y-2.5 mt-3">
+          ) : (
+            <div className="space-y-4 mt-4">
+              {/* --- १. अध्ययन निष्पत्ती (Learning Outcomes) - Class Specific with Dropdown & List --- */}
+              {learningOutcomes.length > 0 && (
+                <div className="p-4 sm:p-5 rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-br from-indigo-50/70 via-purple-50/20 to-white space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-indigo-100">
+                    <div className="flex items-center gap-2.5">
+                      <span className="size-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                        <GraduationCap className="size-4" />
+                      </span>
+                      <div>
+                        <h5 className="text-xs sm:text-sm font-black text-indigo-950 flex items-center gap-2 flex-wrap">
+                          <span>अध्ययन निष्पत्ती (Learning Outcomes)</span>
+                          <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-black border border-indigo-200">
+                            {currentClass === "1st" ? "इयत्ता १ ली" : currentClass === "2nd" ? "इयत्ता २ री" : `इयत्ता ${currentClass}`}
+                          </span>
+                        </h5>
+                        <p className="text-[11px] text-slate-500 font-semibold">
+                          या क्षमतेअंतर्गत विद्यार्थ्याने साध्य केलेल्या अध्ययन निष्पत्ती निवडा
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allSelected = learningOutcomes.every((lo) =>
+                            (currentAssessment.selectedLearningOutcomes || []).includes(lo)
+                          );
+                          updateCurrentAssessment({
+                            selectedLearningOutcomes: allSelected ? [] : [...learningOutcomes],
+                          });
+                        }}
+                        className="px-3.5 py-1.5 rounded-full text-xs font-black bg-white hover:bg-indigo-100 text-indigo-700 border border-indigo-300 transition-all cursor-pointer shadow-2xs"
+                      >
+                        {(currentAssessment.selectedLearningOutcomes || []).length === learningOutcomes.length
+                          ? "सर्व अनचेक करा"
+                          : "सर्व साध्य (Select All) ✓"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Clean, Full-Width Clickable Cards (No Squishing / No Flex Bugs) */}
+                  <div className="space-y-2">
+                    {learningOutcomes.map((lo, loIdx) => {
+                      const isChecked = (currentAssessment.selectedLearningOutcomes || []).includes(lo);
+                      return (
+                        <div
+                          key={loIdx}
+                          onClick={() => {
+                            const prev = currentAssessment.selectedLearningOutcomes || [];
+                            const updated = isChecked
+                              ? prev.filter((item) => item !== lo)
+                              : [...prev, lo];
+                            updateCurrentAssessment({ selectedLearningOutcomes: updated });
+                          }}
+                          className={`w-full text-left p-3 sm:p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
+                            isChecked
+                              ? "bg-white border-indigo-600 text-indigo-950 shadow-xs ring-2 ring-indigo-100"
+                              : "bg-white/90 border-slate-200 text-slate-700 hover:bg-white hover:border-slate-300 shadow-2xs"
+                          }`}
+                        >
+                          <div
+                            className={`size-5 rounded-md border mt-0.5 flex items-center justify-center flex-shrink-0 transition-all ${
+                              isChecked
+                                ? "bg-indigo-600 border-indigo-600 text-white"
+                                : "border-slate-300 bg-white"
+                            }`}
+                          >
+                            {isChecked && <Check className="size-3.5 stroke-[3]" />}
+                          </div>
+                          <div className="flex-1 min-w-0 text-left text-xs sm:text-sm font-bold leading-relaxed break-words text-slate-900">
+                            {lo}
+                          </div>
+                          {isChecked && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex-shrink-0">
+                              साध्य ✓
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* --- २. उपक्रम बँक (Activities) --- */}
+              {bankData && bankData.activities?.length > 0 ? (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap pt-2">
+                    <h5 className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-1.5">
+                      <BookOpen className="size-4 text-emerald-600" />
+                      <span>उपक्रम बँक ({bankData.activities.length} पैकी १ उपक्रम निवडा)</span>
+                    </h5>
+                    <span className="text-[11px] text-slate-500 font-semibold">
+                      उपक्रम निवडल्यावर त्याचे ५ प्रश्न खाली आपोआप जोडले जातील
+                    </span>
+                  </div>
               {/* Clean 5-Row Activity List with Full Text (No Truncation) */}
               <div className="space-y-2">
                 {bankData.activities.map((act) => {
@@ -1540,6 +1655,8 @@ export function HpcAssessmentForm({
             </div>
           )}
         </div>
+      )}
+    </div>
 
         {/* ---------------- 4. Assessment Questions (मूल्यमापनासाठी प्रश्न) ---------------- */}
         <div>
@@ -2148,36 +2265,8 @@ export function HpcAssessmentForm({
                   </select>
                 </div>
 
-                {/* Ready Guidance Suggestions Dropdown */}
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 shadow-2xs">
-                  <label className="block text-[11px] font-black text-slate-700 mb-1 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <Sparkles className="size-3.5 text-indigo-600" />
-                      <span>
-                        तयार वैयक्तिक मार्गदर्शन सूचना निवडा ({availableGuidanceSuggestions.length} पर्याय उपलब्ध):
-                      </span>
-                    </span>
-                  </label>
-                  <select
-                    className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-slate-800 cursor-pointer shadow-xs focus:ring-2 focus:ring-indigo-400"
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        update360("teacherRemarks", "guidanceSuggestion", e.target.value);
-                      }
-                    }}
-                    value=""
-                  >
-                    <option value="">-- तयार वैयक्तिक मार्गदर्शन सूचना निवडा --</option>
-                    {availableGuidanceSuggestions.map((sug, idx) => (
-                      <option key={idx} value={sug}>
-                        {idx + 1}. {sug}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Editable Inputs */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                {/* Editable Input */}
+                <div className="pt-1">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
                       शिक्षकांचे प्रत्यक्ष निरीक्षण व शेरा *:
@@ -2187,19 +2276,6 @@ export function HpcAssessmentForm({
                       value={currentAssessment.threeSixty?.teacherRemarks?.observation || ""}
                       onChange={(e) => update360("teacherRemarks", "observation", e.target.value)}
                       placeholder="उदा. खेळांच्या माध्यमातून तू छान शिकतोस / रोज उपस्थित राहण्याची सवय कर."
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-medium bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
-                      पुढील सुधारणेसाठी वैयक्तिक सूचना:
-                    </label>
-                    <input
-                      type="text"
-                      value={currentAssessment.threeSixty?.teacherRemarks?.guidanceSuggestion || ""}
-                      onChange={(e) => update360("teacherRemarks", "guidanceSuggestion", e.target.value)}
-                      placeholder="उदा. अक्षरे गिरवण्याचा सराव नियमित करावा."
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-medium bg-white text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-orange-400"
                     />
                   </div>
