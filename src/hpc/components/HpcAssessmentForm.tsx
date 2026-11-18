@@ -252,19 +252,19 @@ export function HpcAssessmentForm({
             creativityLevel: "",
             threeSixty: {
               selfAssessment: {
-                likedActivity: "yes",
-                feltEasy: "yes",
-                neededHelpFrom: ["none"],
+                likedActivity: "" as any,
+                feltEasy: "" as any,
+                neededHelpFrom: [],
                 customRemark: "",
               },
               peerAssessment: {
-                peerLiked: "yes",
-                peerFeltEasy: "yes",
+                peerLiked: "" as any,
+                peerFeltEasy: "" as any,
                 peerNeededHelpFrom: [],
                 peerRemarks: "",
               },
               parentFeedback: {
-                learningResourcesAtHome: ["books"],
+                learningResourcesAtHome: [],
                 parentObservations: "",
                 parentExpectations: "",
               },

@@ -188,25 +188,25 @@ export function PreparatoryHpcPdf({
           <div className="grid grid-cols-2 gap-3 text-[11px]">
             <div>
               <span className="font-bold text-slate-600">ध्येय / मोठे होऊन मला व्हायचे आहे: </span>
-              <b className="text-emerald-900">{profile?.ambition || "शास्त्रज्ञ / शिक्षक"}</b>
+              <b className="text-emerald-900">{profile?.ambition || ""}</b>
             </div>
             <div>
               <span className="font-bold text-slate-600">माझे आवडते विषय व खेळ: </span>
               <b className="text-slate-900">
-                {profile?.favoriteSubject || "गणित"}, {profile?.favoriteGame || "खो-खो"}
+                {[profile?.favoriteSubject, profile?.favoriteGame].filter(Boolean).join(", ")}
               </b>
             </div>
           </div>
           <div>
             <span className="font-bold text-slate-600">माझी आवड (छंद): </span>
             <span className="font-medium text-slate-800">
-              {(profile?.hobbies || ["वाचन", "चित्रकला", "खेळ"]).join(", ")}
+              {(profile?.hobbies || []).join(", ")}
             </span>
           </div>
           <div>
             <span className="font-bold text-slate-600">विद्यार्थी स्वतःच्या प्रगतीविषयी नोंद: </span>
             <span className="font-medium text-slate-800 italic">
-              {profile?.studentSelfReflection || "मी दररोज नियमित अभ्यास करतो व मित्रांना मदत करतो."}
+              {profile?.studentSelfReflection || ""}
             </span>
           </div>
         </div>
@@ -299,7 +299,9 @@ export function PreparatoryHpcPdf({
                           ? "प्रगत"
                           : s1Assessment?.awarenessLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s1Assessment?.awarenessLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                     <div className="flex justify-between items-center bg-rose-50/50 p-1 rounded-md">
@@ -309,7 +311,9 @@ export function PreparatoryHpcPdf({
                           ? "प्रगत"
                           : s1Assessment?.sensitivityLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s1Assessment?.sensitivityLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                     <div className="flex justify-between items-center bg-purple-50/50 p-1 rounded-md">
@@ -319,7 +323,9 @@ export function PreparatoryHpcPdf({
                           ? "प्रगत"
                           : s1Assessment?.creativityLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s1Assessment?.creativityLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                   </div>
@@ -328,13 +334,13 @@ export function PreparatoryHpcPdf({
                 {/* 360 Feedback S1 */}
                 <div className="border-t border-slate-200 pt-2 text-[10px] space-y-1">
                   <p>
-                    <b>स्वयं मूल्यमापन:</b> {s1Assessment?.threeSixty?.selfAssessment?.customRemark || "काम आवडले व सोपे वाटले."}
+                    <b>स्वयं मूल्यमापन:</b> {s1Assessment?.threeSixty?.selfAssessment?.customRemark || "-"}
                   </p>
                   <p>
-                    <b>सहाध्यायी अभिप्राय:</b> {s1Assessment?.threeSixty?.peerAssessment?.peerRemarks || "गटात सहकार्याने काम केले."}
+                    <b>सहाध्यायी अभिप्राय:</b> {s1Assessment?.threeSixty?.peerAssessment?.peerRemarks || "-"}
                   </p>
                   <p>
-                    <b>शिक्षक शेरा:</b> {s1Assessment?.threeSixty?.teacherRemarks?.observation || "चांगली प्रगती आहे."}
+                    <b>शिक्षक शेरा:</b> {s1Assessment?.threeSixty?.teacherRemarks?.observation || "-"}
                   </p>
                 </div>
               </div>
@@ -348,10 +354,10 @@ export function PreparatoryHpcPdf({
 
                   <div className="space-y-1.5 text-[11px]">
                     <p>
-                      <b>उपक्रम:</b> {s2Assessment?.activity1Title || "स्वाध्याय व प्रकल्प सादरीकरण"}
+                      <b>उपक्रम:</b> {s2Assessment?.activity1Title || "-"}
                     </p>
                     <p className="text-slate-600 line-clamp-2">
-                      <b>निष्पत्ती:</b> {s2Assessment?.activity1Outcome || "ज्ञान उपयोजन व आत्मविश्वासात वाढ."}
+                      <b>निष्पत्ती:</b> {s2Assessment?.activity1Outcome || "-"}
                     </p>
                   </div>
 
@@ -364,7 +370,9 @@ export function PreparatoryHpcPdf({
                           ? "प्रगत"
                           : s2Assessment?.awarenessLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s2Assessment?.awarenessLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                     <div className="flex justify-between items-center bg-rose-50/50 p-1 rounded-md">
@@ -374,7 +382,9 @@ export function PreparatoryHpcPdf({
                           ? "प्रगत"
                           : s2Assessment?.sensitivityLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s2Assessment?.sensitivityLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                     <div className="flex justify-between items-center bg-purple-50/50 p-1 rounded-md">
@@ -384,7 +394,9 @@ export function PreparatoryHpcPdf({
                           ? "प्रगत"
                           : s2Assessment?.creativityLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s2Assessment?.creativityLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                   </div>
@@ -393,13 +405,13 @@ export function PreparatoryHpcPdf({
                 {/* 360 Feedback S2 */}
                 <div className="border-t border-slate-200 pt-2 text-[10px] space-y-1">
                   <p>
-                    <b>स्वयं मूल्यमापन:</b> {s2Assessment?.threeSixty?.selfAssessment?.customRemark || "नवीन बाबी शिकायला आवडल्या."}
+                    <b>स्वयं मूल्यमापन:</b> {s2Assessment?.threeSixty?.selfAssessment?.customRemark || "-"}
                   </p>
                   <p>
-                    <b>सहाध्यायी अभिप्राय:</b> {s2Assessment?.threeSixty?.peerAssessment?.peerRemarks || "अतिशय छान काम केले."}
+                    <b>सहाध्यायी अभिप्राय:</b> {s2Assessment?.threeSixty?.peerAssessment?.peerRemarks || "-"}
                   </p>
                   <p>
-                    <b>शिक्षक शेरा:</b> {s2Assessment?.threeSixty?.teacherRemarks?.observation || "सातत्यपूर्ण प्रगती."}
+                    <b>शिक्षक शेरा:</b> {s2Assessment?.threeSixty?.teacherRemarks?.observation || "-"}
                   </p>
                 </div>
               </div>

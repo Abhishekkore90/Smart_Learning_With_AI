@@ -15,7 +15,10 @@ async function inlineImagesAsDataUrls(element: HTMLElement): Promise<void> {
       if (!img.src || img.src.startsWith("data:")) return;
 
       try {
-        const response = await fetch(img.src, { mode: "cors" });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const response = await fetch(img.src, { mode: "cors", signal: controller.signal });
+        clearTimeout(timeoutId);
         if (!response.ok) throw new Error("Image fetch failed");
         const blob = await response.blob();
         await new Promise<void>((resolve) => {

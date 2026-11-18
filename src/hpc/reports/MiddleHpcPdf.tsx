@@ -187,26 +187,25 @@ export function MiddleHpcPdf({
           <div className="grid grid-cols-2 gap-3 text-[11px]">
             <div>
               <span className="font-bold text-slate-600">भावी आकांक्षा (Aspiration): </span>
-              <b className="text-purple-900">{profile?.ambition || "अभियंता / आयएएस अधिकारी / क्रीडापटू"}</b>
+              <b className="text-purple-900">{profile?.ambition || ""}</b>
             </div>
             <div>
               <span className="font-bold text-slate-600">रुची व आवडीची क्षेत्रे: </span>
               <b className="text-slate-900">
-                {profile?.favoriteSubject || "विज्ञान व गणित"}, {profile?.favoriteGame || "कबड्डी"}
+                {[profile?.favoriteSubject, profile?.favoriteGame].filter(Boolean).join(", ")}
               </b>
             </div>
           </div>
           <div>
             <span className="font-bold text-slate-600">सहशालेय छंद व उपक्रम: </span>
             <span className="font-medium text-slate-800">
-              {(profile?.hobbies || ["प्रयोगशीलता", "वाचन", "क्रीडा", "नाट्य"]).join(", ")}
+              {(profile?.hobbies || []).join(", ")}
             </span>
           </div>
           <div>
             <span className="font-bold text-slate-600">विद्यार्थी स्व-चिंतन व उद्दिष्टे: </span>
             <span className="font-medium text-slate-800 italic">
-              {profile?.studentSelfReflection ||
-                "मी विज्ञानातील प्रयोग स्वतः करून पाहतो आणि वक्तृत्व व गटचर्चेमध्ये सक्रिय सहभाग घेतो."}
+              {profile?.studentSelfReflection || ""}
             </span>
           </div>
         </div>
@@ -299,7 +298,9 @@ export function MiddleHpcPdf({
                           ? "प्रगत"
                           : s1Assessment?.awarenessLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s1Assessment?.awarenessLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                     <div className="flex justify-between items-center bg-rose-50/50 p-1 rounded-md">
@@ -309,7 +310,9 @@ export function MiddleHpcPdf({
                           ? "प्रगत"
                           : s1Assessment?.sensitivityLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s1Assessment?.sensitivityLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                     <div className="flex justify-between items-center bg-purple-50/50 p-1 rounded-md">
@@ -319,7 +322,9 @@ export function MiddleHpcPdf({
                           ? "प्रगत"
                           : s1Assessment?.creativityLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s1Assessment?.creativityLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                   </div>
@@ -328,13 +333,13 @@ export function MiddleHpcPdf({
                 {/* 360 Feedback */}
                 <div className="border-t border-slate-200 pt-2 text-[10px] space-y-1">
                   <p>
-                    <b>स्वयं मूल्यमापन:</b> {s1Assessment?.threeSixty?.selfAssessment?.customRemark || "प्रकल्प पूर्ण करताना आनंद वाटला."}
+                    <b>स्वयं मूल्यमापन:</b> {s1Assessment?.threeSixty?.selfAssessment?.customRemark || "-"}
                   </p>
                   <p>
-                    <b>सहाध्यायी अभिप्राय:</b> {s1Assessment?.threeSixty?.peerAssessment?.peerRemarks || "सक्रिय सहभाग व सहकार्य."}
+                    <b>सहाध्यायी अभिप्राय:</b> {s1Assessment?.threeSixty?.peerAssessment?.peerRemarks || "-"}
                   </p>
                   <p>
-                    <b>शिक्षक शेरा:</b> {s1Assessment?.threeSixty?.teacherRemarks?.observation || "संकल्पनांचे स्पष्ट आकलन."}
+                    <b>शिक्षक शेरा:</b> {s1Assessment?.threeSixty?.teacherRemarks?.observation || "-"}
                   </p>
                 </div>
               </div>
@@ -348,10 +353,10 @@ export function MiddleHpcPdf({
 
                   <div className="space-y-1.5 text-[11px]">
                     <p>
-                      <b>उपक्रम:</b> {s2Assessment?.activity1Title || "समस्या निराकरण व प्रात्यक्षिक"}
+                      <b>उपक्रम:</b> {s2Assessment?.activity1Title || "-"}
                     </p>
                     <p className="text-slate-600 line-clamp-2">
-                      <b>निष्पत्ती:</b> {s2Assessment?.activity1Outcome || "सर्जनशील विचार व व्यावहारिक उपयोजन."}
+                      <b>निष्पत्ती:</b> {s2Assessment?.activity1Outcome || "-"}
                     </p>
                   </div>
 
@@ -364,7 +369,9 @@ export function MiddleHpcPdf({
                           ? "प्रगत"
                           : s2Assessment?.awarenessLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s2Assessment?.awarenessLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                     <div className="flex justify-between items-center bg-rose-50/50 p-1 rounded-md">
@@ -374,7 +381,9 @@ export function MiddleHpcPdf({
                           ? "प्रगत"
                           : s2Assessment?.sensitivityLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s2Assessment?.sensitivityLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                     <div className="flex justify-between items-center bg-purple-50/50 p-1 rounded-md">
@@ -384,7 +393,9 @@ export function MiddleHpcPdf({
                           ? "प्रगत"
                           : s2Assessment?.creativityLevel === "proficient"
                           ? "प्रवीण"
-                          : "प्रारंभिक"}
+                          : s2Assessment?.creativityLevel === "beginner"
+                          ? "प्रारंभिक"
+                          : "-"}
                       </b>
                     </div>
                   </div>
@@ -393,13 +404,13 @@ export function MiddleHpcPdf({
                 {/* 360 Feedback */}
                 <div className="border-t border-slate-200 pt-2 text-[10px] space-y-1">
                   <p>
-                    <b>स्वयं मूल्यमापन:</b> {s2Assessment?.threeSixty?.selfAssessment?.customRemark || "नवीन कल्पना मांडता आल्या."}
+                    <b>स्वयं मूल्यमापन:</b> {s2Assessment?.threeSixty?.selfAssessment?.customRemark || "-"}
                   </p>
                   <p>
-                    <b>सहाध्यायी अभिप्राय:</b> {s2Assessment?.threeSixty?.peerAssessment?.peerRemarks || "उत्कृष्ट सादरीकरण."}
+                    <b>सहाध्यायी अभिप्राय:</b> {s2Assessment?.threeSixty?.peerAssessment?.peerRemarks || "-"}
                   </p>
                   <p>
-                    <b>शिक्षक शेरा:</b> {s2Assessment?.threeSixty?.teacherRemarks?.observation || "अतिशय उत्तम प्रगती."}
+                    <b>शिक्षक शेरा:</b> {s2Assessment?.threeSixty?.teacherRemarks?.observation || "-"}
                   </p>
                 </div>
               </div>

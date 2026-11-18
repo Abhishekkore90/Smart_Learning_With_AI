@@ -904,10 +904,10 @@ export function HpcDashboard() {
 
       {/* ---------------- 5. LIVE PDF PREVIEW MODAL ---------------- */}
       {previewStudent && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden">
+          <div className="bg-slate-900 rounded-2xl sm:rounded-3xl w-full max-w-6xl h-[94vh] max-h-[94vh] flex flex-col shadow-2xl overflow-hidden border border-slate-700/80 animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-900 text-white">
+            <div className="p-4 sm:p-5 border-b border-slate-700/80 flex items-center justify-between bg-slate-900 text-white shrink-0">
               <div>
                 <h3 className="text-base font-black">
                   HPC समग्र प्रगतिपत्रक प्रिव्ह्यू: {previewStudent.student?.name}
@@ -952,8 +952,8 @@ export function HpcDashboard() {
             </div>
 
             {/* Modal Body / Report Container */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-200/90 flex flex-col items-center">
-              <div className="mb-5 px-5 py-2.5 bg-white/95 backdrop-blur rounded-full text-xs font-black text-slate-800 border border-slate-300 shadow-xs flex items-center gap-2">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto p-4 sm:p-8 bg-slate-200/90 flex flex-col items-center">
+              <div className="mb-5 px-5 py-2.5 bg-white/95 backdrop-blur-md rounded-full text-xs font-black text-slate-800 border border-slate-300 shadow-xs flex items-center gap-2 shrink-0 sticky top-0 z-20">
                 <FileText className="size-4 text-indigo-600" />
                 <span>HPC समग्र प्रगतिपत्रक (एकूण १९ पृष्ठे) — खाली स्क्रोल करून सर्व पृष्ठे तपासा</span>
               </div>

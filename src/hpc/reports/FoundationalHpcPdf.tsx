@@ -25,13 +25,11 @@ import { CLASSWISE_LEARNING_OUTCOMES } from "../data/hpcClasswiseCurricularData"
 
 export type { FoundationalAreaConfig };
 
-function ProficiencyBadge({ level = "पर्वत" }: { level?: string }) {
-  const isAkash = level === "आकाश" || level === "advanced";
-  const isParvat =
-    level === "पर्वत" ||
-    level === "proficient" ||
-    (!isAkash && level !== "निर्झर" && level !== "beginner");
-  const isNirjhar = level === "निर्झर" || level === "beginner";
+function ProficiencyBadge({ level = "" }: { level?: string }) {
+  const norm = String(level || "").toLowerCase().trim();
+  const isAkash = norm === "आकाश" || norm === "advanced" || norm === "akash";
+  const isParvat = norm === "पर्वत" || norm === "proficient" || norm === "parvat";
+  const isNirjhar = norm === "निर्झर" || norm === "beginner" || norm === "nirjhar" || norm === "प्रवाह";
 
   return (
     <div className="flex items-center gap-2 shrink-0 my-0.5">
@@ -114,9 +112,9 @@ function ArrowInputBox({ value }: { value: string }) {
 }
 
 function SmileyOptions({
-  selected = "yes",
+  selected = "",
 }: {
-  selected?: "yes" | "no" | "dont_know";
+  selected?: "yes" | "no" | "dont_know" | "" | string;
 }) {
   return (
     <div className="flex items-center justify-around gap-2 px-1 py-1">
@@ -183,7 +181,7 @@ function SmileyOptions({
   );
 }
 
-function HelpOptions({ selected = "peer" }: { selected?: string }) {
+function HelpOptions({ selected = "" }: { selected?: string }) {
   const options = [
     { id: "peer", label: "वर्गमित्र", icon: "👥" },
     { id: "teacher", label: "शिक्षक", icon: "🧑‍🏫" },
@@ -314,9 +312,45 @@ export function FoundationalHpcPdf({
     totalWorking: 115,
     totalPresent: 0,
   };
-  const totalWorking = attendance?.annualTotalWorking || 225;
+  const totalWorking = attendance?.annualTotalWorking || 0;
   const totalPresent = attendance?.annualTotalPresent || (t1.totalPresent + t2.totalPresent);
-  const attendancePct = attendance?.attendancePercentage || "0.0";
+  const attendancePct = attendance?.attendancePercentage || "";
+
+  // Attendance calculations: takes real numbers from CCE or HPC profile if entered, otherwise leaves blank
+  const monthKeys = [
+    "june", "july", "august", "september", "october",
+    "november", "december", "january", "february", "march", "april", "may"
+  ];
+  const monthlyAttList = monthKeys.map((key) => {
+    const p =
+      profile?.monthlyAttendance?.[key] !== undefined && profile?.monthlyAttendance?.[key] !== null
+        ? profile.monthlyAttendance[key]
+        : attendance?.term1?.[key] !== undefined && attendance?.term1?.[key] !== null
+        ? attendance.term1[key]
+        : attendance?.term2?.[key] !== undefined && attendance?.term2?.[key] !== null
+        ? attendance.term2[key]
+        : null;
+
+    const w =
+      (profile as any)?.workingDays?.[key] !== undefined && (profile as any)?.workingDays?.[key] !== null
+        ? (profile as any).workingDays[key]
+        : attendance?.workingDays?.[key] !== undefined && attendance?.workingDays?.[key] !== null
+        ? attendance.workingDays[key]
+        : null;
+
+    const presentNum = p !== null && p !== "" && Number(p) >= 0 ? Number(p) : null;
+    const workingNum = w !== null && w !== "" && Number(w) > 0 ? Number(w) : null;
+    const pct =
+      workingNum && presentNum !== null && workingNum > 0
+        ? `${Math.round((presentNum / workingNum) * 100)}%`
+        : "";
+
+    return {
+      working: workingNum !== null ? String(workingNum) : "",
+      present: presentNum !== null ? String(presentNum) : "",
+      pct,
+    };
+  });
 
   return (
     <div className="hpc-pdf-document font-sans text-slate-900 bg-transparent flex flex-col items-center">
@@ -576,13 +610,13 @@ export function FoundationalHpcPdf({
                 <label className="inline-flex items-center gap-1 cursor-pointer font-bold">
                   <span>इ. पहिली</span>
                   <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
-                    {student.class === "1st" || (!student.class?.includes("2nd") && !student.class?.includes("bal")) ? "✓" : ""}
+                    {student.class === "1st" || student.class === "इ. पहिली" ? "✓" : ""}
                   </span>
                 </label>
                 <label className="inline-flex items-center gap-1 cursor-pointer font-bold">
                   <span>इ. दुसरी</span>
                   <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
-                    {student.class === "2nd" ? "✓" : ""}
+                    {student.class === "2nd" || student.class === "इ. दुसरी" ? "✓" : ""}
                   </span>
                 </label>
               </div>
@@ -719,13 +753,13 @@ export function FoundationalHpcPdf({
             <div className="flex items-center gap-1.5 w-52">
               <span className="font-bold text-slate-900 whitespace-nowrap">भावंडांची संख्या :</span>
               <div className="border-b border-black flex-1 min-h-[19px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
-                {profile?.siblingCount && profile.siblingCount !== "-" ? profile.siblingCount : "०"}
+                {profile?.siblingCount && profile.siblingCount !== "-" ? profile.siblingCount : ""}
               </div>
             </div>
             <div className="flex items-center gap-1.5 flex-1">
               <span className="font-bold text-slate-900 whitespace-nowrap">भावंडांचे वय :</span>
               <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-                {profile?.siblingAge && profile.siblingAge !== "-" ? profile.siblingAge : "/ /"}
+                {profile?.siblingAge && profile.siblingAge !== "-" ? profile.siblingAge : ""}
               </div>
             </div>
           </div>
@@ -735,13 +769,13 @@ export function FoundationalHpcPdf({
             <div className="flex items-center gap-1.5 flex-1">
               <span className="font-bold text-slate-900 whitespace-nowrap">मातृभाषा :</span>
               <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-                {profile?.motherTongue || "मराठी"}
+                {profile?.motherTongue || (student as any)?.motherTongue || ""}
               </div>
             </div>
             <div className="flex items-center gap-1.5 flex-1">
               <span className="font-bold text-slate-900 whitespace-nowrap">शिक्षणाचे माध्यम :</span>
               <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-                {profile?.mediumOfInstruction || "मराठी"}
+                {profile?.mediumOfInstruction || (student as any)?.mediumOfInstruction || ""}
               </div>
             </div>
           </div>
@@ -750,7 +784,7 @@ export function FoundationalHpcPdf({
           <div className="flex items-center gap-2 w-full">
             <span className="font-bold text-slate-900 whitespace-nowrap">ग्रामीण/शहरी :</span>
             <div className="border-b border-black w-56 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-              {profile?.areaType || "ग्रामीण"}
+              {profile?.areaType || ""}
             </div>
           </div>
         </div>
@@ -778,9 +812,9 @@ export function FoundationalHpcPdf({
                 <td className="border-r border-[#e6006e] bg-[#fef2e6] p-1 w-[16%] text-left pl-2 font-black text-slate-900 whitespace-nowrap">
                   कामाचे दिवस
                 </td>
-                {[20, 24, 22, 21, 18, 19, 24, 22, 20, 24, 6, 0].map((def, i) => (
+                {monthlyAttList.map((mAtt, i) => (
                   <td key={i} className="border-r border-[#e6006e] last:border-r-0 p-1 w-[7%]">
-                    {def > 0 ? def : ""}
+                    {mAtt.working}
                   </td>
                 ))}
               </tr>
@@ -790,9 +824,9 @@ export function FoundationalHpcPdf({
                 <td className="border-r border-[#e6006e] bg-[#fef2e6] p-1 w-[16%] text-left pl-2 font-black text-slate-900 whitespace-nowrap">
                   उपस्थित दिवस
                 </td>
-                {[19, 23, 21, 20, 17, 18, 23, 21, 19, 23, 6, 0].map((def, i) => (
+                {monthlyAttList.map((mAtt, i) => (
                   <td key={i} className="border-r border-[#e6006e] last:border-r-0 p-1 w-[7%] font-black text-slate-900">
-                    {def > 0 ? def : ""}
+                    {mAtt.present}
                   </td>
                 ))}
               </tr>
@@ -802,9 +836,9 @@ export function FoundationalHpcPdf({
                 <td className="border-r border-[#e6006e] bg-[#fef2e6] p-1 w-[16%] text-left pl-2 font-black text-slate-900 whitespace-nowrap">
                   उपस्थिती (% मध्ये)
                 </td>
-                {[95, 96, 95, 95, 94, 95, 96, 95, 95, 96, 100, 0].map((def, i) => (
+                {monthlyAttList.map((mAtt, i) => (
                   <td key={i} className="border-r border-[#e6006e] last:border-r-0 p-1 w-[7%] font-black text-[#e6006e]">
-                    {def > 0 ? `${def}%` : ""}
+                    {mAtt.pct}
                   </td>
                 ))}
               </tr>
@@ -817,8 +851,12 @@ export function FoundationalHpcPdf({
                 </td>
                 <td colSpan={12} className="p-1 px-3 align-middle bg-white w-[84%]">
                   <div className="space-y-1.5 py-1">
-                    <div className="border-b border-black h-3.5 w-full" />
-                    <div className="border-b border-black h-3.5 w-full" />
+                    <div className="border-b border-black h-3.5 w-full flex items-end px-1 text-[10px]">
+                      {(profile as any)?.attendanceReason1 || ""}
+                    </div>
+                    <div className="border-b border-black h-3.5 w-full flex items-end px-1 text-[10px]">
+                      {(profile as any)?.attendanceReason2 || ""}
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -863,7 +901,7 @@ export function FoundationalHpcPdf({
                 <span className="text-lime-500 text-base">★</span>
               </div>
               <SafePhoto
-                src={student.photoUrl}
+                src={profile?.photoUrl || student.photoUrl}
                 alt="Student"
                 className="w-full h-full object-cover object-top rounded-2xl"
                 fallback={
@@ -886,7 +924,7 @@ export function FoundationalHpcPdf({
                   <div>वय</div>
                 </div>
                 <div className="w-16 h-9 rounded-full border-2 border-[#c85a28] bg-white flex items-center justify-center text-sm font-black text-slate-900 shadow-2xs">
-                  {profile?.age || "७"}
+                  {profile?.age || (student?.age ? String(student.age) : "")}
                 </div>
                 <div className="text-sm font-black text-slate-900 leading-tight">
                   <div>वर्षे</div>
@@ -904,7 +942,7 @@ export function FoundationalHpcPdf({
                   <div className="text-[10px] font-bold leading-none">माझा</div>
                   <div className="text-xs font-black leading-tight mt-0.5">वाढदिवस</div>
                   <div className="text-[11px] font-black text-amber-300 my-0.5">
-                    {profile?.birthday && profile.birthday !== "-" ? profile.birthday : student.dob || "१५ ऑगस्ट"}
+                    {profile?.birthday && profile.birthday !== "-" ? profile.birthday : (student?.dob && student.dob !== "-" ? student.dob : "")}
                   </div>
                   <div className="text-[9px] font-bold leading-none opacity-95">या दिवशी असतो.</div>
                 </div>
@@ -978,7 +1016,7 @@ export function FoundationalHpcPdf({
                 <p className="text-xs font-bold text-slate-800 leading-relaxed text-center px-2">
                   {profile?.familyDescription && profile.familyDescription !== "-"
                     ? profile.familyDescription
-                    : "आई, वडील, आजी, आजोबा व भावंड."}
+                    : ""}
                 </p>
               </div>
               <div className="text-center mt-1">
@@ -992,7 +1030,7 @@ export function FoundationalHpcPdf({
               <div className="border-4 border-[#8e237b] rounded-2xl p-2.5 bg-white">
                 <div className="text-sm font-black text-slate-900">मोठे होऊन मला</div>
                 <div className="border-b border-dotted border-slate-700 my-1 h-5 flex items-end px-2 text-xs font-black text-indigo-950">
-                  {profile?.ambition && profile.ambition !== "-" ? profile.ambition : "शिक्षक / डॉक्टर / सैनिक"}
+                  {profile?.ambition && profile.ambition !== "-" ? profile.ambition : ""}
                 </div>
                 <div className="text-right text-sm font-black text-slate-900">व्हायचे आहे.</div>
               </div>
@@ -1046,7 +1084,7 @@ export function FoundationalHpcPdf({
                 <span className="text-base w-6 text-center">🎨</span>
                 <span className="w-20 text-xs font-black text-slate-900">रंग</span>
                 <ArrowInputBox
-                  value={profile?.favoriteColor && profile.favoriteColor !== "-" ? profile.favoriteColor : "निळा"}
+                  value={profile?.favoriteColor && profile.favoriteColor !== "-" ? profile.favoriteColor : ""}
                 />
               </div>
 
@@ -1055,7 +1093,13 @@ export function FoundationalHpcPdf({
                 <span className="text-base w-6 text-center">🍲</span>
                 <span className="w-20 text-xs font-black text-slate-900">अन्नपदार्थ</span>
                 <ArrowInputBox
-                  value={profile?.favoriteFood && profile.favoriteFood !== "-" ? profile.favoriteFood : "वरणभात"}
+                  value={
+                    profile?.favoriteFood && profile.favoriteFood !== "-"
+                      ? profile.favoriteFood
+                      : (profile as any)?.favoriteDish && (profile as any).favoriteDish !== "-"
+                      ? (profile as any).favoriteDish
+                      : ""
+                  }
                 />
               </div>
 
@@ -1064,7 +1108,7 @@ export function FoundationalHpcPdf({
                 <span className="text-base w-6 text-center">🦒</span>
                 <span className="w-20 text-xs font-black text-slate-900">प्राणी</span>
                 <ArrowInputBox
-                  value={profile?.favoriteAnimal && profile.favoriteAnimal !== "-" ? profile.favoriteAnimal : "मांजर"}
+                  value={profile?.favoriteAnimal && profile.favoriteAnimal !== "-" ? profile.favoriteAnimal : ""}
                 />
               </div>
             </div>
@@ -1076,7 +1120,7 @@ export function FoundationalHpcPdf({
                 <span className="text-base w-6 text-center">🌸</span>
                 <span className="w-16 text-xs font-black text-slate-900">फूल</span>
                 <ArrowInputBox
-                  value={profile?.favoriteFlower && profile.favoriteFlower !== "-" ? profile.favoriteFlower : "गुलाब"}
+                  value={profile?.favoriteFlower && profile.favoriteFlower !== "-" ? profile.favoriteFlower : ""}
                 />
               </div>
 
@@ -1085,7 +1129,7 @@ export function FoundationalHpcPdf({
                 <span className="text-base w-6 text-center">🎾</span>
                 <span className="w-16 text-xs font-black text-slate-900">खेळ</span>
                 <ArrowInputBox
-                  value={profile?.favoriteGame && profile.favoriteGame !== "-" ? profile.favoriteGame : "लपंडाव"}
+                  value={profile?.favoriteGame && profile.favoriteGame !== "-" ? profile.favoriteGame : ""}
                 />
               </div>
 
@@ -1094,7 +1138,7 @@ export function FoundationalHpcPdf({
                 <span className="text-base w-6 text-center">📚</span>
                 <span className="w-16 text-xs font-black text-slate-900">विषय</span>
                 <ArrowInputBox
-                  value={profile?.favoriteSubject && profile.favoriteSubject !== "-" ? profile.favoriteSubject : "भाषा"}
+                  value={profile?.favoriteSubject && profile.favoriteSubject !== "-" ? profile.favoriteSubject : ""}
                 />
               </div>
             </div>
@@ -1120,9 +1164,9 @@ export function FoundationalHpcPdf({
                   { name: "क्रीडा किंवा खेळ" },
                   { name: "सर्जनशील लेखन" },
                 ].map(({ name }) => {
-                  const checked = (
-                    profile?.hobbies || ["वाचन", "क्रीडा किंवा खेळ", "कला"]
-                  ).some((h) => h.includes(name) || name.includes(h));
+                  const checked = Boolean(
+                    profile?.hobbies && profile.hobbies.some((h) => h.includes(name) || name.includes(h))
+                  );
                   return (
                     <div key={name} className="flex items-center gap-1.5 shrink-0">
                       <span className="font-bold text-slate-900 text-[11px] whitespace-nowrap">{name}</span>
@@ -1144,9 +1188,9 @@ export function FoundationalHpcPdf({
                   { name: "पाककला" },
                   { name: "इतर" },
                 ].map(({ name }) => {
-                  const checked = (
-                    profile?.hobbies || ["वाचन", "क्रीडा किंवा खेळ", "कला"]
-                  ).some((h) => h.includes(name) || name.includes(h));
+                  const checked = Boolean(
+                    profile?.hobbies && profile.hobbies.some((h) => h.includes(name) || name.includes(h))
+                  );
                   return (
                     <div key={name} className="flex items-center gap-1.5 shrink-0">
                       <span className="font-bold text-slate-900 text-[11px] whitespace-nowrap">{name}</span>
@@ -1168,7 +1212,7 @@ export function FoundationalHpcPdf({
                 <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900">
                   {profile?.regularHomeChores && profile.regularHomeChores !== "-"
                     ? profile.regularHomeChores
-                    : "स्वतःचे दप्तर जागेवर ठेवणे, जेवणानंतर ताट उचलून ठेवणे, झाडांना पाणी देणे."}
+                    : ""}
                 </div>
                 <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900" />
               </div>
@@ -1204,27 +1248,17 @@ export function FoundationalHpcPdf({
           const sessLabel = sess === "session1" ? "सत्र - १" : "सत्र - २";
           const pageNum = 4 + areaIndex * 2 + (sess === "session1" ? 0 : 1);
 
-          // Core Rubric Levels selected
-          const awLvl = currentAssessment?.awarenessLevel || "proficient";
-          const seLvl = currentAssessment?.sensitivityLevel || "proficient";
-          const crLvl = currentAssessment?.creativityLevel || "proficient";
+          // Core Rubric Levels selected (empty if not filled)
+          const awLvl = currentAssessment?.awarenessLevel || "";
+          const seLvl = currentAssessment?.sensitivityLevel || "";
+          const crLvl = currentAssessment?.creativityLevel || "";
 
-          // Selected overall or default to पर्वत
-          const defaultRemark =
-            sess === "session1"
-              ? area.defaultTeacherRemarkS1
-              : area.defaultTeacherRemarkS2;
+          // Teacher & Parent Remarks: only display if manually entered by teacher/parent
           const teacherRemark =
-            currentAssessment?.threeSixty?.teacherRemarks?.observation ||
-            defaultRemark;
+            currentAssessment?.threeSixty?.teacherRemarks?.observation || "";
 
-          const defaultParentRemark =
-            sess === "session1"
-              ? area.defaultParentRemarkS1
-              : area.defaultParentRemarkS2;
           const parentRemark =
-            currentAssessment?.threeSixty?.parentFeedback?.parentObservations ||
-            defaultParentRemark;
+            currentAssessment?.threeSixty?.parentFeedback?.parentObservations || "";
 
           return (
             <div
@@ -1370,8 +1404,7 @@ export function FoundationalHpcPdf({
                       const isParvat =
                         lvlStr === "proficient" ||
                         lvlStr === "parvat" ||
-                        lvlStr === "पर्वत" ||
-                        (!isNirjhar && !isAkash);
+                        lvlStr === "पर्वत";
 
                       return (
                         <tr key={rubric.dimension}>
@@ -1445,19 +1478,19 @@ export function FoundationalHpcPdf({
                       <div className="text-[11px] font-bold text-slate-800 mb-0.5">
                         करायला आवडले.
                       </div>
-                      <SmileyOptions selected="yes" />
+                      <SmileyOptions selected={currentAssessment?.threeSixty?.selfAssessment?.likedActivity || ""} />
                     </div>
                     <div className="col-span-3 border border-slate-800 p-1 text-center bg-white">
                       <div className="text-[11px] font-bold text-slate-800 mb-0.5">
                         सोपे वाटले.
                       </div>
-                      <SmileyOptions selected="yes" />
+                      <SmileyOptions selected={currentAssessment?.threeSixty?.selfAssessment?.feltEasy || ""} />
                     </div>
                     <div className="col-span-6 border border-slate-800 p-1 text-center bg-white">
                       <div className="text-[11px] font-bold text-slate-800 mb-0.5">
                         करताना मदत लागते.
                       </div>
-                      <HelpOptions selected="peer" />
+                      <HelpOptions selected={currentAssessment?.threeSixty?.selfAssessment?.neededHelpFrom?.[0] || ""} />
                     </div>
                   </div>
                 </div>
@@ -1477,19 +1510,19 @@ export function FoundationalHpcPdf({
                       <div className="text-[11px] font-bold text-slate-800 mb-0.5">
                         करायला आवडले.
                       </div>
-                      <SmileyOptions selected="yes" />
+                      <SmileyOptions selected={currentAssessment?.threeSixty?.peerAssessment?.peerLiked || ""} />
                     </div>
                     <div className="col-span-3 border border-slate-800 p-1 text-center bg-white">
                       <div className="text-[11px] font-bold text-slate-800 mb-0.5">
                         सोपे वाटले.
                       </div>
-                      <SmileyOptions selected="yes" />
+                      <SmileyOptions selected={currentAssessment?.threeSixty?.peerAssessment?.peerFeltEasy || ""} />
                     </div>
                     <div className="col-span-6 border border-slate-800 p-1 text-center bg-white">
                       <div className="text-[11px] font-bold text-slate-800 mb-0.5">
                         करताना मदत लागते.
                       </div>
-                      <HelpOptions selected="peer" />
+                      <HelpOptions selected={currentAssessment?.threeSixty?.peerAssessment?.peerNeededHelpFrom?.[0] || ""} />
                     </div>
                   </div>
                 </div>
@@ -1564,12 +1597,17 @@ export function FoundationalHpcPdf({
                 <span className="font-black text-sm text-[#c85a28] mb-1">
                   जाणीवजागृती
                 </span>
-                <ProficiencyBadge level="आकाश" />
+                <ProficiencyBadge level={annualSummary?.areaSummaries?.["physical_health"]?.finalLevel || ""} />
                 <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 mt-1">
-                  <span className="text-sky-700">✓ ✨ आकाश</span>
-                  <span>⛰️ पर्वत</span>
-                  <span>प्रवाह</span>
-                  <span>पैलू</span>
+                  <span className={annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "advanced" ? "text-sky-700 font-bold" : "text-slate-600"}>
+                    {annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "advanced" ? "✓ " : "☐ "}✨ आकाश
+                  </span>
+                  <span className={annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "proficient" ? "text-emerald-700 font-bold" : "text-slate-600"}>
+                    {annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "proficient" ? "✓ " : "☐ "}⛰️ पर्वत
+                  </span>
+                  <span className={annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "beginner" ? "text-amber-700 font-bold" : "text-slate-600"}>
+                    {annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "beginner" ? "✓ " : "☐ "}प्रवाह
+                  </span>
                 </div>
               </div>
 
@@ -1579,16 +1617,20 @@ export function FoundationalHpcPdf({
                   <span className="font-black text-xs text-[#c85a28] block mb-0.5">
                     क्षेत्र 1 : शारीरिक विकास
                   </span>
-                  <p className="text-slate-800 leading-relaxed font-medium">
-                    {FOUNDATIONAL_AREA_DETAILS[0].qualitativeSummary}
+                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                    {annualSummary?.areaSummaries?.["physical_health"]?.qualitativeRemarks ||
+                     annualSummary?.areaSummaries?.["physical_health"]?.awarenessSummary ||
+                     ""}
                   </p>
                 </div>
                 <div>
                   <span className="font-black text-xs text-[#c85a28] block mb-0.5">
                     क्षेत्र 2 : सामाजिक, भावनिक आणि नैतिक विकास
                   </span>
-                  <p className="text-slate-800 leading-relaxed font-medium">
-                    {FOUNDATIONAL_AREA_DETAILS[1].qualitativeSummary}
+                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                    {annualSummary?.areaSummaries?.["socio_emotional"]?.qualitativeRemarks ||
+                     annualSummary?.areaSummaries?.["socio_emotional"]?.awarenessSummary ||
+                     ""}
                   </p>
                 </div>
               </div>
@@ -1601,12 +1643,17 @@ export function FoundationalHpcPdf({
                 <span className="font-black text-sm text-[#c85a28] mb-1">
                   संवेदनशीलता
                 </span>
-                <ProficiencyBadge level="आकाश" />
+                <ProficiencyBadge level={annualSummary?.areaSummaries?.["cognitive"]?.finalLevel || ""} />
                 <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 mt-1">
-                  <span className="text-sky-700">✓ ✨ आकाश</span>
-                  <span>⛰️ पर्वत</span>
-                  <span>प्रवाह</span>
-                  <span>पैलू</span>
+                  <span className={annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "advanced" ? "text-sky-700 font-bold" : "text-slate-600"}>
+                    {annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "advanced" ? "✓ " : "☐ "}✨ आकाश
+                  </span>
+                  <span className={annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "proficient" ? "text-emerald-700 font-bold" : "text-slate-600"}>
+                    {annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "proficient" ? "✓ " : "☐ "}⛰️ पर्वत
+                  </span>
+                  <span className={annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "beginner" ? "text-amber-700 font-bold" : "text-slate-600"}>
+                    {annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "beginner" ? "✓ " : "☐ "}प्रवाह
+                  </span>
                 </div>
               </div>
 
@@ -1616,16 +1663,20 @@ export function FoundationalHpcPdf({
                   <span className="font-black text-xs text-[#c85a28] block mb-0.5">
                     क्षेत्र 3 : बोधात्मक विकास
                   </span>
-                  <p className="text-slate-800 leading-relaxed font-medium">
-                    {FOUNDATIONAL_AREA_DETAILS[2].qualitativeSummary}
+                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                    {annualSummary?.areaSummaries?.["cognitive"]?.qualitativeRemarks ||
+                     annualSummary?.areaSummaries?.["cognitive"]?.sensitivitySummary ||
+                     ""}
                   </p>
                 </div>
                 <div>
                   <span className="font-black text-xs text-[#c85a28] block mb-0.5">
                     क्षेत्र 4 : भाषा आणि साक्षरता विकास
                   </span>
-                  <p className="text-slate-800 leading-relaxed font-medium">
-                    {FOUNDATIONAL_AREA_DETAILS[3].qualitativeSummary}
+                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                    {annualSummary?.areaSummaries?.["language_literacy"]?.qualitativeRemarks ||
+                     annualSummary?.areaSummaries?.["language_literacy"]?.sensitivitySummary ||
+                     ""}
                   </p>
                 </div>
               </div>
@@ -1638,12 +1689,17 @@ export function FoundationalHpcPdf({
                 <span className="font-black text-sm text-[#c85a28] mb-1">
                   सर्जनशीलता
                 </span>
-                <ProficiencyBadge level="आकाश" />
+                <ProficiencyBadge level={annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel || ""} />
                 <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 mt-1">
-                  <span className="text-sky-700">✓ ✨ आकाश</span>
-                  <span>⛰️ पर्वत</span>
-                  <span>प्रवाह</span>
-                  <span>पैलू</span>
+                  <span className={annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "advanced" ? "text-sky-700 font-bold" : "text-slate-600"}>
+                    {annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "advanced" ? "✓ " : "☐ "}✨ आकाश
+                  </span>
+                  <span className={annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "proficient" ? "text-emerald-700 font-bold" : "text-slate-600"}>
+                    {annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "proficient" ? "✓ " : "☐ "}⛰️ पर्वत
+                  </span>
+                  <span className={annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "beginner" ? "text-amber-700 font-bold" : "text-slate-600"}>
+                    {annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "beginner" ? "✓ " : "☐ "}प्रवाह
+                  </span>
                 </div>
               </div>
 
@@ -1653,16 +1709,20 @@ export function FoundationalHpcPdf({
                   <span className="font-black text-xs text-[#c85a28] block mb-0.5">
                     क्षेत्र 5 : सौंदर्यदृष्टी आणि सांस्कृतिक विकास
                   </span>
-                  <p className="text-slate-800 leading-relaxed font-medium">
-                    {FOUNDATIONAL_AREA_DETAILS[4].qualitativeSummary}
+                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                    {annualSummary?.areaSummaries?.["aesthetic_cultural"]?.qualitativeRemarks ||
+                     annualSummary?.areaSummaries?.["aesthetic_cultural"]?.creativitySummary ||
+                     ""}
                   </p>
                 </div>
                 <div>
                   <span className="font-black text-xs text-[#c85a28] block mb-0.5">
                     क्षेत्र 5.1 : सकारात्मक अध्ययन सवयी
                   </span>
-                  <p className="text-slate-800 leading-relaxed font-medium">
-                    {FOUNDATIONAL_AREA_DETAILS[5].qualitativeSummary}
+                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                    {annualSummary?.areaSummaries?.["positive_habits"]?.qualitativeRemarks ||
+                     annualSummary?.areaSummaries?.["positive_habits"]?.creativitySummary ||
+                     ""}
                   </p>
                 </div>
               </div>
@@ -1710,10 +1770,20 @@ export function FoundationalHpcPdf({
             <span className="font-black text-xs text-[#c85a28] block mb-2">
               शिक्षकांचा अंतिम सर्वकष वार्षिक अभिप्राय :
             </span>
-            <p className="text-xs font-medium text-slate-800 leading-relaxed px-1">
-              {annualSummary?.finalTeacherRemarks ||
-                "विद्यार्थी नियमित शाळेत उपस्थित राहतो. वर्गातील सर्व उपक्रम व खेळांमध्ये उत्साहाने भाग घेतो. सहकाऱ्यांशी प्रेमाने व आदराने वागतो. प्रगती समाधानकारक व कौतुकास्पद आहे."}
-            </p>
+            {annualSummary?.finalTeacherRemarks ? (
+              <p className="text-xs font-medium text-slate-800 leading-relaxed px-1">
+                {annualSummary.finalTeacherRemarks}
+              </p>
+            ) : (
+              <div className="space-y-4 px-1 flex-1 flex flex-col justify-around py-2">
+                <div className="border-b border-slate-300 h-5" />
+                <div className="border-b border-slate-300 h-5" />
+                <div className="border-b border-slate-300 h-5" />
+                <div className="border-b border-slate-300 h-5" />
+                <div className="border-b border-slate-300 h-5" />
+                <div className="border-b border-slate-300 h-5" />
+              </div>
+            )}
           </div>
 
           {/* NEP 2020 Principles Banner */}

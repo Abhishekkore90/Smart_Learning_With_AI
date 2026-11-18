@@ -81,13 +81,8 @@ function TeacherHpcReportsPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfProgress, setPdfProgress] = useState({ current: 0, total: 0, message: "" });
+  const [previewZoom, setPreviewZoom] = useState<number>(100);
   const previewContainerRef = useRef<HTMLDivElement>(null);
-
-  // Bulk Generation State
-  const [bulkGenerating, setBulkGenerating] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, studentName: "" });
-  const bulkContainerRef = useRef<HTMLDivElement>(null);
-  const [bulkRenderData, setBulkRenderData] = useState<any[]>([]);
 
   const stageId: HpcStageId = useMemo(() => {
     const match = CLASSES_LIST.find((c) => c.id === selectedClass);
@@ -141,7 +136,7 @@ function TeacherHpcReportsPage() {
   }, [students, searchQuery]);
 
   // Load preview data with Promise.allSettled for ultra-reliable loading
-  const handleOpenPreview = async (studentId: string) => {
+  const handleOpenPreview = async (studentId: string, autoDownload: boolean = false) => {
     setPreviewLoading(true);
     try {
       const existingStudent = students.find((s) => s.id === studentId);
@@ -176,7 +171,7 @@ function TeacherHpcReportsPage() {
       const att = attRes.status === "fulfilled" ? attRes.value : null;
       const school = schoolRes.status === "fulfilled" ? schoolRes.value : {};
 
-      setActivePreviewStudent({
+      const previewData = {
         student: st,
         profile: prof,
         session1: s1,
@@ -184,7 +179,15 @@ function TeacherHpcReportsPage() {
         annualSummary: ann,
         attendance: att,
         schoolSettings: school,
-      });
+      };
+
+      setActivePreviewStudent(previewData);
+
+      if (autoDownload) {
+        setTimeout(() => {
+          handleDownloadSinglePdf(previewData);
+        }, 600);
+      }
     } catch (err: any) {
       console.error("Preview load error:", err);
       toast.error("डेटा लोड करताना त्रुटी आली.");
@@ -194,11 +197,13 @@ function TeacherHpcReportsPage() {
   };
 
   // Download Single PDF
-  const handleDownloadSinglePdf = async () => {
+  const handleDownloadSinglePdf = async (customData?: any) => {
     if (!previewContainerRef.current) return;
     setPdfGenerating(true);
     try {
-      const filename = `HPC_${activePreviewStudent.student?.name}_Class_${selectedClass}.pdf`;
+      const currentStudent = customData || activePreviewStudent;
+      const studentName = currentStudent?.student?.name || "विद्यार्थी";
+      const filename = `HPC_${studentName}_Class_${selectedClass}.pdf`;
       const blob = await generateHpcPdf(
         previewContainerRef.current,
         filename,
@@ -207,83 +212,49 @@ function TeacherHpcReportsPage() {
         }
       );
       downloadBlob(blob, filename);
-      toast.success("HPC PDF यशस्वीरीत्या डाऊनलोड झाली!");
+      toast.success(`${studentName} चे HPC PDF यशस्वीरीत्या डाऊनलोड झाले!`);
     } catch (err: any) {
+      console.error("PDF generation error:", err);
       toast.error("PDF तयार करताना त्रुटी: " + err.message);
     } finally {
       setPdfGenerating(false);
     }
   };
 
-  // Class-wise Bulk PDF Generation
-  const handleBulkDownload = async () => {
-    if (students.length === 0) {
-      toast.error("या वर्गात कोणतेही विद्यार्थी नाहीत.");
+  // Direct Print / Save as PDF using system print dialogue
+  const handlePrint = () => {
+    if (!previewContainerRef.current) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      window.print();
       return;
     }
-
-    setBulkGenerating(true);
-    setBulkProgress({ current: 0, total: students.length, studentName: "तयारी सुरू आहे..." });
-
-    try {
-      const school = await getHpcSchoolSettings();
-      const allData: any[] = [];
-
-      for (let i = 0; i < students.length; i++) {
-        const st = students[i];
-        setBulkProgress({
-          current: i + 1,
-          total: students.length,
-          studentName: `${st.name} चा डेटा गोळा होत आहे...`,
-        });
-
-        const prof = await getHpcStudentProfile(st.id, academicYear);
-        const s1 = await getHpcSessionAssessment(st.id, academicYear, "session1");
-        const s2 = await getHpcSessionAssessment(st.id, academicYear, "session2");
-        const ann = await getHpcAnnualSummary(st.id, academicYear);
-        const att = await getHpcStudentAttendance(selectedClass, academicYear, st.id);
-
-        allData.push({
-          student: st,
-          profile: prof,
-          session1: s1,
-          session2: s2,
-          annualSummary: ann,
-          attendance: att,
-          schoolSettings: school,
-        });
-      }
-
-      setBulkRenderData(allData);
-
-      // Wait for rendering
-      await new Promise((r) => setTimeout(r, 600));
-
-      if (!bulkContainerRef.current) {
-        throw new Error("Bulk container element not ready");
-      }
-
-      const bulkFilename = `HPC_All_Students_Class_${selectedClass}_${academicYear}.pdf`;
-      const blob = await generateHpcPdf(
-        bulkContainerRef.current,
-        bulkFilename,
-        (cur, tot, msg) => {
-          setBulkProgress({
-            current: cur,
-            total: tot,
-            studentName: msg || "PDF पृष्ठे एकत्रित होत आहेत...",
-          });
-        }
-      );
-
-      downloadBlob(blob, bulkFilename);
-      toast.success(`इयत्ता ${selectedClass} सर्व विद्यार्थ्यांची एकत्रित PDF तयार झाली!`);
-    } catch (err: any) {
-      toast.error("एकत्रित PDF तयार करताना त्रुटी: " + err.message);
-    } finally {
-      setBulkGenerating(false);
-      setBulkRenderData([]);
-    }
+    const htmlContent = previewContainerRef.current.innerHTML;
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>HPC_${activePreviewStudent?.student?.name || "Report"}</title>
+          <style>
+            @page { size: A4 portrait; margin: 0; }
+            body { margin: 0; padding: 0; font-family: 'Noto Sans Devanagari', 'Nirmala UI', sans-serif; background: #fff; }
+            .pdf-page { width: 794px; height: 1123px; page-break-after: always; box-sizing: border-box; overflow: hidden; margin: 0 auto; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .pdf-page { page-break-after: always; }
+            }
+          </style>
+          <link rel="stylesheet" href="/src/styles.css">
+        </head>
+        <body>
+          ${htmlContent}
+          <script>
+            setTimeout(() => { window.print(); window.close(); }, 500);
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
@@ -321,11 +292,11 @@ function TeacherHpcReportsPage() {
             HPC समग्र प्रगतिपत्रक अहवाल व PDF
           </h1>
           <p className="text-xs text-slate-500 font-medium">
-            प्रत्येक विद्यार्थ्याचे वैयक्तिक कार्ड किंवा संपूर्ण वर्गाची एकत्रित A4 PDF डाऊनलोड करा
+            प्रत्येक विद्यार्थ्याचे वैयक्तिक समग्र प्रगतिपत्रक (HPC) A4 PDF डाऊनलोड करा
           </p>
         </div>
 
-        {/* Bulk Download & Class Selector */}
+        {/* Year & Class Selector */}
         <div className="flex items-center gap-3 flex-wrap">
           {/* Academic Year Selector */}
           <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-2xl border border-slate-200">
@@ -372,23 +343,6 @@ function TeacherHpcReportsPage() {
               ))}
             </select>
           </div>
-
-          <button
-            onClick={handleBulkDownload}
-            disabled={bulkGenerating || students.length === 0}
-            className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {bulkGenerating ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Download className="size-4" />
-            )}
-            <span>
-              {bulkGenerating
-                ? `एकत्रित PDF तयार होत आहे (${bulkProgress.current}/${bulkProgress.total})`
-                : "वर्गनिहाय एकत्रित PDF (Bulk Download)"}
-            </span>
-          </button>
         </div>
       </div>
 
@@ -457,7 +411,7 @@ function TeacherHpcReportsPage() {
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => handleOpenPreview(s.id)}
+                        onClick={() => handleOpenPreview(s.id, false)}
                         className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                       >
                         <Eye className="size-3.5" />
@@ -465,7 +419,7 @@ function TeacherHpcReportsPage() {
                       </button>
 
                       <button
-                        onClick={() => handleOpenPreview(s.id)}
+                        onClick={() => handleOpenPreview(s.id, true)}
                         className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
                       >
                         <Download className="size-3.5" />
@@ -482,23 +436,63 @@ function TeacherHpcReportsPage() {
 
       {/* ---------------- Single Student Preview Modal ---------------- */}
       {activePreviewStudent && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-900 text-white">
-              <div>
-                <h3 className="text-base font-black">
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden">
+          <div className="bg-slate-900 rounded-2xl sm:rounded-3xl w-full max-w-6xl h-[94vh] max-h-[94vh] flex flex-col shadow-2xl overflow-hidden border border-slate-700/80 animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-700/80 flex items-center justify-between bg-slate-900 text-white shrink-0">
+              <div className="min-w-0 pr-2">
+                <h3 className="text-sm sm:text-base font-black truncate">
                   समग्र प्रगतिपत्रक प्रिव्ह्यू: {activePreviewStudent.student?.name}
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 truncate">
                   {stageInfo.titleMarathi} | इयत्ता {selectedClass} | {academicYear}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Zoom Controls */}
+                <div className="hidden sm:flex items-center gap-1 bg-slate-800 px-2 py-1 rounded-xl border border-slate-700 text-xs">
+                  <button
+                    onClick={() => setPreviewZoom((z) => Math.max(50, z - 10))}
+                    className="px-2 py-0.5 rounded hover:bg-slate-700 text-slate-300 font-bold transition-colors cursor-pointer"
+                    title="झूम कमी करा"
+                  >
+                    -
+                  </button>
+                  <span className="px-1.5 font-mono text-[11px] text-slate-200 min-w-[36px] text-center">
+                    {previewZoom}%
+                  </span>
+                  <button
+                    onClick={() => setPreviewZoom((z) => Math.min(150, z + 10))}
+                    className="px-2 py-0.5 rounded hover:bg-slate-700 text-slate-300 font-bold transition-colors cursor-pointer"
+                    title="झूम वाढवा"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => setPreviewZoom(100)}
+                    className="px-1.5 py-0.5 text-[10px] text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    title="मूळ आकार (100%)"
+                  >
+                    100%
+                  </button>
+                </div>
+
+                {/* Direct Print / Save as PDF */}
                 <button
-                  onClick={handleDownloadSinglePdf}
+                  onClick={handlePrint}
+                  className="px-3 sm:px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer border border-slate-700 shadow-xs"
+                  title="थेट प्रिंट करा किंवा PDF सेव्ह करा"
+                >
+                  <Printer className="size-3.5" />
+                  <span className="hidden md:inline">प्रिंट / PDF सेव्ह</span>
+                </button>
+
+                {/* Download PDF Button */}
+                <button
+                  onClick={() => handleDownloadSinglePdf()}
                   disabled={pdfGenerating}
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-md shadow-emerald-950/20"
                 >
                   {pdfGenerating ? (
                     <Loader2 className="size-3.5 animate-spin" />
@@ -509,19 +503,33 @@ function TeacherHpcReportsPage() {
                     {pdfGenerating ? pdfProgress.message || "PDF तयार होत आहे..." : "PDF डाऊनलोड"}
                   </span>
                 </button>
+
+                {/* Close Button */}
                 <button
                   onClick={() => setActivePreviewStudent(null)}
                   className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                  title="बंद करा"
                 >
                   <X className="size-5" />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 flex justify-center">
+            {/* Modal Body / Report Container */}
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto p-4 sm:p-8 bg-slate-200/90 flex flex-col items-center">
+              <div className="mb-5 px-5 py-2.5 bg-white/95 backdrop-blur-md rounded-full text-xs font-black text-slate-800 border border-slate-300 shadow-xs flex items-center gap-2 shrink-0 sticky top-0 z-20">
+                <FileText className="size-4 text-indigo-600" />
+                <span>HPC समग्र प्रगतिपत्रक (एकूण १९ पृष्ठे) — खाली स्क्रोल करून सर्व पृष्ठे तपासा</span>
+              </div>
+
               <div
                 ref={previewContainerRef}
-                className="bg-white shadow-xl rounded-2xl overflow-hidden scale-[0.9] sm:scale-100 origin-top"
+                style={{
+                  transform: `scale(${previewZoom / 100})`,
+                  transformOrigin: "top center",
+                  marginBottom: previewZoom < 100 ? `-${(100 - previewZoom) * 180}px` : "24px",
+                }}
+                className="flex flex-col items-center transition-transform"
               >
                 {stageId === "foundational" ? (
                   <FoundationalHpcPdf
@@ -560,60 +568,6 @@ function TeacherHpcReportsPage() {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Hidden Bulk Container for Bulk PDF Generation */}
-      {bulkGenerating && bulkRenderData.length > 0 && (
-        <div
-          ref={bulkContainerRef}
-          style={{ position: "fixed", left: "-99999px", top: 0, opacity: 0 }}
-        >
-          {bulkRenderData.map((data, index) => {
-            if (stageId === "foundational") {
-              return (
-                <FoundationalHpcPdf
-                  key={data.student.id || index}
-                  student={data.student}
-                  profile={data.profile}
-                  session1={data.session1}
-                  session2={data.session2}
-                  annualSummary={data.annualSummary}
-                  attendance={data.attendance}
-                  schoolSettings={data.schoolSettings}
-                  academicYear={academicYear}
-                />
-              );
-            } else if (stageId === "preparatory") {
-              return (
-                <PreparatoryHpcPdf
-                  key={data.student.id || index}
-                  student={data.student}
-                  profile={data.profile}
-                  session1={data.session1}
-                  session2={data.session2}
-                  annualSummary={data.annualSummary}
-                  attendance={data.attendance}
-                  schoolSettings={data.schoolSettings}
-                  academicYear={academicYear}
-                />
-              );
-            } else {
-              return (
-                <MiddleHpcPdf
-                  key={data.student.id || index}
-                  student={data.student}
-                  profile={data.profile}
-                  session1={data.session1}
-                  session2={data.session2}
-                  annualSummary={data.annualSummary}
-                  attendance={data.attendance}
-                  schoolSettings={data.schoolSettings}
-                  academicYear={academicYear}
-                />
-              );
-            }
-          })}
         </div>
       )}
     </div>

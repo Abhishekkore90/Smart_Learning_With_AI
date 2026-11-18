@@ -7,6 +7,8 @@ import {
   setDoc,
   addDoc,
   deleteDoc,
+  updateDoc,
+  deleteField,
   query,
   where,
   onSnapshot,
@@ -645,6 +647,68 @@ export async function saveHpcStudentProfile(profile: HpcStudentProfile): Promise
   } catch (err) {
     console.error("Error saving HPC profile:", err);
     throw err;
+  }
+}
+
+/**
+ * Delete student photo from backend (hpc_student_profiles, users, and student_details)
+ */
+export async function deleteHpcStudentPhoto(studentId: string, academicYear: string): Promise<boolean> {
+  try {
+    const hpcDocId = `${studentId}_${academicYear}`;
+    const hpcRef = doc(db, "hpc_student_profiles", hpcDocId);
+    try {
+      const snap = await getDoc(hpcRef);
+      if (snap.exists()) {
+        await updateDoc(hpcRef, {
+          photoUrl: deleteField(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      console.warn("Could not delete photoUrl from hpc_student_profiles:", e);
+    }
+
+    try {
+      const userRef = doc(db, "users", studentId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        await updateDoc(userRef, {
+          photoUrl: deleteField(),
+        });
+      }
+    } catch (e) {
+      console.warn("Could not delete photoUrl from users:", e);
+    }
+
+    try {
+      const detailsRef = doc(db, "student_details", studentId);
+      const detailsSnap = await getDoc(detailsRef);
+      if (detailsSnap.exists()) {
+        await updateDoc(detailsRef, {
+          photoUrl: deleteField(),
+        });
+      }
+    } catch (e) {
+      console.warn("Could not delete photoUrl from student_details:", e);
+    }
+
+    try {
+      const studRef = doc(db, "students", studentId);
+      const studSnap = await getDoc(studRef);
+      if (studSnap.exists()) {
+        await updateDoc(studRef, {
+          photoUrl: deleteField(),
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Error deleting student photo:", err);
+    return false;
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Save,
@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Sparkles,
   Camera,
+  Trash2,
   Home,
   Check,
   Loader2,
@@ -48,6 +49,7 @@ import {
   getHpcStudentById,
   getHpcStudentProfile,
   saveHpcStudentProfile,
+  deleteHpcStudentPhoto,
   getHpcSchoolSettings,
   getHpcStudentAttendance,
   StudentInfoSummary,
@@ -361,6 +363,9 @@ export function HpcStudentProfileForm({
   const [age, setAge] = useState("");
   const [bloodGroup, setBloodGroup] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
+  const [deletingPhoto, setDeletingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef2 = useRef<HTMLInputElement>(null);
 
   // School context info
   const [schoolName, setSchoolName] = useState("");
@@ -412,9 +417,9 @@ export function HpcStudentProfileForm({
   const [parentPhone, setParentPhone] = useState("");
   const [fatherPhone, setFatherPhone] = useState("");
   const [motherPhone, setMotherPhone] = useState("");
-  const [areaType, setAreaType] = useState("ग्रामीण");
-  const [motherTongue, setMotherTongue] = useState("मराठी");
-  const [mediumOfInstruction, setMediumOfInstruction] = useState("मराठी");
+  const [areaType, setAreaType] = useState("");
+  const [motherTongue, setMotherTongue] = useState("");
+  const [mediumOfInstruction, setMediumOfInstruction] = useState("");
 
   // ---------------- SECTION 6: बँक खाते माहिती ----------------
   const [bankName, setBankName] = useState("");
@@ -485,7 +490,7 @@ export function HpcStudentProfileForm({
         setStudentClass(st.class || classId || "1st");
         setBloodGroup(st.bloodGroup || "");
         setCaste(st.caste || "");
-        setCategory(st.category || "खुला (OPEN)");
+        setCategory(st.category || "");
         setSaralId(st.saralId || "");
         setAadhaar(st.aadhaar || "");
         setAparId(st.aparId || "");
@@ -676,6 +681,27 @@ export function HpcStudentProfileForm({
     reader.readAsDataURL(file);
   };
 
+  const handleRemovePhoto = async () => {
+    if (!window.confirm("तुम्हाला खात्री आहे का? हा विद्यार्थी फोटो कायमचा काढून टाकायचा आहे?")) {
+      return;
+    }
+    setDeletingPhoto(true);
+    try {
+      setPhotoUrl("");
+      setStudent((prev) => (prev ? { ...prev, photoUrl: "" } : prev));
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (fileInputRef2.current) fileInputRef2.current.value = "";
+
+      await deleteHpcStudentPhoto(studentId, academicYear);
+      toast.success("विद्यार्थी फोटो यशस्वीरीत्या काढला व डेटाबेसमधून हटवला गेला!");
+    } catch (err: any) {
+      console.error("Photo delete error:", err);
+      toast.error("फोटो हटवताना त्रुटी: " + (err?.message || ""));
+    } finally {
+      setDeletingPhoto(false);
+    }
+  };
+
   const handleAttendanceChange = (monthKey: string, valStr: string) => {
     const totalAllowed = workingDays[monthKey] || 31;
     const clean = valStr.replace(/[^0-9]/g, "");
@@ -854,13 +880,30 @@ export function HpcStudentProfileForm({
       {/* ================= TOP PROFILE HEADER CARD ================= */}
       <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="size-16 rounded-2xl bg-gradient-to-tr from-emerald-700 to-teal-800 text-white flex items-center justify-center font-black text-2xl shadow-md overflow-hidden flex-shrink-0 border-2 border-emerald-100">
-            {photoUrl ? (
-              <img src={photoUrl} alt={fullName} className="w-full h-full object-cover" />
-            ) : student?.photoUrl ? (
-              <img src={student.photoUrl} alt={fullName} className="w-full h-full object-cover" />
-            ) : (
-              fullName?.charAt(0) || "वि"
+          <div className="relative">
+            <div className="size-16 rounded-2xl bg-gradient-to-tr from-emerald-700 to-teal-800 text-white flex items-center justify-center font-black text-2xl shadow-md overflow-hidden flex-shrink-0 border-2 border-emerald-100">
+              {photoUrl ? (
+                <img src={photoUrl} alt={fullName} className="w-full h-full object-cover" />
+              ) : student?.photoUrl ? (
+                <img src={student.photoUrl} alt={fullName} className="w-full h-full object-cover" />
+              ) : (
+                fullName?.charAt(0) || "वि"
+              )}
+            </div>
+            {(photoUrl || student?.photoUrl) && (
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                disabled={deletingPhoto}
+                title="विद्यार्थी फोटो हटवा (Delete Photo)"
+                className="absolute -top-1.5 -right-1.5 size-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center shadow-md cursor-pointer transition-transform hover:scale-110 active:scale-95 disabled:opacity-50"
+              >
+                {deletingPhoto ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <Trash2 className="size-3" />
+                )}
+              </button>
             )}
           </div>
           <div>
@@ -1111,13 +1154,22 @@ export function HpcStudentProfileForm({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    विद्यार्थी फोटो
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span>विद्यार्थी फोटो</span>
+                    {(photoUrl || student?.photoUrl) && (
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        फोटो जोडला आहे ✓
+                      </span>
+                    )}
                   </label>
-                  <div className="flex items-center gap-2">
-                    <label className="cursor-pointer size-10 rounded-xl border-2 border-dashed border-sky-400 bg-sky-50 hover:bg-sky-100 flex items-center justify-center text-sky-700 transition-colors flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label
+                      className="cursor-pointer size-10 rounded-xl border-2 border-dashed border-sky-400 bg-sky-50 hover:bg-sky-100 flex items-center justify-center text-sky-700 transition-colors flex-shrink-0"
+                      title="नवीन फोटो निवडा"
+                    >
                       <Camera className="size-5" />
                       <input
+                        ref={fileInputRef}
                         type="file"
                         accept="image/*"
                         onChange={handlePhotoUpload}
@@ -1125,11 +1177,37 @@ export function HpcStudentProfileForm({
                       />
                     </label>
                     <input
+                      ref={fileInputRef2}
                       type="file"
                       accept="image/*"
                       onChange={handlePhotoUpload}
-                      className="text-xs text-slate-600 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-800 hover:file:bg-slate-200 cursor-pointer w-full"
+                      className="text-xs text-slate-600 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-800 hover:file:bg-slate-200 cursor-pointer flex-1 min-w-[140px]"
                     />
+                    {(photoUrl || student?.photoUrl) && (
+                      <div className="flex items-center gap-2 bg-rose-50/80 px-2.5 py-1.5 rounded-xl border border-rose-200/80">
+                        <div className="size-7 rounded-lg overflow-hidden border border-rose-300 bg-white shrink-0">
+                          <img
+                            src={photoUrl || student?.photoUrl}
+                            alt="विद्यार्थी फोटो"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemovePhoto}
+                          disabled={deletingPhoto}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+                          title="फोटो पूर्णपणे काढून टाका व डेटाबेसमधून हटवा"
+                        >
+                          {deletingPhoto ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="size-3.5" />
+                          )}
+                          <span>फोटो काढा (Delete)</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
