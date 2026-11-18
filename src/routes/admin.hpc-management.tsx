@@ -19,7 +19,6 @@ import {
   GraduationCap,
   Loader2,
   Upload,
-  Download,
   FileSpreadsheet,
   FileText,
   CheckCircle2,
@@ -33,6 +32,9 @@ import {
   ChevronDown,
   ChevronRight,
   Filter,
+  LayoutDashboard,
+  Table as TableIcon,
+  LayoutGrid,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Header } from "@/components/Header";
@@ -85,6 +87,10 @@ import {
   deleteAllHpcCompetencies,
 } from "@/hpc/services/hpcService";
 import { HPC_ACTIVITIES_BANK } from "@/hpc/data/hpcActivitiesBank";
+import {
+  HPC_FINAL_COMPREHENSIVE_REMARKS,
+  HPC_NEXT_CLASS_RECOMMENDATIONS,
+} from "@/hpc/data/hpcFinalRemarksBank";
 
 export const Route = createFileRoute("/admin/hpc-management")({
   head: () => ({
@@ -93,14 +99,46 @@ export const Route = createFileRoute("/admin/hpc-management")({
   component: AdminHpcManagementPage,
 });
 
-type TabType = "goals" | "competencies" | "activities" | "excel_sync" | "remarks" | "rubrics";
+type TabType = "overview" | "excel_sync";
+type DashboardSection = "activities" | "goals_competencies" | "rubrics" | "remarks";
+
+const STAGE_CLASSES_MAP: Record<HpcStageId, { id: string; label: string }[]> = {
+  foundational: [
+    { id: "all", label: "सर्व वर्ग (इ. १ली व २री)" },
+    { id: "1st", label: "इयत्ता १ ली" },
+    { id: "2nd", label: "इयत्ता २ री" },
+  ],
+  preparatory: [
+    { id: "all", label: "सर्व वर्ग (इ. ३री ते ५वी)" },
+    { id: "3rd", label: "इयत्ता ३ री" },
+    { id: "4th", label: "इयत्ता ४ थी" },
+    { id: "5th", label: "इयत्ता ५ वी" },
+  ],
+  middle: [
+    { id: "all", label: "सर्व वर्ग (इ. ६वी ते ८वी)" },
+    { id: "6th", label: "इयत्ता ६ वी" },
+    { id: "7th", label: "इयत्ता ७ वी" },
+    { id: "8th", label: "इयत्ता ८ वी" },
+  ],
+};
 
 function AdminHpcManagementPage() {
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<TabType>("activities");
+  const [activeTab, setActiveTab] = useState<TabType>("overview");
+  const [dashboardSection, setDashboardSection] = useState<DashboardSection>("activities");
+  const [goalsOrCompSubtab, setGoalsOrCompSubtab] = useState<"goals" | "competencies">("competencies");
   const [selectedStage, setSelectedStage] = useState<HpcStageId>("foundational");
+  const [selectedUploadStage, setSelectedUploadStage] = useState<HpcStageId>("foundational");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Master Explorer & Overview State
+  const [explorerClassFilter, setExplorerClassFilter] = useState<string>("all");
+  const [explorerStageFilter, setExplorerStageFilter] = useState<string>("all");
+  const [explorerSubjectFilter, setExplorerSubjectFilter] = useState<string>("all");
+  const [explorerViewMode, setExplorerViewMode] = useState<"table" | "cards">("table");
+  const [viewingActivityModal, setViewingActivityModal] = useState<HpcDynamicActivity | null>(null);
+  const [showMatrix, setShowMatrix] = useState<boolean>(true);
 
   // Custom goals & competencies from Firestore
   const [customGoals, setCustomGoals] = useState<HpcCurricularGoal[]>([]);
@@ -128,6 +166,107 @@ function AdminHpcManagementPage() {
     });
     return counts;
   }, [activitiesList]);
+
+  // Total evaluation questions count across all activities
+  const totalQuestionsCount = useMemo(() => {
+    return activitiesList.reduce((sum, act) => sum + (act.questions?.filter((q) => q && q.trim())?.length || 0), 0);
+  }, [activitiesList]);
+
+  // Unique subjects list across all activities
+  const uniqueSubjects = useMemo(() => {
+    const subs = new Set<string>();
+    activitiesList.forEach((a) => {
+      if (a.subjectOrArea && a.subjectOrArea.trim()) subs.add(a.subjectOrArea.trim());
+    });
+    return Array.from(subs).sort();
+  }, [activitiesList]);
+
+  // Unique classes list from activities
+  const uniqueClasses = useMemo(() => {
+    const cls = new Set<string>();
+    activitiesList.forEach((a) => {
+      if (a.classId && a.classId.trim()) cls.add(a.classId.trim());
+    });
+    return Array.from(cls).sort();
+  }, [activitiesList]);
+
+  // Stage breakdown
+  const stageBreakdown = useMemo(() => {
+    const stats: Record<HpcStageId, { activities: number; questions: number; subjects: Set<string> }> = {
+      foundational: { activities: 0, questions: 0, subjects: new Set() },
+      preparatory: { activities: 0, questions: 0, subjects: new Set() },
+      middle: { activities: 0, questions: 0, subjects: new Set() },
+    };
+    activitiesList.forEach((a) => {
+      const stg = a.stageId || "foundational";
+      if (stats[stg]) {
+        stats[stg].activities++;
+        stats[stg].questions += a.questions?.filter((q) => q && q.trim())?.length || 0;
+        if (a.subjectOrArea) stats[stg].subjects.add(a.subjectOrArea.trim());
+      }
+    });
+    return stats;
+  }, [activitiesList]);
+
+  // Class & Subject matrix for visualization
+  const classSubjectMatrix = useMemo(() => {
+    const matrix: Record<string, Record<string, number>> = {};
+    const classes = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
+    classes.forEach((c) => {
+      matrix[c] = {};
+    });
+    activitiesList.forEach((a) => {
+      const targetClasses: string[] =
+        a.classId && a.classId !== "all"
+          ? [a.classId]
+          : a.stageId === "foundational"
+          ? ["1st", "2nd"]
+          : a.stageId === "preparatory"
+          ? ["3rd", "4th", "5th"]
+          : ["6th", "7th", "8th"];
+
+      const sub = a.subjectOrArea || "इतर";
+      targetClasses.forEach((c) => {
+        if (!matrix[c]) matrix[c] = {};
+        matrix[c][sub] = (matrix[c][sub] || 0) + 1;
+      });
+    });
+    return matrix;
+  }, [activitiesList]);
+
+  // Master Explorer filtered activities
+  const masterExplorerActivities = useMemo(() => {
+    return activitiesList.filter((act) => {
+      // Stage filter
+      if (explorerStageFilter !== "all" && act.stageId !== explorerStageFilter) return false;
+      // Class filter
+      if (explorerClassFilter !== "all") {
+        const stageForClass = ["1st", "2nd"].includes(explorerClassFilter)
+          ? "foundational"
+          : ["3rd", "4th", "5th"].includes(explorerClassFilter)
+          ? "preparatory"
+          : "middle";
+        if (act.stageId && act.stageId !== stageForClass) return false;
+        if (act.classId && act.classId !== "all" && act.classId !== explorerClassFilter) return false;
+      }
+      // Subject filter
+      if (explorerSubjectFilter !== "all" && act.subjectOrArea !== explorerSubjectFilter) return false;
+      // Universal Search
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return true;
+      return (
+        act.activityTitle?.toLowerCase().includes(q) ||
+        act.activityDescription?.toLowerCase().includes(q) ||
+        act.competencyCode?.toLowerCase().includes(q) ||
+        act.competencyTitle?.toLowerCase().includes(q) ||
+        act.goalCode?.toLowerCase().includes(q) ||
+        act.subjectOrArea?.toLowerCase().includes(q) ||
+        act.classId?.toLowerCase().includes(q) ||
+        act.questions?.some((qu) => qu?.toLowerCase().includes(q)) ||
+        act.learningOutcomes?.some((lo) => lo?.toLowerCase().includes(q))
+      );
+    });
+  }, [activitiesList, explorerStageFilter, explorerClassFilter, explorerSubjectFilter, searchQuery]);
 
   // Excel Upload & Sync State
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -196,6 +335,7 @@ function AdminHpcManagementPage() {
   const [remLevel, setRemLevel] = useState<string>("प्रगत");
   const [remText, setRemText] = useState("");
   const [remarkAreaFilter, setRemarkAreaFilter] = useState<string>("all");
+  const [remarkTypeFilter, setRemarkTypeFilter] = useState<string>("all");
 
   const areas = getAreasForStage(selectedStage);
 
@@ -392,6 +532,17 @@ function AdminHpcManagementPage() {
   // Filtered Remarks
   const filteredRemarks = useMemo(() => {
     return remarksList.filter((rem) => {
+      const matchesType =
+        remarkTypeFilter === "all" ||
+        (rem as any).type === remarkTypeFilter ||
+        (remarkTypeFilter === "final_comprehensive" &&
+          (rem.subjectOrArea === "अंतिम सर्वंकष वार्षिक अभिप्राय" || rem.subjectOrArea?.includes("अंतिम"))) ||
+        (remarkTypeFilter === "next_class_recommendation" &&
+          (rem.subjectOrArea === "पुढील इयत्तेसाठी मार्गदर्शन व शिफारस" || rem.subjectOrArea?.includes("शिफारस"))) ||
+        (remarkTypeFilter === "developmental_area" &&
+          rem.subjectOrArea !== "अंतिम सर्वंकष वार्षिक अभिप्राय" &&
+          rem.subjectOrArea !== "पुढील इयत्तेसाठी मार्गदर्शन व शिफारस");
+
       const matchesLevel = remarkLevelFilter === "all" || rem.level === remarkLevelFilter;
       const matchesArea = remarkAreaFilter === "all" || rem.subjectOrArea === remarkAreaFilter;
       const q = searchQuery.toLowerCase().trim();
@@ -399,9 +550,9 @@ function AdminHpcManagementPage() {
         !q ||
         (rem.subjectOrArea && rem.subjectOrArea.toLowerCase().includes(q)) ||
         (rem.remarkText && rem.remarkText.toLowerCase().includes(q));
-      return matchesLevel && matchesArea && matchesQuery;
+      return matchesType && matchesLevel && matchesArea && matchesQuery;
     });
-  }, [remarksList, remarkLevelFilter, remarkAreaFilter, searchQuery]);
+  }, [remarksList, remarkTypeFilter, remarkLevelFilter, remarkAreaFilter, searchQuery]);
 
   // Handle Add Goal
   const handleAddGoal = async () => {
@@ -820,6 +971,22 @@ function AdminHpcManagementPage() {
     reader.readAsBinaryString(file);
   };
 
+  const GOAL_TO_AREA_MAP: Record<string, string> = {
+    "CG-1": "शारीरिक विकास",
+    "CG-2": "शारीरिक विकास",
+    "CG-3": "शारीरिक विकास",
+    "CG-4": "सामाजिक, भावनिक व नैतिक विकास",
+    "CG-5": "सामाजिक, भावनिक व नैतिक विकास",
+    "CG-6": "सामाजिक, भावनिक व नैतिक विकास",
+    "CG-7": "बोधात्मक विकास",
+    "CG-8": "बोधात्मक विकास",
+    "CG-9": "भाषा आणि साक्षरता विकास",
+    "CG-10": "भाषा आणि साक्षरता विकास",
+    "CG-11": "भाषा आणि साक्षरता विकास",
+    "CG-12": "सौंदर्यदृष्टी आणि सांस्कृतिक विकास",
+    "CG-13": "सकारात्मक अध्ययन सवयी",
+  };
+
   const cleanActivityTitle = (text: string): string => {
     if (!text) return "";
     return text
@@ -840,360 +1007,223 @@ function AdminHpcManagementPage() {
       const sheet = wb.Sheets[sheetName];
       if (!sheet) return;
 
-      const rawRows: any[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-      if (rawRows.length === 0) return;
+      const headerRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+      if (headerRows.length === 0) return;
 
       const lowerName = sheetName.toLowerCase();
-      const isRubricSheet =
+
+      // Determine initial section guess from sheet name if specific
+      let currentSection:
+        | "activities"
+        | "rubrics"
+        | "developmental_remarks"
+        | "final_comprehensive"
+        | "next_class_recommendation" = "activities";
+
+      if (
         lowerName.includes("रुब्रिक") ||
         lowerName.includes("निकष") ||
         lowerName.includes("rubric") ||
-        lowerName.includes("मूल्यांकन");
-
-      const isFinalRemarksSheet =
+        lowerName.includes("मूल्यांकन") ||
+        lowerName.includes("sheet2") ||
+        lowerName.includes("sheet 2") ||
+        lowerName.includes("शीट 2") ||
+        lowerName.includes("शीट2")
+      ) {
+        currentSection = "rubrics";
+      } else if (
+        lowerName.includes("शीट 4") ||
+        lowerName.includes("sheet 4") ||
+        lowerName.includes("sheet4") ||
+        lowerName.includes("शीट4") ||
         lowerName.includes("अंतिम") ||
         lowerName.includes("सर्वंकष") ||
         lowerName.includes("final") ||
-        lowerName.includes("comprehensive") ||
-        lowerName.includes("शीट 4") ||
-        lowerName.includes("sheet 4");
-
-      const isRecommendationsSheet =
+        lowerName.includes("comprehensive")
+      ) {
+        currentSection = "final_comprehensive";
+      } else if (
+        lowerName.includes("शीट 5") ||
+        lowerName.includes("sheet 5") ||
+        lowerName.includes("sheet5") ||
+        lowerName.includes("शीट5") ||
         lowerName.includes("शिफारस") ||
         lowerName.includes("मार्गदर्शन") ||
-        lowerName.includes("recommendation") ||
-        lowerName.includes("शीट 5") ||
-        lowerName.includes("sheet 5");
-
-      const isRemarksSheet =
-        !isFinalRemarksSheet &&
-        !isRecommendationsSheet &&
-        (lowerName.includes("वार्षिक") ||
-          lowerName.includes("सारांश") ||
-          lowerName.includes("अभिप्राय") ||
-          lowerName.includes("remark") ||
-          lowerName.includes("विकासक्षेत्र"));
-
-      const hasActivityCol = rawRows.some(
-        (r) => r["उपक्रम (थोडक्यात कृतीसह)"] || (r["उपक्रम"] && !isRubricSheet)
-      );
-
-      // 1. RUBRICS SHEET
-      if (isRubricSheet) {
-        let currAct = "";
-        let currGoal = "";
-        let currComp = "";
-
-        // Header array parser for format: ['उपक्रम', 'क्षमता', 'निर्झर', 'पर्वत', 'आकाश']
-        const headerRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-        for (let rIdx = 1; rIdx < headerRows.length; rIdx++) {
-          const rowArr = headerRows[rIdx];
-          if (!rowArr || rowArr.length === 0) continue;
-
-          const c0 = String(rowArr[0] || "").trim();
-          const c1 = String(rowArr[1] || "").trim();
-          const c2 = String(rowArr[2] || "").trim();
-          const c3 = String(rowArr[3] || "").trim();
-          const c4 = String(rowArr[4] || "").trim();
-
-          // Goal header row e.g. "ध्येय: CG-1 ..."
-          if (c0.startsWith("ध्येय:") || c0.startsWith("ध्येय :") || /^(CG-[0-9]+|ध्येय)/.test(c0)) {
-            const gMatch = c0.match(/CG-[0-9]+/);
-            if (gMatch) currGoal = gMatch[0];
-            continue;
-          }
-
-          // Competency header row e.g. "क्षमता: C-1.1 ..."
-          if (c0.startsWith("क्षमता:") || c0.startsWith("क्षमता :") || /^(C-[0-9]+(\.[0-9]+)?|क्षमता)/.test(c0)) {
-            const cMatch = c0.match(/C-[0-9]+(\.[0-9]+)?/);
-            if (cMatch) currComp = cMatch[0];
-            continue;
-          }
-
-          if (c0) {
-            currAct = c0;
-          }
-
-          if (c1 && (c2 || c3 || c4)) {
-            allRubrics.push({
-              id: `rub_${currComp || "comp"}_${rIdx}_${Date.now()}`,
-              stageId: selectedStage,
-              goalCode: currGoal,
-              competencyCode: currComp,
-              activityTitle: cleanActivityTitle(currAct) || currAct,
-              dimension: c1,
-              beginner: c2,
-              proficient: c3,
-              advanced: c4,
-              createdAt: new Date().toISOString(),
-            });
-          }
-        }
-
-        // Object-based fallback if headerRows didn't match
-        if (allRubrics.length === 0) {
-          rawRows.forEach((row, idx) => {
-            const act = String(row["उपक्रम"] || row["उपक्रमाचे नाव"] || row["Activity"] || "").trim();
-            const goal = String(row["ध्येय"] || row["ध्येय कोड"] || row["Goal"] || "").trim();
-            const comp = String(row["क्षमता कोड"] || row["क्षमता"] || row["Competency"] || "").trim();
-            const dim = String(
-              row["क्षमता / पैलू"] ||
-                row["पैलू"] ||
-                row["निकष"] ||
-                row["परिमाण"] ||
-                row["Dimension"] ||
-                row["क्षमता"] ||
-                ""
-            ).trim();
-            const beg = String(row["प्रारंभिक"] || row["प्रवाह"] || row["निर्झर"] || row["Beginner"] || "").trim();
-            const pro = String(row["प्रवीण"] || row["पर्वत"] || row["Proficient"] || "").trim();
-            const adv = String(row["प्रगत"] || row["आकाश"] || row["Advanced"] || "").trim();
-
-            if (act.startsWith("ध्येय:") || act.startsWith("ध्येय :")) {
-              const gMatch = act.match(/CG-[0-9]+/);
-              if (gMatch) currGoal = gMatch[0];
-              return;
-            }
-            if (goal) {
-              const gMatch = goal.match(/CG-[0-9]+/);
-              if (gMatch) currGoal = gMatch[0];
-            }
-
-            if (act.startsWith("क्षमता:") || act.startsWith("क्षमता :")) {
-              const cMatch = act.match(/C-[0-9]+(\.[0-9]+)?/);
-              if (cMatch) currComp = cMatch[0];
-              return;
-            }
-            if (comp && !["जाणीवजागृती", "संवेदनशीलता", "सर्जनशीलता"].includes(comp)) {
-              const cMatch = comp.match(/C-[0-9]+(\.[0-9]+)?/);
-              if (cMatch) currComp = cMatch[0];
-            }
-
-            if (act && !act.startsWith("ध्येय:") && !act.startsWith("क्षमता:")) currAct = act;
-
-            if (dim && (beg || pro || adv)) {
-              allRubrics.push({
-                id: `rub_${currComp || "comp"}_${idx}_${Date.now()}`,
-                stageId: selectedStage,
-                goalCode: currGoal,
-                competencyCode: currComp,
-                activityTitle: cleanActivityTitle(currAct) || currAct,
-                dimension: dim,
-                beginner: beg,
-                proficient: pro,
-                advanced: adv,
-                createdAt: new Date().toISOString(),
-              });
-            }
-          });
-        }
+        lowerName.includes("recommendation")
+      ) {
+        currentSection = "next_class_recommendation";
+      } else if (
+        lowerName.includes("शीट 3") ||
+        lowerName.includes("sheet 3") ||
+        lowerName.includes("sheet3") ||
+        lowerName.includes("शीट3") ||
+        lowerName.includes("वार्षिक") ||
+        lowerName.includes("सारांश") ||
+        lowerName.includes("शेरे") ||
+        lowerName.includes("विकासक्षेत्र") ||
+        lowerName.includes("development")
+      ) {
+        currentSection = "developmental_remarks";
       }
-      // 2. FINAL COMPREHENSIVE REMARKS SHEET (Sheet 4)
-      else if (isFinalRemarksSheet) {
-        const headerRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-        for (let rIdx = 1; rIdx < headerRows.length; rIdx++) {
-          const rowArr = headerRows[rIdx];
-          if (!rowArr || rowArr.length === 0) continue;
 
-          const level = String(rowArr[1] || rowArr[0] || "").trim();
-          const remarkText = String(rowArr[2] || rowArr[1] || "").trim();
+      // State variables across rows in this sheet
+      let currSub = "";
+      let currGoalCode = "";
+      let currGoalTitle = "";
+      let currCompCode = "";
+      let currCompTitle = "";
+      let currLoList: string[] = [];
+      let currLoText = "";
+      let lastAct: HpcDynamicActivity | null = null;
 
-          if (level && remarkText && remarkText !== level) {
-            const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
-            allRemarks.push({
-              id: `final_rem_${cleanLvl}_${rIdx}`,
-              stageId: selectedStage,
-              subjectOrArea: "अंतिम सर्वंकष वार्षिक अभिप्राय",
-              level,
-              remarkText,
-              type: "final_comprehensive" as any,
-              createdAt: new Date().toISOString(),
-            });
-          }
+      // Rubric section state
+      let currRubAct = "";
+      let currRubGoal = "";
+      let currRubComp = "";
+
+      // Developmental remarks state
+      let currDevArea = "";
+
+      // Column mapping for activities table
+      let colSubIdx = -1;
+      let colGoalIdx = -1;
+      let colCompIdx = -1;
+      let colLoIdx = -1;
+      let colActIdx = -1;
+      let colQIdx = -1;
+      let colTeacherIdx = -1;
+      let colParentIdx = -1;
+
+      for (let rIdx = 0; rIdx < headerRows.length; rIdx++) {
+        const rowArr = headerRows[rIdx];
+        if (!rowArr || rowArr.length === 0) continue;
+
+        const rowStr = rowArr.map((c) => String(c || "").trim()).join(" , ");
+        const c0 = String(rowArr[0] || "").trim();
+        const c1 = String(rowArr[1] || "").trim();
+        const c2 = String(rowArr[2] || "").trim();
+        const c3 = String(rowArr[3] || "").trim();
+        const c4 = String(rowArr[4] || "").trim();
+
+        // ----------------- SECTION TRANSITION DETECTORS -----------------
+        // 1. Rubrics Table Header Detection
+        if (
+          (rowStr.includes("निर्झर") && rowStr.includes("पर्वत") && rowStr.includes("आकाश")) ||
+          (rowStr.includes("प्रारंभिक") && rowStr.includes("प्रवीण") && rowStr.includes("प्रगत")) ||
+          (rowArr.some((c) => String(c).includes("उपक्रम")) &&
+            rowArr.some((c) => String(c).includes("क्षमता") || String(c).includes("पैलू")) &&
+            rowArr.some((c) => String(c).includes("निर्झर") || String(c).includes("प्रारंभिक")))
+        ) {
+          currentSection = "rubrics";
+          continue;
         }
 
-        if (allRemarks.filter((r) => r.subjectOrArea === "अंतिम सर्वंकष वार्षिक अभिप्राय").length === 0) {
-          rawRows.forEach((row, idx) => {
-            const level = String(row["कामगिरी स्तर"] || row["स्तर"] || "").trim();
-            const remarkText = String(
-              row["शिक्षकांचा अंतिम सर्वंकष वार्षिक अभिप्राय"] ||
-                row["शिक्षकांचा अभिप्राय"] ||
-                row["अभिप्राय"] ||
-                ""
-            ).trim();
-
-            if (level && remarkText) {
-              const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
-              allRemarks.push({
-                id: `final_rem_${cleanLvl}_${idx}`,
-                stageId: selectedStage,
-                subjectOrArea: "अंतिम सर्वंकष वार्षिक अभिप्राय",
-                level,
-                remarkText,
-                type: "final_comprehensive" as any,
-                createdAt: new Date().toISOString(),
-              });
-            }
-          });
-        }
-      }
-      // 3. NEXT CLASS RECOMMENDATIONS SHEET (Sheet 5)
-      else if (isRecommendationsSheet) {
-        const headerRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-        for (let rIdx = 1; rIdx < headerRows.length; rIdx++) {
-          const rowArr = headerRows[rIdx];
-          if (!rowArr || rowArr.length === 0) continue;
-
-          const level = String(rowArr[1] || rowArr[0] || "").trim();
-          const remarkText = String(rowArr[2] || rowArr[1] || "").trim();
-
-          if (level && remarkText && remarkText !== level) {
-            const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
-            allRemarks.push({
-              id: `next_rec_${cleanLvl}_${rIdx}`,
-              stageId: selectedStage,
-              subjectOrArea: "पुढील इयत्तेसाठी मार्गदर्शन व शिफारस",
-              level,
-              remarkText,
-              recommendationText: remarkText,
-              type: "next_class_recommendation" as any,
-              createdAt: new Date().toISOString(),
-            });
-          }
+        // 2. Final Comprehensive Remarks Table Header Detection (Sheet 4)
+        if (
+          rowStr.includes("शीट 4") ||
+          rowStr.includes("शिक्षकांचा अंतिम सर्वंकष वार्षिक अभिप्राय") ||
+          (rowStr.includes("अंतिम") && rowStr.includes("सर्वंकष") && rowStr.includes("अभिप्राय"))
+        ) {
+          currentSection = "final_comprehensive";
+          continue;
         }
 
-        if (allRemarks.filter((r) => r.subjectOrArea === "पुढील इयत्तेसाठी मार्गदर्शन व शिफारस").length === 0) {
-          rawRows.forEach((row, idx) => {
-            const level = String(row["कामगिरी स्तर"] || row["स्तर"] || "").trim();
-            const remarkText = String(
-              row["पुढील इयत्तेसाठी विद्यार्थ्यास मार्गदर्शन, शिफारस व सुधारावयाच्या बाबी"] ||
-                row["पुढील इयत्तेसाठी मार्गदर्शन व शिफारस"] ||
-                row["मार्गदर्शन"] ||
-                row["शिफारस"] ||
-                ""
-            ).trim();
-
-            if (level && remarkText) {
-              const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
-              allRemarks.push({
-                id: `next_rec_${cleanLvl}_${idx}`,
-                stageId: selectedStage,
-                subjectOrArea: "पुढील इयत्तेसाठी मार्गदर्शन व शिफारस",
-                level,
-                remarkText,
-                recommendationText: remarkText,
-                type: "next_class_recommendation" as any,
-                createdAt: new Date().toISOString(),
-              });
-            }
-          });
+        // 3. Next Class Recommendation Table Header Detection (Sheet 5)
+        if (
+          rowStr.includes("शीट 5") ||
+          rowStr.includes("पुढील इयत्तेसाठी मार्गदर्शन व शिफारस") ||
+          rowStr.includes("पुढील इयत्तेसाठी विद्यार्थ्यास मार्गदर्शन") ||
+          rowStr.includes("सुधारावयाच्या बाबी")
+        ) {
+          currentSection = "next_class_recommendation";
+          continue;
         }
-      }
-      // 4. DEVELOPMENTAL AREA REMARKS SHEET (Sheet 3)
-      else if (isRemarksSheet) {
-        let currSub = "";
-        const headerRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-        for (let rIdx = 1; rIdx < headerRows.length; rIdx++) {
-          const rowArr = headerRows[rIdx];
-          if (!rowArr || rowArr.length === 0) continue;
 
-          const c0 = String(rowArr[0] || "").trim();
-          const c1 = String(rowArr[1] || "").trim();
-          const c2 = String(rowArr[2] || "").trim();
-          const c3 = String(rowArr[3] || "").trim();
-
+        // 4. Developmental Area Remarks Table Header Detection (Sheet 3)
+        if (
+          rowStr.includes("शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)") ||
+          (rowStr.includes("विकास क्षेत्र") &&
+            rowStr.includes("कामगिरी स्तर") &&
+            rowStr.includes("शिक्षकांचा अभिप्राय")) ||
+          c0.startsWith("विकास क्षेत्र:") ||
+          c0.startsWith("विकास क्षेत्र :")
+        ) {
+          currentSection = "developmental_remarks";
           if (c0.startsWith("विकास क्षेत्र:") || c0.startsWith("विकास क्षेत्र :")) {
-            currSub = c0.replace(/^विकास\s*क्षेत्र\s*:\s*/, "").trim();
+            currDevArea = c0.replace(/^विकास\s*क्षेत्र\s*:\s*/, "").trim();
+            continue;
+          }
+        }
+
+        // 5. Activities Table Header Detection (Sheet 1)
+        if (
+          rowStr.includes("उपक्रम (थोडक्यात कृतीसह)") ||
+          ((rowStr.includes("विकास क्षेत्र") || rowStr.includes("ध्येय क्रमांक")) &&
+            rowStr.includes("उपक्रम") &&
+            !rowStr.includes("निर्झर"))
+        ) {
+          currentSection = "activities";
+          rowArr.forEach((colVal, cIdx) => {
+            const s = String(colVal || "").trim();
+            if (s.includes("विकास क्षेत्र") || s.includes("विषय")) colSubIdx = cIdx;
+            else if (s.includes("ध्येय")) colGoalIdx = cIdx;
+            else if (s.includes("क्षमता")) colCompIdx = cIdx;
+            else if (s.includes("निष्पत्ती") || s.includes("learning")) colLoIdx = cIdx;
+            else if (s.includes("उपक्रम")) colActIdx = cIdx;
+            else if (s.includes("प्रश्न")) colQIdx = cIdx;
+            else if (s.includes("शिक्षकांचा अभिप्राय")) colTeacherIdx = cIdx;
+            else if (s.includes("पालकांचा अभिप्राय")) colParentIdx = cIdx;
+          });
+          continue;
+        }
+
+        // ----------------- PARSE ACCORDING TO CURRENT SECTION -----------------
+
+        // SECTION A: ACTIVITIES TABLE
+        if (currentSection === "activities") {
+          const subCol = colSubIdx >= 0 ? colSubIdx : 1;
+          const goalCol = colGoalIdx >= 0 ? colGoalIdx : 2;
+          const compCol = colCompIdx >= 0 ? colCompIdx : 3;
+          const loCol = colLoIdx >= 0 ? colLoIdx : 4;
+          const actCol = colActIdx >= 0 ? colActIdx : 5;
+          const qCol = colQIdx >= 0 ? colQIdx : 6;
+          const teacherCol = colTeacherIdx >= 0 ? colTeacherIdx : 7;
+          const parentCol = colParentIdx >= 0 ? colParentIdx : 8;
+
+          const rowSub = String(rowArr[subCol] || "").trim();
+          const rowGoal = String(rowArr[goalCol] || "").trim();
+          const rowComp = String(rowArr[compCol] || "").trim();
+          const rowLo = String(rowArr[loCol] || "").trim();
+          const rowAct = String(rowArr[actCol] || "").trim();
+          const rowQ = String(rowArr[qCol] || "").trim();
+          const rowTeacher = String(rowArr[teacherCol] || "").trim();
+          const rowParent = String(rowArr[parentCol] || "").trim();
+
+          // Skip header row if re-encountered
+          if (rowAct === "उपक्रम (थोडक्यात कृतीसह)" || rowComp === "क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन") {
             continue;
           }
 
-          const area = c1 || currSub;
-          const level = c2;
-          const remarkText = c3;
-
-          if (area) currSub = area;
-
-          if (currSub && level && remarkText) {
-            const cleanAreaId = (currSub || "area").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
-            const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
-            allRemarks.push({
-              id: `rem_${cleanAreaId}_${cleanLvl}_${rIdx}`,
-              stageId: selectedStage,
-              subjectOrArea: currSub,
-              level,
-              remarkText,
-              createdAt: new Date().toISOString(),
-            });
+          if (rowSub && !rowSub.startsWith("अ.क्र") && !rowSub.startsWith("विकास क्षेत्र")) {
+            currSub = rowSub;
           }
-        }
 
-        // Fallback for object format
-        if (allRemarks.length === 0) {
-          rawRows.forEach((row, idx) => {
-            const sub = String(row["विषय"] || row["विकास क्षेत्र"] || "").trim();
-            if (sub && !sub.startsWith("विषय:") && !sub.startsWith("विकास क्षेत्र:")) {
-              currSub = sub;
-            }
-            const level = String(row["कामगिरी स्तर"] || row["स्तर"] || "").trim();
-            const remarkText = String(
-              row["शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)"] ||
-                row["शिक्षकांचा अभिप्राय"] ||
-                row["अभिप्राय"] ||
-                ""
-            ).trim();
-
-            if (!remarkText || !level) return;
-
-            const cleanAreaId = (currSub || sub || "area").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
-            const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
-            allRemarks.push({
-              id: `rem_${cleanAreaId}_${cleanLvl}_${idx}`,
-              stageId: selectedStage,
-              subjectOrArea: currSub || sub,
-              level,
-              remarkText,
-              createdAt: new Date().toISOString(),
-            });
-          });
-        }
-      }
-      // 3. ACTIVITIES SHEET (And Extract Goals, Competencies, and Rubrics from rows!)
-      else if (hasActivityCol) {
-        let currSub = "";
-        let currGoalCode = "";
-        let currGoalTitle = "";
-        let currCompCode = "";
-        let currCompTitle = "";
-        let currLoList: string[] = [];
-        let currLoText = "";
-        let lastAct: HpcDynamicActivity | null = null;
-
-        rawRows.forEach((row, idx) => {
-          const rowSub = String(
-            row["विकास क्षेत्र / विषय"] || row["विषय"] || row["विकास क्षेत्र"] || ""
-          ).trim();
-          const rowGoal = String(
-            row["ध्येय क्रमांक व ध्येयाचे संपूर्ण वर्णन"] || row["ध्येय"] || ""
-          ).trim();
-          const rowComp = String(
-            row["क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन"] || row["क्षमता"] || ""
-          ).trim();
-          const rowLo = String(
-            row["अध्ययन निष्पत्ती"] || row["निष्पत्ती"] || row["अध्ययन निष्पत्ती (LO)"] || ""
-          ).trim();
-
-          if (rowSub) currSub = rowSub;
-          if (rowGoal) {
+          if (rowGoal && !rowGoal.startsWith("ध्येय")) {
             const gm = rowGoal.match(/^([A-Za-z0-9\-\.]+)\s*(.*)/);
-            currGoalCode = gm ? gm[1] : rowGoal.slice(0, 10);
-            currGoalTitle = gm && gm[2] ? gm[2] : rowGoal;
+            currGoalCode = gm ? gm[1].trim() : rowGoal.slice(0, 10).trim();
+            currGoalTitle = gm && gm[2] ? gm[2].trim() : rowGoal;
+            if (!currSub && GOAL_TO_AREA_MAP[currGoalCode]) {
+              currSub = GOAL_TO_AREA_MAP[currGoalCode];
+            }
           }
-          if (rowComp) {
+
+          if (rowComp && !rowComp.startsWith("क्षमता")) {
             const cm = rowComp.match(/^([A-Za-z0-9\-\.]+)\s*(.*)/);
-            currCompCode = cm ? cm[1] : rowComp.slice(0, 10);
-            currCompTitle = cm && cm[2] ? cm[2] : rowComp;
+            currCompCode = cm ? cm[1].trim() : rowComp.slice(0, 10).trim();
+            currCompTitle = cm && cm[2] ? cm[2].trim() : rowComp;
           }
-          if (rowLo) {
+
+          if (rowLo && !rowLo.startsWith("अध्ययन निष्पत्ती")) {
             currLoText = rowLo;
             currLoList = rowLo
               .split("\n")
@@ -1201,19 +1231,38 @@ function AdminHpcManagementPage() {
               .filter(Boolean);
           }
 
-          let stage: HpcStageId = selectedStage;
-          if (currCompCode.startsWith("CG-") || currCompCode.startsWith("C-")) {
+          // Detect stage
+          let stage: HpcStageId = selectedUploadStage || selectedStage;
+          if (selectedUploadClass === "1st" || selectedUploadClass === "2nd") {
             stage = "foundational";
+          } else if (
+            selectedUploadClass === "3rd" ||
+            selectedUploadClass === "4th" ||
+            selectedUploadClass === "5th"
+          ) {
+            stage = "preparatory";
+          } else if (
+            selectedUploadClass === "6th" ||
+            selectedUploadClass === "7th" ||
+            selectedUploadClass === "8th"
+          ) {
+            stage = "middle";
+          } else if (currCompCode.startsWith("CG-") || currCompCode.startsWith("C-")) {
+            stage = selectedUploadStage || "foundational";
           } else if (
             currCompCode.startsWith("L1") ||
             currCompCode.startsWith("MC") ||
             currCompCode.startsWith("TWC") ||
             currCompCode.startsWith("VA")
           ) {
-            stage = "preparatory";
+            stage = selectedUploadStage || "preparatory";
           }
 
-          // EXTRACT GOALS INTO GOALSMAP
+          if (!currSub && currGoalCode && GOAL_TO_AREA_MAP[currGoalCode]) {
+            currSub = GOAL_TO_AREA_MAP[currGoalCode];
+          }
+
+          // Register Goal
           if (currGoalCode) {
             const gId = `CUSTOM-${currGoalCode}`;
             if (!goalsMap.has(gId)) {
@@ -1222,12 +1271,12 @@ function AdminHpcManagementPage() {
                 code: currGoalCode,
                 titleMarathi: currGoalTitle || currGoalCode,
                 stageId: stage,
-                areaOrSubjectId: currSub || "general",
+                areaOrSubjectId: currSub || GOAL_TO_AREA_MAP[currGoalCode] || "general",
               });
             }
           }
 
-          // EXTRACT COMPETENCIES INTO COMPSMAP
+          // Register Competency
           if (currCompCode) {
             const cId = `CUSTOM-${currCompCode}`;
             if (!compsMap.has(cId)) {
@@ -1256,49 +1305,48 @@ function AdminHpcManagementPage() {
             }
           }
 
-          const actRaw = String(row["उपक्रम (थोडक्यात कृतीसह)"] || row["उपक्रम"] || "").trim();
-          const questionsRaw = String(row["उपक्रमावर आधारित प्रश्न"] || row["प्रश्न"] || "").trim();
-          const teacherFeedback = String(row["शिक्षकांचा अभिप्राय"] || "").trim();
-          const parentFeedback = String(row["पालकांचा अभिप्राय"] || "").trim();
-
-          if (actRaw) {
-            let activityTitle = actRaw;
+          if (rowAct) {
+            let activityTitle = rowAct;
             let activityDesc = "";
             let activityNum = 1;
 
-            if (actRaw.includes("\n\nकृती:")) {
-              const parts = actRaw.split("\n\nकृती:");
+            if (rowAct.includes("\n\nकृती:")) {
+              const parts = rowAct.split("\n\nकृती:");
               activityTitle = parts[0].trim();
               activityDesc = parts.slice(1).join("\n\nकृती:").trim();
-            } else if (actRaw.includes("कृती:")) {
-              const parts = actRaw.split("कृती:");
+            } else if (rowAct.includes("कृती:")) {
+              const parts = rowAct.split("कृती:");
               activityTitle = parts[0].trim();
               activityDesc = parts.slice(1).join("कृती:").trim();
             } else {
-              const lines = actRaw.split("\n");
+              const lines = rowAct.split("\n");
               activityTitle = lines[0].trim();
               activityDesc = lines.slice(1).join("\n").trim();
             }
 
-            const numMatch = activityTitle.match(/^(\d+)[\.\)]\s*(.*)/);
+            const numMatch = activityTitle.match(/^([0-9\u0966-\u096F]+)[\.\)\-\s]\s*(.*)/);
             if (numMatch) {
-              activityNum = parseInt(numMatch[1], 10);
+              const rawNum = numMatch[1];
+              const marathiMap: Record<string, number> = {
+                "०": 0, "१": 1, "२": 2, "३": 3, "४": 4, "५": 5, "६": 6, "७": 7, "८": 8, "९": 9
+              };
+              activityNum = marathiMap[rawNum] !== undefined ? marathiMap[rawNum] : parseInt(rawNum, 10) || 1;
               activityTitle = numMatch[2].trim();
             }
 
-            const questions = questionsRaw
+            const questions = rowQ
               .split("\n")
-              .map((q) => q.replace(/^[0-9\u0966-\u096F]+[\.\)\-]\s*/, "").trim())
+              .map((q) => q.replace(/^[0-9\u0966-\u096F]+[\.\)\-\s]\s*/, "").trim())
               .filter(Boolean);
 
             const classPrefix = selectedUploadClass !== "all" ? selectedUploadClass : stage;
-            const docId = `act_${classPrefix}_${currCompCode}_${activityNum}`;
+            const docId = `act_${classPrefix}_${currCompCode || "comp"}_${activityNum}`;
 
             lastAct = {
               id: docId,
               classId: selectedUploadClass !== "all" ? selectedUploadClass : undefined,
               stageId: stage,
-              subjectOrArea: currSub,
+              subjectOrArea: currSub || (currGoalCode ? GOAL_TO_AREA_MAP[currGoalCode] : "") || "शारीरिक विकास",
               goalCode: currGoalCode,
               goalTitle: currGoalTitle,
               competencyCode: currCompCode,
@@ -1310,95 +1358,197 @@ function AdminHpcManagementPage() {
               learningOutcomes: currLoList,
               learningOutcomeText: currLoText,
               questions,
-              teacherFeedbackSample: teacherFeedback,
-              parentFeedbackSample: parentFeedback,
+              teacherFeedbackSample: rowTeacher,
+              parentFeedbackSample: rowParent,
               createdAt: new Date().toISOString(),
             };
 
             allActivities.push(lastAct);
-
-            // ALSO EXTRACT RUBRICS FROM ROW IF RUBRIC COLUMNS EXIST
-            const rBeg = String(row["प्रारंभिक"] || row["प्रवाह"] || row["निर्झर"] || "").trim();
-            const rPro = String(row["प्रवीण"] || row["पर्वत"] || "").trim();
-            const rAdv = String(row["प्रगत"] || row["आकाश"] || "").trim();
-            const rDim = String(row["क्षमता"] || row["पैलू"] || row["निकष"] || "सर्वसाधारण").trim();
-            if (rBeg || rPro || rAdv) {
-              allRubrics.push({
-                id: `rub_${selectedUploadClass !== "all" ? selectedUploadClass : "stage"}_${Date.now()}_${idx}`,
-                classId: selectedUploadClass !== "all" ? selectedUploadClass : undefined,
-                stageId: stage,
-                goalCode: currGoalCode,
-                competencyCode: currCompCode,
-                activityTitle,
-                dimension: rDim,
-                beginner: rBeg,
-                proficient: rPro,
-                advanced: rAdv,
-                createdAt: new Date().toISOString(),
-              });
-            }
-          } else if (lastAct && (teacherFeedback || parentFeedback)) {
-            if (teacherFeedback && !lastAct.teacherFeedbackSample?.includes(teacherFeedback)) {
+          } else if (lastAct && (rowTeacher || rowParent)) {
+            if (rowTeacher && !lastAct.teacherFeedbackSample?.includes(rowTeacher)) {
               lastAct.teacherFeedbackSample = lastAct.teacherFeedbackSample
-                ? `${lastAct.teacherFeedbackSample} | ${teacherFeedback}`
-                : teacherFeedback;
+                ? `${lastAct.teacherFeedbackSample} | ${rowTeacher}`
+                : rowTeacher;
             }
-            if (parentFeedback && !lastAct.parentFeedbackSample?.includes(parentFeedback)) {
+            if (rowParent && !lastAct.parentFeedbackSample?.includes(rowParent)) {
               lastAct.parentFeedbackSample = lastAct.parentFeedbackSample
-                ? `${lastAct.parentFeedbackSample} | ${parentFeedback}`
-                : parentFeedback;
+                ? `${lastAct.parentFeedbackSample} | ${rowParent}`
+                : rowParent;
             }
           }
-        });
-      }
-      // 4. GOALS & COMPETENCIES ONLY SHEET
-      else {
-        let currSub = "";
-        let currGoalRaw = "";
+        }
 
-        rawRows.forEach((row) => {
-          const sub = String(row["विकास क्षेत्र / विषय"] || row["विषय"] || "").trim();
-          const goalStr = String(row["ध्येय क्रमांक व ध्येयाचे संपूर्ण वर्णन"] || row["ध्येय"] || "").trim();
-          const compStr = String(row["क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन"] || row["क्षमता"] || "").trim();
-
-          if (sub) currSub = sub;
-          if (goalStr) {
-            currGoalRaw = goalStr;
-            const gm = goalStr.match(/^([A-Za-z0-9\-\.]+)\s*(.*)/);
-            const gCode = gm ? gm[1] : goalStr.slice(0, 10);
-            const gTitle = gm && gm[2] ? gm[2] : goalStr;
-            const gId = `CUSTOM-${gCode}`;
-            if (!goalsMap.has(gId)) {
-              goalsMap.set(gId, {
-                id: gId,
-                code: gCode,
-                titleMarathi: gTitle,
-                stageId: selectedStage,
-                areaOrSubjectId: currSub || "general",
-              });
-            }
+        // SECTION B: RUBRICS TABLE
+        else if (currentSection === "rubrics") {
+          // Check for Goal Header: "ध्येय: CG-1 ..."
+          if (c0.startsWith("ध्येय:") || c0.startsWith("ध्येय :") || /^(CG-[0-9]+|ध्येय)/.test(c0)) {
+            const gMatch = c0.match(/CG-[0-9]+/);
+            if (gMatch) currRubGoal = gMatch[0];
+            continue;
           }
 
-          if (compStr) {
-            const cm = compStr.match(/^([A-Za-z0-9\-\.]+)\s*(.*)/);
-            const cCode = cm ? cm[1] : compStr.slice(0, 10);
-            const cTitle = cm && cm[2] ? cm[2] : compStr;
-            const cId = `CUSTOM-${cCode}`;
-            const currentGoalCode = currGoalRaw.match(/^([A-Za-z0-9\-\.]+)/)?.[1] || "";
-            if (!compsMap.has(cId)) {
-              compsMap.set(cId, {
-                id: cId,
-                code: cCode,
-                titleMarathi: cTitle,
-                goalId: `CUSTOM-${currentGoalCode}`,
-                stageId: selectedStage,
-                applicableClassIds:
-                  selectedStage === "foundational" ? ["1st", "2nd"] : ["3rd", "4th", "5th"],
-                applicableSession: "both",
-              });
-            }
+          // Check for Competency Header: "क्षमता: C-1.1 ..."
+          if (c0.startsWith("क्षमता:") || c0.startsWith("क्षमता :") || /^(C-[0-9]+(\.[0-9]+)?|क्षमता)/.test(c0)) {
+            const cMatch = c0.match(/C-[0-9]+(\.[0-9]+)?/);
+            if (cMatch) currRubComp = cMatch[0];
+            continue;
           }
-        });
+
+          // Skip header row
+          if (c0 === "उपक्रम" && (c1 === "क्षमता" || c1 === "पैलू" || c1 === "जाणीवजागृती")) {
+            continue;
+          }
+
+          if (c0) {
+            currRubAct = c0;
+          }
+
+          const dim = c1 || "";
+          const beg = c2 || "";
+          const pro = c3 || "";
+          const adv = c4 || "";
+
+          if (
+            dim &&
+            !["क्षमता", "पैलू", "निकष", "परिमाण"].includes(dim) &&
+            (beg || pro || adv)
+          ) {
+            const cleanDimKey = dim.includes("जाणीव")
+              ? "awareness"
+              : dim.includes("संवेदन")
+              ? "sensitivity"
+              : dim.includes("सर्जन")
+              ? "creativity"
+              : `dim_${rIdx}`;
+
+            const cleanActSlug = cleanActivityTitle(currRubAct)
+              .slice(0, 30)
+              .replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+
+            const rubId = `rub_${currRubComp || "comp"}_${cleanDimKey}_${cleanActSlug}_${rIdx}`;
+
+            allRubrics.push({
+              id: rubId,
+              stageId: selectedUploadStage || selectedStage,
+              goalCode: currRubGoal,
+              competencyCode: currRubComp,
+              activityTitle: cleanActivityTitle(currRubAct) || currRubAct,
+              dimension: dim,
+              beginner: beg,
+              proficient: pro,
+              advanced: adv,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+
+        // SECTION C: DEVELOPMENTAL AREA REMARKS TABLE (Sheet 3)
+        else if (currentSection === "developmental_remarks") {
+          if (c0.startsWith("विकास क्षेत्र:") || c0.startsWith("विकास क्षेत्र :")) {
+            currDevArea = c0.replace(/^विकास\s*क्षेत्र\s*:\s*/, "").trim();
+            continue;
+          }
+
+          if (
+            c0 === "क्र." ||
+            c1 === "विकास क्षेत्र" ||
+            c2 === "कामगिरी स्तर" ||
+            rowStr.includes("शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)")
+          ) {
+            continue;
+          }
+
+          const area = c1 || currDevArea;
+          const level = c2;
+          const remarkText = c3;
+
+          if (area && !area.startsWith("क्र.") && !area.startsWith("विकास क्षेत्र")) {
+            currDevArea = area;
+          }
+
+          if (currDevArea && level && remarkText && remarkText !== level) {
+            const cleanAreaId = (currDevArea || "area").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+            const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+            allRemarks.push({
+              id: `rem_${cleanAreaId}_${cleanLvl}_${rIdx}`,
+              stageId: selectedUploadStage || selectedStage,
+              subjectOrArea: currDevArea,
+              level,
+              remarkText,
+              type: "developmental_area",
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+
+        // SECTION D: FINAL COMPREHENSIVE REMARKS TABLE (Sheet 4)
+        else if (currentSection === "final_comprehensive") {
+          if (
+            c0.includes("शीट 4") ||
+            c0 === "क्र." ||
+            c1 === "कामगिरी स्तर" ||
+            c2 === "शिक्षकांचा अंतिम सर्वंकष वार्षिक अभिप्राय"
+          ) {
+            continue;
+          }
+
+          const level = c1 || c0;
+          const remarkText = c2 || c1;
+
+          if (
+            level &&
+            remarkText &&
+            remarkText !== level &&
+            level !== "कामगिरी स्तर" &&
+            level !== "क्र."
+          ) {
+            const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+            allRemarks.push({
+              id: `final_rem_${cleanLvl}_${rIdx}`,
+              stageId: selectedUploadStage || selectedStage,
+              subjectOrArea: "अंतिम सर्वंकष वार्षिक अभिप्राय",
+              level,
+              remarkText,
+              type: "final_comprehensive",
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+
+        // SECTION E: NEXT CLASS RECOMMENDATIONS TABLE (Sheet 5)
+        else if (currentSection === "next_class_recommendation") {
+          if (
+            c0.includes("शीट 5") ||
+            c0 === "क्र." ||
+            c1 === "कामगिरी स्तर" ||
+            c2.includes("पुढील इयत्तेसाठी")
+          ) {
+            continue;
+          }
+
+          const level = c1 || c0;
+          const remarkText = c2 || c1;
+
+          if (
+            level &&
+            remarkText &&
+            remarkText !== level &&
+            level !== "कामगिरी स्तर" &&
+            level !== "क्र."
+          ) {
+            const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
+            allRemarks.push({
+              id: `next_rec_${cleanLvl}_${rIdx}`,
+              stageId: selectedUploadStage || selectedStage,
+              subjectOrArea: "पुढील इयत्तेसाठी मार्गदर्शन व शिफारस",
+              level,
+              remarkText,
+              recommendationText: remarkText,
+              type: "next_class_recommendation",
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
       }
     });
 
@@ -1414,8 +1564,12 @@ function AdminHpcManagementPage() {
       wb.SheetNames.find((s) => s.includes("ध्येय") || s.includes("उपक्रम")) || wb.SheetNames[0] || "";
     setSelectedSheetName(defaultSheet);
 
+    const devRemarksCount = allRemarks.filter((r) => r.type === "developmental_area").length;
+    const finalRemarksCount = allRemarks.filter((r) => r.type === "final_comprehensive").length;
+    const nextRecCount = allRemarks.filter((r) => r.type === "next_class_recommendation").length;
+
     toast.success(
-      `एक्सेल फाईलमधून डेटा अचूक वाचला गेला! (उपक्रम: ${allActivities.length}, ध्येये: ${parsedG.length}, क्षमता: ${parsedC.length}, रुब्रिक्स: ${allRubrics.length}, शेरे: ${allRemarks.length})`
+      `एक्सेल फाईलमधून डेटा अचूक वाचला गेला! (उपक्रम: ${allActivities.length}, ध्येये: ${parsedG.length}, क्षमता: ${parsedC.length}, रुब्रिक्स: ${allRubrics.length}, शेरे: ${allRemarks.length} [विकासात्मक: ${devRemarksCount}, अंतिम: ${finalRemarksCount}, शिफारस: ${nextRecCount}])`
     );
   };
 
@@ -1468,96 +1622,6 @@ function AdminHpcManagementPage() {
     }
   };
 
-  // Download Ready Template
-  const handleDownloadTemplate = () => {
-    try {
-      const wb = XLSX.utils.book_new();
-
-      // Sheet 1: ध्येय-क्षमता सूची (उपक्रम व ५ प्रश्न)
-      const activitiesSample = [
-        {
-          "अ.क्र.": 1,
-          "विकास क्षेत्र / विषय": "प्रथम भाषा (R1)",
-          "ध्येय क्रमांक व ध्येयाचे संपूर्ण वर्णन": "L1CG1 सुसंगतपणे कल्पना समजून घेण्यासाठी आणि संवाद साधण्यासाठी मौखिक भाषा कौशल्य विकसित करतो.",
-          "क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन": "L1C1.1 विविध संदर्भांत अखंडित आणि अर्थपूर्ण संवाद साधतो.",
-          "अध्ययन निष्पत्ती": "L1C1.1.1: परिचित संदर्भात स्पष्ट व ओघवते बोलतो.\nL1C1.1.2: सणांची माहिती स्वतःच्या शब्दांत सांगतो.",
-          "उपक्रम (थोडक्यात कृतीसह)": "1. आपल्या आवडत्या सणाबद्दल पाच वाक्यांत सलग बोला.\n\nकृती: विद्यार्थ्यांनी आवडत्या सणाबद्दल पाच वाक्ये सलगपणे सांगावीत. शिक्षकांनी बोलण्यातील क्रम व स्पष्टता यावर अभिप्राय द्यावा.",
-          "उपक्रमावर आधारित प्रश्न": "1. तुमचा आवडता सण कोणता?\n2. तो कधी येतो?\n3. त्या दिवशी तुम्ही काय करता?\n4. तुम्हाला त्यातील सर्वात काय आवडते?\n5. हा सण इतरांसोबत का साजरा करतात?",
-          "शिक्षकांचा अभिप्राय": "विद्यार्थी आत्मविश्वासाने बोलतो व विचारलेल्या प्रश्नांची अचूक उत्तरे देतो.",
-          "पालकांचा अभिप्राय": "माझा पाल्य आवडीने सणाबद्दल घरी माहिती सांगतो.",
-        },
-        {
-          "अ.क्र.": 2,
-          "विकास क्षेत्र / विषय": "गणित (M)",
-          "ध्येय क्रमांक व ध्येयाचे संपूर्ण वर्णन": "MCG1 दैनंदिन जीवनातील संख्यांची संकल्पना समजतो.",
-          "क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन": "MC1.1 1 ते 100 पर्यंतच्या संख्या ओळखतो व मोजतो.",
-          "उपक्रम (थोडक्यात कृतीसह)": "1. वस्तू मोजून योग्य संख्याकार्ड दाखवा.\n\nकृती: विद्यार्थ्यांनी दिलेल्या मण्यांच्या किंवा बियांच्या राशी मोजून योग्य संख्याकार्ड उचलून दाखवावे.",
-          "उपक्रमावर आधारित प्रश्न": "1. तुमच्यासमोर किती मणी आहेत?\n2. त्यातील ५ मणी वेगळे काढा.\n3. उरलेले मणी किती आहेत?\n4. कोणती संख्या मोठी आहे?\n5. हा अंक पाटीवर लिहून दाखवा.",
-          "शिक्षकांचा अभिप्राय": "विद्यार्थी संख्या अचूक मोजतो व कार्ड दाखवतो.",
-          "पालकांचा अभिप्राय": "घरीही वस्तू मोजण्याचा सराव करतो.",
-        },
-      ];
-      const ws1 = XLSX.utils.json_to_sheet(activitiesSample);
-      XLSX.utils.book_append_sheet(wb, ws1, "ध्येय-क्षमता सूची");
-
-      // Sheet 2: मूल्यांकन रुब्रिक
-      const rubricsSample = [
-        {
-          "उपक्रम": "1. आपल्या आवडत्या सणाबद्दल पाच वाक्यांत सलग बोला.",
-          "क्षमता": "जाणीवजागृती",
-          "प्रारंभिक": "विद्यार्थ्याला आवडत्या सणाबद्दल पाच वाक्ये सलग सांगण्यात अडचण येते, मदतीची गरज लागते.",
-          "प्रवीण": "विद्यार्थी बहुतांश टप्पे योग्य रीतीने पार पाडतो, मुद्दे स्पष्ट सांगतो.",
-          "प्रगत": "विद्यार्थी स्वतंत्रपणे, आत्मविश्वासाने व सलगपणे आपल्या भावना व्यक्त करतो.",
-        },
-        {
-          "उपक्रम": "1. आपल्या आवडत्या सणाबद्दल पाच वाक्यांत सलग बोला.",
-          "क्षमता": "संवेदनशीलता",
-          "प्रारंभिक": "इतरांचे म्हणणे ऐकताना संकोच करतो, सहभाग कमी असतो.",
-          "प्रवीण": "काही प्रमाणात आपले म्हणणे मांडतो व इतरांचे ऐकतो.",
-          "प्रगत": "उत्साहाने सर्वांचा आदर करतो आणि मित्रांना प्रोत्साहन देतो.",
-        },
-        {
-          "उपक्रम": "1. आपल्या आवडत्या सणाबद्दल पाच वाक्यांत सलग बोला.",
-          "क्षमता": "सर्जनशीलता",
-          "प्रारंभिक": "स्वतःची स्वतंत्र कल्पना सुचवत नाही, दिलेले उदाहरण सांगतो.",
-          "प्रवीण": "काही प्रमाणात स्वतःच्या कल्पना वापरतो.",
-          "प्रगत": "स्वतःच्या मूळ व वेगळ्या कल्पना वापरून कारणांसह स्पष्ट करतो.",
-        },
-      ];
-      const ws2 = XLSX.utils.json_to_sheet(rubricsSample);
-      XLSX.utils.book_append_sheet(wb, ws2, "मूल्यांकन रुब्रिक");
-
-      // Sheet 3: भाग क - वार्षिक सारांश
-      const remarksSample = [
-        {
-          "क्र.": 1,
-          "विषय": "प्रथम भाषा (R1)",
-          "कामगिरी स्तर": "प्रगत",
-          "शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)": "विद्यार्थ्याची मौखिक अभिव्यक्ती अत्यंत समृद्ध आहे. तो विचारलेल्या प्रश्नांची उत्तरे स्पष्ट व स्वतंत्रपणे देतो.",
-        },
-        {
-          "क्र.": 2,
-          "विषय": "प्रथम भाषा (R1)",
-          "कामगिरी स्तर": "प्रवीण",
-          "शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)": "विद्यार्थी संवादात नियमित सहभागी होतो, शब्दसंग्रह चांगला आहे. नियमित वाचनाचा सराव वाढवावा.",
-        },
-        {
-          "क्र.": 3,
-          "विषय": "गणित (M)",
-          "कामगिरी स्तर": "प्रगत",
-          "शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)": "विद्यार्थी संख्याज्ञान व मूलभूत गणिती क्रिया अचूक करतो. गणितातील कोडी आवडीने सोडवतो.",
-        },
-      ];
-      const ws3 = XLSX.utils.json_to_sheet(remarksSample);
-      XLSX.utils.book_append_sheet(wb, ws3, "भाग क - वार्षिक सारांश");
-
-      XLSX.writeFile(wb, "HPC_Activities_Questions_Rubrics_Template.xlsx");
-      toast.success("नमुना एक्सेल टेम्पलेट यशस्वीरीत्या डाऊनलोड झाले!");
-    } catch (err: any) {
-      toast.error("टेम्पलेट डाऊनलोड करताना त्रुटी: " + err.message);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <Header />
@@ -1573,12 +1637,6 @@ function AdminHpcManagementPage() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleDownloadTemplate}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-            >
-              <Download className="size-3.5" /> नमुना एक्सेल टेम्पलेट डाऊनलोड (Sample Template)
-            </button>
             <Link
               to="/teacher/hpc"
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
@@ -1610,73 +1668,29 @@ function AdminHpcManagementPage() {
 
         {/* Tab Controls & Stage Selector */}
         <div className="bg-white rounded-3xl p-4 border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Main Tabs */}
-          <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 overflow-x-auto gap-1">
+          {/* Main Tabs - EXACTLY 2 OPTIONS ONLY */}
+          <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-2">
             <button
-              onClick={() => setActiveTab("activities")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === "activities"
-                  ? "bg-white text-indigo-700 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+              onClick={() => setActiveTab("overview")}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+                activeTab === "overview"
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
               }`}
             >
-              <ListOrdered className="size-3.5" />
-              १. उपक्रम व ५ प्रश्न बँक ({activitiesList.length})
+              <LayoutDashboard className="size-4" />
+              <span>१. मुख्य डॅशबोर्ड व सर्व माहिती (Overall Dashboard)</span>
             </button>
             <button
               onClick={() => setActiveTab("excel_sync")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
                 activeTab === "excel_sync"
-                  ? "bg-white text-emerald-700 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
               }`}
             >
-              <FileSpreadsheet className="size-3.5" />
-              २. एक्सेल अपलोड व सिंक
-            </button>
-            <button
-              onClick={() => setActiveTab("remarks")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === "remarks"
-                  ? "bg-white text-purple-700 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <MessageSquare className="size-3.5" />
-              ३. वार्षिक शेरे बँक ({remarksList.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("goals")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === "goals"
-                  ? "bg-white text-indigo-700 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <BookOpen className="size-3.5" />
-              ४. अभ्यासक्रम ध्येये (CG) ({allGoals.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("competencies")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === "competencies"
-                  ? "bg-white text-indigo-700 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <Award className="size-3.5" />
-              ५. क्षमता यादी (C) ({allCompetencies.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("rubrics")}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === "rubrics"
-                  ? "bg-white text-indigo-700 shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <Compass className="size-3.5" />
-              ६. निकषसंच (Rubrics) ({rubricsList.length})
+              <FileSpreadsheet className="size-4" />
+              <span>२. एक्सेल / CSV फाईल अपलोड व सिंक (File Upload & Sync)</span>
             </button>
           </div>
 
@@ -1712,1190 +1726,1161 @@ function AdminHpcManagementPage() {
         </div>
 
         {/* ========================================================================= */}
-        {/* TAB 1: ACTIVITIES & 5 QUESTIONS BANK */}
+        {/* TAB 0: MASTER DASHBOARD & OVERVIEW (सोपा तक्ता व सर्व माहिती) */}
         {/* ========================================================================= */}
-        {activeTab === "activities" && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-            {/* 3 Dedicated Spaces for the 3 Stages (separated as per classes) */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Layers className="size-3.5 text-indigo-600" />
-                  इयत्तेनुसार ३ स्वतंत्र स्तर कक्ष (3 Independent Stage Spaces)
-                </span>
-                <span className="text-xs text-slate-500 font-bold bg-slate-100 px-2.5 py-1 rounded-lg">
-                  🛡️ एका स्तराचा डेटा साफ केल्यास इतर स्तर पूर्णपणे सुरक्षित राहतात
-                </span>
-              </div>
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            {/* Top Quick Stats Grid (6 Interactive Cards) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {/* 1. Activities */}
+              <button
+                type="button"
+                onClick={() => setDashboardSection("activities")}
+                className={`p-4 rounded-2xl bg-white border text-left transition-all cursor-pointer shadow-xs flex flex-col justify-between hover:border-indigo-400 hover:shadow-sm ${
+                  dashboardSection === "activities"
+                    ? "border-indigo-600 ring-2 ring-indigo-500/15 bg-indigo-50/20"
+                    : "border-slate-200"
+                }`}
+              >
+                <div className="flex items-center justify-between text-slate-500 mb-2 w-full">
+                  <span className="text-[11px] font-bold">एकूण उपक्रम</span>
+                  <ListOrdered className="size-4 text-indigo-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-slate-900">{activitiesList.length}</div>
+                  <span className="text-[10px] text-indigo-600 font-bold">Activities Bank</span>
+                </div>
+              </button>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {HPC_STAGES_INFO.map((stg) => {
-                  const isSelected = selectedStage === stg.id;
-                  const count = countByStage[stg.id] || 0;
+              {/* 2. Questions */}
+              <button
+                type="button"
+                onClick={() => setDashboardSection("activities")}
+                className={`p-4 rounded-2xl bg-white border text-left transition-all cursor-pointer shadow-xs flex flex-col justify-between hover:border-emerald-400 hover:shadow-sm ${
+                  dashboardSection === "activities"
+                    ? "border-emerald-600 ring-2 ring-emerald-500/15 bg-emerald-50/20"
+                    : "border-slate-200"
+                }`}
+              >
+                <div className="flex items-center justify-between text-slate-500 mb-2 w-full">
+                  <span className="text-[11px] font-bold">५ प्रश्न बँक</span>
+                  <HelpCircle className="size-4 text-emerald-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-slate-900">{totalQuestionsCount}</div>
+                  <span className="text-[10px] text-emerald-600 font-bold">Evaluation Questions</span>
+                </div>
+              </button>
 
-                  const theme =
-                    stg.id === "foundational"
-                      ? {
-                          border: isSelected
-                            ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40"
-                            : "border-slate-200 hover:border-emerald-300 bg-white",
-                          badge: "bg-emerald-100 text-emerald-800",
-                          accent: "text-emerald-700",
-                          dot: "bg-emerald-500",
-                        }
-                      : stg.id === "preparatory"
-                      ? {
-                          border: isSelected
-                            ? "border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/40"
-                            : "border-slate-200 hover:border-indigo-300 bg-white",
-                          badge: "bg-indigo-100 text-indigo-800",
-                          accent: "text-indigo-700",
-                          dot: "bg-indigo-500",
-                        }
-                      : {
-                          border: isSelected
-                            ? "border-purple-500 ring-2 ring-purple-500/20 bg-purple-50/40"
-                            : "border-slate-200 hover:border-purple-300 bg-white",
-                          badge: "bg-purple-100 text-purple-800",
-                          accent: "text-purple-700",
-                          dot: "bg-purple-500",
-                        };
+              {/* 3. Competencies */}
+              <button
+                type="button"
+                onClick={() => {
+                  setDashboardSection("goals_competencies");
+                  setGoalsOrCompSubtab("competencies");
+                }}
+                className={`p-4 rounded-2xl bg-white border text-left transition-all cursor-pointer shadow-xs flex flex-col justify-between hover:border-purple-400 hover:shadow-sm ${
+                  dashboardSection === "goals_competencies" && goalsOrCompSubtab === "competencies"
+                    ? "border-purple-600 ring-2 ring-purple-500/15 bg-purple-50/20"
+                    : "border-slate-200"
+                }`}
+              >
+                <div className="flex items-center justify-between text-slate-500 mb-2 w-full">
+                  <span className="text-[11px] font-bold">अध्ययन क्षमता</span>
+                  <Award className="size-4 text-purple-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-slate-900">{allCompetencies.length}</div>
+                  <span className="text-[10px] text-purple-600 font-bold">Competencies (C)</span>
+                </div>
+              </button>
 
-                  return (
-                    <div
-                      key={stg.id}
-                      onClick={() => {
-                        setSelectedStage(stg.id);
-                        setSelectedCompFilter("all");
-                      }}
-                      className={`relative rounded-3xl p-5 border-2 transition-all cursor-pointer flex flex-col justify-between shadow-xs hover:shadow-md ${theme.border}`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-2.5">
-                          <span
-                            className={`text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${theme.badge}`}
-                          >
-                            {stg.classesLabelMarathi}
-                          </span>
-                          {isSelected ? (
-                            <span className="flex items-center gap-1 text-[11px] font-black text-indigo-700 bg-white px-2 py-0.5 rounded-full shadow-2xs border border-indigo-200">
-                              <CheckCircle2 className="size-3 text-indigo-600" /> सध्या उघडलेला कक्ष
-                            </span>
-                          ) : (
-                            <span className="text-[11px] font-bold text-slate-400">
-                              उघडण्यासाठी क्लिक करा
-                            </span>
-                          )}
-                        </div>
+              {/* 4. Curricular Goals */}
+              <button
+                type="button"
+                onClick={() => {
+                  setDashboardSection("goals_competencies");
+                  setGoalsOrCompSubtab("goals");
+                }}
+                className={`p-4 rounded-2xl bg-white border text-left transition-all cursor-pointer shadow-xs flex flex-col justify-between hover:border-amber-400 hover:shadow-sm ${
+                  dashboardSection === "goals_competencies" && goalsOrCompSubtab === "goals"
+                    ? "border-amber-600 ring-2 ring-amber-500/15 bg-amber-50/20"
+                    : "border-slate-200"
+                }`}
+              >
+                <div className="flex items-center justify-between text-slate-500 mb-2 w-full">
+                  <span className="text-[11px] font-bold">अभ्यासक्रम ध्येये</span>
+                  <BookOpen className="size-4 text-amber-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-slate-900">{allGoals.length}</div>
+                  <span className="text-[10px] text-amber-600 font-bold">Curricular Goals (CG)</span>
+                </div>
+              </button>
 
-                        <h4 className="text-base font-black text-slate-900 flex items-center gap-2">
-                          <span className={`size-2.5 rounded-full ${theme.dot}`} />
-                          <span>{stg.titleMarathi}</span>
-                        </h4>
-                        <p className="text-xs text-slate-500 font-medium mt-1">
-                          {stg.id === "foundational" && "इयत्ता १ली व २री (भाग १ - पायाभूत शिक्षण)"}
-                          {stg.id === "preparatory" && "इयत्ता ३री, ४थी व ५वी (भाग २ - प्राथमिक पूर्वतयारी)"}
-                          {stg.id === "middle" && "इयत्ता ६वी, ७वी व ८वी (भाग ३ - उच्च प्राथमिक / माध्यमिक)"}
-                        </p>
+              {/* 5. Rubrics */}
+              <button
+                type="button"
+                onClick={() => setDashboardSection("rubrics")}
+                className={`p-4 rounded-2xl bg-white border text-left transition-all cursor-pointer shadow-xs flex flex-col justify-between hover:border-sky-400 hover:shadow-sm ${
+                  dashboardSection === "rubrics"
+                    ? "border-sky-600 ring-2 ring-sky-500/15 bg-sky-50/20"
+                    : "border-slate-200"
+                }`}
+              >
+                <div className="flex items-center justify-between text-slate-500 mb-2 w-full">
+                  <span className="text-[11px] font-bold">निकषसंच (Rubrics)</span>
+                  <Compass className="size-4 text-sky-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-slate-900">{rubricsList.length}</div>
+                  <span className="text-[10px] text-sky-600 font-bold">3 Levels Scale</span>
+                </div>
+              </button>
 
-                        <div className="mt-3.5 py-2.5 px-3 rounded-2xl bg-white/90 border border-slate-200/80 flex items-center justify-between shadow-2xs">
-                          <span className="text-xs font-bold text-slate-600">उपलब्ध उपक्रम संख्या:</span>
-                          <span className={`text-sm font-black ${theme.accent}`}>
-                            {count} उपक्रम
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedStage(stg.id);
-                            setSelectedCompFilter("all");
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            isSelected
-                              ? "bg-slate-900 text-white font-black"
-                              : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                          }`}
-                        >
-                          {isSelected ? "सक्रिय कक्ष (Active)" : "हा कक्ष उघडा"}
-                        </button>
-
-                        {count > 0 && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleClearStageActivities(stg.id);
-                            }}
-                            className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                            title={`फक्त ${stg.titleMarathi} मधील उपक्रम डेटाबेसमधून हटवा`}
-                          >
-                            <Trash2 className="size-3" />
-                            <span>फक्त हा स्तर साफ करा</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              {/* 6. Remarks */}
+              <button
+                type="button"
+                onClick={() => setDashboardSection("remarks")}
+                className={`p-4 rounded-2xl bg-white border text-left transition-all cursor-pointer shadow-xs flex flex-col justify-between hover:border-rose-400 hover:shadow-sm ${
+                  dashboardSection === "remarks"
+                    ? "border-rose-600 ring-2 ring-rose-500/15 bg-rose-50/20"
+                    : "border-slate-200"
+                }`}
+              >
+                <div className="flex items-center justify-between text-slate-500 mb-2 w-full">
+                  <span className="text-[11px] font-bold">वार्षिक शेरे</span>
+                  <MessageSquare className="size-4 text-rose-600" />
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-slate-900">{remarksList.length}</div>
+                  <span className="text-[10px] text-rose-600 font-bold">Feedback Remarks</span>
+                </div>
+              </button>
             </div>
 
-            {/* Header for Selected Stage Activities */}
-            <div className="flex items-center justify-between pt-2 pb-4 border-b border-slate-100 flex-wrap gap-3">
-              <div>
-                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <span>उपक्रम व ५ प्रश्न बँक —</span>
-                  <span className="text-xs px-3 py-1 rounded-full bg-indigo-100 text-indigo-900 font-black">
-                    {HPC_STAGES_INFO.find((s) => s.id === selectedStage)?.titleMarathi} ({HPC_STAGES_INFO.find((s) => s.id === selectedStage)?.classesLabelMarathi})
+            {/* 3 Stages Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Foundational */}
+              <div className="p-5 rounded-3xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50/60 to-white shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    इयत्ता १ ली व २ री
                   </span>
-                </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  या स्तरातील एकूण उपक्रम: <b>{filteredActivities.length}</b> (शिक्षकांच्या मूल्यमापन फॉर्ममध्ये थेट वापरले जातात)
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={fetchActivities}
-                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
-                  title="रिफ्रेश करा"
-                >
-                  <RefreshCw className="size-3.5" />
-                  <span>रिफ्रेश</span>
-                </button>
-                {filteredActivities.length > 0 && (
-                  <button
-                    onClick={() => handleClearStageActivities(selectedStage)}
-                    className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                    title={`फक्त ${HPC_STAGES_INFO.find((s) => s.id === selectedStage)?.titleMarathi} मधील उपक्रम हटवा`}
-                  >
-                    <Trash2 className="size-3.5" />
-                    <span>फक्त हा स्तर साफ करा ({filteredActivities.length})</span>
-                  </button>
-                )}
-                <button
-                  onClick={handleOpenAddActivity}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Plus className="size-3.5" />
-                  <span>नवीन उपक्रम जोडा (Add Activity)</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Filter & Search Bar */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              <div className="relative">
-                <Search className="size-4 absolute left-3 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="उपक्रम, प्रश्न किंवा कोड शोधा..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800"
-                />
-              </div>
-
-              <div>
-                <select
-                  value={selectedCompFilter}
-                  onChange={(e) => setSelectedCompFilter(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
-                >
-                  <option value="all">सर्व क्षमता (All Competencies)</option>
-                  {allCompetencies.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.code}: {(c.titleMarathi || (c as any).nameMarathi || c.code || "").slice(0, 45)}...
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end text-xs font-bold text-slate-500">
-                दाखवत आहे: {filteredActivities.length} उपक्रम
-              </div>
-            </div>
-
-            {/* Activities List */}
-            {activitiesLoading ? (
-              <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
-                <Loader2 className="size-6 animate-spin" />
-                <span className="text-xs font-bold">उपक्रम लोड होत आहेत...</span>
-              </div>
-            ) : filteredActivities.length === 0 ? (
-              <div className="py-10 text-center bg-amber-50/70 border border-amber-200 rounded-3xl p-6 space-y-4">
-                <AlertCircle className="size-9 text-amber-600 mx-auto" />
-                <div className="space-y-1">
-                  <h4 className="text-sm font-black text-slate-900">
-                    निवडलेल्या '{HPC_STAGES_INFO.find((s) => s.id === selectedStage)?.titleMarathi} ({HPC_STAGES_INFO.find((s) => s.id === selectedStage)?.classesLabelMarathi})' मध्ये सध्या कोणतेही उपक्रम उपलब्ध नाहीत.
-                  </h4>
-                  {countByStage.foundational > 0 && selectedStage !== "foundational" && (
-                    <p className="text-xs font-bold text-emerald-800">
-                      💡 तुमच्या डेटाबेसमध्ये <b>पायाभूत स्तर (इ. १ली व २री)</b> मध्ये <b>{countByStage.foundational} उपक्रम</b> उपलब्ध आहेत!
-                    </p>
-                  )}
-                  {countByStage.preparatory > 0 && selectedStage !== "preparatory" && (
-                    <p className="text-xs font-bold text-indigo-800">
-                      💡 तुमच्या डेटाबेसमध्ये <b>पूर्वतयारी स्तर (इ. ३री ते ५वी)</b> मध्ये <b>{countByStage.preparatory} उपक्रम</b> उपलब्ध आहेत!
-                    </p>
-                  )}
-                  {countByStage.middle > 0 && selectedStage !== "middle" && (
-                    <p className="text-xs font-bold text-purple-800">
-                      💡 तुमच्या डेटाबेसमध्ये <b>मध्य स्तर (इ. ६वी ते ८वी)</b> मध्ये <b>{countByStage.middle} उपक्रम</b> उपलब्ध आहेत!
-                    </p>
-                  )}
+                  <span className="size-2.5 rounded-full bg-emerald-500" />
                 </div>
-
-                <div className="flex justify-center gap-2.5 pt-1 flex-wrap">
-                  {countByStage.foundational > 0 && selectedStage !== "foundational" && (
-                    <button
-                      onClick={() => setSelectedStage("foundational")}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs cursor-pointer"
-                    >
-                      पायाभूत स्तर उघडा ({countByStage.foundational} उपक्रम)
-                    </button>
-                  )}
-                  {countByStage.preparatory > 0 && selectedStage !== "preparatory" && (
-                    <button
-                      onClick={() => setSelectedStage("preparatory")}
-                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs cursor-pointer"
-                    >
-                      पूर्वतयारी स्तर उघडा ({countByStage.preparatory} उपक्रम)
-                    </button>
-                  )}
-                  {countByStage.middle > 0 && selectedStage !== "middle" && (
-                    <button
-                      onClick={() => setSelectedStage("middle")}
-                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black shadow-xs cursor-pointer"
-                    >
-                      मध्य स्तर उघडा ({countByStage.middle} उपक्रम)
-                    </button>
-                  )}
-                  <button
-                    onClick={handleOpenAddActivity}
-                    className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold shadow-xs cursor-pointer"
-                  >
-                    + मॅन्युअल उपक्रम जोडा
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("excel_sync")}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1"
-                  >
-                    <FileSpreadsheet className="size-3.5" />
-                    <span>एक्सेल फाईल अपलोड करा</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredActivities.map((act) => (
-                  <div
-                    key={act.id}
-                    className="p-5 rounded-2xl border border-slate-200 bg-white hover:border-indigo-300 transition-all shadow-xs space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-black px-2.5 py-0.5 rounded-lg bg-indigo-100 text-indigo-900 font-mono">
-                            {act.competencyCode}
-                          </span>
-                          <span className="text-xs font-bold text-slate-500">
-                            विषय / क्षेत्र: <b className="text-slate-800">{act.subjectOrArea}</b>
-                          </span>
-                          {act.goalCode && (
-                            <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md">
-                              ध्येय: {act.goalCode}
-                            </span>
-                          )}
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-900">
-                            उपक्रम क्र. {act.activityNumber || 1}
-                          </span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-                            {act.stageId === "foundational"
-                              ? "पायाभूत (१ली-२री)"
-                              : act.stageId === "preparatory"
-                              ? "पूर्वतयारी (३री-५वी)"
-                              : "मध्य स्तर"}
-                          </span>
-                        </div>
-                        <h4 className="text-sm font-black text-slate-900 pt-1">
-                          {act.activityTitle}
-                        </h4>
-                      </div>
-
-                      <div className="flex items-center gap-2 self-start shrink-0">
-                        <button
-                          onClick={() => handleOpenEditActivity(act)}
-                          className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                          title="संपादित करा"
-                        >
-                          <Edit2 className="size-3.5" />
-                          <span>संपादित करा (Edit)</span>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteActivity(act.id, act.activityTitle)}
-                          className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                          title="हटवा"
-                        >
-                          <Trash2 className="size-3.5" />
-                          <span>हटवा (Delete)</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {act.activityDescription && (
-                      <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed font-medium">
-                        <b className="text-slate-700">कृती तपशील:</b> {act.activityDescription}
-                      </p>
-                    )}
-
-                    {/* Learning Outcomes for this activity/competency */}
-                    {((act.learningOutcomes && act.learningOutcomes.length > 0) || act.learningOutcomeText) && (
-                      <div className="text-xs bg-indigo-50/70 p-3 rounded-xl border border-indigo-200/70 space-y-1">
-                        <span className="text-[11px] font-black text-indigo-900 flex items-center gap-1.5 flex-wrap">
-                          <GraduationCap className="size-3.5 text-indigo-700" />
-                          <span>अध्ययन निष्पत्ती (Learning Outcomes):</span>
-                          {act.classId && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-200/80 text-indigo-900 font-bold">
-                              {act.classId === "1st" ? "इयत्ता १ ली" : act.classId === "2nd" ? "इयत्ता २ री" : `इयत्ता ${act.classId}`}
-                            </span>
-                          )}
-                        </span>
-                        <div className="text-[11px] text-slate-800 space-y-0.5 pl-2 leading-relaxed font-medium">
-                          {act.learningOutcomes && act.learningOutcomes.length > 0 ? (
-                            act.learningOutcomes.map((lo, lIdx) => (
-                              <div key={lIdx} className="flex items-start gap-1.5">
-                                <span className="text-indigo-600 font-bold">•</span>
-                                <span>{lo}</span>
-                              </div>
-                            ))
-                          ) : (
-                            <p>{act.learningOutcomeText}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 5 Questions */}
-                    {act.questions && act.questions.length > 0 && (
-                      <div className="space-y-1.5 pt-1">
-                        <span className="text-[11px] font-black text-slate-700 flex items-center gap-1">
-                          <HelpCircle className="size-3 text-indigo-600" /> मूल्यमापनासाठी ५ प्रश्न:
-                        </span>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {act.questions.map((q, qIdx) => (
-                            <div
-                              key={qIdx}
-                              className="text-xs text-slate-700 bg-indigo-50/40 border border-indigo-100/60 p-2 rounded-xl flex items-start gap-2"
-                            >
-                              <span className="size-4 rounded-full bg-indigo-200 text-indigo-900 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
-                                {qIdx + 1}
-                              </span>
-                              <span className="font-medium">{q}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Sample Feedbacks */}
-                    {(act.teacherFeedbackSample || act.parentFeedbackSample) && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-100 text-[11px]">
-                        {act.teacherFeedbackSample && (
-                          <div className="bg-emerald-50/60 border border-emerald-200/60 p-2.5 rounded-xl text-emerald-900">
-                            <b>शिक्षकांचा अभिप्राय नमुना:</b> {act.teacherFeedbackSample}
-                          </div>
-                        )}
-                        {act.parentFeedbackSample && (
-                          <div className="bg-amber-50/60 border border-amber-200/60 p-2.5 rounded-xl text-amber-900">
-                            <b>पालकांचा अभिप्राय नमुना:</b> {act.parentFeedbackSample}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                <h4 className="text-base font-black text-slate-900">पायाभूत स्तर (Foundational Stage)</h4>
+                <p className="text-xs text-slate-500 mt-0.5">शारीरिक, सामाजिक-भावनिक, भाषा, गणित व सौंदर्यदृष्टी</p>
+                <div className="mt-4 grid grid-cols-3 gap-2 bg-white p-3 rounded-2xl border border-emerald-100 text-center">
+                  <div>
+                    <div className="text-lg font-black text-emerald-700">{stageBreakdown.foundational.activities}</div>
+                    <div className="text-[10px] font-bold text-slate-500">उपक्रम</div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 2: EXCEL / CSV UPLOAD & SYNC */}
-        {/* ========================================================================= */}
-        {activeTab === "excel_sync" && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-8">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">
-                  एक्सेल / CSV फाईल अपलोड व सिंक (Excel Bulk Upload & Sync)
-                </h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  SCERT व HPC मार्गदर्शक तत्त्वांचे एक्सेल वर्कशीट (ध्येय-क्षमता, उपक्रम, ५ प्रश्न, रुब्रिक्स व सारांश शेरे) थेट अपलोड करून डेटाबेसमध्ये सिंक करा
-                </p>
-              </div>
-
-              {(activitiesList.length > 0 || remarksList.length > 0) && (
+                  <div>
+                    <div className="text-lg font-black text-emerald-700">{stageBreakdown.foundational.questions}</div>
+                    <div className="text-[10px] font-bold text-slate-500">५ प्रश्न</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-black text-emerald-700">{stageBreakdown.foundational.subjects.size}</div>
+                    <div className="text-[10px] font-bold text-slate-500">विषय</div>
+                  </div>
+                </div>
                 <button
-                  onClick={handleResetEntireDatabase}
-                  className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-                  title="सर्व HPC डेटाबेस स्वच्छ करा"
+                  type="button"
+                  onClick={() => {
+                    setExplorerStageFilter("foundational");
+                    setExplorerClassFilter("all");
+                  }}
+                  className="mt-3.5 w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
                 >
-                  <Trash2 className="size-3.5" />
-                  <span>संपूर्ण डेटाबेस रीसेट करा (Reset Entire Master Database)</span>
+                  हा स्तर एक्सप्लोर करा ({stageBreakdown.foundational.activities} उपक्रम)
                 </button>
+              </div>
+
+              {/* Preparatory */}
+              <div className="p-5 rounded-3xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50/60 to-white shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                    इयत्ता ३ री ते ५ वी
+                  </span>
+                  <span className="size-2.5 rounded-full bg-indigo-500" />
+                </div>
+                <h4 className="text-base font-black text-slate-900">प्राथमिक पूर्वतयारी (Preparatory Stage)</h4>
+                <p className="text-xs text-slate-500 mt-0.5">भाषा १, भाषा २, गणित, परिसर अभ्यास व कला शिक्षण</p>
+                <div className="mt-4 grid grid-cols-3 gap-2 bg-white p-3 rounded-2xl border border-indigo-100 text-center">
+                  <div>
+                    <div className="text-lg font-black text-indigo-700">{stageBreakdown.preparatory.activities}</div>
+                    <div className="text-[10px] font-bold text-slate-500">उपक्रम</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-black text-indigo-700">{stageBreakdown.preparatory.questions}</div>
+                    <div className="text-[10px] font-bold text-slate-500">५ प्रश्न</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-black text-indigo-700">{stageBreakdown.preparatory.subjects.size}</div>
+                    <div className="text-[10px] font-bold text-slate-500">विषय</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExplorerStageFilter("preparatory");
+                    setExplorerClassFilter("all");
+                  }}
+                  className="mt-3.5 w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
+                >
+                  हा स्तर एक्सप्लोर करा ({stageBreakdown.preparatory.activities} उपक्रम)
+                </button>
+              </div>
+
+              {/* Middle */}
+              <div className="p-5 rounded-3xl border-2 border-purple-200 bg-gradient-to-br from-purple-50/60 to-white shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                    इयत्ता ६ वी ते ८ वी
+                  </span>
+                  <span className="size-2.5 rounded-full bg-purple-500" />
+                </div>
+                <h4 className="text-base font-black text-slate-900">मध्य स्तर (Middle Stage)</h4>
+                <p className="text-xs text-slate-500 mt-0.5">भाषा १, भाषा २, भाषा ३, गणित, विज्ञान व सामाजिक शास्त्रे</p>
+                <div className="mt-4 grid grid-cols-3 gap-2 bg-white p-3 rounded-2xl border border-purple-100 text-center">
+                  <div>
+                    <div className="text-lg font-black text-purple-700">{stageBreakdown.middle.activities}</div>
+                    <div className="text-[10px] font-bold text-slate-500">उपक्रम</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-black text-purple-700">{stageBreakdown.middle.questions}</div>
+                    <div className="text-[10px] font-bold text-slate-500">५ प्रश्न</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-black text-purple-700">{stageBreakdown.middle.subjects.size}</div>
+                    <div className="text-[10px] font-bold text-slate-500">विषय</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExplorerStageFilter("middle");
+                    setExplorerClassFilter("all");
+                  }}
+                  className="mt-3.5 w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
+                >
+                  हा स्तर एक्सप्लोर करा ({stageBreakdown.middle.activities} उपक्रम)
+                </button>
+              </div>
+            </div>
+
+            {/* Class & Subject Matrix Table (Collapsible) */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <TableIcon className="size-4 text-indigo-600" />
+                  <h4 className="text-sm font-black text-slate-900">
+                    इयत्ता व विषयनिहाय अपलोड सारांश मॅट्रिक्स (Class-Wise Upload Status Matrix)
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowMatrix(!showMatrix)}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                >
+                  {showMatrix ? "मॅट्रिक्स लपवा ▲" : "मॅट्रिक्स दाखवा ▼"}
+                </button>
+              </div>
+
+              {showMatrix && (
+                <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-100 text-slate-700 font-black border-b border-slate-200">
+                      <tr>
+                        <th className="p-3 w-28">इयत्ता</th>
+                        <th className="p-3 w-32">स्तर</th>
+                        <th className="p-3">उपलब्ध विषय व उपक्रम संख्या</th>
+                        <th className="p-3 w-24 text-center">एकूण</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {[
+                        { id: "1st", label: "इयत्ता १ ली", stage: "foundational", stageLabel: "पायाभूत (१ली-२री)" },
+                        { id: "2nd", label: "इयत्ता २ री", stage: "foundational", stageLabel: "पायाभूत (१ली-२री)" },
+                        { id: "3rd", label: "इयत्ता ३ री", stage: "preparatory", stageLabel: "पूर्वतयारी (३री-५वी)" },
+                        { id: "4th", label: "इयत्ता ४ थी", stage: "preparatory", stageLabel: "पूर्वतयारी (३री-५वी)" },
+                        { id: "5th", label: "इयत्ता ५ वी", stage: "preparatory", stageLabel: "पूर्वतयारी (३री-५वी)" },
+                        { id: "6th", label: "इयत्ता ६ वी", stage: "middle", stageLabel: "मध्य स्तर (६वी-८वी)" },
+                        { id: "7th", label: "इयत्ता ७ वी", stage: "middle", stageLabel: "मध्य स्तर (६वी-८वी)" },
+                        { id: "8th", label: "इयत्ता ८ वी", stage: "middle", stageLabel: "मध्य स्तर (६वी-८वी)" },
+                      ].map((cls) => {
+                        const subObj = classSubjectMatrix[cls.id] || {};
+                        const subEntries = Object.entries(subObj);
+                        const totalInClass = subEntries.reduce((s, [, c]) => s + c, 0);
+
+                        return (
+                          <tr key={cls.id} className="hover:bg-slate-50">
+                            <td className="p-3 font-black text-slate-800">{cls.label}</td>
+                            <td className="p-3">
+                              <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                                {cls.stageLabel}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              {subEntries.length > 0 ? (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {subEntries.map(([sub, count]) => (
+                                    <span
+                                      key={sub}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-900 text-[11px] font-bold"
+                                    >
+                                      <span>{sub}:</span>
+                                      <b className="text-indigo-700">{count}</b>
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-slate-400 italic">कोणतेही उपक्रम अपलोड नाहीत</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-center">
+                              <span
+                                className={`px-2.5 py-1 rounded-full text-xs font-black ${
+                                  totalInClass > 0 ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-400"
+                                }`}
+                              >
+                                {totalInClass}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
 
-            {/* Class Selector for Upload */}
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-indigo-50/40 rounded-2xl border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="size-2.5 rounded-full bg-orange-500 animate-pulse" />
-                  <span className="text-xs sm:text-sm font-black text-slate-900">
-                    इयत्ता निवडा (Select Class for Excel Upload & Fetching):
-                  </span>
+            {/* Master Data Sections Navigator (4 Sub-Sections inside Overall Dashboard) */}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                    <Layers className="size-4 text-indigo-600" />
+                    <span>डॅशबोर्ड डेटा विभाग (HPC Master Data Sections)</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    खालील ४ विभागांपैकी हवा असलेला विभाग निवडून सर्व माहिती एका क्लिकवर सहज पहा, शोधा व व्यवस्थापित करा
+                  </p>
                 </div>
-                <p className="text-[11px] text-slate-600 font-semibold">
-                  प्रत्येक इयत्तेच्या अध्ययन निष्पत्ती वेगळ्या असल्याने, ज्या इयत्तेची फाईल अपलोड करत आहात ती इयत्ता निवडा
-                </p>
               </div>
 
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {[
-                  { id: "all", label: "सर्व वर्ग (All)" },
-                  { id: "1st", label: "इयत्ता १ ली" },
-                  { id: "2nd", label: "इयत्ता २ री" },
-                  { id: "3rd", label: "इयत्ता ३ री" },
-                  { id: "4th", label: "इयत्ता ४ थी" },
-                  { id: "5th", label: "इयत्ता ५ वी" },
-                  { id: "6th", label: "इयत्ता ६ वी" },
-                  { id: "7th", label: "इयत्ता ७ वी" },
-                  { id: "8th", label: "इयत्ता ८ वी" },
-                ].map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setSelectedUploadClass(c.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                      selectedUploadClass === c.id
-                        ? "bg-orange-600 text-white shadow-xs scale-105"
-                        : "bg-white text-slate-700 hover:bg-orange-100/50 border border-slate-200"
+              {/* 4 Section Navigator Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+                {/* 1. Activities & Questions */}
+                <button
+                  type="button"
+                  onClick={() => setDashboardSection("activities")}
+                  className={`p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer flex items-center gap-3 ${
+                    dashboardSection === "activities"
+                      ? "border-indigo-600 bg-indigo-50/80 shadow-xs ring-2 ring-indigo-500/10"
+                      : "border-slate-200 hover:border-indigo-300 bg-white"
+                  }`}
+                >
+                  <div
+                    className={`p-2.5 rounded-xl shrink-0 ${
+                      dashboardSection === "activities"
+                        ? "bg-indigo-600 text-white"
+                        : "bg-indigo-50 text-indigo-600"
                     }`}
                   >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Upload Area */}
-            <div className="p-6 sm:p-8 border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-3xl text-center space-y-4">
-              <div className="size-14 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center mx-auto shadow-sm">
-                <FileSpreadsheet className="size-7" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-black text-slate-900">
-                  {uploadedFileName ? uploadedFileName : "येथे एक्सेल फाईल निवडा किंवा ड्रॅग करा"}
-                </h4>
-                <p className="text-xs text-slate-500 font-medium max-w-md mx-auto">
-                  सपोर्टेड फॉरमॅट: .xlsx, .xls, .csv (ध्येय-क्षमता सूची, ५ प्रश्न, मूल्यांकन रुब्रिक, वार्षिक सारांश शेरे)
-                </p>
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-
-              <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-sm transition-all cursor-pointer flex items-center gap-2"
-                >
-                  <Upload className="size-4" /> फाईल निवडा (Browse File)
-                </button>
-                <button
-                  onClick={handleDownloadTemplate}
-                  className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <Download className="size-4 text-emerald-600" /> नमुना टेम्पलेट डाऊनलोड करा
-                </button>
-              </div>
-            </div>
-
-            {/* Workbook Sheets Selector & Summary */}
-            {sheetNames.length > 0 && (
-              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-600">उपलब्ध शीट्स (Sheets):</span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {sheetNames.map((name) => (
-                        <button
-                          key={name}
-                          onClick={() => {
-                            setSelectedSheetName(name);
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            selectedSheetName === name
-                              ? "bg-indigo-600 text-white font-black shadow-xs"
-                              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
-                          }`}
-                        >
-                          {name}
-                        </button>
-                      ))}
+                    <ListOrdered className="size-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-black text-slate-900 truncate">१. उपक्रम व ५ प्रश्न बँक</div>
+                    <div className="text-[11px] font-bold text-indigo-700 truncate">
+                      {activitiesList.length} उपक्रम • {totalQuestionsCount} प्रश्न
                     </div>
                   </div>
+                </button>
 
-                  {/* Sync Button */}
-                  <button
-                    onClick={handleSyncToFirestore}
-                    disabled={
-                      isSyncing ||
-                      (parsedActivities.length === 0 &&
-                        parsedRemarks.length === 0 &&
-                        parsedRubrics.length === 0 &&
-                        parsedGoals.length === 0 &&
-                        parsedCompetencies.length === 0)
-                    }
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                {/* 2. Curricular Goals & Competencies */}
+                <button
+                  type="button"
+                  onClick={() => setDashboardSection("goals_competencies")}
+                  className={`p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer flex items-center gap-3 ${
+                    dashboardSection === "goals_competencies"
+                      ? "border-purple-600 bg-purple-50/80 shadow-xs ring-2 ring-purple-500/10"
+                      : "border-slate-200 hover:border-purple-300 bg-white"
+                  }`}
+                >
+                  <div
+                    className={`p-2.5 rounded-xl shrink-0 ${
+                      dashboardSection === "goals_competencies"
+                        ? "bg-purple-600 text-white"
+                        : "bg-purple-50 text-purple-600"
+                    }`}
                   >
-                    {isSyncing ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin" />
-                        <span>डेटाबेसमध्ये सेव्ह होत आहे...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save className="size-4" />
-                        <span>
-                          डेटाबेसमध्ये सेव्ह करा (Save {parsedActivities.length + parsedRemarks.length + parsedRubrics.length + parsedGoals.length + parsedCompetencies.length} Records)
-                        </span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Progress bar */}
-                {syncProgress && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs font-bold text-slate-600">
-                      <span>अपलोड प्रगती:</span>
-                      <span>
-                        {syncProgress.current} / {syncProgress.total} ({Math.round((syncProgress.current / syncProgress.total) * 100)}%)
-                      </span>
-                    </div>
-                    <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-600 transition-all duration-300"
-                        style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
-                      />
+                    <Award className="size-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-black text-slate-900 truncate">२. ध्येये व क्षमता (CG & C)</div>
+                    <div className="text-[11px] font-bold text-purple-700 truncate">
+                      {allGoals.length} ध्येये • {allCompetencies.length} क्षमता
                     </div>
                   </div>
-                )}
-              </div>
-            )}
+                </button>
 
-            {/* Parsed Preview Table */}
-            {parsedActivities.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                    <CheckCircle2 className="size-4 text-emerald-600" />
-                    <span>वाचलेले उपक्रम व ५ प्रश्न (Preview: {parsedActivities.length} नोंदी)</span>
-                  </h4>
-                  <span className="text-xs text-slate-500 font-bold">
-                    पहिले १५ उपक्रम दाखवत आहे
-                  </span>
+                {/* 3. Performance Rubrics */}
+                <button
+                  type="button"
+                  onClick={() => setDashboardSection("rubrics")}
+                  className={`p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer flex items-center gap-3 ${
+                    dashboardSection === "rubrics"
+                      ? "border-sky-600 bg-sky-50/80 shadow-xs ring-2 ring-sky-500/10"
+                      : "border-slate-200 hover:border-sky-300 bg-white"
+                  }`}
+                >
+                  <div
+                    className={`p-2.5 rounded-xl shrink-0 ${
+                      dashboardSection === "rubrics"
+                        ? "bg-sky-600 text-white"
+                        : "bg-sky-50 text-sky-600"
+                    }`}
+                  >
+                    <Compass className="size-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-black text-slate-900 truncate">३. निकषसंच (Rubrics)</div>
+                    <div className="text-[11px] font-bold text-sky-700 truncate">
+                      {rubricsList.length} निकष (३ स्तर निकष)
+                    </div>
+                  </div>
+                </button>
+
+                {/* 4. Year-End Remarks */}
+                <button
+                  type="button"
+                  onClick={() => setDashboardSection("remarks")}
+                  className={`p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer flex items-center gap-3 ${
+                    dashboardSection === "remarks"
+                      ? "border-rose-600 bg-rose-50/80 shadow-xs ring-2 ring-rose-500/10"
+                      : "border-slate-200 hover:border-rose-300 bg-white"
+                  }`}
+                >
+                  <div
+                    className={`p-2.5 rounded-xl shrink-0 ${
+                      dashboardSection === "remarks"
+                        ? "bg-rose-600 text-white"
+                        : "bg-rose-50 text-rose-600"
+                    }`}
+                  >
+                    <MessageSquare className="size-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-black text-slate-900 truncate">४. वार्षिक शेरे बँक</div>
+                    <div className="text-[11px] font-bold text-rose-700 truncate">
+                      {remarksList.length} सर्वंकष शेरे
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* ========================================================================= */}
+            {/* SUBSECTION 1: ACTIVITIES & 5 QUESTIONS BANK */}
+            {/* ========================================================================= */}
+            {dashboardSection === "activities" && (
+              <div className="space-y-6">
+                {/* 3 Dedicated Spaces for the 3 Stages (separated as per classes) */}
+                <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <Layers className="size-3.5 text-indigo-600" />
+                      इयत्तेनुसार ३ स्वतंत्र स्तर कक्ष (3 Independent Stage Spaces)
+                    </span>
+                    <span className="text-xs text-slate-500 font-bold bg-slate-100 px-2.5 py-1 rounded-lg">
+                      🛡️ एका स्तराचा डेटा साफ केल्यास इतर स्तर पूर्णपणे सुरक्षित राहतात
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {HPC_STAGES_INFO.map((stg) => {
+                      const isSelected = selectedStage === stg.id;
+                      const count = countByStage[stg.id] || 0;
+
+                      const theme =
+                        stg.id === "foundational"
+                          ? {
+                              border: isSelected
+                                ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40"
+                                : "border-slate-200 hover:border-emerald-300 bg-white",
+                              badge: "bg-emerald-100 text-emerald-800",
+                              accent: "text-emerald-700",
+                              dot: "bg-emerald-500",
+                            }
+                          : stg.id === "preparatory"
+                          ? {
+                              border: isSelected
+                                ? "border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/40"
+                                : "border-slate-200 hover:border-indigo-300 bg-white",
+                              badge: "bg-indigo-100 text-indigo-800",
+                              accent: "text-indigo-700",
+                              dot: "bg-indigo-500",
+                            }
+                          : {
+                              border: isSelected
+                                ? "border-purple-500 ring-2 ring-purple-500/20 bg-purple-50/40"
+                                : "border-slate-200 hover:border-purple-300 bg-white",
+                              badge: "bg-purple-100 text-purple-800",
+                              accent: "text-purple-700",
+                              dot: "bg-purple-500",
+                            };
+
+                      return (
+                        <div
+                          key={stg.id}
+                          onClick={() => {
+                            setSelectedStage(stg.id);
+                            setSelectedCompFilter("all");
+                            setExplorerStageFilter(stg.id);
+                          }}
+                          className={`relative rounded-3xl p-5 border-2 transition-all cursor-pointer flex flex-col justify-between shadow-xs hover:shadow-md ${theme.border}`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2 mb-2.5">
+                              <span
+                                className={`text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${theme.badge}`}
+                              >
+                                {stg.classesLabelMarathi}
+                              </span>
+                              {isSelected ? (
+                                <span className="flex items-center gap-1 text-[11px] font-black text-indigo-700 bg-white px-2 py-0.5 rounded-full shadow-2xs border border-indigo-200">
+                                  <CheckCircle2 className="size-3 text-indigo-600" /> सक्रिय कक्ष
+                                </span>
+                              ) : (
+                                <span className="text-[11px] font-bold text-slate-400">
+                                  उघडण्यासाठी क्लिक करा
+                                </span>
+                              )}
+                            </div>
+
+                            <h4 className="text-base font-black text-slate-900 flex items-center gap-2">
+                              <span className={`size-2.5 rounded-full ${theme.dot}`} />
+                              <span>{stg.titleMarathi}</span>
+                            </h4>
+                            <p className="text-xs text-slate-500 font-medium mt-1">
+                              {stg.id === "foundational" && "इयत्ता १ली व २री (भाग १ - पायाभूत शिक्षण)"}
+                              {stg.id === "preparatory" && "इयत्ता ३री, ४थी व ५वी (भाग २ - प्राथमिक पूर्वतयारी)"}
+                              {stg.id === "middle" && "इयत्ता ६वी, ७वी व ८वी (भाग ३ - उच्च प्राथमिक / माध्यमिक)"}
+                            </p>
+
+                            <div className="mt-3.5 py-2.5 px-3 rounded-2xl bg-white/90 border border-slate-200/80 flex items-center justify-between shadow-2xs">
+                              <span className="text-xs font-bold text-slate-600">उपलब्ध उपक्रम संख्या:</span>
+                              <span className={`text-sm font-black ${theme.accent}`}>
+                                {count} उपक्रम
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedStage(stg.id);
+                                setSelectedCompFilter("all");
+                                setExplorerStageFilter(stg.id);
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                isSelected
+                                  ? "bg-slate-900 text-white font-black"
+                                  : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                              }`}
+                            >
+                              {isSelected ? "सक्रिय कक्ष (Active)" : "हा कक्ष उघडा"}
+                            </button>
+
+                            {count > 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleClearStageActivities(stg.id);
+                                }}
+                                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title={`फक्त ${stg.titleMarathi} मधील उपक्रम डेटाबेसमधून हटवा`}
+                              >
+                                <Trash2 className="size-3" />
+                                <span>फक्त हा स्तर साफ करा</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
-                  <div className="overflow-x-auto max-h-96">
+                {/* Master Content Explorer Section */}
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <span>सर्व अपलोड सामग्रीचा सोपा तक्ता (Master Content Explorer)</span>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-900 text-white font-mono">
+                      {masterExplorerActivities.length} नोंदी
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    कोणतीही इयत्ता किंवा विषय निवडून अपलोड केलेले सर्व उपक्रम, ५ प्रश्न व क्षमता कोड सहज तपासा व शोधा
+                  </p>
+                </div>
+
+                {/* View Mode Toggle & Quick Actions */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setExplorerViewMode("table")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        explorerViewMode === "table"
+                          ? "bg-white text-slate-900 shadow-xs font-black"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      <TableIcon className="size-3.5" />
+                      <span>सोपा तक्ता (Table)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExplorerViewMode("cards")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        explorerViewMode === "cards"
+                          ? "bg-white text-slate-900 shadow-xs font-black"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      <LayoutGrid className="size-3.5" />
+                      <span>सविस्तर कार्डे (Cards)</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("excel_sync")}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Upload className="size-3.5" />
+                    <span>नवीन एक्सेल फाईल अपलोड करा</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Multi-Filters Bar */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                {/* Universal Search */}
+                <div className="relative">
+                  <Search className="size-4 absolute left-3 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="उपक्रम, ५ प्रश्न, क्षमता किंवा LO शोधा..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 bg-white focus:outline-none focus:border-indigo-500 shadow-2xs"
+                  />
+                </div>
+
+                {/* Stage Filter */}
+                <div>
+                  <select
+                    value={explorerStageFilter}
+                    onChange={(e) => setExplorerStageFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-indigo-500 shadow-2xs"
+                  >
+                    <option value="all">सर्व स्तर (All 3 Stages)</option>
+                    <option value="foundational">पायाभूत स्तर (इ. १ली व २री)</option>
+                    <option value="preparatory">प्राथमिक पूर्वतयारी (इ. ३री ते ५वी)</option>
+                    <option value="middle">मध्य स्तर (इ. ६वी ते ८वी)</option>
+                  </select>
+                </div>
+
+                {/* Class Filter */}
+                <div>
+                  <select
+                    value={explorerClassFilter}
+                    onChange={(e) => setExplorerClassFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-indigo-500 shadow-2xs"
+                  >
+                    <option value="all">सर्व इयत्ता (All Classes)</option>
+                    <option value="1st">इयत्ता १ ली</option>
+                    <option value="2nd">इयत्ता २ री</option>
+                    <option value="3rd">इयत्ता ३ री</option>
+                    <option value="4th">इयत्ता ४ थी</option>
+                    <option value="5th">इयत्ता ५ वी</option>
+                    <option value="6th">इयत्ता ६ वी</option>
+                    <option value="7th">इयत्ता ७ वी</option>
+                    <option value="8th">इयत्ता ८ वी</option>
+                  </select>
+                </div>
+
+                {/* Subject Filter */}
+                <div>
+                  <select
+                    value={explorerSubjectFilter}
+                    onChange={(e) => setExplorerSubjectFilter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:border-indigo-500 shadow-2xs"
+                  >
+                    <option value="all">सर्व विषय (All Subjects)</option>
+                    {uniqueSubjects.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Table View / Cards View */}
+              {activitiesLoading ? (
+                <div className="py-16 text-center text-slate-500 flex flex-col items-center gap-2">
+                  <Loader2 className="size-7 animate-spin text-indigo-600" />
+                  <span className="text-xs font-bold">माहिती लोड होत आहे...</span>
+                </div>
+              ) : masterExplorerActivities.length === 0 ? (
+                <div className="py-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 p-6 space-y-3">
+                  <AlertCircle className="size-8 text-amber-500 mx-auto" />
+                  <p className="text-sm font-black text-slate-800">निवडलेल्या फिल्टरनुसार कोणतीही सामग्री सापडली नाही.</p>
+                  <p className="text-xs text-slate-500">कृपया फिल्टर बदला किंवा नवीन एक्सेल फाईल अपलोड करा.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setExplorerStageFilter("all");
+                      setExplorerClassFilter("all");
+                      setExplorerSubjectFilter("all");
+                    }}
+                    className="px-4 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold"
+                  >
+                    सर्व फिल्टर साफ करा (Clear Filters)
+                  </button>
+                </div>
+              ) : explorerViewMode === "table" ? (
+                /* ============ COMPACT TABLE VIEW ============ */
+                <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs bg-white">
+                  <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
+                      <thead className="bg-slate-900 text-white font-black sticky top-0 z-10">
                         <tr>
                           <th className="p-3 w-12 text-center">क्र.</th>
+                          <th className="p-3 w-24">इयत्ता</th>
+                          <th className="p-3 w-28">स्तर</th>
                           <th className="p-3 w-36">विषय / क्षेत्र</th>
                           <th className="p-3 w-28">क्षमता कोड</th>
+                          <th className="p-3 min-w-[260px]">उपक्रम शीर्षक</th>
+                          <th className="p-3 w-36 text-center">५ प्रश्न बँक</th>
                           <th className="p-3 min-w-[200px]">अध्ययन निष्पत्ती (LO)</th>
-                          <th className="p-3 min-w-[200px]">उपक्रम नाव</th>
-                          <th className="p-3 min-w-[220px]">५ प्रश्न नमुना</th>
-                          <th className="p-3 min-w-[160px]">शिक्षकांचा अभिप्राय</th>
+                          <th className="p-3 w-28 text-center">क्रिया</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {parsedActivities.slice(0, 15).map((act, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
-                            <td className="p-3 font-bold text-slate-800">{act.subjectOrArea}</td>
-                            <td className="p-3">
-                              <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-mono font-bold text-[11px]">
-                                {act.competencyCode}
+                        {masterExplorerActivities.map((act, idx) => {
+                          const qCount = act.questions?.filter((q) => q && q.trim())?.length || 0;
+                          const stageBadge =
+                            act.stageId === "foundational"
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                              : act.stageId === "preparatory"
+                              ? "bg-indigo-100 text-indigo-800 border-indigo-200"
+                              : "bg-purple-100 text-purple-800 border-purple-200";
+
+                          return (
+                            <tr
+                              key={act.id}
+                              className="hover:bg-indigo-50/40 transition-colors cursor-pointer"
+                              onClick={() => setViewingActivityModal(act)}
+                            >
+                              <td className="p-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                              <td className="p-3">
+                                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 font-bold border border-slate-200 text-[11px]">
+                                  {act.classId ? `इ. ${act.classId}` : "सर्व"}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${stageBadge}`}>
+                                  {act.stageId === "foundational"
+                                    ? "पायाभूत"
+                                    : act.stageId === "preparatory"
+                                    ? "पूर्वतयारी"
+                                    : "मध्य स्तर"}
+                                </span>
+                              </td>
+                              <td className="p-3 font-bold text-slate-800">{act.subjectOrArea}</td>
+                              <td className="p-3">
+                                <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-mono font-bold text-[11px]">
+                                  {act.competencyCode}
+                                </span>
+                              </td>
+                              <td className="p-3 font-black text-slate-900 leading-snug">
+                                {act.activityTitle}
+                              </td>
+                              <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => setViewingActivityModal(act)}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer flex items-center gap-1 mx-auto ${
+                                    qCount > 0
+                                      ? "bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border border-emerald-300"
+                                      : "bg-slate-100 text-slate-500"
+                                  }`}
+                                  title="सर्व ५ प्रश्न पहा"
+                                >
+                                  <HelpCircle className="size-3 text-emerald-600" />
+                                  <span>{qCount} प्रश्न पहा 👁️</span>
+                                </button>
+                              </td>
+                              <td className="p-3 text-[11px] text-slate-600 max-w-xs truncate">
+                                {act.learningOutcomes?.[0] || act.learningOutcomeText || "-"}
+                              </td>
+                              <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditActivity(act)}
+                                    className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors"
+                                    title="संपादित करा"
+                                  >
+                                    <Edit2 className="size-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteActivity(act.id, act.activityTitle)}
+                                    className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors"
+                                    title="हटवा"
+                                  >
+                                    <Trash2 className="size-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                /* ============ CARDS VIEW ============ */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {masterExplorerActivities.map((act) => (
+                    <div
+                      key={act.id}
+                      className="p-5 rounded-2xl border border-slate-200 bg-white hover:border-indigo-300 transition-all shadow-xs space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-black px-2.5 py-0.5 rounded-lg bg-indigo-100 text-indigo-900 font-mono">
+                              {act.competencyCode}
+                            </span>
+                            <span className="text-xs font-bold text-slate-600">
+                              विषय: <b>{act.subjectOrArea}</b>
+                            </span>
+                            {act.classId && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                                इ. {act.classId}
                               </span>
-                            </td>
-                            <td className="p-3 text-[11px] text-indigo-900 font-medium">
-                              {act.learningOutcomes && act.learningOutcomes.length > 0 ? (
-                                <ul className="space-y-0.5 list-disc list-inside">
-                                  {act.learningOutcomes.slice(0, 2).map((lo, li) => (
-                                    <li key={li} className="truncate max-w-xs">{lo}</li>
+                            )}
+                          </div>
+                          <h4 className="text-sm font-black text-slate-900 pt-1">{act.activityTitle}</h4>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setViewingActivityModal(act)}
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700"
+                            title="तपशील पहा"
+                          >
+                            <Eye className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditActivity(act)}
+                            className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700"
+                            title="संपादित करा"
+                          >
+                            <Edit2 className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteActivity(act.id, act.activityTitle)}
+                            className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700"
+                            title="हटवा"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Questions Preview in Card */}
+                      {act.questions && act.questions.length > 0 && (
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1">
+                          <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
+                            <HelpCircle className="size-3 text-emerald-600" /> ५ प्रश्न नमुना:
+                          </span>
+                          <ul className="text-xs text-slate-800 space-y-0.5 pl-2">
+                            {act.questions.slice(0, 3).map((q, qi) => (
+                              <li key={qi} className="truncate">
+                                <b>{qi + 1}.</b> {q}
+                              </li>
+                            ))}
+                          </ul>
+                          {act.questions.length > 3 && (
+                            <button
+                              type="button"
+                              onClick={() => setViewingActivityModal(act)}
+                              className="text-[10px] text-indigo-600 font-bold hover:underline"
+                            >
+                              + आणखी {act.questions.length - 3} प्रश्न पहा...
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+              </div>
+            )}
+            {/* ========================================================================= */}
+            {/* SUBSECTION 2: CURRICULAR GOALS & COMPETENCIES (CG & C) */}
+            {/* ========================================================================= */}
+            {dashboardSection === "goals_competencies" && (
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+                {/* Internal Subtabs Switcher */}
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
+                  <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setGoalsOrCompSubtab("competencies")}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                        goalsOrCompSubtab === "competencies"
+                          ? "bg-purple-600 text-white shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      <Award className="size-3.5" />
+                      <span>१. मूल्यमापन क्षमता यादी (Competencies) ({allCompetencies.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGoalsOrCompSubtab("goals")}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                        goalsOrCompSubtab === "goals"
+                          ? "bg-amber-600 text-white shadow-xs"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      <BookOpen className="size-3.5" />
+                      <span>२. अभ्यासक्रम ध्येये (Curricular Goals) ({allGoals.length})</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={fetchGoalsAndCompetencies}
+                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                      title="रिफ्रेश करा"
+                    >
+                      <RefreshCw className="size-4" />
+                    </button>
+                    {goalsOrCompSubtab === "competencies" ? (
+                      <button
+                        onClick={() => {
+                          setNewCompGoalId(allGoals[0]?.id || "");
+                          setShowAddComp(true);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <Plus className="size-3.5" />
+                        <span>नवीन क्षमता जोडा (Add C)</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setNewGoalArea(areas[0]?.id || "");
+                          setShowAddGoal(true);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <Plus className="size-3.5" />
+                        <span>नवीन ध्येय जोडा (Add CG)</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Subtab 1: Competencies */}
+                {goalsOrCompSubtab === "competencies" && (
+                  <div className="space-y-4">
+                    {/* Filter & Search Bar */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      <div className="relative">
+                        <Search className="size-4 absolute left-3 top-3 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="क्षमता कोड किंवा नाव शोधा..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <select
+                          value={compGoalFilter}
+                          onChange={(e) => setCompGoalFilter(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
+                        >
+                          <option value="all">सर्व अभ्यासक्रम ध्येये (All Goals)</option>
+                          {allGoals.map((g) => (
+                            <option key={g.id} value={g.code}>
+                              {g.code}: {(g.titleMarathi || (g as any).nameMarathi || g.code || "").slice(0, 40)}...
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-end text-xs font-bold text-slate-500">
+                        दाखवत आहे: {filteredCompetencies.length} क्षमता
+                      </div>
+                    </div>
+
+                    {allCompetencies.length === 0 ? (
+                      <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
+                        <AlertCircle className="size-8 text-amber-500 mx-auto" />
+                        <p className="text-sm font-bold text-slate-700">अद्याप कोणतीही क्षमता (C) जोडलेली नाही.</p>
+                      </div>
+                    ) : filteredCompetencies.length === 0 ? (
+                      <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
+                        <AlertCircle className="size-8 text-amber-500 mx-auto" />
+                        <p className="text-sm font-bold text-slate-700">निवडलेल्या ध्येयासाठी कोणतीही क्षमता आढळली नाही.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {filteredCompetencies.map((c) => (
+                          <div
+                            key={c.id}
+                            className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-purple-300 transition-all shadow-xs"
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-mono">
+                                  {c.code}
+                                </span>
+                                <span className="text-xs font-bold text-slate-500">
+                                  ध्येय: <b>{c.goalId}</b>
+                                </span>
+                                {c.applicableSession && (
+                                  <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                    {c.applicableSession === "session1"
+                                      ? "सत्र १"
+                                      : c.applicableSession === "session2"
+                                      ? "सत्र २"
+                                      : "दोन्ही सत्रे"}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm font-bold text-slate-900 mt-1 leading-relaxed">
+                                {c.titleMarathi}
+                              </p>
+                              {c.learningOutcomes && c.learningOutcomes.length > 0 && (
+                                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[10px] font-bold text-slate-500">अध्ययन निष्पत्ती ({c.learningOutcomes.length}):</span>
+                                  {c.learningOutcomes.slice(0, 3).map((lo, loi) => (
+                                    <span key={loi} className="text-[10px] font-medium bg-white px-2 py-0.5 rounded-md border border-slate-200 text-slate-700 max-w-xs truncate" title={lo}>
+                                      {lo}
+                                    </span>
                                   ))}
-                                  {act.learningOutcomes.length > 2 && (
-                                    <span className="text-[10px] text-indigo-600 font-bold block">
-                                      +{act.learningOutcomes.length - 2} आणखी...
+                                  {c.learningOutcomes.length > 3 && (
+                                    <span className="text-[10px] font-bold text-purple-700">
+                                      +{c.learningOutcomes.length - 3} आणखी
                                     </span>
                                   )}
-                                </ul>
-                              ) : (
-                                <span className="text-slate-400">-</span>
+                                </div>
                               )}
-                            </td>
-                            <td className="p-3 font-bold text-slate-900">{act.activityTitle}</td>
-                            <td className="p-3 text-[11px] text-slate-600">
-                              {act.questions && act.questions.length > 0 ? (
-                                <ol className="list-decimal list-inside space-y-0.5">
-                                  {act.questions.slice(0, 3).map((q, qi) => (
-                                    <li key={qi} className="truncate max-w-xs">{q}</li>
-                                  ))}
-                                  {act.questions.length > 3 && (
-                                    <li className="text-slate-400 font-medium">आणखी {act.questions.length - 3} प्रश्न...</li>
-                                  )}
-                                </ol>
-                              ) : (
-                                <span className="text-slate-400">प्रश्न नाहीत</span>
-                              )}
-                            </td>
-                            <td className="p-3 text-[11px] text-slate-600 truncate max-w-xs">
-                              {act.teacherFeedbackSample || "-"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
+                            </div>
 
-            {/* Parsed Remarks Preview */}
-            {parsedRemarks.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-emerald-600" />
-                  <span>वाचलेले वार्षिक शेरे (Preview: {parsedRemarks.length} शेरे)</span>
-                </h4>
-                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
-                  <div className="overflow-x-auto max-h-80">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
-                        <tr>
-                          <th className="p-3 w-12 text-center">क्र.</th>
-                          <th className="p-3 w-36">विषय / क्षेत्र</th>
-                          <th className="p-3 w-28">कामगिरी स्तर</th>
-                          <th className="p-3">शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {parsedRemarks.slice(0, 15).map((r, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
-                            <td className="p-3 font-bold text-slate-800">{r.subjectOrArea}</td>
-                            <td className="p-3">
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-bold text-[11px]">
-                                {r.level}
+                            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                              <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                                सक्रिय
                               </span>
-                            </td>
-                            <td className="p-3 text-slate-700 font-medium">{r.remarkText}</td>
-                          </tr>
+                              <button
+                                onClick={() => handleDeleteCompetency(c.id, c.code)}
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 transition-all cursor-pointer"
+                                title="क्षमता हटवा"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Parsed Rubrics Preview */}
-            {parsedRubrics.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-emerald-600" />
-                  <span>वाचलेले मूल्यांकन रुब्रिक्स (Preview: {parsedRubrics.length} निकष नोंदी)</span>
-                </h4>
-                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
-                  <div className="overflow-x-auto max-h-80">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
-                        <tr>
-                          <th className="p-3 w-12 text-center">क्र.</th>
-                          <th className="p-3 min-w-[180px]">उपक्रम</th>
-                          <th className="p-3 w-28">परिमाण</th>
-                          <th className="p-3 min-w-[200px]">प्रारंभिक / निर्झर</th>
-                          <th className="p-3 min-w-[200px]">प्रवीण / पर्वत</th>
-                          <th className="p-3 min-w-[200px]">प्रगत / आकाश</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {parsedRubrics.slice(0, 10).map((rub, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
-                            <td className="p-3 font-bold text-slate-800">{rub.activityTitle || "-"}</td>
-                            <td className="p-3">
-                              <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-bold text-[11px]">
-                                {rub.dimension}
-                              </span>
-                            </td>
-                            <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.beginner}</td>
-                            <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.proficient}</td>
-                            <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.advanced}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Parsed Goals & Competencies Preview */}
-            {(parsedGoals.length > 0 || parsedCompetencies.length > 0) && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-emerald-600" />
-                  <span>
-                    वाचलेली ध्येये व क्षमता (Preview: {parsedGoals.length} ध्येये, {parsedCompetencies.length} क्षमता)
-                  </span>
-                </h4>
-                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
-                  <div className="overflow-x-auto max-h-80">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
-                        <tr>
-                          <th className="p-3 w-12 text-center">क्र.</th>
-                          <th className="p-3 w-28">क्षमता कोड</th>
-                          <th className="p-3 w-28">संबंधित ध्येय</th>
-                          <th className="p-3">क्षमतेचे वर्णन</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {parsedCompetencies.slice(0, 15).map((comp, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
-                            <td className="p-3 font-mono font-bold text-purple-900">{comp.code}</td>
-                            <td className="p-3 font-mono font-bold text-indigo-900">{comp.goalId.replace("CUSTOM-", "")}</td>
-                            <td className="p-3 text-slate-700 font-medium">{comp.titleMarathi}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 3: YEAR-END REMARKS BANK (वार्षिक शेरे बँक) */}
-        {/* ========================================================================= */}
-        {activeTab === "remarks" && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">
-                  वार्षिक शेरे बँक (Year-End Summary Remarks Bank)
-                </h3>
-                <p className="text-xs text-slate-500 font-medium">
-                  विषयानुसार व कामगिरी स्तरानुसार (प्रारंभिक, प्रवीण, प्रगत) शिक्षकांच्या अंतिम सर्वंकष शेऱ्यांची बँक
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={fetchRemarks}
-                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
-                  title="रिफ्रेश करा"
-                >
-                  <RefreshCw className="size-4" />
-                </button>
-                {remarksList.length > 0 && (
-                  <button
-                    onClick={handleClearAllRemarks}
-                    className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5"
-                    title="सर्व शेरे हटवा"
-                  >
-                    <Trash2 className="size-3.5" />
-                    <span>सर्व शेरे साफ करा (Clear Remarks)</span>
-                  </button>
                 )}
-                <button
-                  onClick={handleOpenAddRemark}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Plus className="size-3.5" />
-                  <span>नवीन शेरा जोडा (Add Remark)</span>
-                </button>
-              </div>
-            </div>
 
-            {/* Filter */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="relative">
-                <Search className="size-4 absolute left-3 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="विषय किंवा शेरा शोधा..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800"
-                />
-              </div>
-
-              <div>
-                <select
-                  value={remarkAreaFilter}
-                  onChange={(e) => setRemarkAreaFilter(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
-                >
-                  <option value="all">सर्व विकास क्षेत्र / विषय (All Areas)</option>
-                  {Array.from(new Set(remarksList.map((r) => r.subjectOrArea).filter(Boolean))).map((a) => (
-                    <option key={a} value={a}>
-                      {a}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <select
-                  value={remarkLevelFilter}
-                  onChange={(e) => setRemarkLevelFilter(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
-                >
-                  <option value="all">सर्व कामगिरी स्तर (All Levels)</option>
-                  <option value="प्रगत">प्रगत (Advanced)</option>
-                  <option value="प्रवीण">प्रवीण (Proficient)</option>
-                  <option value="प्रारंभिक">प्रारंभिक (Beginner)</option>
-                  <option value="आकाश">आकाश</option>
-                  <option value="पर्वत">पर्वत</option>
-                  <option value="निर्झर">निर्झर</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end text-xs font-bold text-slate-500">
-                दाखवत आहे: {filteredRemarks.length} शेरे
-              </div>
-            </div>
-
-            {/* Remarks Table */}
-            {remarksLoading ? (
-              <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
-                <Loader2 className="size-6 animate-spin" />
-                <span className="text-xs font-bold">शेरे लोड होत आहेत...</span>
-              </div>
-            ) : filteredRemarks.length === 0 ? (
-              <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
-                <AlertCircle className="size-8 text-amber-500 mx-auto" />
-                <p className="text-sm font-bold text-slate-700">अद्याप कोणताही शेरा डेटाबेसमध्ये जोडलेला नाही.</p>
-                <p className="text-xs text-slate-500">
-                  तुम्ही वरून "नवीन शेरा जोडा" वापरू शकता किंवा एक्सेल अपलोड टॅबमधून 'भाग क - वार्षिक सारांश' शीट थेट अपलोड करू शकता.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredRemarks.map((rem) => (
-                  <div
-                    key={rem.id}
-                    className="p-4 rounded-2xl border border-slate-200 bg-white hover:border-purple-300 transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="space-y-1 max-w-3xl">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-500">
-                          विषय: <b className="text-slate-900">{rem.subjectOrArea}</b>
-                        </span>
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-900">
-                          {rem.level}
-                        </span>
+                {/* Subtab 2: Curricular Goals */}
+                {goalsOrCompSubtab === "goals" && (
+                  <div className="space-y-4">
+                    {allGoals.length === 0 ? (
+                      <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
+                        <AlertCircle className="size-8 text-amber-500 mx-auto" />
+                        <p className="text-sm font-bold text-slate-700">अद्याप कोणतेही ध्येय (CG) जोडलेले नाही.</p>
                       </div>
-                      <p className="text-xs text-slate-800 font-medium leading-relaxed">
-                        {rem.remarkText}
-                      </p>
-                    </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {allGoals.map((g) => {
+                          const area = areas.find((a) => a.id === g.areaOrSubjectId);
+                          return (
+                            <div
+                              key={g.id}
+                              className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-amber-300 transition-all shadow-xs"
+                            >
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-mono">
+                                    {g.code}
+                                  </span>
+                                  <span className="text-xs font-bold text-slate-500">
+                                    विषय / क्षेत्र: <b>{area?.nameMarathi || g.areaOrSubjectId}</b>
+                                  </span>
+                                </div>
+                                <p className="text-sm font-bold text-slate-900 mt-1 leading-relaxed">
+                                  {g.titleMarathi}
+                                </p>
+                              </div>
 
-                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                      <button
-                        onClick={() => handleOpenEditRemark(rem)}
-                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-purple-100 text-slate-600 hover:text-purple-800 transition-all cursor-pointer"
-                        title="संपादित करा"
-                      >
-                        <Edit2 className="size-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteRemark(rem.id)}
-                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-800 transition-all cursor-pointer"
-                        title="हटवा"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </div>
+                              <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                                  सक्रिय
+                                </span>
+                                <button
+                                  onClick={() => handleDeleteGoal(g.id, g.code)}
+                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 transition-all cursor-pointer"
+                                  title="ध्येय हटवा"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 4: CURRICULAR GOALS */}
-        {/* ========================================================================= */}
-        {activeTab === "goals" && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">
-                  अभ्यासक्रमाची ध्येये (Curricular Goals) — {HPC_STAGES_INFO.find((s) => s.id === selectedStage)?.titleMarathi}
-                </h3>
-                <p className="text-xs text-slate-500 font-medium">
-                  फक्त एक्सेल शीटद्वारे अपलोड केलेली व जोडलेली ध्येये (एकूण: {allGoals.length})
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={fetchGoalsAndCompetencies}
-                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
-                  title="रिफ्रेश करा"
-                >
-                  <RefreshCw className="size-4" />
-                </button>
-                {allGoals.length > 0 && (
-                  <button
-                    onClick={() => handleClearStageGoals(selectedStage)}
-                    className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5"
-                    title="या स्तरातील सर्व ध्येये हटवा"
-                  >
-                    <Trash2 className="size-3.5" />
-                    <span>सर्व ध्येये साफ करा</span>
-                  </button>
                 )}
-                <button
-                  onClick={() => {
-                    setNewGoalArea(areas[0]?.id || "");
-                    setShowAddGoal(true);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Plus className="size-3.5" />
-                  <span>नवीन ध्येय जोडा (Add CG)</span>
-                </button>
-              </div>
-            </div>
-
-            {allGoals.length === 0 ? (
-              <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
-                <AlertCircle className="size-8 text-amber-500 mx-auto" />
-                <p className="text-sm font-bold text-slate-700">या स्तरासाठी अद्याप कोणतेही ध्येय (CG) जोडलेले नाही.</p>
-                <p className="text-xs text-slate-500">
-                  तुम्ही 'एक्सेल अपलोड व सिंक' टॅबमधून एक्सेल फाईल अपलोड करू शकता किंवा वरून "नवीन ध्येय जोडा" वापरू शकता.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {allGoals.map((g) => {
-                  const area = areas.find((a) => a.id === g.areaOrSubjectId);
-                  return (
-                    <div
-                      key={g.id}
-                      className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-indigo-300 transition-all shadow-xs"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-black px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-900 font-mono">
-                            {g.code}
-                          </span>
-                          <span className="text-xs font-bold text-slate-500">
-                            विषय / क्षेत्र: <b>{area?.nameMarathi || g.areaOrSubjectId}</b>
-                          </span>
-                        </div>
-                        <p className="text-sm font-bold text-slate-900 mt-1 leading-relaxed">
-                          {g.titleMarathi}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                        <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
-                          सक्रिय
-                        </span>
-                        <button
-                          onClick={() => handleDeleteGoal(g.id, g.code)}
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 transition-all cursor-pointer"
-                          title="ध्येय हटवा"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             )}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 5: COMPETENCIES */}
-        {/* ========================================================================= */}
-        {activeTab === "competencies" && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">
-                  क्षमता यादी (Competencies) — {HPC_STAGES_INFO.find((s) => s.id === selectedStage)?.titleMarathi}
-                </h3>
-                <p className="text-xs text-slate-500 font-medium">
-                  फक्त एक्सेल शीटद्वारे अपलोड केलेल्या व जोडलेल्या क्षमता (एकूण: {allCompetencies.length})
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={fetchGoalsAndCompetencies}
-                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
-                  title="रिफ्रेश करा"
-                >
-                  <RefreshCw className="size-4" />
-                </button>
-                {allCompetencies.length > 0 && (
-                  <button
-                    onClick={() => handleClearStageCompetencies(selectedStage)}
-                    className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5"
-                    title="या स्तरातील सर्व क्षमता हटवा"
-                  >
-                    <Trash2 className="size-3.5" />
-                    <span>सर्व क्षमता साफ करा</span>
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setNewCompGoalId(allGoals[0]?.id || "");
-                    setShowAddComp(true);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Plus className="size-3.5" />
-                  <span>नवीन क्षमता जोडा (Add C)</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Filter & Search Bar */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              <div className="relative">
-                <Search className="size-4 absolute left-3 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="क्षमता कोड किंवा नाव शोधा..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800"
-                />
-              </div>
-
-              <div>
-                <select
-                  value={compGoalFilter}
-                  onChange={(e) => setCompGoalFilter(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
-                >
-                  <option value="all">सर्व अभ्यासक्रम ध्येये (All Goals)</option>
-                  {allGoals.map((g) => (
-                    <option key={g.id} value={g.code}>
-                      {g.code}: {(g.titleMarathi || (g as any).nameMarathi || g.code || "").slice(0, 40)}...
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end text-xs font-bold text-slate-500">
-                दाखवत आहे: {filteredCompetencies.length} क्षमता
-              </div>
-            </div>
-
-            {allCompetencies.length === 0 ? (
-              <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
-                <AlertCircle className="size-8 text-amber-500 mx-auto" />
-                <p className="text-sm font-bold text-slate-700">या स्तरासाठी अद्याप कोणतीही क्षमता (C) जोडलेली नाही.</p>
-                <p className="text-xs text-slate-500">
-                  तुम्ही 'एक्सेल अपलोड व सिंक' टॅबमधून एक्सेल फाईल अपलोड करू शकता किंवा वरून "नवीन क्षमता जोडा" वापरू शकता.
-                </p>
-              </div>
-            ) : filteredCompetencies.length === 0 ? (
-              <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
-                <AlertCircle className="size-8 text-amber-500 mx-auto" />
-                <p className="text-sm font-bold text-slate-700">निवडलेल्या ध्येयासाठी कोणतीही क्षमता आढळली नाही.</p>
-                <p className="text-xs text-slate-500">कृपया वरील फिल्टर तपासा किंवा नवीन क्षमता जोडा.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredCompetencies.map((c) => (
-                  <div
-                    key={c.id}
-                    className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-purple-300 transition-all shadow-xs"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-mono">
-                          {c.code}
-                        </span>
-                        <span className="text-xs font-bold text-slate-500">
-                          ध्येय: <b>{c.goalId}</b>
-                        </span>
-                        {c.applicableSession && (
-                          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
-                            {c.applicableSession === "session1"
-                              ? "सत्र १"
-                              : c.applicableSession === "session2"
-                              ? "सत्र २"
-                              : "दोन्ही सत्रे"}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm font-bold text-slate-900 mt-1 leading-relaxed">
-                        {c.titleMarathi}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
-                        सक्रिय
-                      </span>
-                      <button
-                        onClick={() => handleDeleteCompetency(c.id, c.code)}
-                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 transition-all cursor-pointer"
-                        title="क्षमता हटवा"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 6: RUBRICS */}
-        {/* ========================================================================= */}
-        {activeTab === "rubrics" && (
+            {/* ========================================================================= */}
+            {/* SUBSECTION 3: PERFORMANCE INDICATORS & RUBRICS */}
+            {/* ========================================================================= */}
+            {dashboardSection === "rubrics" && (
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
               <div>
@@ -3073,7 +3058,597 @@ function AdminHpcManagementPage() {
               </div>
             )}
           </div>
+            )}
+            {/* ========================================================================= */}
+            {/* SUBSECTION 4: YEAR-END SUMMARY REMARKS BANK */}
+            {/* ========================================================================= */}
+            {dashboardSection === "remarks" && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">
+                  वार्षिक शेरे बँक (Year-End Summary Remarks Bank)
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  विषयानुसार व कामगिरी स्तरानुसार (प्रारंभिक, प्रवीण, प्रगत) शिक्षकांच्या अंतिम सर्वंकष शेऱ्यांची बँक
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={fetchRemarks}
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                  title="रिफ्रेश करा"
+                >
+                  <RefreshCw className="size-4" />
+                </button>
+                {remarksList.length > 0 && (
+                  <button
+                    onClick={handleClearAllRemarks}
+                    className="px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-all cursor-pointer flex items-center gap-1.5"
+                    title="सर्व शेरे हटवा"
+                  >
+                    <Trash2 className="size-3.5" />
+                    <span>सर्व शेरे साफ करा (Clear Remarks)</span>
+                  </button>
+                )}
+                <button
+                  onClick={handleOpenAddRemark}
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Plus className="size-3.5" />
+                  <span>नवीन शेरा जोडा (Add Remark)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Remark Category Quick Tabs */}
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3 flex-wrap">
+              {[
+                { id: "all", label: "सर्व शेरे (All)", count: remarksList.length },
+                {
+                  id: "developmental_area",
+                  label: "१. विकासात्मक शेरे (Developmental Area)",
+                  count: remarksList.filter(
+                    (r) =>
+                      (r as any).type === "developmental_area" ||
+                      (!r.subjectOrArea?.includes("अंतिम") && !r.subjectOrArea?.includes("पुढील") && !r.subjectOrArea?.includes("शिफारस"))
+                  ).length,
+                },
+                {
+                  id: "final_comprehensive",
+                  label: "२. अंतिम सर्वंकष शेरे (Sheet 4)",
+                  count: remarksList.filter(
+                    (r) =>
+                      (r as any).type === "final_comprehensive" ||
+                      r.subjectOrArea?.includes("अंतिम") ||
+                      r.subjectOrArea?.includes("सर्वंकष")
+                  ).length,
+                },
+                {
+                  id: "next_class_recommendation",
+                  label: "३. पुढील इयत्ता शिफारस (Sheet 5)",
+                  count: remarksList.filter(
+                    (r) =>
+                      (r as any).type === "next_class_recommendation" ||
+                      r.subjectOrArea?.includes("शिफारस") ||
+                      r.subjectOrArea?.includes("मार्गदर्शन")
+                  ).length,
+                },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setRemarkTypeFilter(tab.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    remarkTypeFilter === tab.id
+                      ? "bg-purple-600 text-white font-black shadow-xs"
+                      : "bg-slate-100 text-slate-700 hover:bg-purple-50"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      remarkTypeFilter === tab.id ? "bg-white/20 text-white" : "bg-slate-200 text-slate-600"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Filter */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="relative">
+                <Search className="size-4 absolute left-3 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="विषय किंवा शेरा शोधा..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-800"
+                />
+              </div>
+
+              <div>
+                <select
+                  value={remarkAreaFilter}
+                  onChange={(e) => setRemarkAreaFilter(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
+                >
+                  <option value="all">सर्व विकास क्षेत्र / विषय (All Areas)</option>
+                  {Array.from(new Set(remarksList.map((r) => r.subjectOrArea).filter(Boolean))).map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <select
+                  value={remarkLevelFilter}
+                  onChange={(e) => setRemarkLevelFilter(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800"
+                >
+                  <option value="all">सर्व कामगिरी स्तर (All Levels)</option>
+                  <option value="प्रगत">प्रगत (Advanced)</option>
+                  <option value="प्रवीण">प्रवीण (Proficient)</option>
+                  <option value="प्रारंभिक">प्रारंभिक (Beginner)</option>
+                  <option value="आकाश">आकाश</option>
+                  <option value="पर्वत">पर्वत</option>
+                  <option value="निर्झर">निर्झर</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end text-xs font-bold text-slate-500">
+                दाखवत आहे: {filteredRemarks.length} शेरे
+              </div>
+            </div>
+
+            {/* Remarks Table */}
+            {remarksLoading ? (
+              <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
+                <Loader2 className="size-6 animate-spin" />
+                <span className="text-xs font-bold">शेरे लोड होत आहेत...</span>
+              </div>
+            ) : filteredRemarks.length === 0 ? (
+              <div className="py-12 text-center bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-2">
+                <AlertCircle className="size-8 text-amber-500 mx-auto" />
+                <p className="text-sm font-bold text-slate-700">अद्याप कोणताही शेरा डेटाबेसमध्ये जोडलेला नाही.</p>
+                <p className="text-xs text-slate-500">
+                  तुम्ही वरून "नवीन शेरा जोडा" वापरू शकता किंवा एक्सेल अपलोड टॅबमधून 'भाग क - वार्षिक सारांश' शीट थेट अपलोड करू शकता.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredRemarks.map((rem) => (
+                  <div
+                    key={rem.id}
+                    className="p-4 rounded-2xl border border-slate-200 bg-white hover:border-purple-300 transition-all shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="space-y-1 max-w-3xl">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500">
+                          विषय: <b className="text-slate-900">{rem.subjectOrArea}</b>
+                        </span>
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-900">
+                          {rem.level}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-800 font-medium leading-relaxed">
+                        {rem.remarkText}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      <button
+                        onClick={() => handleOpenEditRemark(rem)}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-purple-100 text-slate-600 hover:text-purple-800 transition-all cursor-pointer"
+                        title="संपादित करा"
+                      >
+                        <Edit2 className="size-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRemark(rem.id)}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-800 transition-all cursor-pointer"
+                        title="हटवा"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+            )}
+          </div>
         )}
+        {/* ========================================================================= */}
+        {/* TAB 2: EXCEL / CSV UPLOAD & SYNC */}
+        {/* ========================================================================= */}
+        {activeTab === "excel_sync" && (
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-8">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">
+                  एक्सेल / CSV फाईल अपलोड व सिंक (Excel Bulk Upload & Sync)
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  SCERT व HPC मार्गदर्शक तत्त्वांचे एक्सेल वर्कशीट (ध्येय-क्षमता, उपक्रम, ५ प्रश्न, रुब्रिक्स व सारांश शेरे) थेट अपलोड करून डेटाबेसमध्ये सिंक करा
+                </p>
+              </div>
+
+              {(activitiesList.length > 0 || remarksList.length > 0) && (
+                <button
+                  onClick={handleResetEntireDatabase}
+                  className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                  title="सर्व HPC डेटाबेस स्वच्छ करा"
+                >
+                  <Trash2 className="size-3.5" />
+                  <span>संपूर्ण डेटाबेस रीसेट करा (Reset Entire Master Database)</span>
+                </button>
+              )}
+            </div>
+
+            {/* Class Selector for Upload */}
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-indigo-50/40 rounded-2xl border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="size-2.5 rounded-full bg-orange-500 animate-pulse" />
+                  <span className="text-xs sm:text-sm font-black text-slate-900">
+                    इयत्ता निवडा (Select Class for Excel Upload & Fetching):
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 font-semibold">
+                  प्रत्येक इयत्तेच्या अध्ययन निष्पत्ती वेगळ्या असल्याने, ज्या इयत्तेची फाईल अपलोड करत आहात ती इयत्ता निवडा
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {[
+                  { id: "all", label: "सर्व वर्ग (All)" },
+                  { id: "1st", label: "इयत्ता १ ली" },
+                  { id: "2nd", label: "इयत्ता २ री" },
+                  { id: "3rd", label: "इयत्ता ३ री" },
+                  { id: "4th", label: "इयत्ता ४ थी" },
+                  { id: "5th", label: "इयत्ता ५ वी" },
+                  { id: "6th", label: "इयत्ता ६ वी" },
+                  { id: "7th", label: "इयत्ता ७ वी" },
+                  { id: "8th", label: "इयत्ता ८ वी" },
+                ].map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedUploadClass(c.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      selectedUploadClass === c.id
+                        ? "bg-orange-600 text-white shadow-xs scale-105"
+                        : "bg-white text-slate-700 hover:bg-orange-100/50 border border-slate-200"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Upload Area */}
+            <div className="p-6 sm:p-8 border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-3xl text-center space-y-4">
+              <div className="size-14 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center mx-auto shadow-sm">
+                <FileSpreadsheet className="size-7" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-black text-slate-900">
+                  {uploadedFileName ? uploadedFileName : "येथे एक्सेल फाईल निवडा किंवा ड्रॅग करा"}
+                </h4>
+                <p className="text-xs text-slate-500 font-medium max-w-md mx-auto">
+                  सपोर्टेड फॉरमॅट: .xlsx, .xls, .csv (ध्येय-क्षमता सूची, ५ प्रश्न, मूल्यांकन रुब्रिक, वार्षिक सारांश शेरे)
+                </p>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+
+              <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-sm transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <Upload className="size-4" /> फाईल निवडा (Browse File)
+                </button>
+              </div>
+            </div>
+
+            {/* Workbook Sheets Selector & Summary */}
+            {sheetNames.length > 0 && (
+              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-600">उपलब्ध शीट्स (Sheets):</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {sheetNames.map((name) => (
+                        <button
+                          key={name}
+                          onClick={() => {
+                            setSelectedSheetName(name);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            selectedSheetName === name
+                              ? "bg-indigo-600 text-white font-black shadow-xs"
+                              : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sync Button */}
+                  <button
+                    onClick={handleSyncToFirestore}
+                    disabled={
+                      isSyncing ||
+                      (parsedActivities.length === 0 &&
+                        parsedRemarks.length === 0 &&
+                        parsedRubrics.length === 0 &&
+                        parsedGoals.length === 0 &&
+                        parsedCompetencies.length === 0)
+                    }
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                  >
+                    {isSyncing ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        <span>डेटाबेसमध्ये सेव्ह होत आहे...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="size-4" />
+                        <span>
+                          डेटाबेसमध्ये सेव्ह करा (Save {parsedActivities.length + parsedRemarks.length + parsedRubrics.length + parsedGoals.length + parsedCompetencies.length} Records)
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Progress bar */}
+                {syncProgress && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold text-slate-600">
+                      <span>अपलोड प्रगती:</span>
+                      <span>
+                        {syncProgress.current} / {syncProgress.total} ({Math.round((syncProgress.current / syncProgress.total) * 100)}%)
+                      </span>
+                    </div>
+                    <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-600 transition-all duration-300"
+                        style={{ width: `${(syncProgress.current / syncProgress.total) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Parsed Preview Table */}
+            {parsedActivities.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-emerald-600" />
+                    <span>वाचलेले उपक्रम व ५ प्रश्न (Preview: {parsedActivities.length} नोंदी)</span>
+                  </h4>
+                  <span className="text-xs text-slate-500 font-bold">
+                    पहिले १५ उपक्रम दाखवत आहे
+                  </span>
+                </div>
+
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+                  <div className="overflow-x-auto max-h-96">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
+                        <tr>
+                          <th className="p-3 w-12 text-center">क्र.</th>
+                          <th className="p-3 w-36">विषय / क्षेत्र</th>
+                          <th className="p-3 w-28">क्षमता कोड</th>
+                          <th className="p-3 min-w-[200px]">अध्ययन निष्पत्ती (LO)</th>
+                          <th className="p-3 min-w-[200px]">उपक्रम नाव</th>
+                          <th className="p-3 min-w-[220px]">५ प्रश्न नमुना</th>
+                          <th className="p-3 min-w-[160px]">शिक्षकांचा अभिप्राय</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {parsedActivities.slice(0, 15).map((act, i) => (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
+                            <td className="p-3 font-bold text-slate-800">{act.subjectOrArea}</td>
+                            <td className="p-3">
+                              <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-mono font-bold text-[11px]">
+                                {act.competencyCode}
+                              </span>
+                            </td>
+                            <td className="p-3 text-[11px] text-indigo-900 font-medium">
+                              {act.learningOutcomes && act.learningOutcomes.length > 0 ? (
+                                <ul className="space-y-0.5 list-disc list-inside">
+                                  {act.learningOutcomes.slice(0, 2).map((lo, li) => (
+                                    <li key={li} className="truncate max-w-xs">{lo}</li>
+                                  ))}
+                                  {act.learningOutcomes.length > 2 && (
+                                    <span className="text-[10px] text-indigo-600 font-bold block">
+                                      +{act.learningOutcomes.length - 2} आणखी...
+                                    </span>
+                                  )}
+                                </ul>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </td>
+                            <td className="p-3 font-bold text-slate-900">{act.activityTitle}</td>
+                            <td className="p-3 text-[11px] text-slate-600">
+                              {act.questions && act.questions.length > 0 ? (
+                                <ol className="list-decimal list-inside space-y-0.5">
+                                  {act.questions.slice(0, 3).map((q, qi) => (
+                                    <li key={qi} className="truncate max-w-xs">{q}</li>
+                                  ))}
+                                  {act.questions.length > 3 && (
+                                    <li className="text-slate-400 font-medium">आणखी {act.questions.length - 3} प्रश्न...</li>
+                                  )}
+                                </ol>
+                              ) : (
+                                <span className="text-slate-400">प्रश्न नाहीत</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-[11px] text-slate-600 truncate max-w-xs">
+                              {act.teacherFeedbackSample || "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Parsed Remarks Preview */}
+            {parsedRemarks.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-600" />
+                  <span>वाचलेले वार्षिक शेरे (Preview: {parsedRemarks.length} शेरे)</span>
+                </h4>
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+                  <div className="overflow-x-auto max-h-80">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
+                        <tr>
+                          <th className="p-3 w-12 text-center">क्र.</th>
+                          <th className="p-3 w-36">विषय / क्षेत्र</th>
+                          <th className="p-3 w-32">शेरा प्रकार</th>
+                          <th className="p-3 w-28">कामगिरी स्तर</th>
+                          <th className="p-3">शिक्षकांचा अभिप्राय / शिफारस</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {parsedRemarks.slice(0, 15).map((r, i) => (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
+                            <td className="p-3 font-bold text-slate-800">{r.subjectOrArea}</td>
+                            <td className="p-3">
+                              <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-[10px]">
+                                {(r as any).type === "final_comprehensive"
+                                  ? "अंतिम सर्वंकष"
+                                  : (r as any).type === "next_class_recommendation"
+                                  ? "पुढील शिफारस"
+                                  : "विकासात्मक"}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-bold text-[11px]">
+                                {r.level}
+                              </span>
+                            </td>
+                            <td className="p-3 text-slate-700 font-medium">{r.remarkText}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Parsed Rubrics Preview */}
+            {parsedRubrics.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-600" />
+                  <span>वाचलेले मूल्यांकन रुब्रिक्स (Preview: {parsedRubrics.length} निकष नोंदी)</span>
+                </h4>
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+                  <div className="overflow-x-auto max-h-80">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
+                        <tr>
+                          <th className="p-3 w-12 text-center">क्र.</th>
+                          <th className="p-3 min-w-[180px]">उपक्रम</th>
+                          <th className="p-3 w-28">परिमाण</th>
+                          <th className="p-3 min-w-[200px]">प्रारंभिक / निर्झर</th>
+                          <th className="p-3 min-w-[200px]">प्रवीण / पर्वत</th>
+                          <th className="p-3 min-w-[200px]">प्रगत / आकाश</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {parsedRubrics.slice(0, 10).map((rub, i) => (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
+                            <td className="p-3 font-bold text-slate-800">{rub.activityTitle || "-"}</td>
+                            <td className="p-3">
+                              <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-bold text-[11px]">
+                                {rub.dimension}
+                              </span>
+                            </td>
+                            <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.beginner}</td>
+                            <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.proficient}</td>
+                            <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.advanced}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Parsed Goals & Competencies Preview */}
+            {(parsedGoals.length > 0 || parsedCompetencies.length > 0) && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-600" />
+                  <span>
+                    वाचलेली ध्येये व क्षमता (Preview: {parsedGoals.length} ध्येये, {parsedCompetencies.length} क्षमता)
+                  </span>
+                </h4>
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+                  <div className="overflow-x-auto max-h-80">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
+                        <tr>
+                          <th className="p-3 w-12 text-center">क्र.</th>
+                          <th className="p-3 w-28">क्षमता कोड</th>
+                          <th className="p-3 w-28">संबंधित ध्येय</th>
+                          <th className="p-3">क्षमतेचे वर्णन</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {parsedCompetencies.slice(0, 15).map((comp, i) => (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
+                            <td className="p-3 font-mono font-bold text-purple-900">{comp.code}</td>
+                            <td className="p-3 font-mono font-bold text-indigo-900">{comp.goalId.replace("CUSTOM-", "")}</td>
+                            <td className="p-3 text-slate-700 font-medium">{comp.titleMarathi}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </main>
 
       {/* ========================================================================= */}
@@ -3545,6 +4120,134 @@ function AdminHpcManagementPage() {
                 className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-black cursor-pointer shadow-xs"
               >
                 सेव्ह करा (Save Rubric)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* QUICK ACTIVITY & 5-QUESTIONS DETAILS MODAL */}
+      {/* ========================================================================= */}
+      {viewingActivityModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 border border-slate-200 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-black px-2.5 py-0.5 rounded-lg bg-purple-100 text-purple-900 font-mono">
+                    {viewingActivityModal.competencyCode}
+                  </span>
+                  <span className="text-xs font-bold text-slate-600">
+                    विषय: <b>{viewingActivityModal.subjectOrArea}</b>
+                  </span>
+                  {viewingActivityModal.classId && (
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                      इयत्ता: {viewingActivityModal.classId}
+                    </span>
+                  )}
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800">
+                    {viewingActivityModal.stageId === "foundational"
+                      ? "पायाभूत (१ली-२री)"
+                      : viewingActivityModal.stageId === "preparatory"
+                      ? "पूर्वतयारी (३री-५वी)"
+                      : "मध्य स्तर (६वी-८वी)"}
+                  </span>
+                </div>
+                <h3 className="text-base font-black text-slate-900 pt-1">
+                  {viewingActivityModal.activityTitle}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingActivityModal(null)}
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {viewingActivityModal.activityDescription && (
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                <span className="text-xs font-bold text-slate-600">कृती / उपक्रमाचे स्वरूप:</span>
+                <p className="text-xs text-slate-800 leading-relaxed font-medium">
+                  {viewingActivityModal.activityDescription}
+                </p>
+              </div>
+            )}
+
+            {/* 5 Questions */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                <HelpCircle className="size-4 text-emerald-600" />
+                <span>५ मूल्यमापनाचे प्रश्न (Evaluation Questions):</span>
+              </h4>
+              <div className="space-y-1.5">
+                {viewingActivityModal.questions && viewingActivityModal.questions.length > 0 ? (
+                  viewingActivityModal.questions.map((q, qi) => (
+                    <div
+                      key={qi}
+                      className="p-2.5 bg-emerald-50/50 rounded-xl border border-emerald-100 flex items-start gap-2.5 text-xs font-bold text-slate-800"
+                    >
+                      <span className="size-5 rounded-full bg-emerald-200 text-emerald-900 flex items-center justify-center shrink-0 text-[11px] font-black">
+                        {qi + 1}
+                      </span>
+                      <span className="pt-0.5">{q || <i className="text-slate-400 font-normal">प्रश्न उपलब्ध नाही</i>}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 italic">कोणतेही प्रश्न उपलब्ध नाहीत.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Learning Outcomes */}
+            {viewingActivityModal.learningOutcomes && viewingActivityModal.learningOutcomes.length > 0 && (
+              <div className="p-3.5 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-1">
+                <span className="text-xs font-bold text-indigo-900">अध्ययन निष्पत्ती (Learning Outcomes):</span>
+                <ul className="text-xs text-slate-700 list-disc list-inside space-y-0.5">
+                  {viewingActivityModal.learningOutcomes.map((lo, li) => (
+                    <li key={li}>{lo}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Teacher / Parent Feedback Samples */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {viewingActivityModal.teacherFeedbackSample && (
+                <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-100 text-xs space-y-1">
+                  <span className="font-bold text-amber-900">शिक्षकांचा नमुना अभिप्राय:</span>
+                  <p className="text-slate-700">{viewingActivityModal.teacherFeedbackSample}</p>
+                </div>
+              )}
+              {viewingActivityModal.parentFeedbackSample && (
+                <div className="p-3 bg-purple-50/50 rounded-2xl border border-purple-100 text-xs space-y-1">
+                  <span className="font-bold text-purple-900">पालकांचा नमुना अभिप्राय:</span>
+                  <p className="text-slate-700">{viewingActivityModal.parentFeedbackSample}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  const act = viewingActivityModal;
+                  setViewingActivityModal(null);
+                  handleOpenEditActivity(act);
+                }}
+                className="px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold cursor-pointer flex items-center gap-1.5"
+              >
+                <Edit2 className="size-3.5" />
+                <span>संपादित करा</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewingActivityModal(null)}
+                className="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer"
+              >
+                बंद करा
               </button>
             </div>
           </div>

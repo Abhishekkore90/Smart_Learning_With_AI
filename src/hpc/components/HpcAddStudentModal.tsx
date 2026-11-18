@@ -22,6 +22,7 @@ import {
   CASTE_OPTIONS,
   MAHARASHTRA_DISTRICTS,
   TALUKA_OPTIONS,
+  getTalukasForDistrict,
   PARENT_EDUCATION_OPTIONS,
   MOTHER_OCCUPATION_OPTIONS,
   FATHER_OCCUPATION_OPTIONS,
@@ -168,6 +169,20 @@ export const HpcAddStudentModal: React.FC<HpcAddStudentModalProps> = ({
   const [motherTongue, setMotherTongue] = useState("मराठी");
   const [taluka, setTaluka] = useState("");
   const [district, setDistrict] = useState("");
+
+  const availableTalukas = useMemo(() => {
+    if (!district || !district.trim()) return [];
+    return getTalukasForDistrict(district);
+  }, [district]);
+
+  const handleDistrictChange = (newDistrict: string) => {
+    setDistrict(newDistrict);
+    const talukas = getTalukasForDistrict(newDistrict);
+    const exists = talukas.some((t) => t.value === taluka);
+    if (!exists && taluka) {
+      setTaluka("");
+    }
+  };
   const [motherEducation, setMotherEducation] = useState("");
   const [motherOccupation, setMotherOccupation] = useState("");
   const [fatherEducation, setFatherEducation] = useState("");
@@ -434,23 +449,27 @@ export const HpcAddStudentModal: React.FC<HpcAddStudentModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <SmartSelectField
-                  label="तालुका"
-                  value={taluka}
-                  onChange={setTaluka}
-                  options={TALUKA_OPTIONS}
-                  placeholder="-- तालुका निवडा --"
-                  customPlaceholder="तालुक्याचे नाव प्रविष्ट करा..."
+                  label="जिल्हा (प्रथम निवडा)"
+                  value={district}
+                  onChange={handleDistrictChange}
+                  options={MAHARASHTRA_DISTRICTS}
+                  placeholder="-- जिल्हा निवडा --"
+                  customPlaceholder="जिल्ह्याचे नाव प्रविष्ट करा..."
                 />
               </div>
 
               <div>
                 <SmartSelectField
-                  label="जिल्हा"
-                  value={district}
-                  onChange={setDistrict}
-                  options={MAHARASHTRA_DISTRICTS}
-                  placeholder="-- जिल्हा निवडा --"
-                  customPlaceholder="जिल्ह्याचे नाव प्रविष्ट करा..."
+                  label="तालुका (निवडलेल्या जिल्ह्याचे तालुके)"
+                  value={taluka}
+                  onChange={setTaluka}
+                  options={availableTalukas}
+                  placeholder={
+                    district
+                      ? `-- ${district} मधील तालुका निवडा --`
+                      : "-- आधी जिल्हा निवडा --"
+                  }
+                  customPlaceholder="तालुक्याचे नाव प्रविष्ट करा..."
                 />
               </div>
 

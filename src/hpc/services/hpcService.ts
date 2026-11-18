@@ -882,7 +882,12 @@ export async function getHpcDynamicActivities(
 
       const matchesStage = !stageId || !data.stageId || data.stageId === stageId;
       const matchesSubject = !subjectOrArea || data.subjectOrArea === subjectOrArea;
-      const matchesClass = !classId || !data.classId || data.classId === classId;
+      const matchesClass =
+        !classId ||
+        !data.classId ||
+        data.classId === "all" ||
+        data.classId === classId ||
+        (data.stageId === "foundational" && (classId === "1st" || classId === "2nd"));
       if (matchesStage && matchesSubject && matchesClass) {
         rawList.push(data);
       }
@@ -1478,6 +1483,7 @@ export async function getHpcCompetencies(
             ? ["3rd", "4th", "5th"]
             : ["6th", "7th", "8th"]),
         applicableSession: raw.applicableSession || "both",
+        learningOutcomes: raw.learningOutcomes || [],
       };
       if (!stageId || data.stageId === stageId) {
         customList.push(data);
@@ -1505,6 +1511,7 @@ export async function getHpcCompetencies(
                 ? ["3rd", "4th", "5th"]
                 : ["6th", "7th", "8th"],
             applicableSession: "both",
+            learningOutcomes: data.learningOutcomes || [],
           });
         }
       }

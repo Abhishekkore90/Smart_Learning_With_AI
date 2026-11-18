@@ -1320,23 +1320,7 @@ export function HpcAssessmentForm({
 
         {/* ---------------- 3. Activities & Outcomes (उपक्रम व कृती) ---------------- */}
         <div>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
-            <div>
-              <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                <Layers className="size-4 text-emerald-600" />
-                <span>
-                  {bankData && bankData.activities?.length > 0
-                    ? `उपक्रम बँक (${bankData.activities.length} पैकी १ उपक्रम निवडा)`
-                    : "सविस्तर उपक्रम व कृती (Activities & Learning Outcomes)"}
-                </span>
-              </h4>
-              <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                {bankData && bankData.activities?.length > 0
-                  ? "खालील उपक्रमांपैकी एका उपक्रमाची निवड करा, त्याचे ५ प्रश्न खाली आपोआप जोडले जातील."
-                  : "उपक्रमाचे नाव, वर्णन व निष्पत्ती नोंदवा."}
-              </p>
-            </div>
-
+          <div className="flex flex-col sm:flex-row sm:items-center justify-end pb-3 border-b border-slate-100 gap-2">
             {availableCompetencies.length > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold text-slate-500">क्षमता निवडा:</span>

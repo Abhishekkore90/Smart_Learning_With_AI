@@ -39,6 +39,7 @@ import {
   CASTE_OPTIONS,
   MAHARASHTRA_DISTRICTS,
   TALUKA_OPTIONS,
+  getTalukasForDistrict,
   PARENT_EDUCATION_OPTIONS,
   MOTHER_OCCUPATION_OPTIONS,
   FATHER_OCCUPATION_OPTIONS,
@@ -400,6 +401,21 @@ export function HpcStudentProfileForm({
   const [birthPlace, setBirthPlace] = useState("");
   const [studentTaluka, setStudentTaluka] = useState("");
   const [studentDistrict, setStudentDistrict] = useState("");
+
+  // Dynamically filter talukas based on selected district
+  const availableStudentTalukas = useMemo(() => {
+    if (!studentDistrict || !studentDistrict.trim()) return [];
+    return getTalukasForDistrict(studentDistrict);
+  }, [studentDistrict]);
+
+  const handleDistrictChange = (newDistrict: string) => {
+    setStudentDistrict(newDistrict);
+    const talukas = getTalukasForDistrict(newDistrict);
+    const exists = talukas.some((t) => t.value === studentTaluka);
+    if (!exists && studentTaluka) {
+      setStudentTaluka("");
+    }
+  };
 
   // ---------------- SECTION 5: कुटुंब व संपर्क माहिती ----------------
   const [motherName, setMotherName] = useState("");
@@ -1538,26 +1554,37 @@ export function HpcStudentProfileForm({
                 />
               </div>
 
+              {/* १. प्रथम जिल्हा निवडा */}
               <div>
                 <SmartDropdownField
-                  label="तालुका"
-                  value={studentTaluka}
-                  onChange={setStudentTaluka}
-                  options={TALUKA_OPTIONS}
-                  placeholder="-- तालुका निवडा --"
-                  customPlaceholder="उदा. शिरूर, हवेली किंवा स्वतः तालुका लिहा..."
+                  label="जिल्हा (प्रथम जिल्हा निवडा)"
+                  value={studentDistrict}
+                  onChange={handleDistrictChange}
+                  options={MAHARASHTRA_DISTRICTS}
+                  placeholder="-- जिल्हा निवडा --"
+                  customPlaceholder="उदा. पुणे, सांगली, सातारा किंवा स्वतः जिल्हा लिहा..."
                 />
               </div>
 
+              {/* २. निवडलेल्या जिल्ह्यानुसार तालुका निवडा */}
               <div>
                 <SmartDropdownField
-                  label="जिल्हा"
-                  value={studentDistrict}
-                  onChange={setStudentDistrict}
-                  options={MAHARASHTRA_DISTRICTS}
-                  placeholder="-- जिल्हा निवडा --"
-                  customPlaceholder="उदा. पुणे, नाशिक किंवा स्वतः जिल्हा लिहा..."
+                  label="तालुका (निवडलेल्या जिल्ह्याचे तालुके)"
+                  value={studentTaluka}
+                  onChange={setStudentTaluka}
+                  options={availableStudentTalukas}
+                  placeholder={
+                    studentDistrict
+                      ? `-- ${studentDistrict} मधील तालुका निवडा --`
+                      : "-- आधी जिल्हा निवडा --"
+                  }
+                  customPlaceholder="उदा. तासगाव, मिरज, हवेली किंवा स्वतः तालुका लिहा..."
                 />
+                {!studentDistrict && (
+                  <p className="text-[11px] font-bold text-amber-600 mt-1">
+                    ℹ️ तालुक्यांची यादी पाहण्यासाठी कृपया आधी वरील जिल्हा निवडा.
+                  </p>
+                )}
               </div>
             </div>
           </div>
