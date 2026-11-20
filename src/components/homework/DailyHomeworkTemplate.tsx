@@ -26,7 +26,15 @@ import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
 
 import { QuestionPaperRenderer } from "@/components/homework/QuestionPaperRenderer";
-import { getHomeworkHeaderProfile, formatHomeworkFileName } from "@/utils/homeworkDocHelper";
+import {
+  getHomeworkHeaderProfile,
+  formatHomeworkFileName,
+  addCanvasPagesToPdf,
+  addHomeworkFooterLinksToPdf,
+  HOMEWORK_WHATSAPP_LINK,
+  HOMEWORK_WEBSITE_URL,
+  HOMEWORK_WEBSITE_LABEL,
+} from "@/utils/homeworkDocHelper";
 
 interface DailyHomeworkTemplateProps {
   homework: HomeworkItem;
@@ -148,7 +156,7 @@ export function DailyHomeworkTemplate({
     captureContainer.style.zIndex = "-99999";
     captureContainer.style.pointerEvents = "none";
     captureContainer.style.background = "#ffffff";
-    captureContainer.style.overflow = "hidden";
+    captureContainer.style.overflow = "visible";
     captureContainer.appendChild(clone);
     document.body.appendChild(captureContainer);
 
@@ -193,17 +201,8 @@ export function DailyHomeworkTemplate({
       toast.info("वर्कशीट PDF तयार होत आहे...");
       const canvas = await renderWorksheetToCanvas(worksheetRef.current);
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "pt",
-        format: "a4",
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+      const pdf = addCanvasPagesToPdf(null, canvas, true);
+      addHomeworkFooterLinksToPdf(pdf);
       pdf.save(formatHomeworkFileName(homework.class));
       toast.success("गृहपाठ PDF यशस्वीरित्या डाउनलोड झाली!");
     } catch (err: any) {
@@ -222,16 +221,8 @@ export function DailyHomeworkTemplate({
       toast.info("WhatsApp साठी PDF तयार होत आहे...");
       const canvas = await renderWorksheetToCanvas(worksheetRef.current);
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "pt",
-        format: "a4",
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+      const pdf = addCanvasPagesToPdf(null, canvas, true);
+      addHomeworkFooterLinksToPdf(pdf);
 
       const fileName = formatHomeworkFileName(homework.class);
       const pdfBlob = pdf.output("blob");
@@ -678,6 +669,26 @@ export function DailyHomeworkTemplate({
               <span>वर्गशिक्षक स्वाक्षरी (Teacher's Sign)</span>
               <div className="mt-6 border-b border-slate-400 w-36 ml-auto" />
             </div>
+          </div>
+
+          {/* Clickable WhatsApp & Website Links on screen (ignored by html2canvas so it appears ONLY ONCE at the bottom of the PDF) */}
+          <div data-html2canvas-ignore="true" className="mt-6 pt-3.5 border-t border-dashed border-slate-300 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-bold print:hidden">
+            <a
+              href={HOMEWORK_WHATSAPP_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-1/2 flex items-center justify-center gap-2 py-2 px-3 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-md shadow-sm transition-colors text-center font-bold no-underline"
+            >
+              <span>💬 WhatsApp ग्रुप जॉईन करा (Click Here)</span>
+            </a>
+            <a
+              href={HOMEWORK_WEBSITE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-1/2 flex items-center justify-center gap-2 py-2 px-3 bg-[#1e3a8a] hover:bg-[#1e40af] text-white rounded-md shadow-sm transition-colors text-center font-bold no-underline"
+            >
+              <span>🌐 {HOMEWORK_WEBSITE_LABEL} (सराव व माहिती)</span>
+            </a>
           </div>
         </div>
       </div>

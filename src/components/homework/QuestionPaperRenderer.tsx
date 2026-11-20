@@ -21,6 +21,7 @@ import type { QuestionPaperData, QuestionPaperItemDef } from "@/types/questionPa
 import { QUESTION_PAPER_PRESETS } from "@/data/questionPaperPresets";
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
+import { addHomeworkFooterLinksToPdf } from "@/utils/homeworkDocHelper";
 
 interface QuestionPaperRendererProps {
   initialData?: QuestionPaperData;
@@ -106,6 +107,7 @@ export function QuestionPaperRenderer({
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
       pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+      addHomeworkFooterLinksToPdf(pdf);
       pdf.save(`${paperData.subject}_${paperData.standard}_चाचणी.pdf`);
       toast.success("प्रश्नपत्रिका PDF डाऊनलोड झाली!");
     } catch (err: any) {

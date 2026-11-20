@@ -130,48 +130,7 @@ function StudentHomeworkPage() {
 
       <main className="lg:pl-64 pt-16 min-h-screen">
         <div className="p-4 sm:p-8 space-y-8 max-w-7xl mx-auto">
-          {/* Top Co-Tabs: Regular Homework vs MCQ Homework */}
-          <div className="no-print flex items-center gap-1.5 sm:gap-2 p-1.5 bg-slate-200/90 rounded-2xl w-full sm:w-fit overflow-x-auto touch-pan-x shadow-xs">
-            <button
-              type="button"
-              onClick={() => setMainTab("homework")}
-              className={`flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer shrink-0 ${
-                mainTab === "homework"
-                  ? "bg-white text-indigo-700 shadow-md font-black"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <BookOpen className="size-4 text-indigo-600 shrink-0" />
-              <span>दैनिक गृहपाठ (Daily Homework)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMainTab("mcq")}
-              className={`flex items-center gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer shrink-0 ${
-                mainTab === "mcq"
-                  ? "bg-indigo-600 text-white shadow-md font-black"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <Sparkles className="size-4 text-amber-300 shrink-0" />
-              <span>MCQ स्वाध्याय (MCQ Quiz)</span>
-              <span className="bg-amber-400 text-amber-950 text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0">
-                नवीन
-              </span>
-            </button>
-          </div>
-
-          {mainTab === "mcq" ? (
-            <MCQHomeworkSection
-              defaultRole="student"
-              userName={profile?.fullName || (profile as any)?.name || user?.displayName || "विद्यार्थी"}
-              initialClass={selectedClass || "all"}
-              initialSubject={selectedSubject || "all"}
-            />
-          ) : (
-            <>
-              {/* Active Homework Document Viewer */}
+          {/* Active Homework Document Viewer */}
               {activeHomework ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
@@ -278,6 +237,37 @@ function StudentHomeworkPage() {
                 </div>
 
                 <div className="flex items-center gap-3 flex-wrap self-start">
+                  {/* Co-Tabs: दैनिक गृहपाठ vs MCQ स्वाध्याय */}
+                  <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setMainTab("homework")}
+                      className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-95 ${
+                        mainTab === "homework"
+                          ? "bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/30 ring-2 ring-indigo-400/60 scale-[1.02]"
+                          : "bg-indigo-50/80 text-indigo-950 border-2 border-indigo-200/90 hover:bg-indigo-100 hover:border-indigo-400"
+                      }`}
+                    >
+                      <BookOpen className="size-4" />
+                      <span>दैनिक गृहपाठ (Daily Homework)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMainTab("mcq")}
+                      className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-95 ${
+                        mainTab === "mcq"
+                          ? "bg-gradient-to-r from-purple-600 via-purple-600 to-pink-600 text-white shadow-md shadow-purple-600/30 ring-2 ring-purple-400/60 scale-[1.02]"
+                          : "bg-purple-50/80 text-purple-950 border-2 border-purple-200/90 hover:bg-purple-100 hover:border-purple-400"
+                      }`}
+                    >
+                      <Sparkles className="size-4 text-amber-300" />
+                      <span>MCQ स्वाध्याय (MCQ Quiz)</span>
+                      <span className="bg-amber-400 text-amber-950 text-[9px] px-1.5 py-0.2 rounded-full font-black uppercase tracking-wider animate-pulse">
+                        नवीन
+                      </span>
+                    </button>
+                  </div>
+
                   {/* View Mode Switcher */}
                   <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
                     <button
@@ -414,7 +404,19 @@ function StudentHomeworkPage() {
                   </div>
                 </div>
 
-                {/* CALENDAR VIEW */}
+                {/* Content: MCQ vs Homework */}
+                {mainTab === "mcq" ? (
+                  <MCQHomeworkSection
+                    embedded={true}
+                    defaultRole="student"
+                    userName={profile?.fullName || (profile as any)?.name || user?.displayName || "विद्यार्थी"}
+                    initialClass={selectedClass || "1st"}
+                    initialMedium={(selectedMedium as any) || "marathi"}
+                    initialSubject={selectedSubject || "all"}
+                  />
+                ) : (
+                  <>
+                    {/* CALENDAR VIEW */}
                 {viewMode === "calendar" && (
                   <DailyHomeworkCalendar
                     homeworkList={filteredData}
@@ -523,12 +525,12 @@ function StudentHomeworkPage() {
                   </table>
                 </div>
                 )}
-              </div>
-            </div>
-          )}
-          </>
-          )}
+              </>
+            )}
+          </div>
         </div>
+      )}
+    </div>
       </main>
     </div>
   );

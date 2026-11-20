@@ -37,6 +37,8 @@ import {
   formatHomeworkDateToMarathi,
   getMarathiClassLabel,
   formatHomeworkFileName,
+  addCanvasPagesToPdf,
+  addHomeworkFooterLinksToPdf,
 } from "@/utils/homeworkDocHelper";
 import { getUnifiedSchoolProfile, saveUnifiedSchoolProfile, saveUnifiedSchoolProfileToFirestore } from "@/utils/schoolProfileHelper";
 import html2canvas from "html2canvas-pro";
@@ -1615,16 +1617,87 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
   const paginateHomeworkDocument = () => {
     if (!containerRef.current) return;
 
-    // docx-preview already generates <section class="docx"> for each page sheet.
-    // We simply mark each section as .homework-page-sheet and ensure clean presentation
-    // without ever deleting any sections or dropping any subject questions/tables!
+    // docx-preview generates <section class="docx"> for each page sheet.
     const docxSections = Array.from(
-      containerRef.current.querySelectorAll<HTMLElement>(".docx-wrapper > section.docx, section.docx")
-    );
+      containerRef.current.querySelectorAll<HTMLElement>(
+        ".docx-wrapper > section.docx, .docx-wrapper > section.docx-doc, section.docx"
+      )
+    ).filter((s) => s.style.display !== "none");
 
     if (docxSections.length > 0) {
       containerRef.current.style.backgroundColor = "transparent";
       containerRef.current.style.boxShadow = "none";
+
+      // Check if the last section is an orphan page containing ONLY the signature table or blank overflow
+      if (docxSections.length > 1) {
+        const lastSec = docxSections[docxSections.length - 1];
+        const prevSec = docxSections[docxSections.length - 2];
+
+        // Clone lastSec to inspect its text content without signatures
+        const clone = lastSec.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll("table, [data-header-field]").forEach((el) => {
+          const txt = el.textContent || "";
+          if (
+            txt.includes("शिक्षक") ||
+            txt.includes("मुख्याध्यापक") ||
+            txt.includes("पालक") ||
+            txt.includes("स्वाक्षरी") ||
+            txt.includes("सही")
+          ) {
+            el.remove();
+          }
+        });
+        const remainingText = (clone.textContent || "").replace(/[\s\r\n\t]/g, "");
+
+        // If last section has no substantial question content (it was created just for signatures or empty overflow)
+        const hasRealQuestions = /([१२३४५६७८९१०][\s.)]|प्रश्न|[Qq]uestion)/.test(remainingText);
+
+        if (!hasRealQuestions && remainingText.length < 120) {
+          // Extract signature table/element from lastSec if present
+          const sigInLast =
+            lastSec.querySelector('[data-header-field="hw-signature-block"]') ||
+            Array.from(lastSec.querySelectorAll("table")).find((t) => {
+              const tTxt = t.textContent || "";
+              return (
+                (tTxt.includes("शिक्षक") || tTxt.includes("मुख्याध्यापक") || tTxt.includes("पालक")) &&
+                (tTxt.includes("स्वाक्षरी") || tTxt.includes("सही"))
+              );
+            });
+
+          const targetArticle = prevSec.querySelector("article") || prevSec;
+          if (sigInLast) {
+            targetArticle.appendChild(sigInLast);
+          }
+
+          // Optimize prevSec spacing so signatures and content fit neatly on that page:
+          // 1. Constrain oversized empty drawing boxes or empty table cells
+          const boxes = Array.from(prevSec.querySelectorAll<HTMLElement>("table, div, td")).filter((el) => {
+            const t = (el.textContent || "").trim();
+            return (
+              (t.length === 0 || t.length < 15) &&
+              (el.offsetHeight > 130 || parseInt(el.style.height || "0", 10) > 130)
+            );
+          });
+          boxes.forEach((b) => {
+            b.style.maxHeight = "115px";
+            b.style.height = "105px";
+          });
+
+          // 2. Reduce paragraph gaps slightly on prevSec
+          prevSec.querySelectorAll<HTMLElement>("p").forEach((p) => {
+            p.style.marginTop = "2px";
+            p.style.marginBottom = "3px";
+          });
+
+          // 3. Compact section padding so content doesn't overflow A4
+          prevSec.style.paddingTop = "10mm";
+          prevSec.style.paddingBottom = "8mm";
+
+          // Remove the empty orphan last section
+          lastSec.remove();
+          docxSections.pop();
+        }
+      }
 
       docxSections.forEach((sec, idx) => {
         sec.classList.add("homework-page-sheet");
@@ -1657,7 +1730,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
     // Dynamic font size for Line 1 to guarantee 100% fit on one line without breaking margins
     const schoolLen = activeSchool.length;
-    const line1FontSize = schoolLen > 36 ? "10pt" : schoolLen > 24 ? "11pt" : "11.5pt";
+    const line1FontSize = schoolLen > 36 ? "11.5pt" : schoolLen > 24 ? "12pt" : "12.5pt";
 
     const displaySchool = activeSchool
       ? escapeHtmlStr(activeSchool)
@@ -1674,20 +1747,20 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
     // Helper to format Line 1: शाळेचे नाव, केंद्र, तालुका, जिल्हा (Borderless 4-cell table)
     const line1Html = `
-      <table data-header-field="hw-line-1" style="width: 100% !important; border-collapse: collapse !important; border: none !important; margin: 6px 0 3px 0 !important; font-size: ${line1FontSize} !important; line-height: 1.4 !important; color: #000000 !important; background: transparent !important; table-layout: fixed !important;">
+      <table data-header-field="hw-line-1" style="width: 100% !important; border-collapse: collapse !important; border: none !important; margin: 6px 0 4px 0 !important; font-size: ${line1FontSize} !important; line-height: 1.4 !important; color: #000000 !important; background: transparent !important; table-layout: fixed !important;">
         <tbody>
           <tr style="border: none !important; background: transparent !important;">
-            <td style="border: none !important; padding: 2px 4px 2px 0 !important; text-align: left !important; width: 40% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
-              <strong style="white-space: nowrap !important;">शाळेचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displaySchool}</span>
+            <td style="border: none !important; padding: 3px 6px 3px 0 !important; text-align: left !important; width: 40% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
+              <strong style="white-space: nowrap !important; font-weight: 800;">शाळेचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${displaySchool}</span>
             </td>
-            <td style="border: none !important; padding: 2px 4px !important; text-align: center !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
-              <strong style="white-space: nowrap !important;">केंद्र : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayKendra}</span>
+            <td style="border: none !important; padding: 3px 6px !important; text-align: center !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
+              <strong style="white-space: nowrap !important; font-weight: 800;">केंद्र : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${displayKendra}</span>
             </td>
-            <td style="border: none !important; padding: 2px 4px !important; text-align: center !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
-              <strong style="white-space: nowrap !important;">तालुका : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayTaluka}</span>
+            <td style="border: none !important; padding: 3px 6px !important; text-align: center !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
+              <strong style="white-space: nowrap !important; font-weight: 800;">तालुका : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${displayTaluka}</span>
             </td>
-            <td style="border: none !important; padding: 2px 0 2px 4px !important; text-align: right !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
-              <strong style="white-space: nowrap !important;">जिल्हा : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayDistrict}</span>
+            <td style="border: none !important; padding: 3px 0 3px 6px !important; text-align: right !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
+              <strong style="white-space: nowrap !important; font-weight: 800;">जिल्हा : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${displayDistrict}</span>
             </td>
           </tr>
         </tbody>
@@ -1696,17 +1769,17 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
     // Helper to format Line 2: वार, दिनांक, इयत्ता (Borderless 3-cell table)
     const line2Html = `
-      <table data-header-field="hw-line-2" style="width: 100% !important; border-collapse: collapse !important; border: none !important; margin: 3px 0 4px 0 !important; font-size: 11.5pt !important; line-height: 1.4 !important; color: #000000 !important; background: transparent !important; table-layout: fixed !important;">
+      <table data-header-field="hw-line-2" style="width: 100% !important; border-collapse: collapse !important; border: none !important; margin: 4px 0 5px 0 !important; font-size: 12.5pt !important; line-height: 1.4 !important; color: #000000 !important; background: transparent !important; table-layout: fixed !important;">
         <tbody>
           <tr style="border: none !important; background: transparent !important;">
-            <td style="border: none !important; padding: 2px 4px 2px 0 !important; text-align: left !important; width: 30% !important; vertical-align: middle !important; background: transparent !important;">
-              <strong>वार : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwDayOfWeek || "शुक्रवार")}</span>
+            <td style="border: none !important; padding: 3px 6px 3px 0 !important; text-align: left !important; width: 30% !important; vertical-align: middle !important; background: transparent !important;">
+              <strong style="font-weight: 800;">वार : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${escapeHtmlStr(hwDayOfWeek || "शुक्रवार")}</span>
             </td>
-            <td style="border: none !important; padding: 2px 4px !important; text-align: center !important; width: 45% !important; vertical-align: middle !important; background: transparent !important;">
-              <strong>दिनांक : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwDateStr || "१२ ऑक्टोबर २०२६")}</span>
+            <td style="border: none !important; padding: 3px 6px !important; text-align: center !important; width: 45% !important; vertical-align: middle !important; background: transparent !important;">
+              <strong style="font-weight: 800;">दिनांक : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${escapeHtmlStr(hwDateStr || "१२ ऑक्टोबर २०२६")}</span>
             </td>
-            <td style="border: none !important; padding: 2px 0 2px 4px !important; text-align: right !important; width: 25% !important; vertical-align: middle !important; background: transparent !important;">
-              <strong>इयत्ता : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwClassName || "१ ली")}</span>
+            <td style="border: none !important; padding: 3px 0 3px 6px !important; text-align: right !important; width: 25% !important; vertical-align: middle !important; background: transparent !important;">
+              <strong style="font-weight: 800;">इयत्ता : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${escapeHtmlStr(hwClassName || "१ ली")}</span>
             </td>
           </tr>
         </tbody>
@@ -1715,8 +1788,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
     // Helper to format Line 3: विद्यार्थ्याचे नाव
     const line3Html = `
-      <p data-header-field="hw-line-3" style="width: 100% !important; margin: 4px 0 8px 0 !important; font-size: 11.5pt !important; line-height: 1.4 !important; color: #000000 !important; background: transparent !important; text-align: left !important;">
-        <strong>विद्यार्थ्याचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a; margin-left: 4px;">${escapeHtmlStr(hwStudentName || "....................................................................................")}</span>
+      <p data-header-field="hw-line-3" style="width: 100% !important; margin: 5px 0 10px 0 !important; font-size: 12.5pt !important; line-height: 1.4 !important; color: #000000 !important; background: transparent !important; text-align: left !important;">
+        <strong style="font-weight: 800;">विद्यार्थ्याचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #000000; margin-left: 4px;">${escapeHtmlStr(hwStudentName || "....................................................................................")}</span>
       </p>
     `.trim();
 
@@ -1732,37 +1805,25 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       <table data-header-field="hw-signature-block" style="width: 100% !important; border-collapse: collapse !important; border: none !important; margin: 20px 0 6px 0 !important; font-size: 11pt !important; line-height: 1.4 !important; color: #000000 !important; background: transparent !important; table-layout: fixed !important;">
         <tbody>
           <tr style="border: none !important; background: transparent !important;">
-            <!-- Column 1: वर्गशिक्षक स्वाक्षरी -->
-            <td style="border: none !important; padding: 4px 6px !important; text-align: center !important; width: 33.33% !important; vertical-align: bottom !important; background: transparent !important;">
-              <div style="font-size: 9.5pt; color: #334155; margin-bottom: 16px; text-align: center;">
-                स्वाक्षरी : <span style="display: inline-block; width: 90px; border-bottom: 1.5px dotted #64748b; vertical-align: middle;"></span>
+            <!-- Column 1: वर्गशिक्षक -->
+            <td style="border: none !important; padding: 6px 8px !important; text-align: center !important; width: 33.33% !important; vertical-align: middle !important; background: transparent !important;">
+              <div style="font-weight: 700; font-size: 11pt; color: #000000; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                शिक्षकाचे नाव : <span contenteditable="true" style="font-weight: 700; color: #000000;">${teacherDisplay}</span>
               </div>
-              <div style="font-weight: 700; font-size: 10pt; color: #0f172a; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                शिक्षकाचे नाव : <span contenteditable="true" style="font-weight: 700; color: #1e293b;">${teacherDisplay}</span>
-              </div>
-              <div style="font-size: 9.5pt; font-weight: 700; color: #334155; margin-top: 2px; text-align: center;">(वर्गशिक्षक स्वाक्षरी)</div>
             </td>
 
-            <!-- Column 2: मुख्याध्यापक स्वाक्षरी -->
-            <td style="border: none !important; padding: 4px 6px !important; text-align: center !important; width: 33.33% !important; vertical-align: bottom !important; background: transparent !important;">
-              <div style="font-size: 9.5pt; color: #334155; margin-bottom: 16px; text-align: center;">
-                स्वाक्षरी व शिक्का : <span style="display: inline-block; width: 90px; border-bottom: 1.5px dotted #64748b; vertical-align: middle;"></span>
+            <!-- Column 2: मुख्याध्यापक -->
+            <td style="border: none !important; padding: 6px 8px !important; text-align: center !important; width: 33.33% !important; vertical-align: middle !important; background: transparent !important;">
+              <div style="font-weight: 700; font-size: 11pt; color: #000000; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                मुख्याध्यापकाचे नाव : <span contenteditable="true" style="font-weight: 700; color: #000000;">${hmDisplay}</span>
               </div>
-              <div style="font-weight: 700; font-size: 10pt; color: #0f172a; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                मुख्याध्यापकाचे नाव : <span contenteditable="true" style="font-weight: 700; color: #1e293b;">${hmDisplay}</span>
-              </div>
-              <div style="font-size: 9.5pt; font-weight: 700; color: #334155; margin-top: 2px; text-align: center;">(मुख्याध्यापक स्वाक्षरी व शिक्का)</div>
             </td>
 
             <!-- Column 3: पालक स्वाक्षरी -->
-            <td style="border: none !important; padding: 4px 6px !important; text-align: center !important; width: 33.33% !important; vertical-align: bottom !important; background: transparent !important;">
-              <div style="font-size: 9.5pt; color: #334155; margin-bottom: 16px; text-align: center;">
-                स्वाक्षरी : <span style="display: inline-block; width: 90px; border-bottom: 1.5px dotted #64748b; vertical-align: middle;"></span>
+            <td style="border: none !important; padding: 6px 8px !important; text-align: center !important; width: 33.33% !important; vertical-align: middle !important; background: transparent !important;">
+              <div style="font-weight: 700; font-size: 11pt; color: #000000; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                पालक स्वाक्षरी : <span contenteditable="true" style="font-weight: 700; color: #000000;">....................</span>
               </div>
-              <div style="font-weight: 700; font-size: 10pt; color: #0f172a; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                पालकाचे नाव : <span contenteditable="true" style="font-weight: 700; color: #64748b;">....................</span>
-              </div>
-              <div style="font-size: 9.5pt; font-weight: 700; color: #334155; margin-top: 2px; text-align: center;">(पालक स्वाक्षरी)</div>
             </td>
           </tr>
         </tbody>
@@ -1780,6 +1841,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
       if (hasSchool && (hasKendraOrTaluka || hasWarOrDate)) {
         tbl.setAttribute("data-header-field", "hw-header-table");
+        tbl.style.fontSize = "12.5pt";
+        tbl.style.lineHeight = "1.4";
 
         // Clean out any previously injected nested header tables inside its cells
         const nestedHwTables = tbl.querySelectorAll('[data-header-field^="hw-line-"]');
@@ -1791,77 +1854,77 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
           // 1. शाळेचे नाव
           if (cText.includes("शाळेचे नाव")) {
-            cell.innerHTML = `<strong>शाळेचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displaySchool}</span>`;
-            cell.style.padding = "4px 6px";
+            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">शाळेचे नाव : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${displaySchool}</span>`;
+            cell.style.padding = "5px 8px";
             cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "10pt";
-            cell.style.lineHeight = "1.3";
+            cell.style.fontSize = schoolLen > 36 ? "11.5pt" : "12.5pt";
+            cell.style.lineHeight = "1.4";
             cell.style.whiteSpace = "normal";
             cell.style.wordBreak = "break-word";
             updatedLine1 = true;
           }
           // 2. केंद्र
           else if (cText.includes("केंद्र")) {
-            cell.innerHTML = `<strong>केंद्र : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayKendra}</span>`;
-            cell.style.padding = "4px 6px";
+            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">केंद्र : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${displayKendra}</span>`;
+            cell.style.padding = "5px 8px";
             cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "10pt";
-            cell.style.lineHeight = "1.3";
+            cell.style.fontSize = "12.5pt";
+            cell.style.lineHeight = "1.4";
             cell.style.whiteSpace = "normal";
             cell.style.wordBreak = "break-word";
             updatedLine1 = true;
           }
           // 3. तालुका
           else if (cText.includes("तालुका")) {
-            cell.innerHTML = `<strong>तालुका : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayTaluka}</span>`;
-            cell.style.padding = "4px 6px";
+            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">तालुका : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${displayTaluka}</span>`;
+            cell.style.padding = "5px 8px";
             cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "10pt";
-            cell.style.lineHeight = "1.3";
+            cell.style.fontSize = "12.5pt";
+            cell.style.lineHeight = "1.4";
             cell.style.whiteSpace = "normal";
             cell.style.wordBreak = "break-word";
             updatedLine1 = true;
           }
           // 4. जिल्हा
           else if (cText.includes("जिल्हा")) {
-            cell.innerHTML = `<strong>जिल्हा : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayDistrict}</span>`;
-            cell.style.padding = "4px 6px";
+            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">जिल्हा : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${displayDistrict}</span>`;
+            cell.style.padding = "5px 8px";
             cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "10pt";
-            cell.style.lineHeight = "1.3";
+            cell.style.fontSize = "12.5pt";
+            cell.style.lineHeight = "1.4";
             cell.style.whiteSpace = "normal";
             cell.style.wordBreak = "break-word";
             updatedLine1 = true;
           }
           // 5. वार
           else if (cText.includes("वार")) {
-            cell.innerHTML = `<strong>वार : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwDayOfWeek || "शुक्रवार")}</span>`;
-            cell.style.padding = "4px 6px";
+            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">वार : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${escapeHtmlStr(hwDayOfWeek || "शुक्रवार")}</span>`;
+            cell.style.padding = "5px 8px";
             cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "10pt";
-            cell.style.lineHeight = "1.3";
+            cell.style.fontSize = "12.5pt";
+            cell.style.lineHeight = "1.4";
             cell.style.whiteSpace = "normal";
             cell.style.wordBreak = "break-word";
             updatedLine2 = true;
           }
           // 6. दिनांक
           else if (cText.includes("दिनांक")) {
-            cell.innerHTML = `<strong>दिनांक : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwDateStr || "२० नोव्हेंबर २०२६")}</span>`;
-            cell.style.padding = "4px 6px";
+            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">दिनांक : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${escapeHtmlStr(hwDateStr || "२० नोव्हेंबर २०२६")}</span>`;
+            cell.style.padding = "5px 8px";
             cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "10pt";
-            cell.style.lineHeight = "1.3";
+            cell.style.fontSize = "12.5pt";
+            cell.style.lineHeight = "1.4";
             cell.style.whiteSpace = "normal";
             cell.style.wordBreak = "break-word";
             updatedLine2 = true;
           }
           // 7. इयत्ता
           else if (cText.includes("इयत्ता")) {
-            cell.innerHTML = `<strong>इयत्ता : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwClassName || "१ ली")}</span>`;
-            cell.style.padding = "4px 6px";
+            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">इयत्ता : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${escapeHtmlStr(hwClassName || "१ ली")}</span>`;
+            cell.style.padding = "5px 8px";
             cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "10pt";
-            cell.style.lineHeight = "1.3";
+            cell.style.fontSize = "12.5pt";
+            cell.style.lineHeight = "1.4";
             cell.style.whiteSpace = "normal";
             cell.style.wordBreak = "break-word";
             updatedLine2 = true;
@@ -1887,8 +1950,12 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     });
 
     for (const el of allStudentEls) {
-      el.innerHTML = `<strong>विद्यार्थ्याचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a; margin-left: 4px;">${studentDisplay}</span>`;
+      el.innerHTML = `<strong style="font-size: 12.5pt; font-weight: 800; color: #000000;">विद्यार्थ्याचे नाव : </strong><span contenteditable="true" style="font-weight: 700; font-size: 12.5pt; color: #000000; margin-left: 4px;">${studentDisplay}</span>`;
       el.setAttribute("data-header-field", "hw-line-3");
+      el.style.fontSize = "12.5pt";
+      el.style.fontWeight = "700";
+      el.style.lineHeight = "1.5";
+      el.style.margin = "6px 0 10px 0";
       updatedLine3 = true;
     }
 
@@ -2097,6 +2164,12 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       }
     }
 
+    // Clean up any previously injected HTML footer links so they never duplicate with the clickable PDF footer
+    try {
+      const existingFooters = containerRef.current.querySelectorAll('[data-header-field="hw-footer-links"]');
+      existingFooters.forEach((f) => f.remove());
+    } catch {}
+
     // 4. Also synchronize secondary page header on Page 2 if present
     const allHeaders = Array.from(containerRef.current.querySelectorAll<HTMLElement>("p"));
     for (const p of allHeaders) {
@@ -2148,8 +2221,9 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       aspect = hPt / wPt;
     }
 
+    const isVml = pageEl.classList.contains("vml-page-wrapper");
     const targetWidthPx = 794;
-    const targetHeightPx = Math.round(targetWidthPx * aspect);
+    const standardA4HeightPx = Math.round(targetWidthPx * aspect);
 
     // 2. Create off-screen desktop capture wrapper with fixed 794px desktop width
     // Placed at (0, 0) with zIndex: -99999 and pointerEvents: none so Android WebView
@@ -2161,10 +2235,6 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     captureContainer.style.width = `${targetWidthPx}px`;
     captureContainer.style.minWidth = `${targetWidthPx}px`;
     captureContainer.style.maxWidth = `${targetWidthPx}px`;
-    captureContainer.style.height = `${targetHeightPx}px`;
-    captureContainer.style.minHeight = `${targetHeightPx}px`;
-    captureContainer.style.maxHeight = `${targetHeightPx}px`;
-    captureContainer.style.overflow = "hidden";
     captureContainer.style.zIndex = "-99999";
     captureContainer.style.pointerEvents = "none";
     captureContainer.style.background = "#ffffff";
@@ -2175,16 +2245,36 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     clone.style.width = `${targetWidthPx}px`;
     clone.style.minWidth = `${targetWidthPx}px`;
     clone.style.maxWidth = `${targetWidthPx}px`;
-    clone.style.height = `${targetHeightPx}px`;
-    clone.style.minHeight = `${targetHeightPx}px`;
-    clone.style.maxHeight = `${targetHeightPx}px`;
     clone.style.margin = "0";
     clone.style.boxShadow = "none";
     clone.style.borderRadius = "0px";
     clone.style.transform = "none";
     clone.style.boxSizing = "border-box";
     clone.style.position = "relative";
-    clone.style.overflow = "hidden";
+
+    if (isVml) {
+      captureContainer.style.height = `${standardA4HeightPx}px`;
+      captureContainer.style.minHeight = `${standardA4HeightPx}px`;
+      captureContainer.style.maxHeight = `${standardA4HeightPx}px`;
+      captureContainer.style.overflow = "hidden";
+
+      clone.style.height = `${standardA4HeightPx}px`;
+      clone.style.minHeight = `${standardA4HeightPx}px`;
+      clone.style.maxHeight = `${standardA4HeightPx}px`;
+      clone.style.overflow = "hidden";
+    } else {
+      // For flowing Word documents & homework sheets:
+      // Allow natural vertical expansion so NO questions/content are ever clipped or cut off!
+      captureContainer.style.minHeight = `${standardA4HeightPx}px`;
+      captureContainer.style.height = "auto";
+      captureContainer.style.maxHeight = "none";
+      captureContainer.style.overflow = "visible";
+
+      clone.style.minHeight = `${standardA4HeightPx}px`;
+      clone.style.height = "auto";
+      clone.style.maxHeight = "none";
+      clone.style.overflow = "visible";
+    }
 
     // 4. In clone, lock all VML shape text boxes to exact desktop pixel font sizes
     // This prevents html2canvas in Android WebView from failing on cqw or miscomputing font scale!
@@ -2218,6 +2308,11 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       // Wait 2 animation frames for browser to lay out the off-screen clone
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
+      // Measure true rendered height of clone
+      const targetHeightPx = isVml
+        ? standardA4HeightPx
+        : Math.max(clone.offsetHeight, clone.scrollHeight, captureContainer.scrollHeight, standardA4HeightPx);
+
       // 6. Capture with high-DPI desktop scale
       const canvas = await html2canvas(clone, {
         scale: 2,
@@ -2243,7 +2338,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         },
       });
 
-      return { canvas, aspect };
+      return { canvas, aspect: targetHeightPx / targetWidthPx };
     } finally {
       if (captureContainer.parentNode) {
         captureContainer.parentNode.removeChild(captureContainer);
@@ -2304,129 +2399,17 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       }
 
       let pdf: jsPDF | null = null;
-
-      if (vmlPages.length > 0 || pageElements.length > 1) {
-        // Multi-page document: capture each page individually with exact desktop A4 fidelity
-        for (let i = 0; i < pageElements.length; i++) {
-          const pageEl = pageElements[i];
-          const { canvas, aspect } = await renderElementToA4Canvas(pageEl);
-
-          const imgData = canvas.toDataURL("image/jpeg", 0.95);
-          const isHomeworkSheet = pageEl.classList.contains("homework-page-sheet") || documentType === "homework";
-          const pdfWidth = 595.28; // Standard A4 width in pt
-          // For homework sheets or standard A4 pages, guarantee exact standard A4 (841.89 pt)
-          const pdfHeight = (isHomeworkSheet || (aspect >= 1.25 && aspect <= 1.55)) ? 841.89 : pdfWidth * aspect;
-
-          if (!pdf) {
-            pdf = new jsPDF({
-              orientation: "portrait",
-              unit: "pt",
-              format: [pdfWidth, pdfHeight],
-              compress: true,
-            });
-            pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
-          } else {
-            pdf.addPage([pdfWidth, pdfHeight], "portrait");
-            pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
-          }
-        }
-      } else {
-        // Single continuous container or fallback
-        const targetEl = pageElements[0] || containerRef.current;
-        const { canvas } = await renderElementToA4Canvas(targetEl);
-
-        const imgWidth = 595.28;
-        const pageHeightPt = 841.89; // Standard A4 height
-        const pxPerPt = canvas.width / imgWidth;
-        const pageHeightPx = Math.floor(pageHeightPt * pxPerPt);
-
-        if (canvas.height <= pageHeightPx * 1.05) {
-          const imgData = canvas.toDataURL("image/jpeg", 0.95);
-          const pdfHeight = (canvas.height / canvas.width) * imgWidth;
-          pdf = new jsPDF({
-            orientation: "portrait",
-            unit: "pt",
-            format: [imgWidth, pdfHeight],
-            compress: true,
-          });
-          pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, pdfHeight, undefined, "FAST");
-        } else {
-          pdf = new jsPDF({
-            orientation: "portrait",
-            unit: "pt",
-            format: "a4",
-            compress: true,
-          });
-
-          // Smart slice: Search for clean whitespace rows near pageHeightPx to avoid cutting text/images
-          const ctx = canvas.getContext("2d");
-          let currentY = 0;
-          let isFirst = true;
-
-          while (currentY < canvas.height) {
-            let sliceHeight = Math.min(pageHeightPx, canvas.height - currentY);
-
-            if (currentY + sliceHeight < canvas.height && ctx) {
-              const maxSearch = Math.floor(pageHeightPx * 0.22);
-              const startCheck = currentY + sliceHeight;
-              let bestBreak = startCheck;
-              let foundBreak = false;
-
-              for (let testY = startCheck; testY > startCheck - maxSearch; testY -= 2) {
-                const imgDataRow = ctx.getImageData(0, testY, canvas.width, 1).data;
-                let isBlank = true;
-                for (let px = 0; px < canvas.width; px += 8) {
-                  const idx = px * 4;
-                  if (imgDataRow[idx] < 245 || imgDataRow[idx + 1] < 245 || imgDataRow[idx + 2] < 245) {
-                    isBlank = false;
-                    break;
-                  }
-                }
-                if (isBlank) {
-                  bestBreak = testY;
-                  foundBreak = true;
-                  break;
-                }
-              }
-
-              if (foundBreak && bestBreak > currentY + pageHeightPx * 0.70) {
-                sliceHeight = bestBreak - currentY;
-              }
-            }
-
-            const sliceCanvas = document.createElement("canvas");
-            sliceCanvas.width = canvas.width;
-            sliceCanvas.height = sliceHeight;
-
-            const sliceCtx = sliceCanvas.getContext("2d");
-            if (sliceCtx) {
-              sliceCtx.drawImage(
-                canvas,
-                0,
-                currentY,
-                canvas.width,
-                sliceHeight,
-                0,
-                0,
-                canvas.width,
-                sliceHeight
-              );
-            }
-
-            const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
-            const sliceHeightPt = (sliceHeight / canvas.width) * imgWidth;
-
-            if (!isFirst) {
-              pdf.addPage();
-            }
-            pdf.addImage(sliceData, "JPEG", 0, 0, imgWidth, sliceHeightPt, undefined, "FAST");
-            isFirst = false;
-            currentY += sliceHeight;
-          }
-        }
+      for (let i = 0; i < pageElements.length; i++) {
+        const pageEl = pageElements[i];
+        const { canvas } = await renderElementToA4Canvas(pageEl);
+        pdf = addCanvasPagesToPdf(pdf, canvas, i === 0);
       }
 
       if (pdf) {
+        if (documentType === "homework") {
+          addHomeworkFooterLinksToPdf(pdf);
+        }
+
         const cleanTitle =
           documentType === "homework"
             ? formatHomeworkFileName(homeworkClass || paperTitle)
@@ -2467,48 +2450,38 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     try {
       const filename = formatHomeworkFileName(homeworkClass || paperTitle);
 
-      const pages = containerRef.current.querySelectorAll<HTMLElement>(
-        ".vml-page-wrapper, .homework-page-sheet, .docx-wrapper > section.docx, .docx-wrapper > section.docx-doc, .docx-page, .homework-a4-page"
-      );
-      let pdf: jsPDF | null = null;
+      const vmlPages = Array.from(
+        containerRef.current.querySelectorAll<HTMLElement>(".vml-page-wrapper")
+      ).filter((p) => p.style.display !== "none" && !p.classList.contains("vml-page-hidden"));
 
-      if (pages.length > 0) {
-        for (let i = 0; i < pages.length; i++) {
-          const pg = pages[i];
-          const { canvas } = await renderElementToA4Canvas(pg);
-          const imgData = canvas.toDataURL("image/jpeg", 0.95);
-          if (i === 0) {
-            pdf = new jsPDF({
-              orientation: "portrait",
-              unit: "pt",
-              format: "a4",
-              compress: true,
-            });
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
-          } else if (pdf) {
-            pdf.addPage();
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
-          }
-        }
+      let pageElements: HTMLElement[] = [];
+      if (vmlPages.length > 0) {
+        pageElements = vmlPages;
       } else {
-        const { canvas } = await renderElementToA4Canvas(containerRef.current);
-        const imgData = canvas.toDataURL("image/jpeg", 0.95);
-        pdf = new jsPDF({
-          orientation: "portrait",
-          unit: "pt",
-          format: "a4",
-          compress: true,
-        });
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+        const docxPages = Array.from(
+          containerRef.current.querySelectorAll<HTMLElement>(
+            ".homework-page-sheet, .docx-wrapper > section.docx, .docx-wrapper > section.docx-doc, .docx-page, .homework-a4-page"
+          )
+        ).filter((p) => p.style.display !== "none");
+        if (docxPages.length > 0) {
+          pageElements = docxPages;
+        } else {
+          pageElements = [containerRef.current];
+        }
+      }
+
+      let pdf: jsPDF | null = null;
+      for (let i = 0; i < pageElements.length; i++) {
+        const pg = pageElements[i];
+        const { canvas } = await renderElementToA4Canvas(pg);
+        pdf = addCanvasPagesToPdf(pdf, canvas, i === 0);
       }
 
       if (pdf) {
+        if (documentType === "homework") {
+          addHomeworkFooterLinksToPdf(pdf);
+        }
+
         const blob = pdf.output("blob");
         const file = new File([blob], filename, { type: "application/pdf" });
 
@@ -2585,22 +2558,24 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
         {/* Action Buttons */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
-          {/* Mobile Screen Fit Toggle */}
-          <button
-            type="button"
-            onClick={() => setMobileFitWidth((prev) => !prev)}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
-              mobileFitWidth
-                ? "bg-indigo-600 text-white border-indigo-500 shadow-sm"
-                : "bg-slate-800 text-slate-300 border-slate-700 hover:text-white"
-            }`}
-            title={mobileFitWidth ? "१००% आकार पहा (Full Size)" : "मोबाईल स्क्रीनवर बसवा (Fit Screen)"}
-          >
-            {mobileFitWidth ? <Minimize2 className="size-3.5 text-indigo-200" /> : <Maximize2 className="size-3.5 text-amber-300" />}
-            <span>{mobileFitWidth ? "१००% आकार" : "स्क्रीनवर बसवा"}</span>
-          </button>
+          {/* Mobile Screen Fit Toggle (hidden for homework) */}
+          {documentType !== "homework" && (
+            <button
+              type="button"
+              onClick={() => setMobileFitWidth((prev) => !prev)}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                mobileFitWidth
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-sm"
+                  : "bg-slate-800 text-slate-300 border-slate-700 hover:text-white"
+              }`}
+              title={mobileFitWidth ? "१००% आकार पहा (Full Size)" : "मोबाईल स्क्रीनवर बसवा (Fit Screen)"}
+            >
+              {mobileFitWidth ? <Minimize2 className="size-3.5 text-indigo-200" /> : <Maximize2 className="size-3.5 text-amber-300" />}
+              <span>{mobileFitWidth ? "१००% आकार" : "स्क्रीनवर बसवा"}</span>
+            </button>
+          )}
 
-          {hasSavedVersion && (
+          {documentType !== "homework" && hasSavedVersion && (
             <button
               onClick={handleRestoreSaved}
               className="px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
@@ -2611,20 +2586,23 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             </button>
           )}
 
-          <button
-            onClick={handleResetToOriginal}
-            className="px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
-            title="मूळ Word फाईल पुन्हा लोड करा"
-          >
-            <RotateCcw className="size-3.5" />
-            <span>मूळ फाईल</span>
-          </button>
+          {documentType !== "homework" && (
+            <button
+              onClick={handleResetToOriginal}
+              className="px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer"
+              title="मूळ Word फाईल पुन्हा लोड करा"
+            >
+              <RotateCcw className="size-3.5" />
+              <span>मूळ फाईल</span>
+            </button>
+          )}
 
+          {/* 1. PDF Download */}
           <button
             onClick={handleDownloadPdf}
             disabled={isDownloadingPdf}
             className="px-3 sm:px-4 py-1.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
-            title="जशी आहे तशी मूळ PDF डाऊनलोड करा"
+            title="PDF डाऊनलोड करा"
           >
             {isDownloadingPdf ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -2634,6 +2612,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             <span>PDF</span>
           </button>
 
+          {/* 2. WhatsApp वर पाठवा */}
           {documentType === "homework" && (
             <button
               onClick={handleSharePdfToWhatsApp}
@@ -2650,17 +2629,19 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             </button>
           )}
 
+          {/* 3. माहिती भरा */}
           {documentType === "homework" && (
             <button
               onClick={() => setShowHwHeaderModal(true)}
-              className="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              className="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
               title="शाळेचे नाव, केंद्र, तालुका, जिल्हा, वार, दिनांक इत्यादी माहिती भरा"
             >
-              <Edit3 className="size-3.5 text-amber-300" />
+              <Edit3 className="size-3.5" />
               <span>माहिती भरा</span>
             </button>
           )}
 
+          {/* 4. जतन करा */}
           <button
             onClick={handleSave}
             disabled={isSaving}
@@ -2744,37 +2725,6 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             <Check className="size-3.5 text-emerald-400" />
             <span>शाळेचे नाव, केंद्र, तालुका, जिल्हा व स्वाक्षरी अचूक बसतील</span>
           </div>
-        </div>
-      )}
-
-      {/* Quick Header Details Bar for Homework */}
-      {documentType === "homework" && (
-        <div className="bg-slate-800 text-white px-3 sm:px-4 py-2 border-b border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 print:hidden shadow-sm">
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap text-xs">
-            <span className="font-bold text-amber-400 flex items-center gap-1.5">
-              <Sparkles className="size-3.5 sm:size-4 text-amber-300" />
-              <span>शीर्षक माहिती:</span>
-            </span>
-            <span className="text-slate-300 font-medium text-[11px] sm:text-xs">
-              {hwSchoolName ? `शाळा: ${hwSchoolName} • ` : ""}
-              {hwTeacherName ? `शिक्षक: ${hwTeacherName} • ` : ""}
-              {hwHeadmasterName ? `मुख्याध्यापक: ${hwHeadmasterName} • ` : ""}
-              वार: {hwDayOfWeek} • दिनांक: {hwDateStr} • इयत्ता: {hwClassName}
-              {!hwSchoolName && !hwTeacherName && !hwHeadmasterName && (
-                <span className="text-amber-300 ml-1 font-normal">
-                  (माहिती भरण्यासाठी उजवीकडील बटण वापरा)
-                </span>
-              )}
-            </span>
-          </div>
-
-          <button
-            onClick={() => setShowHwHeaderModal(true)}
-            className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow cursor-pointer active:scale-95 shrink-0"
-          >
-            <Edit3 className="size-3.5 text-amber-300" />
-            <span>माहिती भरा व पृष्ठात बसवा</span>
-          </button>
         </div>
       )}
 

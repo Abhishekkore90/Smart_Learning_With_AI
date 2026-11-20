@@ -1,3 +1,5 @@
+import { jsPDF } from "jspdf";
+
 /**
  * Helper to identify whether a homework item is a Word (.docx / .doc) document
  */
@@ -214,5 +216,235 @@ export const formatHomeworkFileName = (cls?: string): string => {
 
   return `Class ${classLabel} Homework.pdf`;
 };
+
+export const HOMEWORK_WHATSAPP_LINK =
+  "https://chat.whatsapp.com/IUcC4XskSSQF8dFpQWUMb4?s=cl&p=a&mlu=4&ilr=4";
+export const HOMEWORK_WEBSITE_URL = "https://sgkbrainova.com";
+export const HOMEWORK_WEBSITE_LABEL = "sgkbrainova.com";
+
+/**
+ * Adds clickable footer link badges for WhatsApp and Website on the LAST page of a homework PDF (ONE TIME ONLY).
+ * Ensures the interactive link annotations (URI actions) are registered in the PDF dictionary
+ * so that tapping or clicking on the buttons in any PDF reader directly opens the URLs.
+ */
+export const addHomeworkFooterLinksToPdf = (pdf: jsPDF | null): jsPDF | null => {
+  if (!pdf) return pdf;
+
+  try {
+    const totalPages = pdf.getNumberOfPages();
+    if (totalPages < 1) return pdf;
+
+    const originalPage = pdf.getCurrentPageInfo()?.pageNumber || 1;
+
+    // Apply ONLY on the very last page of the document (ONE TIME ONLY)
+    pdf.setPage(totalPages);
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const margin = 24;
+    const gap = 12;
+    const btnHeight = 18;
+    const footerY = pageHeight - btnHeight - 8; // 8 pt padding from bottom edge
+    const btnWidth = (pageWidth - margin * 2 - gap) / 2;
+
+    // Draw clean solid white background strip behind the footer bar to avoid any overlapping
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(0, footerY - 5, pageWidth, pageHeight - (footerY - 5), "F");
+
+    // Top divider line
+    pdf.setDrawColor(226, 232, 240); // slate-200
+    pdf.setLineWidth(0.6);
+    pdf.line(margin, footerY - 4, pageWidth - margin, footerY - 4);
+
+    // 1. WhatsApp Button (Left)
+    const waX = margin;
+    const waY = footerY;
+    pdf.setFillColor(37, 211, 102); // #25D366 (WhatsApp Green)
+    pdf.setDrawColor(22, 163, 74); // #16a34a border
+    pdf.setLineWidth(0.5);
+    pdf.roundedRect(waX, waY, btnWidth, btnHeight, 3.5, 3.5, "FD");
+
+    // WhatsApp text
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8.5);
+    pdf.text("WhatsApp Group: Click to Join", waX + btnWidth / 2, waY + 12, {
+      align: "center",
+    });
+
+    // Interactive link annotation for WhatsApp
+    pdf.link(waX, waY, btnWidth, btnHeight, {
+      url: HOMEWORK_WHATSAPP_LINK,
+    });
+
+    // 2. Website Button (Right)
+    const webX = margin + btnWidth + gap;
+    const webY = footerY;
+    pdf.setFillColor(30, 58, 138); // #1e3a8a (Navy/Blue)
+    pdf.setDrawColor(29, 78, 216); // #1d4ed8 border
+    pdf.setLineWidth(0.5);
+    pdf.roundedRect(webX, webY, btnWidth, btnHeight, 3.5, 3.5, "FD");
+
+    // Website text
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8.5);
+    pdf.text(`Website: ${HOMEWORK_WEBSITE_LABEL} (Click Here)`, webX + btnWidth / 2, webY + 12, {
+      align: "center",
+    });
+
+    // Interactive link annotation for Website
+    pdf.link(webX, webY, btnWidth, btnHeight, {
+      url: HOMEWORK_WEBSITE_URL,
+    });
+
+    // Restore originally active page
+    pdf.setPage(originalPage);
+  } catch (err) {
+    console.error("Error adding footer links to PDF:", err);
+  }
+
+  return pdf;
+};
+
+/**
+ * Returns clean, attractive HTML for the clickable WhatsApp and Website footer bar
+ * to be embedded in printable / previewable homework worksheets.
+ */
+export const getHomeworkFooterHtml = (): string => {
+  return `
+    <div data-header-field="hw-footer-links" style="margin-top: 14px; padding-top: 10px; border-top: 1.5px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-family: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; width: 100%;">
+      <a href="${HOMEWORK_WHATSAPP_LINK}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background-color: #25D366; color: #ffffff !important; padding: 6px 12px; border-radius: 6px; font-size: 10pt; font-weight: 700; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+        <span>💬 WhatsApp ग्रुप जॉईन करा (Click Here)</span>
+      </a>
+      <a href="${HOMEWORK_WEBSITE_URL}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background-color: #1e3a8a; color: #ffffff !important; padding: 6px 12px; border-radius: 6px; font-size: 10pt; font-weight: 700; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+        <span>🌐 ${HOMEWORK_WEBSITE_LABEL} (सराव व माहिती)</span>
+      </a>
+    </div>
+  `.trim();
+};
+
+/**
+ * Intelligently appends one or more A4 pages to a jsPDF instance from a rendered canvas.
+ * - If the canvas fits on 1 A4 page (with 5% margin tolerance), adds 1 page.
+ * - If the canvas is taller than 1 A4 page, slices it at clean blank whitespace rows
+ *   between questions/paragraphs into multiple A4 pages so that NO text, images, or content is ever cut off!
+ */
+export const addCanvasPagesToPdf = (
+  pdf: jsPDF | null,
+  canvas: HTMLCanvasElement,
+  isFirstElement: boolean = false
+): jsPDF => {
+  const imgWidth = 595.28; // Standard A4 width in pt
+  const pageHeightPt = 841.89; // Standard A4 height in pt
+  const pxPerPt = canvas.width / imgWidth;
+  const pageHeightPx = Math.floor(pageHeightPt * pxPerPt);
+
+  let activePdf = pdf;
+
+  // Single page case: canvas fits comfortably within 1 A4 page
+  if (canvas.height <= pageHeightPx * 1.05) {
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const pdfHeight = (canvas.height / canvas.width) * imgWidth;
+    if (!activePdf) {
+      activePdf = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: "a4",
+        compress: true,
+      });
+      activePdf.addImage(imgData, "JPEG", 0, 0, imgWidth, pdfHeight, undefined, "FAST");
+    } else {
+      activePdf.addPage([imgWidth, pageHeightPt], "portrait");
+      activePdf.addImage(imgData, "JPEG", 0, 0, imgWidth, pdfHeight, undefined, "FAST");
+    }
+    return activePdf;
+  }
+
+  // Multi-page case: canvas is taller than 1 A4 page, slice cleanly across pages
+  if (!activePdf) {
+    activePdf = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4",
+      compress: true,
+    });
+  }
+
+  const ctx = canvas.getContext("2d");
+  let currentY = 0;
+  let isFirstSlice = isFirstElement;
+
+  while (currentY < canvas.height) {
+    let sliceHeight = Math.min(pageHeightPx, canvas.height - currentY);
+
+    // If this slice doesn't reach the end of the canvas, find a clean whitespace row
+    if (currentY + sliceHeight < canvas.height && ctx) {
+      const maxSearch = Math.floor(pageHeightPx * 0.28);
+      const startCheck = currentY + sliceHeight;
+      let bestBreak = startCheck;
+      let foundBreak = false;
+
+      // Search upward for a clean whitespace row
+      for (let testY = startCheck; testY > startCheck - maxSearch; testY -= 2) {
+        const imgDataRow = ctx.getImageData(0, testY, canvas.width, 1).data;
+        let isBlank = true;
+        for (let px = 0; px < canvas.width; px += 8) {
+          const idx = px * 4;
+          if (imgDataRow[idx] < 240 || imgDataRow[idx + 1] < 240 || imgDataRow[idx + 2] < 240) {
+            isBlank = false;
+            break;
+          }
+        }
+        if (isBlank) {
+          bestBreak = testY;
+          foundBreak = true;
+          break;
+        }
+      }
+
+      if (foundBreak && bestBreak > currentY + pageHeightPx * 0.60) {
+        sliceHeight = bestBreak - currentY;
+      }
+    }
+
+    const sliceCanvas = document.createElement("canvas");
+    sliceCanvas.width = canvas.width;
+    sliceCanvas.height = sliceHeight;
+
+    const sliceCtx = sliceCanvas.getContext("2d");
+    if (sliceCtx) {
+      sliceCtx.fillStyle = "#ffffff";
+      sliceCtx.fillRect(0, 0, sliceCanvas.width, sliceHeight);
+      sliceCtx.drawImage(
+        canvas,
+        0,
+        currentY,
+        canvas.width,
+        sliceHeight,
+        0,
+        0,
+        canvas.width,
+        sliceHeight
+      );
+    }
+
+    const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
+    const sliceHeightPt = (sliceHeight / canvas.width) * imgWidth;
+
+    if (isFirstSlice && currentY === 0) {
+      activePdf.addImage(sliceData, "JPEG", 0, 0, imgWidth, sliceHeightPt, undefined, "FAST");
+    } else {
+      activePdf.addPage([imgWidth, pageHeightPt], "portrait");
+      activePdf.addImage(sliceData, "JPEG", 0, 0, imgWidth, sliceHeightPt, undefined, "FAST");
+    }
+
+    isFirstSlice = false;
+    currentY += sliceHeight;
+  }
+
+  return activePdf;
+};
+
 
 

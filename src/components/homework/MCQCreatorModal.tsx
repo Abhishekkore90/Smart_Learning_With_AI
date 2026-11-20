@@ -35,6 +35,7 @@ interface MCQCreatorModalProps {
   userName?: string;
   mode?: "admin" | "custom";
   defaultDate?: string;
+  defaultMedium?: "marathi" | "semi";
 }
 
 const SUBJECT_OPTIONS = [
@@ -60,6 +61,7 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
   userName = "शिक्षक",
   mode,
   defaultDate,
+  defaultMedium = "marathi",
 }) => {
   const { user, profile } = useAuth();
   const [quizCategory, setQuizCategory] = useState<"admin" | "custom">(() => {
@@ -74,7 +76,7 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
   );
   const [classId, setClassId] = useState(defaultClass);
   const [subject, setSubject] = useState(defaultSubject);
-  const [medium, setMedium] = useState<"marathi" | "semi">("marathi");
+  const [medium, setMedium] = useState<"marathi" | "semi">(defaultMedium);
   const [date, setDate] = useState(() => defaultDate || new Date().toISOString().split("T")[0]);
   const [instructions, setInstructions] = useState(
     "सर्व प्रश्न सोडवणे अनिवार्य आहे. अचूक पर्यायावर क्लिक करा."

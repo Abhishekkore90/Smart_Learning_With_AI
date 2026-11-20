@@ -215,10 +215,27 @@ export const MCQPrintDocument = forwardRef<HTMLDivElement, MCQPrintDocumentProps
             </div>
           </div>
 
-          {/* Bottom URL Watermark */}
-          <div className="pt-2 text-[10px] font-bold text-slate-400 tracking-wider">
-            अधिकृत स्वाध्याय व निकाल पोर्टल:{" "}
-            <span className="text-indigo-600 font-black">https://sgkbrainova.com</span>
+          {/* Bottom Links: WhatsApp & Website */}
+          <div className="pt-2 flex items-center justify-between gap-3 text-[10px] font-bold text-slate-500">
+            <a
+              href="https://chat.whatsapp.com/IUcC4XskSSQF8dFpQWUMb4?s=cl&p=a&mlu=4&ilr=4"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-emerald-700 hover:text-emerald-800 no-underline font-black"
+            >
+              <span>💬 WhatsApp ग्रुप: Click to Join</span>
+            </a>
+            <div>
+              अधिकृत पोर्टल:{" "}
+              <a
+                href="https://sgkbrainova.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-600 hover:text-indigo-800 font-black no-underline"
+              >
+                https://sgkbrainova.com
+              </a>
+            </div>
           </div>
         </div>
       </div>

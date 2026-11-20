@@ -493,6 +493,7 @@ function ClassTimetablePage() {
   const { user } = useAuth();
   const [gridData, setGridData] = useState<any>(null);
   const [savingGrid, setSavingGrid] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Timetable Edit Mode and School Details Modal states
   const [isEditing, setIsEditing] = useState(false);
@@ -861,6 +862,7 @@ function ClassTimetablePage() {
     const element = document.getElementById("editable-timetable-container");
     if (!element) return;
 
+    setIsGeneratingPdf(true);
     toast.success(lang === "mr" ? "PDF तयार होत आहे..." : "Generating PDF...");
 
     let tempWrapper: HTMLDivElement | null = null;
@@ -914,7 +916,8 @@ function ClassTimetablePage() {
       tempWrapper.style.minWidth = `${targetWidth}px`;
       tempWrapper.style.maxWidth = `${targetWidth}px`;
       tempWrapper.style.background = '#ffffff';
-      tempWrapper.style.zIndex = '99999';
+      tempWrapper.style.zIndex = '-99999';
+      tempWrapper.style.opacity = '0';
       tempWrapper.style.overflow = 'visible';
       tempWrapper.style.pointerEvents = 'none';
       tempWrapper.style.transform = 'none';
@@ -1115,6 +1118,10 @@ function ClassTimetablePage() {
             styles.forEach((st) => {
               clonedDoc.head.appendChild(st.cloneNode(true));
             });
+            const clonedTemp = clonedDoc.querySelector('[data-pdf-temp="true"]') as HTMLElement;
+            if (clonedTemp) {
+              clonedTemp.style.opacity = '1';
+            }
           } catch (e) {}
         }
       });
@@ -1184,6 +1191,7 @@ function ClassTimetablePage() {
       console.error("PDF generation error:", err);
       toast.error(lang === "mr" ? "PDF तयार करण्यात त्रुटी आली" : "Failed to generate PDF");
     } finally {
+      setIsGeneratingPdf(false);
       if (tempWrapper && tempWrapper.parentNode) {
         tempWrapper.parentNode.removeChild(tempWrapper);
       }
@@ -1316,11 +1324,15 @@ function ClassTimetablePage() {
                     {/* 4. PDF Download */}
                     <button
                       onClick={handleDownloadPDFDirectly}
-                      disabled={savingGrid}
-                      className="flex items-center justify-center gap-1 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg text-[11px] font-black transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+                      disabled={savingGrid || isGeneratingPdf}
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg text-[11px] font-black transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
                     >
-                      <Download className="size-3.5" />
-                      <span>PDF</span>
+                      {isGeneratingPdf ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Download className="size-3.5" />
+                      )}
+                      <span>{isGeneratingPdf ? (lang === "mr" ? "तयार होत आहे..." : "Generating...") : "PDF"}</span>
                     </button>
                   </div>
                 </div>

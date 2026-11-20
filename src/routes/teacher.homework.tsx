@@ -281,186 +281,40 @@ function HomeworkPage() {
             </div>
           )}
 
-          {/* SECTION 1: Top Dashboard Banner (Screenshot 2 moved to TOP of page) */}
+          {/* SECTION 1: Clean Header with only Information Fill Option */}
           {!activeHomework && (
-            <div className="no-print bg-gradient-to-r from-teal-800 via-emerald-800 to-indigo-950 rounded-2xl sm:rounded-3xl p-4 sm:p-7 text-white shadow-xl relative overflow-hidden border border-emerald-600/30">
-              <div className="absolute top-0 right-0 size-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
-              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="space-y-2">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-200 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-                    <BookOpen className="size-3.5" /> दैनिक गृहपाठ पोर्टल (Daily Homework)
-                  </div>
-                  <h1 className="text-xl sm:text-3xl font-black tracking-tight">
-                    गृहपाठ व्यवस्थापन (Homework Viewer & Editor)
+            <div className="no-print bg-gradient-to-r from-teal-800 via-emerald-800 to-indigo-950 rounded-2xl p-3.5 sm:p-5 text-white shadow-lg relative overflow-hidden border border-emerald-600/30">
+              <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <h1 className="text-base sm:text-xl font-black tracking-tight flex items-center gap-2">
+                    <BookOpen className="size-5 text-emerald-300 shrink-0" />
+                    <span>गृहपाठ व्यवस्थापन (Homework Viewer & Editor)</span>
                   </h1>
-                  <p className="text-xs sm:text-sm text-emerald-100 max-w-2xl font-medium">
-                    इयत्ता १ ली ते ८ वी मराठी व सेमी माध्यमासाठी तारीखनिहाय गृहपाठ पहा, मूळ डिझाइन सुरक्षित ठेवून मजकूर संपादित करा, प्रिंट काढा किंवा PDF डाउनलोड करा.
-                  </p>
-
-                  {/* Saved Profile Summary Pill & Button on Dashboard */}
-                  <div className="pt-1 flex items-center gap-2 flex-wrap text-xs">
-                    <button
-                      type="button"
-                      onClick={openProfileModal}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white font-bold transition-all shadow-xs cursor-pointer active:scale-95 text-xs backdrop-blur-md"
-                      title="शाळा, शिक्षक व मुख्याध्यापक माहिती सेट करा किंवा बदला"
-                    >
-                      <Building2 className="size-3.5 text-amber-300" />
-                      <span>
-                        {hwProfile.schoolName
-                          ? `शाळा: ${hwProfile.schoolName} ${hwProfile.teacherName ? `• शिक्षक: ${hwProfile.teacherName}` : ""}`
-                          : "शाळा व शिक्षक माहिती सेट करा (Set Header Info)"}
-                      </span>
-                      wi                 <Edit3 className="size-3 text-amber-300 ml-1" />
-                    </button>
-                    {hwProfile.schoolName && (
-                      <span className="text-[11px] text-emerald-200 font-medium">
-                        ✓ सर्व दैनिक गृहपाठांवर आपोआप लागू होईल
-                      </span>
-                    )}
-                  </div>
+                  {hwProfile.schoolName && (
+                    <p className="text-xs text-emerald-200 font-medium">
+                      शाळा: {hwProfile.schoolName} {hwProfile.teacherName ? `• शिक्षक: ${hwProfile.teacherName}` : ""}
+                    </p>
+                  )}
                 </div>
 
-                {/* Stepper Wizard Bar */}
-                <div className="flex items-center gap-1 sm:gap-2 bg-white/10 backdrop-blur-md p-1.5 sm:p-2 rounded-2xl border border-white/15 text-[11px] sm:text-xs font-bold overflow-x-auto touch-pan-x max-w-full shrink-0">
-                  <button
-                    type="button"
-                    onClick={openProfileModal}
-                    className="px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black shadow-md flex items-center gap-1.5 active:scale-95"
-                    title="शाळा व शिक्षक माहिती भरा"
-                  >
-                    <Building2 className="size-3.5" />
-                    <span>माहिती भरा</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMainTab("homework");
-                      setStep("medium");
-                    }}
-                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${mainTab === "homework" && step === "medium"
-                      ? "bg-white text-emerald-900 shadow-md font-black"
-                      : "text-white/80 hover:text-white"
-                      }`}
-                  >
-                    १. माध्यम
-                  </button>
-                  <ChevronRight className="size-3.5 text-white/40 shrink-0" />
-                  <button
-                    onClick={() => {
-                      setMainTab("homework");
-                      setStep("class");
-                    }}
-                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 ${mainTab === "homework" && step === "class"
-                      ? "bg-white text-emerald-900 shadow-md font-black"
-                      : "text-white/80 hover:text-white"
-                      }`}
-                  >
-                    २. इयत्ता
-                  </button>
-                </div>
+                {/* Only Information Fill Option */}
+                <button
+                  type="button"
+                  onClick={openProfileModal}
+                  className="px-3.5 sm:px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs sm:text-sm shadow-md flex items-center gap-2 active:scale-95 transition-all cursor-pointer shrink-0"
+                  title="शाळा व शिक्षक माहिती भरा किंवा बदला"
+                >
+                  <Building2 className="size-4 text-amber-950" />
+                  <span>माहिती भरा</span>
+                  <Edit3 className="size-3.5 text-amber-950/70" />
+                </button>
               </div>
             </div>
           )}
 
-          {/* SECTION 2: Colorful & Recognizable Co-Tabs (Screenshot 3 taken DOWN below the Banner) */}
-          {!activeHomework && (
-            <div className="no-print bg-white/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl sm:rounded-3xl border-2 border-slate-200/90 shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-              <div className="flex items-center gap-2 sm:gap-3 flex-1 flex-wrap sm:flex-nowrap">
-                {/* Tab 1: दैनिक गृहपाठ (Daily Homework) */}
-                <button
-                  type="button"
-                  onClick={() => setMainTab("homework")}
-                  className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all duration-300 cursor-pointer shadow-sm active:scale-98 ${mainTab === "homework"
-                    ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/60 scale-[1.02]"
-                    : "bg-emerald-50/70 hover:bg-emerald-100/90 text-emerald-950 border border-emerald-200/80 hover:border-emerald-400 hover:scale-[1.01]"
-                    }`}
-                >
-                  <div
-                    className={`size-8 rounded-xl flex items-center justify-center shrink-0 ${mainTab === "homework"
-                      ? "bg-white/20 text-white shadow-xs"
-                      : "bg-emerald-600 text-white shadow-xs"
-                      }`}
-                  >
-                    <BookOpen className="size-4.5" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-black leading-tight flex items-center gap-1.5">
-                      <span>दैनिक गृहपाठ</span>
-                      <span className="text-[10px] font-bold opacity-80">(Daily Homework)</span>
-                    </div>
-                    <div
-                      className={`text-[10px] font-semibold mt-0.5 ${mainTab === "homework" ? "text-emerald-100" : "text-emerald-700"
-                        }`}
-                    >
-                      कार्यपुस्तिका, Word व PDF गृहपाठ
-                    </div>
-                  </div>
-                </button>
-
-                {/* Tab 2: MCQ स्वाध्याय (MCQ Quiz) */}
-                <button
-                  type="button"
-                  onClick={() => setMainTab("mcq")}
-                  className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition-all duration-300 cursor-pointer shadow-sm active:scale-98 ${mainTab === "mcq"
-                    ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30 ring-2 ring-purple-400/60 scale-[1.02]"
-                    : "bg-indigo-50/70 hover:bg-indigo-100/90 text-indigo-950 border border-indigo-200/80 hover:border-indigo-400 hover:scale-[1.01]"
-                    }`}
-                >
-                  <div
-                    className={`size-8 rounded-xl flex items-center justify-center shrink-0 ${mainTab === "mcq"
-                      ? "bg-white/20 text-amber-300 shadow-xs"
-                      : "bg-indigo-600 text-amber-300 shadow-xs"
-                      }`}
-                  >
-                    <Sparkles className="size-4.5" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-black leading-tight flex items-center gap-2">
-                      <span>MCQ स्वाध्याय</span>
-                      <span className="text-[10px] font-bold opacity-80">(MCQ Quiz)</span>
-                      <span className="bg-gradient-to-r from-amber-400 to-orange-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider shadow-xs animate-pulse">
-                        नवीन
-                      </span>
-                    </div>
-                    <div
-                      className={`text-[10px] font-semibold mt-0.5 ${mainTab === "mcq" ? "text-indigo-100" : "text-indigo-700"
-                        }`}
-                    >
-                      ऑनलाइन टेस्ट, क्विझ व निकाल
-                    </div>
-                  </div>
-                </button>
-              </div>
-
-              {/* Status indicator on right */}
-              <div className="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100/90 border border-slate-200 text-xs font-bold text-slate-700 shrink-0">
-                <span
-                  className={`size-2.5 rounded-full ${mainTab === "homework" ? "bg-emerald-500 animate-ping" : "bg-purple-500 animate-ping"
-                    }`}
-                />
-                <span>
-                  {mainTab === "homework"
-                    ? "दैनिक गृहपाठ विभाग सक्रिय"
-                    : "MCQ स्वाध्याय विभाग सक्रिय"}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* SECTION 3: Content based on mainTab */}
-          {mainTab === "mcq" ? (
-            <MCQHomeworkSection
-              defaultRole="teacher"
-              userName={profile?.fullName || (profile as any)?.name || user?.displayName || "शिक्षक"}
-              initialClass={selectedClass || "all"}
-              initialSubject={selectedSubject || "all"}
-            />
-          ) : (
-            <>
-
-              {/* ACTIVE DOCUMENT VIEWER / TEMPLATE MODE */}
-              {activeHomework ? (
-                <div className="space-y-4">
+          {/* ACTIVE DOCUMENT VIEWER / TEMPLATE MODE */}
+          {activeHomework ? (
+            <div className="space-y-4">
                   <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex-wrap">
                     <button
                       onClick={() => setActiveHomework(null)}
@@ -633,96 +487,161 @@ function HomeworkPage() {
                   {/* STEP 4: HOMEWORK LIST */}
                   {step === "list" && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                      {/* Context Header & Filter Bar */}
-                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
-                          <span className="px-3 py-1 rounded-lg bg-amber-100 text-amber-800 font-bold">
+                      {/* Context Breadcrumb & Class Switcher */}
+                      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 text-xs sm:text-sm">
+                          <span className="px-3 py-1.5 rounded-xl bg-amber-100 text-amber-900 font-bold">
                             {currentMediumObj?.labelMr}
                           </span>
                           <span className="text-slate-400">/</span>
-                          <span className="px-3 py-1 rounded-lg bg-orange-100 text-orange-800 font-bold">
+                          <span className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-sm shadow-xs">
                             {currentClassObj?.mr}
+                          </span>
+                          <span className="text-slate-400 hidden sm:inline">•</span>
+                          <span className="text-slate-500 text-xs font-semibold hidden sm:inline">
+                            {mainTab === "homework" ? "दैनिक गृहपाठ संच" : "MCQ स्वाध्याय संच"}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
-                          {/* Date Picker Filter */}
-                          <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
-                            <Calendar className="size-3.5 text-amber-600" />
-                            <span className="text-slate-500 font-medium">दिनांक:</span>
-                            <input
-                              type="date"
-                              value={filterDate}
-                              onChange={(e) => setFilterDate(e.target.value)}
-                              className="bg-transparent border-none outline-none font-bold text-slate-800 cursor-pointer"
-                            />
-                            {filterDate && (
-                              <button
-                                onClick={() => setFilterDate("")}
-                                className="text-slate-400 hover:text-red-500 ml-1 font-bold"
-                                title="तारीख फिल्टर काढा"
+                        <button
+                          onClick={() => setStep("class")}
+                          className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer flex items-center gap-1.5 transition-all shadow-2xs active:scale-95"
+                        >
+                          <ChevronLeft className="size-3.5" />
+                          <span>इयत्ता बदला (Change Class)</span>
+                        </button>
+                      </div>
+
+                      {/* Prominent, Highly Attractive Mode Selector */}
+                      <div className="bg-white/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl sm:rounded-3xl border-2 border-slate-200/90 shadow-md">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                          {/* Button 1: दैनिक गृहपाठ */}
+                          <button
+                            type="button"
+                            onClick={() => setMainTab("homework")}
+                            className={`flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl font-black transition-all duration-300 cursor-pointer active:scale-98 text-left ${
+                              mainTab === "homework"
+                                ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400 scale-[1.01]"
+                                : "bg-emerald-50/70 hover:bg-emerald-100/90 text-emerald-950 border-2 border-emerald-300/80 hover:border-emerald-500 shadow-xs hover:scale-[1.005]"
+                            }`}
+                          >
+                            <div
+                              className={`size-11 sm:size-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+                                mainTab === "homework" ? "bg-white/20 text-white" : "bg-emerald-600 text-white"
+                              }`}
+                            >
+                              <BookOpen className="size-5 sm:size-6" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-black text-sm sm:text-base leading-tight flex items-center gap-1.5">
+                                <span>दैनिक गृहपाठ</span>
+                                <span className="text-[11px] font-bold opacity-80">(Daily Homework)</span>
+                              </div>
+                              <div
+                                className={`text-[11px] sm:text-xs font-semibold mt-1 ${
+                                  mainTab === "homework" ? "text-emerald-100" : "text-emerald-700"
+                                }`}
                               >
-                                ✕
-                              </button>
-                            )}
-                          </div>
+                                कार्यपुस्तिका, Word व PDF गृहपाठ
+                              </div>
+                            </div>
+                          </button>
 
-                          {/* Search Input */}
-                          <div className="relative flex-1 sm:w-56">
-                            <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="text"
-                              placeholder="शोध करा..."
-                              value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
-                              className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:bg-white focus:border-amber-500"
-                            />
-                          </div>
-
+                          {/* Button 2: MCQ स्वाध्याय */}
                           <button
-                            onClick={() => setStep("class")}
-                            className="px-3 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 cursor-pointer flex items-center gap-1"
+                            type="button"
+                            onClick={() => setMainTab("mcq")}
+                            className={`flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl font-black transition-all duration-300 cursor-pointer active:scale-98 text-left ${
+                              mainTab === "mcq"
+                                ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-purple-600/30 ring-2 ring-purple-400 scale-[1.01]"
+                                : "bg-purple-50/70 hover:bg-purple-100/90 text-purple-950 border-2 border-purple-300/80 hover:border-purple-500 shadow-xs hover:scale-[1.005]"
+                            }`}
                           >
-                            <ChevronLeft className="size-3.5" />
-                            <span>इयत्ता बदला</span>
+                            <div
+                              className={`size-11 sm:size-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+                                mainTab === "mcq" ? "bg-white/20 text-amber-300" : "bg-purple-600 text-amber-300"
+                              }`}
+                            >
+                              <Sparkles className="size-5 sm:size-6" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-black text-sm sm:text-base leading-tight flex items-center gap-2">
+                                <span>MCQ स्वाध्याय</span>
+                                <span className="text-[11px] font-bold opacity-80">(MCQ Quiz)</span>
+                                <span className="bg-gradient-to-r from-amber-400 to-orange-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider shadow-xs animate-pulse">
+                                  नवीन
+                                </span>
+                              </div>
+                              <div
+                                className={`text-[11px] sm:text-xs font-semibold mt-1 ${
+                                  mainTab === "mcq" ? "text-purple-100" : "text-purple-700"
+                                }`}
+                              >
+                                इयत्ता {currentClassObj?.mr} साठी ऑनलाईन क्विझ व निकाल
+                              </div>
+                            </div>
                           </button>
                         </div>
                       </div>
 
-                      {/* View Switcher: Calendar vs List */}
-                      <div className="flex items-center justify-between gap-3 flex-wrap bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-                        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200">
-                          <button
-                            type="button"
-                            onClick={() => setViewMode("calendar")}
-                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all cursor-pointer ${viewMode === "calendar"
-                              ? "bg-emerald-600 text-white shadow-xs font-black"
-                              : "text-slate-600 hover:text-slate-900"
-                              }`}
-                          >
-                            <Calendar className="size-3.5" />
-                            <span>कॅलेंडर दृश्य (Calendar View)</span>
-                          </button>
+                      {/* Filter Bar (Only for Regular Homework) */}
+                      {mainTab === "homework" && (
+                        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                            <Calendar className="size-4 text-emerald-600" />
+                            <span>तारीखनिहाय दैनिक गृहपाठ कॅलेंडर व यादी</span>
+                          </div>
 
-                          <button
-                            type="button"
-                            onClick={() => setViewMode("list")}
-                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all cursor-pointer ${viewMode === "list"
-                              ? "bg-emerald-600 text-white shadow-xs font-black"
-                              : "text-slate-600 hover:text-slate-900"
-                              }`}
-                          >
-                            <Layers className="size-3.5" />
-                            <span>यादी दृश्य (List View)</span>
-                          </button>
+                          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                            {/* Date Picker Filter */}
+                            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
+                              <Calendar className="size-3.5 text-amber-600" />
+                              <span className="text-slate-500 font-medium">दिनांक:</span>
+                              <input
+                                type="date"
+                                value={filterDate}
+                                onChange={(e) => setFilterDate(e.target.value)}
+                                className="bg-transparent border-none outline-none font-bold text-slate-800 cursor-pointer"
+                              />
+                              {filterDate && (
+                                <button
+                                  onClick={() => setFilterDate("")}
+                                  className="text-slate-400 hover:text-red-500 ml-1 font-bold"
+                                  title="तारीख फिल्टर काढा"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Search Input */}
+                            <div className="relative flex-1 sm:w-56">
+                              <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                              <input
+                                type="text"
+                                placeholder="शोध करा..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:bg-white focus:border-amber-500"
+                              />
+                            </div>
+                          </div>
                         </div>
+                      )}
 
-                        <div className="text-xs text-slate-500 font-semibold hidden md:block">
-                          * कॅलेंडरवरून कोणत्याही तारखेचा गृहपाठ निवडून एका क्लिकवर पहा व संपादित करा
-                        </div>
-                      </div>
-
-                      {/* CALENDAR VIEW */}
+                      {/* Content based on Class-wise mainTab */}
+                      {mainTab === "mcq" ? (
+                        <MCQHomeworkSection
+                          embedded={true}
+                          defaultRole="teacher"
+                          userName={profile?.fullName || (profile as any)?.name || user?.displayName || "शिक्षक"}
+                          initialClass={selectedClass || "1st"}
+                          initialMedium={(selectedMedium as any) || "marathi"}
+                          initialSubject={selectedSubject || "all"}
+                        />
+                      ) : (
+                        <>
+                          {/* CALENDAR VIEW */}
                       {viewMode === "calendar" && (
                         <DailyHomeworkCalendar
                           homeworkList={filteredHomework}
@@ -844,12 +763,12 @@ function HomeworkPage() {
                           )}
                         </>
                       )}
-                    </motion.div>
+                    </>
+                  )}
+                </motion.div>
                   )}
                 </div>
               )}
-            </>
-          )}
           {/* Homework Dashboard Header Setup Modal */}
           {showProfileModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150">

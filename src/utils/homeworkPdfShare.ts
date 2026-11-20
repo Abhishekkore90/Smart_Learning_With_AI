@@ -8,6 +8,9 @@ import {
   getMarathiClassLabel,
   formatHomeworkFileName,
   isWordHomework,
+  addCanvasPagesToPdf,
+  addHomeworkFooterLinksToPdf,
+  getHomeworkFooterHtml,
 } from "@/utils/homeworkDocHelper";
 
 export interface DirectShareHomeworkPdfOptions {
@@ -86,7 +89,7 @@ export async function directShareHomeworkPdfToWhatsApp({
   container.style.backgroundColor = "#ffffff";
   container.style.zIndex = "-99999";
   container.style.pointerEvents = "none";
-  container.style.overflow = "hidden";
+  container.style.overflow = "visible";
   document.body.appendChild(container);
 
   try {
@@ -276,8 +279,8 @@ export async function directShareHomeworkPdfToWhatsApp({
               </div>
             </div>
 
-            <!-- Footer -->
-            <div style="margin-top: 18px; text-align: center; font-size: 9.5px; font-weight: 600; color: #94a3b8;">
+            <!-- Footer note (clickable links are placed at the bottom of the PDF) -->
+            <div style="margin-top: 14px; text-align: center; font-size: 9px; font-weight: 600; color: #94a3b8;">
               स्मार्ट लर्निंग विथ एआय — दैनिक गृहपाठ प्रणाली
             </div>
           </div>
@@ -346,17 +349,11 @@ export async function directShareHomeworkPdfToWhatsApp({
         y: 0,
       });
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
-      pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "pt",
-        format: "a4",
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+      pdf = addCanvasPagesToPdf(null, canvas, true);
     }
+
+    // Ensure clickable WhatsApp and Website links are attached to all pages of the PDF
+    addHomeworkFooterLinksToPdf(pdf);
 
     const blob = pdf.output("blob");
     const pdfFile = new File([blob], fileName, { type: "application/pdf" });

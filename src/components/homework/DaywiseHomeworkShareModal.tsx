@@ -33,6 +33,11 @@ import {
   formatHomeworkDateToMarathi,
   getMarathiClassLabel,
   formatHomeworkFileName,
+  addCanvasPagesToPdf,
+  addHomeworkFooterLinksToPdf,
+  HOMEWORK_WHATSAPP_LINK,
+  HOMEWORK_WEBSITE_URL,
+  HOMEWORK_WEBSITE_LABEL,
 } from "@/utils/homeworkDocHelper";
 
 export interface DaywiseHomeworkShareModalProps {
@@ -245,17 +250,8 @@ export const DaywiseHomeworkShareModal: React.FC<DaywiseHomeworkShareModalProps>
       logging: false,
     });
 
-    const imgData = canvas.toDataURL("image/jpeg", 0.95);
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "pt",
-      format: "a4",
-    });
-
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-    pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+    const pdf = addCanvasPagesToPdf(null, canvas, true);
+    addHomeworkFooterLinksToPdf(pdf);
     const blob = pdf.output("blob");
     const fileName = formatHomeworkFileName(classId);
 
@@ -1041,8 +1037,27 @@ const WorksheetDocumentContent: React.FC<WorksheetDocumentContentProps> = ({
         </div>
       </div>
 
-      {/* 6. Footer Note */}
-      <div className="pt-2 text-center text-[9px] font-semibold text-slate-400">
+      {/* 6. WhatsApp & Website Footer (Ignored by canvas to prevent PDF duplication) */}
+      <div data-html2canvas-ignore="true" className="pt-3 border-t border-dashed border-slate-300 flex items-center justify-between gap-3 text-[10px] font-bold print:hidden">
+        <a
+          href={HOMEWORK_WHATSAPP_LINK}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-[#25D366] text-white rounded shadow-sm text-center font-bold no-underline"
+        >
+          <span>💬 WhatsApp ग्रुप जॉईन करा (Click Here)</span>
+        </a>
+        <a
+          href={HOMEWORK_WEBSITE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-[#1e3a8a] text-white rounded shadow-sm text-center font-bold no-underline"
+        >
+          <span>🌐 {HOMEWORK_WEBSITE_LABEL} (सराव व माहिती)</span>
+        </a>
+      </div>
+
+      <div className="pt-1 text-center text-[8.5px] font-semibold text-slate-400">
         स्मार्ट लर्निंग विथ एआय — दैनिक गृहपाठ प्रणाली • डिजिटल शाळा महाराष्ट्र
       </div>
     </div>

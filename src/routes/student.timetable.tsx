@@ -279,7 +279,8 @@ function StudentTimetablePage() {
       tempWrapper.style.minWidth = `${targetWidth}px`;
       tempWrapper.style.maxWidth = `${targetWidth}px`;
       tempWrapper.style.background = '#ffffff';
-      tempWrapper.style.zIndex = '99999';
+      tempWrapper.style.zIndex = '-99999';
+      tempWrapper.style.opacity = '0';
       tempWrapper.style.overflow = 'visible';
       tempWrapper.style.pointerEvents = 'none';
       tempWrapper.style.transform = 'none';
@@ -480,6 +481,10 @@ function StudentTimetablePage() {
             styles.forEach((st) => {
               clonedDoc.head.appendChild(st.cloneNode(true));
             });
+            const clonedTemp = clonedDoc.querySelector('[data-pdf-temp="true"]') as HTMLElement;
+            if (clonedTemp) {
+              clonedTemp.style.opacity = '1';
+            }
           } catch (e) {}
         }
       });

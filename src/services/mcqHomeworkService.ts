@@ -13,6 +13,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import type { MCQHomeworkSet, MCQQuestion, LocalMCQSubmission } from "@/types/mcqHomework";
+import { SEED_MCQ_HOMEWORK } from "@/data/seedMCQHomework";
 
 const COLLECTION_NAME = "mcq_homework";
 
@@ -122,14 +123,22 @@ export async function deleteMCQHomework(id: string): Promise<void> {
  * Fetches a single MCQ Homework Set by ID (supports public access without auth)
  */
 export async function getMCQHomeworkById(id: string): Promise<MCQHomeworkSet | null> {
+  if (id.startsWith("seed_")) {
+    const seed = SEED_MCQ_HOMEWORK.find((s) => s.id === id);
+    if (seed) return seed;
+  }
   try {
     const docRef = doc(db, COLLECTION_NAME, id);
     const snap = await getDoc(docRef);
-    if (!snap.exists()) return null;
+    if (!snap.exists()) {
+      const seed = SEED_MCQ_HOMEWORK.find((s) => s.id === id);
+      return seed || null;
+    }
     return normalizeMCQHomework(snap.id, snap.data());
   } catch (err) {
     console.error("Error fetching MCQ homework by ID:", err);
-    return null;
+    const seed = SEED_MCQ_HOMEWORK.find((s) => s.id === id);
+    return seed || null;
   }
 }
 
