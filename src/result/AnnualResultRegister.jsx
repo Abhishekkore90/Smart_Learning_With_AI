@@ -5,7 +5,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
 import { fetchStudentsForClass, hasStudentFilledData } from "./firestoreMarksHelper";
-import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { getDefaultSubjectsForClass, deduplicateAndNormalizeSubjects } from "@/data/cceSubjects";
 
 // Marathi Grade Calculation Helper
 const getMarathiGrade = (percent) => {
@@ -23,15 +23,23 @@ const getMarathiGrade = (percent) => {
 };
 
 // Format Subject Label for Display matching Image 2
-const getSubjectDisplayLabel = (subName) => {
+const getSubjectDisplayLabel = (subName, selectedClass) => {
   if (!subName) return "";
   const s = String(subName).trim();
+  const isC6 = selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६");
   if (s.toLowerCase().includes("मराठी") && !s.includes("प्रथम")) return "प्रथम भाषा: मराठी";
   if (s.toLowerCase().includes("इंग्रजी") && !s.includes("तृतीय") && !s.includes("द्वितीय")) return "तृतीय भाषा: इंग्रजी";
   if (s.toLowerCase().includes("हिंदी") && !s.includes("तृतीय") && !s.includes("द्वितीय")) return "द्वितीय भाषा: हिंदी";
   if (s.toLowerCase().includes("गणित")) return "गणित";
   if (s.toLowerCase().includes("कला")) return "कलाशिक्षण";
-  if (s.toLowerCase().includes("कार्यानुभव") || s.toLowerCase().includes("कार्यशिक्षण") || s.toLowerCase().includes("कार्य")) return "कार्यशिक्षण";
+  if (
+    s.toLowerCase().includes("कार्यानुभव") ||
+    s.toLowerCase().includes("कार्यशिक्षण") ||
+    s.toLowerCase().includes("कार्य") ||
+    s.toLowerCase().includes("व्यावसायिक")
+  ) {
+    return isC6 ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण";
+  }
   if (s.toLowerCase().includes("शारीरिक")) return "शारीरिक शिक्षण";
   if (s.toLowerCase().includes("परिसर") || s.toLowerCase().includes("संभोवतालचे") || s.toLowerCase().includes("evs")) return "परिसर अभ्यास";
   return s;
@@ -210,14 +218,18 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
             sName = localStorage.getItem("schoolName") || localStorage.getItem("teacher_school_name") || "";
           }
 
-          const classSubjects = getDefaultSubjectsForClass(selectedClass, selectedMedium) || [
-            "मराठी",
-            "इंग्रजी",
-            "गणित",
-            "कलाशिक्षण",
-            "कार्यशिक्षण",
-            "शारीरिक शिक्षण",
-          ];
+          const isC6 = selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६");
+          const classSubjects = deduplicateAndNormalizeSubjects(
+            getDefaultSubjectsForClass(selectedClass, selectedMedium) || [
+              "मराठी",
+              "इंग्रजी",
+              "गणित",
+              "कलाशिक्षण",
+              isC6 ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण",
+              "शारीरिक शिक्षण",
+            ],
+            selectedClass
+          );
 
           return { sName, classSubjects };
         })(),
@@ -774,7 +786,7 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
                     className="border border-black px-0.5 py-1.5 font-extrabold text-[14px] align-middle whitespace-normal break-words overflow-hidden leading-tight text-black"
                     style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#000000", width: "144px" }}
                   >
-                    {getSubjectDisplayLabel(sub)}
+                    {getSubjectDisplayLabel(sub, selectedClass)}
                   </th>
                 ))}
 

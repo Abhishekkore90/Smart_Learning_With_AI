@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import "./result.css";
 
 import { matchStudentClassAndMedium, fetchStudentsForClass, hasStudentFilledData } from "./firestoreMarksHelper";
-import { getDefaultSubjectsForClass } from "../data/cceSubjects";
+import { getDefaultSubjectsForClass, deduplicateAndNormalizeSubjects } from "../data/cceSubjects";
 import { getTeacherId } from "../lib/teacherIsolationHelper";
 
 const DEFAULT_SUBJECTS = [
@@ -181,7 +181,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
     slogan: "मुलांचा सर्वांगीण विकास — हाच आमचा ध्यास!",
   });
 
-  const [subjects, setSubjects] = useState(DEFAULT_SUBJECTS);
+  const [subjects, setSubjects] = useState(() => deduplicateAndNormalizeSubjects(DEFAULT_SUBJECTS));
   const [students, setStudents] = useState([]);
   const [marksData, setMarksData] = useState({});
   const [outcomesData, setOutcomesData] = useState({});
@@ -454,7 +454,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             slogan: slogan,
           };
 
-          let classSubjects = getDefaultSubjectsForClass(selectedClass, currentMedium);
+          let classSubjects = deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, currentMedium), selectedClass);
 
           return { schoolObj, classSubjects };
         })(),
@@ -888,7 +888,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
       ]);
 
       if (settingsResult.schoolObj) setSchoolData(settingsResult.schoolObj);
-      if (settingsResult.classSubjects) setSubjects(settingsResult.classSubjects);
+      if (settingsResult.classSubjects) setSubjects(deduplicateAndNormalizeSubjects(settingsResult.classSubjects));
       if (studentsResult) setStudents(studentsResult);
       if (marksResult) setMarksData(marksResult);
       if (outcomesResult) setOutcomesData(outcomesResult);
@@ -1231,7 +1231,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
       if (subLower.includes("हिंदी") && g.thirdLanguage) return g.thirdLanguage;
       if (subLower.includes("गणित") && (g.maths || g.math)) return g.maths || g.math;
       if (subLower.includes("कला") && g.art) return g.art;
-      if ((subLower.includes("कार्या") || subLower.includes("कार्य")) && (g.workExperience || g.work)) return g.workExperience || g.work;
+      if ((subLower.includes("कार्या") || subLower.includes("कार्य") || subLower.includes("व्यावसायिक")) && (g.workExperience || g.work)) return g.workExperience || g.work;
       if (subLower.includes("शारीरिक") && (g.physicalEdu || g.pe)) return g.physicalEdu || g.pe;
       if ((subLower.includes("विज्ञान") || subLower.includes("science")) && (g.science || g.vijnan || g.vidnyan)) return g.science || g.vijnan || g.vidnyan;
       if ((subLower.includes("सामाजिक") || subLower.includes("social")) && (g.social || g.samajikShastra || g.history)) return g.social || g.samajikShastra || g.history;
@@ -1376,7 +1376,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                 (subLower.includes("हिंदी") && (kLower.includes("हिंदी") || kLower.includes("hindi") || kLower.includes("thirdlanguage") || kLower === "lang3")) ||
                 (subLower.includes("गणित") && (kLower.includes("गणित") || kLower.includes("math") || kLower.includes("maths"))) ||
                 (subLower.includes("कला") && (kLower.includes("कला") || kLower.includes("art") || kLower.includes("kala"))) ||
-                ((subLower.includes("कार्या") || subLower.includes("कार्य")) && (kLower.includes("कार्या") || kLower.includes("कार्य") || kLower.includes("work") || kLower.includes("karyanubhav"))) ||
+                ((subLower.includes("कार्या") || subLower.includes("कार्य") || subLower.includes("व्यावसायिक")) && (kLower.includes("कार्या") || kLower.includes("कार्य") || kLower.includes("work") || kLower.includes("karyanubhav") || kLower.includes("व्यावसायिक"))) ||
                 (subLower.includes("शारीरिक") && (kLower.includes("शारीरिक") || kLower.includes("sharirik") || kLower === "pe" || kLower.includes("physical"))) ||
                 ((subLower.includes("विज्ञान") || subLower.includes("science")) && (kLower.includes("विज्ञान") || kLower.includes("science") || kLower.includes("vijnan") || kLower.includes("vidnyan"))) ||
                 ((subLower.includes("सामाजिक") || subLower.includes("social")) && (kLower.includes("सामाजिक") || kLower.includes("social") || kLower.includes("samajik") || kLower.includes("samajshastra") || kLower.includes("history"))) ||
@@ -1470,7 +1470,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             }
 
             if (hasAny && sum > 0) {
-              const isPractical = subLower.includes("कला") || subLower.includes("कार्या") || subLower.includes("कार्य") || subLower.includes("शारीरिक");
+              const isPractical = subLower.includes("कला") || subLower.includes("कार्या") || subLower.includes("कार्य") || subLower.includes("व्यावसायिक") || subLower.includes("शारीरिक");
               const defaultMax = isPractical ? 100 : (hasSankalit ? 100 : 70);
               const maxMarks = Number(subData.outOf ?? subData.max ?? subData.totalMax ?? defaultMax) || defaultMax;
               return getGrade((sum / maxMarks) * 100);
@@ -1515,7 +1515,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
               (subLower.includes("हिंदी") && (kLower.includes("हिंदी") || kLower.includes("hindi"))) ||
               (subLower.includes("गणित") && (kLower.includes("गणित") || kLower.includes("math"))) ||
               (subLower.includes("कला") && (kLower.includes("कला") || kLower.includes("art"))) ||
-              ((subLower.includes("कार्या") || subLower.includes("कार्य")) && (kLower.includes("कार्य") || kLower.includes("work"))) ||
+              ((subLower.includes("कार्या") || subLower.includes("कार्य") || subLower.includes("व्यावसायिक")) && (kLower.includes("कार्य") || kLower.includes("work") || kLower.includes("व्यावसायिक"))) ||
               (subLower.includes("शारीरिक") && (kLower.includes("शारीरिक") || kLower.includes("pe") || kLower.includes("physical"))) ||
               ((subLower.includes("परिसर") || subLower.includes("evs")) && (kLower.includes("परिसर") || kLower.includes("evs")))
             ) {
@@ -1537,7 +1537,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                 const belongsToEnglish = subLower.includes("इंग्रजी") && (oKeyLower.includes("english") || oKeyLower.includes("इंग्रजी") || /^e[_\.]/i.test(oKey) || /^2[_\.]/.test(oKey));
                 const belongsToMath = subLower.includes("गणित") && (oKeyLower.includes("math") || oKeyLower.includes("गणित") || /^m[_\.]/i.test(oKey) || /^3[_\.]/.test(oKey));
                 const belongsToArt = subLower.includes("कला") && (oKeyLower.includes("art") || oKeyLower.includes("कला"));
-                const belongsToWork = (subLower.includes("कार्या") || subLower.includes("कार्य")) && (oKeyLower.includes("work") || oKeyLower.includes("कार्य"));
+                const belongsToWork = (subLower.includes("कार्या") || subLower.includes("कार्य") || subLower.includes("व्यावसायिक")) && (oKeyLower.includes("work") || oKeyLower.includes("कार्य") || oKeyLower.includes("व्यावसायिक"));
                 const belongsToPE = subLower.includes("शारीरिक") && (oKeyLower.includes("pe") || oKeyLower.includes("शारीरिक"));
                 const belongsToEVS = (subLower.includes("परिसर") || subLower.includes("evs")) && (oKeyLower.includes("evs") || oKeyLower.includes("परिसर"));
 

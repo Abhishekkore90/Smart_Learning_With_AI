@@ -26092,12 +26092,22 @@ export const SUBJECT_NAMES_MAP: Record<string, string> = {
   parisar1: "परिसर अभ्यास भाग १",
   parisar2: "परिसर अभ्यास भाग २",
   samajik_shastra: "सामाजिक शास्त्रे",
-  kala: "कला",
-  karyanubhav: "कार्यानुभव",
+  kala: "कलाशिक्षण",
+  karyanubhav: "कार्यशिक्षण",
   sharirik: "शारीरिक शिक्षण व आरोग्य",
   visheshpragati: "विशेष प्रगती",
   aavad: "आवडी-निवडी",
   sudharna: "सुधारणा आवश्यक",
   vyaktimatva: "व्यक्तिमत्त्व गुण",
+};
+
+export const getSubjectDisplayNameForClass = (key: string, selectedClass?: string): string => {
+  if (
+    key === "karyanubhav" &&
+    (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६"))
+  ) {
+    return "व्यावसायिक अभ्यास";
+  }
+  return SUBJECT_NAMES_MAP[key] || key;
 };
 

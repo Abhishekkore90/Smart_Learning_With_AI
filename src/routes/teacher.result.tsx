@@ -164,9 +164,24 @@ function TeacherResultsPage() {
   const activeTab = tab || "dashboard";
 
   // Form State for custom file uploads
-  const [selectedClass, setSelectedClass] = useState("1st");
-  const [academicYear, setAcademicYear] = useState(getCurrentAcademicYear());
-  const [selectedMedium, setSelectedMedium] = useState("marathi");
+  const [selectedClass, setSelectedClass] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("cce_selected_class") || "1st";
+    }
+    return "1st";
+  });
+  const [academicYear, setAcademicYear] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("cce_academic_year") || getCurrentAcademicYear();
+    }
+    return getCurrentAcademicYear();
+  });
+  const [selectedMedium, setSelectedMedium] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("cce_selected_medium") || "marathi";
+    }
+    return "marathi";
+  });
   const [studentsCount, setStudentsCount] = useState(3);
   const [examTitle, setExamTitle] = useState("");
   const [fileData, setFileData] = useState<{ name: string; content: string; type: string } | null>(null);
@@ -888,6 +903,7 @@ function TeacherResultsPage() {
               <CCEMarksEntry 
                 selectedClass={selectedClass} 
                 academicYear={academicYear} 
+                selectedMedium={selectedMedium}
                 onBack={() => navigate({ to: "/teacher/result", search: { tab: "dashboard" } as any })}
               />
             </motion.div>

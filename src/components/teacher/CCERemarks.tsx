@@ -46,7 +46,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getClassRemarks, SUBJECT_NAMES_MAP, normalizeClassKey } from "@/data/classRemarksData";
-import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { getDefaultSubjectsForClass, deduplicateAndNormalizeSubjects } from "@/data/cceSubjects";
 
 type Semester = "sem1" | "sem2";
 type Medium = "marathi" | "semi";
@@ -333,7 +333,7 @@ function mapSubjectNameToKey(subName: string, customKeys: string[] = []): string
     return "samajik_shastra";
   }
   if (s.includes("कला") || s.includes("art")) return "kala";
-  if (s.includes("कार्यानुभव") || s.includes("कार्यशिक्षण") || s.includes("कार्य") || s.includes("work")) return "karyanubhav";
+  if (s.includes("कार्यानुभव") || s.includes("कार्यशिक्षण") || s.includes("कार्य") || s.includes("work") || s.includes("व्यावसायिक")) return "karyanubhav";
   if (s.includes("शारीरिक") || s.includes("आरोग्य") || s.includes("पी.ई") || s.includes("physical")) return "sharirik";
 
   if (SUBJECT_META[s] || SUBJECT_NAMES_MAP[s] || customKeys.includes(s)) return s;
@@ -472,7 +472,7 @@ export function CCERemarks({
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && parsed.length > 0) {
             if (isMounted) {
-              setConfiguredSubjects(parsed);
+              setConfiguredSubjects(deduplicateAndNormalizeSubjects(parsed));
               return;
             }
           }
@@ -485,7 +485,7 @@ export function CCERemarks({
         if (isMounted && snap.exists() && snap.data().subjects) {
           const subs = snap.data().subjects;
           if (Array.isArray(subs) && subs.length > 0) {
-            setConfiguredSubjects(subs);
+            setConfiguredSubjects(deduplicateAndNormalizeSubjects(subs));
             return;
           }
         }
@@ -494,7 +494,7 @@ export function CCERemarks({
       }
 
       if (isMounted) {
-        setConfiguredSubjects(getDefaultSubjectsForClass(selectedClass, selectedMedium));
+        setConfiguredSubjects(deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, selectedMedium)));
       }
     }
 
@@ -1089,10 +1089,11 @@ export function CCERemarks({
 
   // Available subjects for this class based on Subject Config ("विषय निश्चिती") + 4 image categories
   const availableSubjectKeys = useMemo(() => {
-    const rawSubjects =
+    const rawSubjects = deduplicateAndNormalizeSubjects(
       configuredSubjects.length > 0
         ? configuredSubjects
-        : getDefaultSubjectsForClass(selectedClass, selectedMedium);
+        : getDefaultSubjectsForClass(selectedClass, selectedMedium)
+    );
 
     const customKeys = Object.keys(customClassRemarks);
     const mappedKeys: string[] = [];
@@ -1321,7 +1322,7 @@ export function CCERemarks({
 
                     <div className="truncate">
                       <span className="text-sm sm:text-base font-bold text-slate-900 truncate block">
-                        {meta.label}
+                        {(subKey === "karyanubhav" && (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६"))) ? "व्यावसायिक अभ्यास" : meta.label}
                       </span>
                     </div>
 

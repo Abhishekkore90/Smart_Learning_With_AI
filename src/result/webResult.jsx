@@ -5,6 +5,7 @@ import AlertMessage from "../../AlertMessage";
 import { useParams } from 'react-router-dom';
 import { printReportContent } from '../utils/printHelper';
 import { getUnifiedSchoolProfile } from '../utils/schoolProfileHelper';
+import { deduplicateAndNormalizeSubjects } from '../data/cceSubjects';
 
 
 
@@ -46,9 +47,11 @@ const WebResult = () => {
       }
       const data = await response.json();
       // Assuming the data is an object with numeric keys
-      const orderedSubjects = Object.keys(data)
-        .sort((a, b) => parseInt(a) - parseInt(b)) // Sort by numeric keys
-        .map((key) => data[key]); // Map keys to subject names
+      const orderedSubjects = deduplicateAndNormalizeSubjects(
+        Object.keys(data)
+          .sort((a, b) => parseInt(a) - parseInt(b)) // Sort by numeric keys
+          .map((key) => data[key]) // Map keys to subject names
+      );
       setSubjectSequence(orderedSubjects);
     } catch (error) {
       console.error('Error fetching subject sequence:', error);
@@ -176,7 +179,7 @@ const WebResult = () => {
       });
       // Process the results similar to your viewResult function
       const resultsWithTotal = {};
-      const allSubjects = new Set([
+      const allSubjects = deduplicateAndNormalizeSubjects([
         ...Object.keys(firstSemesterData || {}),
         ...Object.keys(secondSemesterData || {})
       ]);
@@ -252,7 +255,7 @@ const WebResult = () => {
 
         // Process the results
         const resultsWithTotal = {};
-        const allSubjects = new Set([
+        const allSubjects = deduplicateAndNormalizeSubjects([
           ...Object.keys(firstSemesterData || {}),
           ...Object.keys(secondSemesterData || {})
         ]);
@@ -408,9 +411,9 @@ const WebResult = () => {
       const resultsWithTotal = {};
 
       // Combine all subjects from both semesters
-      const allSubjects = new Set([
-        ...Object.keys(firstSemesterData),
-        ...Object.keys(secondSemesterData),
+      const allSubjects = deduplicateAndNormalizeSubjects([
+        ...Object.keys(firstSemesterData || {}),
+        ...Object.keys(secondSemesterData || {}),
       ]);
 
       allSubjects.forEach((subject) => {
@@ -866,7 +869,10 @@ const WebResult = () => {
                           {subjectSequence
                             .filter((subject, index) => subject && index !== 0) // Skip first null or empty subject
                             .map((subject) => {
-                              const grades = selectedStudentResults.results[subject] || {}; // Get grades for the subject
+                              const res = selectedStudentResults.results || {};
+                              const grades = res[subject] ||
+                                (subject.includes("कला") ? (res["कलाशिक्षण"] || res["कला"] || {}) : null) ||
+                                (subject.includes("कार्य") || subject.includes("व्यावसायिक") ? (res["व्यावसायिक अभ्यास"] || res["कार्यशिक्षण"] || res["कार्यानुभव"] || {}) : null) || {};
                               return (
                                 <tr key={subject}>
                                   <td><b>{subject}</b></td>
@@ -1260,7 +1266,10 @@ const WebResult = () => {
                           {subjectSequence
                             .filter((subject, index) => subject && index !== 0) // Skip first null or empty subject
                             .map((subject) => {
-                              const { grade } = selectedStudentResults.results[subject] || {}; // Get grade for the subject
+                              const res = selectedStudentResults.results || {};
+                              const { grade } = res[subject] ||
+                                (subject.includes("कला") ? (res["कलाशिक्षण"] || res["कला"] || {}) : null) ||
+                                (subject.includes("कार्य") || subject.includes("व्यावसायिक") ? (res["व्यावसायिक अभ्यास"] || res["कार्यशिक्षण"] || res["कार्यानुभव"] || {}) : null) || {};
                               return (
                                 <tr key={subject}>
                                   <td><b>{subject}</b></td>

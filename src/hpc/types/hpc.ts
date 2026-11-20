@@ -56,12 +56,14 @@ export interface HpcStudentProfile {
   // Part A(1) - School & Teacher Info
   schoolName?: string;
   udiseNumber?: string;
+  pincode?: string; // पिन कोड
   cluster?: string; // केंद्र
   taluka?: string; // तालुका
   district?: string; // जिल्हा
   headmasterName?: string; // मुख्याध्यापक
   teacherName?: string; // वर्गशिक्षक
   teacherPhone?: string; // वर्गशिक्षक मोबाईल
+  teacherIdNumber?: string; // अंगणवाडी सेविका / शिक्षक आय.डी.
 
   // Part A(1) - Student & Parent Details
   fullName?: string;
@@ -127,6 +129,8 @@ export interface HpcStudentProfile {
   // Part A(2) - Attendance Record (महिनानिहाय उपस्थिती)
   monthlyAttendance?: Record<string, number>;
   monthlyWorkingDays?: Record<string, number>;
+  attendanceReason1?: string; // उपस्थिती कमी असल्यास कारण १ (HPC पान २)
+  attendanceReason2?: string; // उपस्थिती कमी असल्यास कारण २ (HPC पान २)
   
   // Part A(2) - Basic personal details (मी व माझा परिसर)
   photoUrl?: string;
@@ -305,6 +309,9 @@ export interface HpcDynamicActivity {
   questions: string[]; // ५ प्रश्नांची यादी
   teacherFeedbackSample?: string; // शिक्षकांचा अभिप्राय
   parentFeedbackSample?: string; // पालकांचा अभिप्राय
+  teacherFeedbackBank?: string[]; // स्वतंत्र शिक्षकांचे अभिप्राय
+  parentFeedbackBank?: string[]; // स्वतंत्र पालकांचे अभिप्राय
+  sheetSource?: string; // एक्सेल शीटचे नाव (Sheet Name)
   createdAt?: string;
   updatedAt?: string;
 }
@@ -320,6 +327,7 @@ export interface HpcDynamicRubric {
   beginner: string; // प्रारंभिक / निर्झर
   proficient: string; // प्रवीण / पर्वत
   advanced: string; // प्रगत / आकाश
+  sheetSource?: string;
   createdAt?: string;
 }
 
@@ -332,5 +340,6 @@ export interface HpcDynamicRemark {
   remarkText: string; // शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)
   recommendationText?: string; // पुढील इयत्तेसाठी मार्गदर्शन/शिफारस
   type?: string; // final_comprehensive किंवा next_class_recommendation
+  sheetSource?: string;
   createdAt?: string;
 }

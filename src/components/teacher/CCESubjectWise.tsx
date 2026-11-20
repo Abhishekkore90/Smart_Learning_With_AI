@@ -75,7 +75,7 @@ const mapSubjectNameToKey = (name: string): string | null => {
   if (n.includes("भूगोल") || n.includes("geography")) return "geography";
   if (n.includes("सामाजिक") || n.includes("social")) return "history";
   if (n.includes("कला") || n.includes("art")) return "kala";
-  if (n.includes("कार्यानुभव") || n.includes("कार्यशिक्षण") || n.includes("कार्य") || n.includes("work")) return "karyanubhav";
+  if (n.includes("कार्यानुभव") || n.includes("कार्यशिक्षण") || n.includes("कार्य") || n.includes("work") || n.includes("व्यावसायिक")) return "karyanubhav";
   if (n.includes("शारीरिक") || n.includes("health") || n.includes("pe")) return "sharirik";
   return null;
 };
@@ -804,7 +804,7 @@ export function CCESubjectWise({
                   className="w-full flex items-center justify-between p-4 cursor-pointer transition-colors hover:bg-slate-50 text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-base font-extrabold text-slate-900">{subject.label}</span>
+                    <span className="text-base font-extrabold text-slate-900">{(subject.key === "karyanubhav" && (activeClass === "6th" || activeClass === "6" || String(activeClass).includes("६"))) ? "व्यावसायिक अभ्यास" : subject.label}</span>
                     {outcomesList.length > 0 && (
                       <span className="px-2.5 py-0.5 text-xs font-black bg-blue-100 text-blue-700 rounded-full border border-blue-200">
                         {outcomesList.length} निष्पत्ती
@@ -874,7 +874,7 @@ export function CCESubjectWise({
                                 lastClickedCodeRef.current = item.code;
                                 setEditingOutcome({
                                   subjectKey: subject.key,
-                                  subjectLabel: subject.label,
+                                  subjectLabel: (subject.key === "karyanubhav" && (activeClass === "6th" || activeClass === "6" || String(activeClass).includes("६"))) ? "व्यावसायिक अभ्यास" : subject.label,
                                   code: item.code,
                                   text: item.text,
                                 });
@@ -898,7 +898,7 @@ export function CCESubjectWise({
                                   onClick={() =>
                                     setEditingOutcome({
                                       subjectKey: subject.key,
-                                      subjectLabel: subject.label,
+                                      subjectLabel: (subject.key === "karyanubhav" && (activeClass === "6th" || activeClass === "6" || String(activeClass).includes("६"))) ? "व्यावसायिक अभ्यास" : subject.label,
                                       code: item.code,
                                       text: item.text,
                                     })

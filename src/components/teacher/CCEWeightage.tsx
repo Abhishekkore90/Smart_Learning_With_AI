@@ -19,7 +19,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { getDefaultSubjectsForClass, deduplicateAndNormalizeSubjects, normalizeSubjectTitle, isClass6 } from "@/data/cceSubjects";
 
 interface SubjectWeightage {
   tondiKaam: string;
@@ -63,20 +63,73 @@ const getSubjectKeyFallback = (subjectName: string): string => {
   if (s.includes("इंग्रजी") || s.includes("english")) return "english";
   if (s.includes("गणित") || s.includes("math")) return "math";
   if (s.includes("कला") || s.includes("art")) return "art";
-  if (s.includes("कार्यानुभव") || s.includes("कार्यशिक्षण") || s.includes("कार्य") || s.includes("work")) return "work";
+  if (s.includes("कार्यानुभव") || s.includes("कार्यशिक्षण") || s.includes("कार्य") || s.includes("work") || s.includes("व्यावसायिक")) return "work";
   if (s.includes("शारीरिक") || s.includes("pe") || s.includes("physical")) return "pe";
   if (s.includes("परिसर") || s.includes("संभोवतालचे") || s.includes("evs")) return "evs";
   return s;
 };
 
-const ensureSubjectWeightages = (item: WeightageItem, dynamicSubjects: string[]): WeightageItem => {
-  const subjects = item.subjects || {};
-  dynamicSubjects.forEach((sub) => {
+const ensureSubjectWeightages = (item: WeightageItem, dynamicSubjects: string[], selectedClass?: string): WeightageItem => {
+  const cleanSubsList = deduplicateAndNormalizeSubjects(dynamicSubjects, selectedClass);
+  const subjects: Record<string, SubjectWeightage> = {};
+
+  // First copy existing subjects, normalizing any old keys ("कला" -> "कलाशिक्षण", "कार्यानुभव" -> "कार्यशिक्षण" or "व्यावसायिक अभ्यास")
+  if (item.subjects && typeof item.subjects === "object") {
+    for (const [k, v] of Object.entries(item.subjects)) {
+      const normKey = normalizeSubjectTitle(k, selectedClass);
+      subjects[normKey] = v;
+    }
+  }
+
+  // Ensure "कला" is migrated to "कलाशिक्षण"
+  if (item.subjects?.["कला"] && !subjects["कलाशिक्षण"]) {
+    subjects["कलाशिक्षण"] = item.subjects["कला"];
+  }
+
+  const isC6 = isClass6(selectedClass);
+  const targetWorkName = isC6 ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण";
+  const oldWorkVal =
+    item.subjects?.[targetWorkName] ||
+    item.subjects?.["कार्यशिक्षण"] ||
+    item.subjects?.["कार्यानुभव"] ||
+    item.subjects?.["कार्य"] ||
+    item.subjects?.["karyanubhav"] ||
+    item.subjects?.["karyashikshan"] ||
+    item.subjects?.["व्यावसायिक अभ्यास"];
+
+  if (oldWorkVal && !subjects[targetWorkName]) {
+    subjects[targetWorkName] = oldWorkVal;
+  }
+
+  if (isC6) {
+    if (subjects["कार्यशिक्षण"]) {
+      if (!subjects["व्यावसायिक अभ्यास"]) {
+        subjects["व्यावसायिक अभ्यास"] = subjects["कार्यशिक्षण"];
+      }
+      delete subjects["कार्यशिक्षण"];
+    }
+  } else {
+    if (subjects["व्यावसायिक अभ्यास"]) {
+      if (!subjects["कार्यशिक्षण"]) {
+        subjects["कार्यशिक्षण"] = subjects["व्यावसायिक अभ्यास"];
+      }
+      delete subjects["व्यावसायिक अभ्यास"];
+    }
+  }
+
+  delete subjects["कला"];
+  delete subjects["कार्यानुभव"];
+  delete subjects["कार्य"];
+  delete subjects["karyanubhav"];
+  delete subjects["karyashikshan"];
+
+  cleanSubsList.forEach((sub) => {
     const isPracticalSub =
       sub.includes("कला") ||
       sub.includes("कार्यानुभव") ||
       sub.includes("कार्यशिक्षण") ||
       sub.includes("कार्य") ||
+      sub.includes("व्यावसायिक") ||
       sub.includes("शारीरिक");
 
     if (!subjects[sub]) {
@@ -153,7 +206,7 @@ const getSankalitTotal = (w: SubjectWeightage) => {
 const getExpectedMarks = (selectedClass: string, subjectName?: string) => {
   if (subjectName) {
     const lower = subjectName.toLowerCase();
-    if (lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("शारीरिक")) {
+    if (lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक") || lower.includes("शारीरिक")) {
       return { akarik: 100, sankalit: 0 };
     }
   }
@@ -209,22 +262,23 @@ export function CCEWeightage({
   const [editingItem, setEditingItem] = useState<WeightageItem | null>(null);
   const [subjectIndex, setSubjectIndex] = useState(0);
   const [students, setStudents] = useState<{ id: string; name: string; rollNo: string }[]>([]);
-  const [dynamicSubjects, setDynamicSubjects] = useState<string[]>(() => getDefaultSubjectsForClass(selectedClass));
+  const [dynamicSubjects, setDynamicSubjects] = useState<string[]>(() => deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass), selectedClass));
 
   // Instant cache & real-time sync for subjects from CCESubjectConfig
   useEffect(() => {
     try {
       const cached = localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}`);
       if (cached) {
-        setDynamicSubjects(JSON.parse(cached));
+        setDynamicSubjects(deduplicateAndNormalizeSubjects(JSON.parse(cached), selectedClass));
       }
     } catch (e) { }
 
     const unsubSettings = onSnapshot(doc(db, "cce_settings", `${selectedClass}_${academicYear}`), (snap) => {
       if (snap.exists() && snap.data().subjects) {
         const subs = snap.data().subjects;
-        setDynamicSubjects(subs);
-        localStorage.setItem(`cce_subjects_${selectedClass}_${academicYear}`, JSON.stringify(subs));
+        const cleanSubs = deduplicateAndNormalizeSubjects(subs, selectedClass);
+        setDynamicSubjects(cleanSubs);
+        localStorage.setItem(`cce_subjects_${selectedClass}_${academicYear}`, JSON.stringify(cleanSubs));
       }
     });
     return () => unsubSettings();
@@ -234,11 +288,13 @@ export function CCEWeightage({
     const load = async () => {
       setLoading(true);
       try {
-        let loadedSubjects = dynamicSubjects;
+        let loadedSubjects = deduplicateAndNormalizeSubjects(dynamicSubjects, selectedClass);
         const settingsRef = doc(db, "cce_settings", `${selectedClass}_${academicYear}`);
         const settingsSnap = await getDoc(settingsRef);
         if (settingsSnap.exists() && settingsSnap.data().subjects) {
-          loadedSubjects = settingsSnap.data().subjects;
+          loadedSubjects = deduplicateAndNormalizeSubjects(settingsSnap.data().subjects, selectedClass);
+          setDynamicSubjects(loadedSubjects);
+        } else {
           setDynamicSubjects(loadedSubjects);
         }
 
@@ -252,10 +308,10 @@ export function CCEWeightage({
           const docData = snap.data();
           const loadedData = (docData.data || docData) as WeightageData;
           const sem1 = (loadedData.semester1 || docData.semester1 || []).map((i: WeightageItem) =>
-            ensureSubjectWeightages(i, loadedSubjects)
+            ensureSubjectWeightages(i, loadedSubjects, selectedClass)
           );
           const sem2 = (loadedData.semester2 || docData.semester2 || []).map((i: WeightageItem) =>
-            ensureSubjectWeightages(i, loadedSubjects)
+            ensureSubjectWeightages(i, loadedSubjects, selectedClass)
           );
           setData({ semester1: sem1, semester2: sem2 });
         } else {
@@ -289,7 +345,7 @@ export function CCEWeightage({
               };
             });
             setData({
-              semester1: defaultItems.map((i) => ensureSubjectWeightages(i, loadedSubjects)),
+              semester1: defaultItems.map((i) => ensureSubjectWeightages(i, loadedSubjects, selectedClass)),
               semester2: [],
             });
           } else {
@@ -387,19 +443,27 @@ export function CCEWeightage({
   };
 
   const handleAddNew = () => {
+    const cleanSubs = deduplicateAndNormalizeSubjects(dynamicSubjects, selectedClass);
     const defaultSubjects: Record<string, SubjectWeightage> = {};
-    dynamicSubjects.forEach((sub) => {
+    cleanSubs.forEach((sub) => {
+      const isPracticalSub =
+        sub.includes("कला") ||
+        sub.includes("कार्यानुभव") ||
+        sub.includes("कार्यशिक्षण") ||
+        sub.includes("कार्य") ||
+        sub.includes("शारीरिक");
+
       defaultSubjects[sub] = {
-        tondiKaam: "",
-        pratyakshikPrayog: "",
-        upakramKriti: "",
-        prakalpa: "",
-        chaachaniLekhi: "",
-        swadhyayVargakarya: "",
-        itar: "",
-        sankalitTondi: "",
-        sankalitPratyakshik: "",
-        sankalitLekhi: "",
+        tondiKaam: isPracticalSub ? "10" : "",
+        pratyakshikPrayog: isPracticalSub ? "20" : "",
+        upakramKriti: isPracticalSub ? "20" : "",
+        prakalpa: isPracticalSub ? "20" : "",
+        chaachaniLekhi: isPracticalSub ? "10" : "",
+        swadhyayVargakarya: isPracticalSub ? "10" : "",
+        itar: isPracticalSub ? "10" : "",
+        sankalitTondi: isPracticalSub ? "0" : "",
+        sankalitPratyakshik: isPracticalSub ? "0" : "",
+        sankalitLekhi: isPracticalSub ? "0" : "",
       };
     });
     const newItem: WeightageItem = {
@@ -438,11 +502,12 @@ export function CCEWeightage({
   };
 
   const duplicateItem = async (item: WeightageItem) => {
-    const clonedSubjects = JSON.parse(JSON.stringify(item.subjects || {}));
+    const cleanItem = ensureSubjectWeightages(item, dynamicSubjects, selectedClass);
+    const clonedSubjects = JSON.parse(JSON.stringify(cleanItem.subjects || {}));
     const newItem: WeightageItem = {
-      ...item,
+      ...cleanItem,
       id: `item_${Date.now()}`,
-      name: `${item.name} (प्रत)`,
+      name: `${cleanItem.name} (प्रत)`,
       subjects: clonedSubjects,
     };
     const updatedData = {
@@ -646,18 +711,23 @@ export function CCEWeightage({
           </button>
 
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-            {dynamicSubjects.map((sub, idx) => (
-              <button
-                key={sub}
-                onClick={() => setSubjectIndex(idx)}
-                className={`px-3.5 py-2 rounded-xl font-extrabold text-xs whitespace-nowrap transition-all cursor-pointer ${subjectIndex === idx
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                  : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-                  }`}
-              >
-                {sub}
-              </button>
-            ))}
+            {dynamicSubjects.map((rawSub, idx) => {
+              const sub = isClass6(selectedClass) && (rawSub.includes("कार्य") || rawSub.includes("work") || rawSub === "कार्यशिक्षण" || rawSub === "कार्यानुभव")
+                ? "व्यावसायिक अभ्यास"
+                : normalizeSubjectTitle(rawSub, selectedClass);
+              return (
+                <button
+                  key={sub}
+                  onClick={() => setSubjectIndex(idx)}
+                  className={`px-3.5 py-2 rounded-xl font-extrabold text-xs whitespace-nowrap transition-all cursor-pointer ${subjectIndex === idx
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                    : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                    }`}
+                >
+                  {sub}
+                </button>
+              );
+            })}
           </div>
 
           <button
@@ -798,7 +868,7 @@ export function CCEWeightage({
                 <span className="text-xs font-black uppercase tracking-wider text-blue-900">{item.name}</span>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setEditingItem(item)}
+                    onClick={() => setEditingItem(ensureSubjectWeightages(item, dynamicSubjects, selectedClass))}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer"
                     title="संपादित करा"
                   >
@@ -823,8 +893,18 @@ export function CCEWeightage({
 
               {/* Formatted Subjects Summary */}
               <div className="space-y-2">
-                {dynamicSubjects.map((sub) => {
-                  const sw = item.subjects?.[sub];
+                {deduplicateAndNormalizeSubjects([...(dynamicSubjects || []), ...Object.keys(item.subjects || {})], selectedClass).map((rawSub) => {
+                  let sub = normalizeSubjectTitle(rawSub, selectedClass);
+                  if (isClass6(selectedClass) && (sub.includes("कार्य") || sub.includes("work") || sub === "कार्यशिक्षण" || sub === "कार्यानुभव")) {
+                    sub = "व्यावसायिक अभ्यास";
+                  }
+                  const sw =
+                    item.subjects?.[sub] ||
+                    item.subjects?.[rawSub] ||
+                    (sub === "कलाशिक्षण" ? (item.subjects?.["कला"] || item.subjects?.["kala"]) : null) ||
+                    ((sub === "कार्यशिक्षण" || sub === "व्यावसायिक अभ्यास")
+                      ? (item.subjects?.["व्यावसायिक अभ्यास"] || item.subjects?.["कार्यशिक्षण"] || item.subjects?.["कार्यानुभव"] || item.subjects?.["karyanubhav"] || item.subjects?.["कार्य"])
+                      : null);
                   if (!sw) return null;
                   const aTot = getAkarikTotal(sw);
                   const sTot = getSankalitTotal(sw);

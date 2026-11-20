@@ -50,10 +50,10 @@ const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
     subjectKey === "science" ? "सामान्य विज्ञान" : "",
     subjectKey === "history" ? "इतिहास व नागरिकशास्त्र" : "",
     subjectKey === "geography" ? "भूगोल" : "",
-    subjectKey === "kala" ? "कलाशिक्षण" : "",
-    subjectKey === "kala" ? "कला" : "",
-    subjectKey === "karyanubhav" ? "कार्यशिक्षण" : "",
-    subjectKey === "karyanubhav" ? "कार्यानुभव" : "",
+    subjectKey === "kala" || subjectKey === "कलाशिक्षण" || subjectKey === "कला" ? "कलाशिक्षण" : "",
+    subjectKey === "kala" || subjectKey === "कलाशिक्षण" || subjectKey === "कला" ? "kala" : "",
+    subjectKey === "karyanubhav" || subjectKey === "कार्यशिक्षण" || subjectKey === "कार्यानुभव" || subjectKey === "व्यावसायिक अभ्यास" ? "कार्यशिक्षण" : "",
+    subjectKey === "karyanubhav" || subjectKey === "कार्यशिक्षण" || subjectKey === "कार्यानुभव" || subjectKey === "व्यावसायिक अभ्यास" ? "karyanubhav" : "",
     subjectKey === "sharirik" ? "शारीरिक" : "",
   ].filter(Boolean)));
 
@@ -82,6 +82,14 @@ const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
 
   if (baseBankList.length === 0 && (normKey === "evs" || normKey === "parisar" || normKey === "परिसर अभ्यास") && outcomeBank) {
     baseBankList = [...(outcomeBank.evs || []), ...(outcomeBank.evs1 || []), ...(outcomeBank.evs2 || [])];
+  }
+  const isKala = normKey === "kala" || normKey === "कला" || normKey === "कलाशिक्षण";
+  const isKarya = normKey === "karyanubhav" || normKey === "कार्यानुभव" || normKey === "कार्यशिक्षण" || normKey === "व्यावसायिक अभ्यास";
+  if (baseBankList.length === 0 && isKala && CLASS_1_OUTCOMES.kala) {
+    baseBankList = CLASS_1_OUTCOMES.kala;
+  }
+  if (baseBankList.length === 0 && isKarya && CLASS_1_OUTCOMES.karyanubhav) {
+    baseBankList = CLASS_1_OUTCOMES.karyanubhav;
   }
   if (baseBankList.length === 0 && ["kala", "karyanubhav", "sharirik"].includes(normKey) && CLASS_1_OUTCOMES[normKey]) {
     baseBankList = CLASS_1_OUTCOMES[normKey];
@@ -318,7 +326,7 @@ const OutcomeTable = ({
   );
 };
 
-import { getDefaultSubjectsForClass } from "../data/cceSubjects";
+import { getDefaultSubjectsForClass, deduplicateAndNormalizeSubjects } from "../data/cceSubjects";
 
 const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", initialSemester = "sem2", initialMedium, onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
@@ -373,10 +381,10 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return deduplicateAndNormalizeSubjects(parsed);
       } catch (e) { }
     }
-    return getDefaultSubjectsForClass(initialClass || "1st", med);
+    return deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(initialClass || "1st", med));
   });
 
   const [schoolData, setSchoolData] = useState({
@@ -539,6 +547,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         if (activeSubs.length === 0) {
           activeSubs = getDefaultSubjectsForClass(selectedClass, currentMed);
         }
+        setConfiguredSubjects(deduplicateAndNormalizeSubjects(activeSubs));
 
         const rawClassNum = selectedClass.replace(/\D/g, "");
         const classVariants = Array.from(new Set([
@@ -782,8 +791,8 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: sciOutcomes, subjectName: "सामान्य विज्ञान", isEnglish: false },
         { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: histOutcomes, subjectName: "इतिहास व नागरिकशास्त्र", isEnglish: false },
         { key: "भूगोल", title: "भूगोल", outcomes: geoOutcomes, subjectName: "भूगोल", isEnglish: false },
-        { key: "कला", title: "कलाशिक्षण", outcomes: kOutcomes, subjectName: "कलाशिक्षण", isEnglish: false },
-        { key: "कार्यानुभव", title: "कार्यशिक्षण", outcomes: kaOutcomes, subjectName: "कार्यशिक्षण", isEnglish: false },
+        { key: "कलाशिक्षण", title: "कलाशिक्षण", outcomes: kOutcomes, subjectName: "कलाशिक्षण", isEnglish: false },
+        { key: "कार्यशिक्षण", title: (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६")) ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण", outcomes: kaOutcomes, subjectName: (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६")) ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण", isEnglish: false },
         { key: "शारीरिक", title: "शारीरिक शिक्षण", outcomes: shOutcomes, subjectName: "शारीरिक", isEnglish: false },
       ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
 
@@ -1144,8 +1153,8 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान" },
           { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र" },
           { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल" },
-          { key: "कला", title: "कलाशिक्षण", outcomes: kalaOutcomes, subjectName: "कलाशिक्षण" },
-          { key: "कार्यानुभव", title: "कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: "कार्यशिक्षण" },
+          { key: "कलाशिक्षण", title: "कलाशिक्षण", outcomes: kalaOutcomes, subjectName: "कलाशिक्षण" },
+          { key: "कार्यशिक्षण", title: (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६")) ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६")) ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण" },
           { key: "शारीरिक", title: "शारीरिक शिक्षण व आरोग्य", outcomes: sharirikOutcomes, subjectName: "शारीरिक" },
         ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
 
@@ -1557,7 +1566,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       if (name.includes("इतिहास")) return active.includes("इतिहास") || active.includes("नागरिकशास्त्र") || active.includes("सामाजिक") || active.includes("social");
       if (name.includes("भूगोल")) return active.includes("भूगोल") || active.includes("सामाजिक") || active.includes("social");
       if (name.includes("कला")) return active.includes("कला") || active.includes("art");
-      if (name.includes("कार्यानुभव") || name.includes("कार्यशिक्षण") || name.includes("कार्य")) return active.includes("कार्यानुभव") || active.includes("कार्यशिक्षण") || active.includes("कार्य") || active.includes("work");
+      if (name.includes("कार्यानुभव") || name.includes("कार्यशिक्षण") || name.includes("कार्य") || name.includes("व्यावसायिक")) return active.includes("कार्यानुभव") || active.includes("कार्यशिक्षण") || active.includes("कार्य") || active.includes("व्यावसायिक") || active.includes("work");
       if (name.includes("शारीरिक")) return active.includes("शारीरिक") || active.includes("आरोग्य") || active.includes("pe") || active.includes("sports") || active.includes("physical");
 
       return active.includes(name) || name.includes(active);
@@ -1618,7 +1627,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         subjectName && (subjectName.includes("इतिहास") || subjectName.includes("नागरिकशास्त्र")) ? "history" : "",
         subjectName && subjectName.includes("भूगोल") ? "geography" : "",
         subjectName && subjectName.includes("कला") ? "kala" : "",
-        subjectName && (subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण") || subjectName.includes("कार्य")) ? "karyanubhav" : "",
+        subjectName && (subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण") || subjectName.includes("कार्य") || subjectName.includes("व्यावसायिक")) ? "karyanubhav" : "",
         subjectName && (subjectName.includes("शारीरिक") || subjectName.includes("आरोग्य")) ? "sharirik" : "",
       ].filter(Boolean))
     );
@@ -1799,8 +1808,8 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
               { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान", isEnglish: false },
               { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र", isEnglish: false },
               { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल", isEnglish: false },
-              { key: "कला", title: "कलाशिक्षण", outcomes: kalaOutcomes, subjectName: "कलाशिक्षण", isEnglish: false },
-              { key: "कार्यानुभव", title: "कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: "कार्यशिक्षण", isEnglish: false },
+              { key: "कलाशिक्षण", title: "कलाशिक्षण", outcomes: kalaOutcomes, subjectName: "कलाशिक्षण", isEnglish: false },
+              { key: "कार्यशिक्षण", title: (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६")) ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६")) ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण", isEnglish: false },
               { key: "शारीरिक", title: "शारीरिक शिक्षण", outcomes: sharirikOutcomes, subjectName: "शारीरिक", isEnglish: false },
             ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
 
@@ -1951,8 +1960,8 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान" },
             { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र" },
             { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल" },
-            { key: "कला", title: "कलाशिक्षण", outcomes: kalaOutcomes, subjectName: "कलाशिक्षण" },
-            { key: "कार्यानुभव", title: "कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: "कार्यशिक्षण" },
+            { key: "कलाशिक्षण", title: "कलाशिक्षण", outcomes: kalaOutcomes, subjectName: "कलाशिक्षण" },
+            { key: "कार्यशिक्षण", title: (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६")) ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६")) ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण" },
             { key: "शारीरिक", title: "शारीरिक शिक्षण व आरोग्य", outcomes: sharirikOutcomes, subjectName: "शारीरिक" },
           ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
 
@@ -2039,8 +2048,8 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
               { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान" },
               { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र" },
               { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल" },
-              { key: "कला", title: "कलाशिक्षण", outcomes: kalaOutcomes, subjectName: "कलाशिक्षण" },
-              { key: "कार्यानुभव", title: "कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: "कार्यशिक्षण" },
+              { key: "कलाशिक्षण", title: "कलाशिक्षण", outcomes: kalaOutcomes, subjectName: "कलाशिक्षण" },
+              { key: "कार्यशिक्षण", title: (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६")) ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: (selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६")) ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण" },
               { key: "शारीरिक", title: "शारीरिक शिक्षण व आरोग्य", outcomes: sharirikOutcomes, subjectName: "शारीरिक" },
             ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
 

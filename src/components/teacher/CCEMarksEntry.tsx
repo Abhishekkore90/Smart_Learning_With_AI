@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 // @ts-ignore
 import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
-import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { getDefaultSubjectsForClass, deduplicateAndNormalizeSubjects, normalizeSubjectTitle, isClass6 } from "@/data/cceSubjects";
 // @ts-ignore
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
 
@@ -74,7 +74,7 @@ const getSubjectKey = (subjectName: string): string => {
   if (s.includes("इंग्रजी") || s.includes("english")) return "english";
   if (s.includes("गणित") || s.includes("math")) return "math";
   if (s.includes("कला") || s.includes("art")) return "art";
-  if (s.includes("कार्यानुभव") || s.includes("कार्यशिक्षण") || s.includes("कार्य") || s.includes("work")) return "work";
+  if (s.includes("कार्यानुभव") || s.includes("कार्यशिक्षण") || s.includes("कार्य") || s.includes("work") || s.includes("व्यावसायिक")) return "work";
   if (s.includes("शारीरिक") || s.includes("pe") || s.includes("physical")) return "pe";
   if (s.includes("परिसर") || s.includes("संभोवतालचे") || s.includes("evs")) return "evs";
   if (s.includes("विज्ञान") || s.includes("science")) return "science";
@@ -132,17 +132,20 @@ export function CCEMarksEntry({
   selectedClass,
   academicYear,
   onBack,
+  selectedMedium: propMedium,
 }: {
   selectedClass: string;
   academicYear: string;
   onBack: () => void;
+  selectedMedium?: string;
 }) {
   const [selectedMedium, setSelectedMedium] = useState<"marathi" | "semi">(() => {
+    if (propMedium) return propMedium === "semi" ? "semi" : "marathi";
     const stored = localStorage.getItem("cce_selected_medium");
     return stored === "semi" ? "semi" : "marathi";
   });
   const [students, setStudents] = useState<Student[]>([]);
-  const [subjects, setSubjects] = useState<string[]>(() => getDefaultSubjectsForClass(selectedClass, selectedMedium));
+  const [subjects, setSubjects] = useState<string[]>(() => deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, selectedMedium), selectedClass));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSemester, setActiveSemester] = useState<Semester>("sem1");
@@ -190,13 +193,38 @@ export function CCEMarksEntry({
       }
     } catch (e) {}
 
-    const unsubSettings = onSnapshot(doc(db, "cce_settings", `${selectedClass}_${academicYear}`), (snap) => {
-      if (snap.exists() && snap.data().subjects) {
-        setSubjects(snap.data().subjects);
-      } else {
-        setSubjects(getDefaultSubjectsForClass(selectedClass, selectedMedium));
+    const settingDocIds = [
+      `${selectedClass}_${academicYear}_${selectedMedium}`,
+      `${selectedClass}_${academicYear}`,
+    ];
+    let unsubSettings = () => {};
+    (async () => {
+      try {
+        const stored = localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}_${selectedMedium}`) ||
+                       localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSubjects(deduplicateAndNormalizeSubjects(parsed, selectedClass));
+          }
+        }
+      } catch (e) {}
+
+      for (const sId of settingDocIds) {
+        try {
+          const sSnap = await getDoc(doc(db, "cce_settings", sId));
+          if (sSnap.exists() && sSnap.data().subjects) {
+            setSubjects(deduplicateAndNormalizeSubjects(sSnap.data().subjects, selectedClass));
+            unsubSettings = onSnapshot(doc(db, "cce_settings", sId), (snap) => {
+              if (snap.exists() && snap.data().subjects) {
+                setSubjects(deduplicateAndNormalizeSubjects(snap.data().subjects, selectedClass));
+              }
+            });
+            break;
+          }
+        } catch (e) {}
       }
-    });
+    })();
 
     const primaryDocId = `${selectedClass}_${academicYear}_${activeSemester}`;
     const teacherDocId = currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_${activeSemester}` : primaryDocId;
@@ -357,16 +385,16 @@ export function CCEMarksEntry({
     const semesterKey = activeSemester === "sem1" ? "semester1" : "semester2";
     const items = weightages[semesterKey] || weightages.data?.[semesterKey] || [];
     if (items.length > 0 && items[0].subjects) {
-      const weightageSubKeys = Object.keys(items[0].subjects);
+      const weightageSubKeys = deduplicateAndNormalizeSubjects(Object.keys(items[0].subjects), selectedClass);
       if (weightageSubKeys.length > 0) {
         // Sort according to default subject order so tabs appear in correct sequence
-        const defaultOrder = getDefaultSubjectsForClass(selectedClass, selectedMedium);
+        const defaultOrder = deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, selectedMedium), selectedClass);
         const sorted = [...weightageSubKeys].sort((a, b) => {
           const idxA = defaultOrder.findIndex((d) => d.toLowerCase() === a.toLowerCase() || a.toLowerCase().includes(d.toLowerCase()) || d.toLowerCase().includes(a.toLowerCase()));
           const idxB = defaultOrder.findIndex((d) => d.toLowerCase() === b.toLowerCase() || b.toLowerCase().includes(d.toLowerCase()) || d.toLowerCase().includes(b.toLowerCase()));
           return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
         });
-        setSubjects(sorted);
+        setSubjects(deduplicateAndNormalizeSubjects(sorted, selectedClass));
       }
     }
   }, [weightages, activeSemester, selectedClass, selectedMedium]);
@@ -404,7 +432,7 @@ export function CCEMarksEntry({
         (lowerTarget.includes("इतिहास") && sLower.includes("इतिहास")) ||
         (lowerTarget.includes("भूगोल") && sLower.includes("भूगोल")) ||
         (lowerTarget.includes("कला") && sLower.includes("कला")) ||
-        ((lowerTarget.includes("कार्यानुभव") || lowerTarget.includes("कार्यशिक्षण") || lowerTarget.includes("कार्य")) && (sLower.includes("कार्यानुभव") || sLower.includes("कार्यशिक्षण") || sLower.includes("कार्य"))) ||
+        ((lowerTarget.includes("कार्यानुभव") || lowerTarget.includes("कार्यशिक्षण") || lowerTarget.includes("कार्य") || lowerTarget.includes("व्यावसायिक")) && (sLower.includes("कार्यानुभव") || sLower.includes("कार्यशिक्षण") || sLower.includes("कार्य") || sLower.includes("व्यावसायिक"))) ||
         (lowerTarget.includes("शारीरिक") && sLower.includes("शारीरिक"))
       ) {
         return sVal;
@@ -429,7 +457,13 @@ export function CCEMarksEntry({
       (stdName ? allMarks[stdName] : null) ||
       {};
 
-    const record = stdRecord[subjectName] || {};
+    const normSub = normalizeSubjectTitle(subjectName, selectedClass);
+    const record =
+      stdRecord[normSub] ||
+      stdRecord[subjectName] ||
+      (normSub === "कलाशिक्षण" ? (stdRecord["कला"] || stdRecord["kala"]) : null) ||
+      ((normSub === "कार्यशिक्षण" || normSub === "व्यावसायिक अभ्यास") ? (stdRecord["व्यावसायिक अभ्यास"] || stdRecord["कार्यानुभव"] || stdRecord["karyanubhav"] || stdRecord["कार्यशिक्षण"] || stdRecord["कार्य"]) : null) ||
+      {};
     return {
       tondiKaam: parseInt(record.tondiKaam as any) || 0,
       pratyakshikPrayog: parseInt(record.pratyakshikPrayog as any) || 0,
@@ -450,13 +484,28 @@ export function CCEMarksEntry({
     field: string,
     value: number
   ) => {
-    setAllMarks((prev) => ({
-      ...prev,
-      [studentId]: {
-        ...(prev[studentId] || {}),
-        [subjectName]: { ...getSubjectMarks(studentId, subjectName), [field]: value },
-      },
-    }));
+    const normSub = normalizeSubjectTitle(subjectName, selectedClass);
+    const currentMarks = getSubjectMarks(studentId, normSub);
+    const updated = { ...currentMarks, [field]: value };
+    const extraKeys: string[] = [];
+    if (normSub === "कलाशिक्षण") extraKeys.push("कला");
+    if (normSub === "कार्यशिक्षण" || normSub === "व्यावसायिक अभ्यास") extraKeys.push("कार्यानुभव", "कार्यशिक्षण", "व्यावसायिक अभ्यास", "karyanubhav");
+
+    setAllMarks((prev) => {
+      const currentStd = prev[studentId] || {};
+      const updatedStd: Record<string, SubjectMarks> = {
+        ...currentStd,
+        [normSub]: updated,
+        [subjectName]: updated,
+      };
+      extraKeys.forEach((k) => {
+        updatedStd[k] = updated;
+      });
+      return {
+        ...prev,
+        [studentId]: updatedStd,
+      };
+    });
   };
 
   const getActiveColsForStudent = (rollNoStr: string, subjectName: string, studentId?: string) => {
@@ -466,6 +515,7 @@ export function CCEMarksEntry({
       subjectName.includes("कार्यानुभव") ||
       subjectName.includes("कार्यशिक्षण") ||
       subjectName.includes("कार्य") ||
+      subjectName.includes("व्यावसायिक") ||
       subjectName.includes("शारीरिक");
 
     const defaultCols = isPracticalSub
@@ -542,12 +592,13 @@ export function CCEMarksEntry({
 
   const getStudentProgress = (student: Student) => {
     let filled = 0;
-    subjects.forEach((sub) => {
+    const cleanSubs = deduplicateAndNormalizeSubjects(subjects, selectedClass);
+    cleanSubs.forEach((sub) => {
       if (isSubjectFilledForStudent(student, student.rollNo || "", sub)) {
         filled++;
       }
     });
-    return { filled, total: subjects.length };
+    return { filled, total: cleanSubs.length };
   };
 
   const getSubjectProgress = (subjectName: string) => {
@@ -657,19 +708,25 @@ export function CCEMarksEntry({
 
         {/* Subject Nav Tabs */}
         <div className="bg-slate-100 p-2 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {subjects.map((sub) => (
-            <button
-              key={sub}
-              onClick={() => setEditingSubject(sub)}
-              className={`px-4 py-2.5 rounded-xl font-extrabold text-xs whitespace-nowrap transition-all cursor-pointer ${
-                editingSubject === sub
-                  ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
-                  : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              {sub}
-            </button>
-          ))}
+          {deduplicateAndNormalizeSubjects(subjects, selectedClass).map((rawSub) => {
+            let sub = normalizeSubjectTitle(rawSub, selectedClass);
+            if (isClass6(selectedClass) && (sub.includes("कार्य") || sub.includes("work") || sub === "कार्यशिक्षण" || sub === "कार्यानुभव")) {
+              sub = "व्यावसायिक अभ्यास";
+            }
+            return (
+              <button
+                key={sub}
+                onClick={() => setEditingSubject(sub)}
+                className={`px-4 py-2.5 rounded-xl font-extrabold text-xs whitespace-nowrap transition-all cursor-pointer ${
+                  (editingSubject ? normalizeSubjectTitle(editingSubject, selectedClass) : "") === sub
+                    ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
+                    : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                {sub}
+              </button>
+            );
+          })}
         </div>
 
         {/* Roster of Students for this Subject */}
@@ -752,9 +809,14 @@ export function CCEMarksEntry({
   if (editingStudent) {
     const student = editingStudent;
     const studentIdx = students.indexOf(student);
-    const subject = subjects[subjectIndex];
+    const activeSubjects = deduplicateAndNormalizeSubjects(subjects, selectedClass).map((s) =>
+      isClass6(selectedClass) && (s.includes("कार्य") || s.includes("work") || s === "कार्यशिक्षण" || s === "कार्यानुभव")
+        ? "व्यावसायिक अभ्यास"
+        : normalizeSubjectTitle(s, selectedClass)
+    );
+    const subject = activeSubjects[subjectIndex] || activeSubjects[0] || "";
     const sm = getSubjectMarks(student.id, subject);
-    const isLastSubject = subjectIndex === subjects.length - 1;
+    const isLastSubject = subjectIndex === activeSubjects.length - 1;
 
     const activeCols = getActiveColsForStudent(student.rollNo || "", subject);
     const akarikCols = activeCols.filter((c) => c.type === "akarik");
@@ -782,9 +844,9 @@ export function CCEMarksEntry({
 
     const handleSaveAndNextSubject = async () => {
       await saveMarks();
-      if (subjectIndex < subjects.length - 1) {
+      if (subjectIndex < activeSubjects.length - 1) {
         setSubjectIndex(subjectIndex + 1);
-        toast.success(`पुढील विषय: ${subjects[subjectIndex + 1]}`);
+        toast.success(`पुढील विषय: ${activeSubjects[subjectIndex + 1]}`);
       } else {
         if (studentIdx < students.length - 1) {
           setEditingStudent(students[studentIdx + 1]);
@@ -851,7 +913,7 @@ export function CCEMarksEntry({
 
         {/* Subject Nav Tabs */}
         <div className="bg-slate-100 p-2 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {subjects.map((sub, idx) => (
+          {activeSubjects.map((sub, idx) => (
             <button
               key={sub}
               onClick={() => setSubjectIndex(idx)}
@@ -968,7 +1030,7 @@ export function CCEMarksEntry({
               onClick={() => {
                 setSelectedMedium("marathi");
                 localStorage.setItem("cce_selected_medium", "marathi");
-                setSubjects(getDefaultSubjectsForClass(selectedClass, "marathi"));
+                setSubjects(deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, "marathi"), selectedClass));
               }}
               className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer ${
                 selectedMedium === "marathi" ? "bg-white text-blue-900 shadow-md" : "text-blue-100 hover:text-white"
@@ -980,7 +1042,7 @@ export function CCEMarksEntry({
               onClick={() => {
                 setSelectedMedium("semi");
                 localStorage.setItem("cce_selected_medium", "semi");
-                setSubjects(getDefaultSubjectsForClass(selectedClass, "semi"));
+                setSubjects(deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, "semi"), selectedClass));
               }}
               className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer ${
                 selectedMedium === "semi" ? "bg-white text-blue-900 shadow-md" : "text-blue-100 hover:text-white"
@@ -1077,7 +1139,11 @@ export function CCEMarksEntry({
             );
           })
         ) : (
-          subjects.map((sub, idx) => {
+          deduplicateAndNormalizeSubjects(subjects, selectedClass).map((rawSub, idx) => {
+            let sub = normalizeSubjectTitle(rawSub, selectedClass);
+            if (isClass6(selectedClass) && (sub.includes("कार्य") || sub.includes("work") || sub === "कार्यशिक्षण" || sub === "कार्यानुभव")) {
+              sub = "व्यावसायिक अभ्यास";
+            }
             const prog = getSubjectProgress(sub);
             const isComplete = prog.filled === prog.total;
 

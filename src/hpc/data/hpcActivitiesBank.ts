@@ -6501,12 +6501,22 @@ export function getActivitiesForCompetency(
     if (classActs.length > 0) {
       const first = classActs[0];
       const loList = CLASSWISE_LEARNING_OUTCOMES[classId]?.[cCode] || first.learningOutcomes || [];
-      const teacherRemarks = classActs
-        .map((a) => a.teacherFeedbackSample)
-        .filter(Boolean);
-      const parentRemarks = classActs
-        .map((a) => a.parentFeedbackSample)
-        .filter(Boolean);
+      const teacherRemarks = Array.from(
+        new Set(
+          classActs
+            .flatMap((a) => (a.teacherFeedbackSample ? a.teacherFeedbackSample.split(/\s*\|\s*/) : []))
+            .map((s) => s.trim())
+            .filter(Boolean)
+        )
+      );
+      const parentRemarks = Array.from(
+        new Set(
+          classActs
+            .flatMap((a) => (a.parentFeedbackSample ? a.parentFeedbackSample.split(/\s*\|\s*/) : []))
+            .map((s) => s.trim())
+            .filter(Boolean)
+        )
+      );
 
       return {
         code: cCode,

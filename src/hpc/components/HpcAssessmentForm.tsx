@@ -322,12 +322,34 @@ export function HpcAssessmentForm({
     );
   }, [areaAssessments, currentArea]);
 
+  const FOUNDATIONAL_AREA_GOALS: Record<string, string[]> = useMemo(
+    () => ({
+      physical_health: ["CG-1", "CG-2", "CG-3"],
+      socio_emotional: ["CG-4", "CG-5", "CG-6"],
+      cognitive: ["CG-7", "CG-8"],
+      language_literacy: ["CG-9", "CG-10", "CG-11"],
+      aesthetic_cultural: ["CG-12"],
+      positive_habits: ["CG-13"],
+    }),
+    []
+  );
+
   // Available goals and competencies for current area (Dynamic Excel > Default)
   const availableGoals = useMemo(() => {
     if (!currentArea) return [];
+    if (isFoundational) {
+      const allowedCodes = FOUNDATIONAL_AREA_GOALS[currentArea.id] || [];
+      const defaultGoals = getGoalsForArea(currentArea.id, stageId);
+      if (customGoals && customGoals.length > 0) {
+        const matched = customGoals.filter((g) => allowedCodes.includes(g.code));
+        if (matched.length > 0) return matched;
+      }
+      return defaultGoals;
+    }
+
     if (customGoals && customGoals.length > 0) {
       const areaGoals = customGoals.filter((g) => {
-        if (!g.areaOrSubjectId || g.areaOrSubjectId === "general") return true;
+        if (!g.areaOrSubjectId || g.areaOrSubjectId === "general") return false;
         const cleanSub = g.areaOrSubjectId.trim().toLowerCase();
         const cleanAreaId = (currentArea.id || "").trim().toLowerCase();
         const cleanAreaMarathi = (currentArea.nameMarathi || "").trim().toLowerCase();
@@ -338,10 +360,9 @@ export function HpcAssessmentForm({
         );
       });
       if (areaGoals.length > 0) return areaGoals;
-      return customGoals;
     }
     return getGoalsForArea(currentArea.id, stageId);
-  }, [currentArea, stageId, customGoals]);
+  }, [currentArea, stageId, isFoundational, customGoals, FOUNDATIONAL_AREA_GOALS]);
 
   const availableCompetencies = useMemo(() => {
     const selectedGoals = currentAssessment.selectedGoalIds || [];
@@ -370,13 +391,14 @@ export function HpcAssessmentForm({
           );
         });
       });
-      return filtered;
+      if (filtered.length > 0) return filtered;
     }
 
-    // Fallback only if no custom competencies exist in DB
+    // Fallback to official SCERT competencies
     const list: any[] = [];
     selectedGoals.forEach((goalId) => {
-      const comps = getCompetenciesForGoalAndClass(goalId, classId, session);
+      const cleanGId = goalId.replace(/^CUSTOM[-_]/i, "").trim();
+      const comps = getCompetenciesForGoalAndClass(cleanGId, classId, session);
       comps.forEach((c) => {
         if (!list.some((existing) => existing.id === c.id)) {
           list.push(c);
@@ -385,6 +407,34 @@ export function HpcAssessmentForm({
     });
     return list;
   }, [currentAssessment.selectedGoalIds, classId, session, customCompetencies, availableGoals]);
+
+  // Auto-select first goal for current area if none selected yet
+  useEffect(() => {
+    if (availableGoals.length > 0) {
+      const currentSelected = currentAssessment.selectedGoalIds || [];
+      const hasValidSelection = currentSelected.some((id) =>
+        availableGoals.some((g) => g.id === id || g.code === id)
+      );
+      if (!hasValidSelection) {
+        updateCurrentAssessment({ selectedGoalIds: [availableGoals[0].id] });
+      }
+    }
+  }, [availableGoals, currentArea?.id]);
+
+  // Auto-select first competency for current area if none selected yet
+  useEffect(() => {
+    if (availableCompetencies.length > 0) {
+      const currentSelected = currentAssessment.selectedCompetencyIds || [];
+      const hasValidComp = currentSelected.some((id) =>
+        availableCompetencies.some((c) => c.id === id || c.code === id)
+      );
+      if (!hasValidComp) {
+        const firstComp = availableCompetencies[0];
+        updateCurrentAssessment({ selectedCompetencyIds: [firstComp.id] });
+        setSelectedBankCompCode(firstComp.code);
+      }
+    }
+  }, [availableCompetencies, currentArea?.id]);
 
   // Update field in current area assessment
   const updateCurrentAssessment = (updates: Partial<HpcAreaAssessment>) => {
@@ -514,43 +564,61 @@ export function HpcAssessmentForm({
     return Array.from(new Set(raw.map((s) => s.trim()))).filter(Boolean);
   }, [bankData, activeBankCompCode, currentClass]);
 
-  // Always available Parent Remarks list (Bank + Static Fallback)
+  // Always available Parent Remarks list (Bank + Static Fallback) - Each Excel box as its own separate option
   const effectiveParentRemarks = useMemo(() => {
+    let list: string[] = [];
     if (bankData?.parentRemarks && bankData.parentRemarks.length > 0) {
-      return bankData.parentRemarks;
+      list = bankData.parentRemarks;
+    } else if (activeBankCompCode && HPC_ACTIVITIES_BANK[activeBankCompCode]?.parentRemarks?.length > 0) {
+      list = HPC_ACTIVITIES_BANK[activeBankCompCode].parentRemarks;
+    } else {
+      list = [
+        "माझा पाल्य घरी या उपक्रमातील कृती आवडीने करून दाखवतो. त्याच्या प्रगतीचे आम्हाला समाधान वाटते.",
+        "मला असे दिसून आले की माझा पाल्य नवीन गोष्टी शिकताना खूप आनंद घेतो व उत्साहाने सांगतो.",
+        "दैनंदिन व्यवहारात माझा पाल्य चांगल्या सवयी नियमित पाळतो. आम्ही त्याला सतत प्रोत्साहन देतो.",
+        "माझा पाल्य सध्या अभ्यासात व उपक्रमात स्वतःहून रुची दाखवतो. शाळेच्या मार्गदर्शनाचा चांगला उपयोग होत आहे.",
+        "आमच्या निरीक्षणानुसार पाल्याचा आत्मविश्वास दिवसेंदिवस वाढत आहे. आम्ही घरून पूर्ण पाठबळ देत आहोत.",
+        "घरी विचारलेल्या प्रश्नांची माझा पाल्य समजून विचारपूर्वक उत्तरे देतो. हा बदल आम्हाला खूप आवडला.",
+        "माझा पाल्य आपल्या वस्तू व्यवस्थित ठेवतो व घरातील कामात आनंदाने सहकार्य करतो.",
+        "शाळेतील अनुभव माझा पाल्य घरी आमच्याशी मोकळेपणाने शेअर करतो. त्याचा संवाद सुधारत आहे.",
+        "माझा पाल्य न घाबरता व न संकोचता स्वतःचे विचार मांडतो. त्याच्यातील ही प्रगती कौतुकास्पद आहे.",
+        "पाल्याच्या सर्वांगीण प्रगतीसाठी शाळेचे व शिक्षकांचे मार्गदर्शन अत्यंत मोलाचे ठरत आहे."
+      ];
     }
-    if (activeBankCompCode && HPC_ACTIVITIES_BANK[activeBankCompCode]?.parentRemarks?.length > 0) {
-      return HPC_ACTIVITIES_BANK[activeBankCompCode].parentRemarks;
-    }
-    return [
-      "माझा पाल्य घरी या उपक्रमातील कृती आवडीने करून दाखवतो. त्याच्या प्रगतीचे आम्हाला समाधान वाटते.",
-      "मला असे दिसून आले की माझा पाल्य नवीन गोष्टी शिकताना खूप आनंद घेतो व उत्साहाने सांगतो.",
-      "दैनंदिन व्यवहारात माझा पाल्य चांगल्या सवयी नियमित पाळतो. आम्ही त्याला सतत प्रोत्साहन देतो.",
-      "माझा पाल्य सध्या अभ्यासात व उपक्रमात स्वतःहून रुची दाखवतो. शाळेच्या मार्गदर्शनाचा चांगला उपयोग होत आहे.",
-      "आमच्या निरीक्षणानुसार पाल्याचा आत्मविश्वास दिवसेंदिवस वाढत आहे. आम्ही घरून पूर्ण पाठबळ देत आहोत.",
-      "घरी विचारलेल्या प्रश्नांची माझा पाल्य समजून विचारपूर्वक उत्तरे देतो. हा बदल आम्हाला खूप आवडला.",
-      "माझा पाल्य आपल्या वस्तू व्यवस्थित ठेवतो व घरातील कामात आनंदाने सहकार्य करतो.",
-      "शाळेतील अनुभव माझा पाल्य घरी आमच्याशी मोकळेपणाने शेअर करतो. त्याचा संवाद सुधारत आहे.",
-      "माझा पाल्य न घाबरता व न संकोचता स्वतःचे विचार मांडतो. त्याच्यातील ही प्रगती कौतुकास्पद आहे.",
-      "पाल्याच्या सर्वांगीण प्रगतीसाठी शाळेचे व शिक्षकांचे मार्गदर्शन अत्यंत मोलाचे ठरत आहे."
-    ];
+    return Array.from(
+      new Set(
+        list
+          .flatMap((rem) => (typeof rem === "string" ? rem.split(/\s*\|\s*/) : [rem]))
+          .map((r) => (typeof r === "string" ? r.trim() : ""))
+          .filter(Boolean)
+      )
+    );
   }, [bankData, activeBankCompCode]);
 
-  // Always available Teacher Remarks list (Bank + Static Fallback)
+  // Always available Teacher Remarks list (Bank + Static Fallback) - Each Excel box as its own separate option
   const effectiveTeacherRemarks = useMemo(() => {
+    let list: string[] = [];
     if (bankData?.teacherRemarks && bankData.teacherRemarks.length > 0) {
-      return bankData.teacherRemarks;
+      list = bankData.teacherRemarks;
+    } else if (activeBankCompCode && HPC_ACTIVITIES_BANK[activeBankCompCode]?.teacherRemarks?.length > 0) {
+      list = HPC_ACTIVITIES_BANK[activeBankCompCode].teacherRemarks;
+    } else {
+      list = [
+        "विद्यार्थी उपक्रमात अत्यंत आनंदाने व उत्स्फूर्तपणे सहभाग घेतो.",
+        "संकल्पनांची समज चांगली असून विचारलेल्या प्रश्नांची अचूक उत्तरे देतो.",
+        "मित्रांसोबत सहकार्याने काम करतो व गटात पुढाकार घेण्याची वृत्ती दिसून येते.",
+        "दिलेल्या सूचनांचे तंतोतंत पालन करून कृती वेळेत पूर्ण करतो.",
+        "नवीन गोष्टी शिकण्याबाबत विद्यार्थ्यामध्ये तीव्र कुतूहल व जिज्ञासा दिसून येते."
+      ];
     }
-    if (activeBankCompCode && HPC_ACTIVITIES_BANK[activeBankCompCode]?.teacherRemarks?.length > 0) {
-      return HPC_ACTIVITIES_BANK[activeBankCompCode].teacherRemarks;
-    }
-    return [
-      "विद्यार्थी उपक्रमात अत्यंत आनंदाने व उत्स्फूर्तपणे सहभाग घेतो.",
-      "संकल्पनांची समज चांगली असून विचारलेल्या प्रश्नांची अचूक उत्तरे देतो.",
-      "मित्रांसोबत सहकार्याने काम करतो व गटात पुढाकार घेण्याची वृत्ती दिसून येते.",
-      "दिलेल्या सूचनांचे तंतोतंत पालन करून कृती वेळेत पूर्ण करतो.",
-      "नवीन गोष्टी शिकण्याबाबत विद्यार्थ्यामध्ये तीव्र कुतूहल व जिज्ञासा दिसून येते."
-    ];
+    return Array.from(
+      new Set(
+        list
+          .flatMap((rem) => (typeof rem === "string" ? rem.split(/\s*\|\s*/) : [rem]))
+          .map((r) => (typeof r === "string" ? r.trim() : ""))
+          .filter(Boolean)
+      )
+    );
   }, [bankData, activeBankCompCode]);
 
   // Selected Teacher Level Filter ("nirjhar" | "parvat" | "aakash") - Default to nirjhar or saved level

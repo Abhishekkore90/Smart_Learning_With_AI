@@ -51,7 +51,7 @@ export const DEFAULT_MARATHI_SUBJECTS_MAP: Record<string, string[]> = {
     "सामान्य विज्ञान",
     "सामाजिक शास्त्रे",
     "कलाशिक्षण",
-    "कार्यशिक्षण",
+    "व्यावसायिक अभ्यास",
     "शारीरिक शिक्षण",
   ],
   "7th": [
@@ -131,7 +131,7 @@ export const DEFAULT_SEMI_SUBJECTS_MAP: Record<string, string[]> = {
     "General Science",
     "Social Sciences",
     "कलाशिक्षण",
-    "कार्यशिक्षण",
+    "व्यावसायिक अभ्यास",
     "शारीरिक शिक्षण",
   ],
   "7th": [
@@ -173,6 +173,25 @@ export function isRecordSemi(f: any): boolean {
 
 export function detectRecordMedium(f: any): "semi" | "marathi" {
   return isRecordSemi(f) ? "semi" : "marathi";
+}
+
+export function isClass6(className?: string): boolean {
+  if (!className) return false;
+  const c = String(className).toLowerCase().trim();
+  return (
+    c === "6th" ||
+    c === "6" ||
+    c.includes("६") ||
+    c.includes("सहा") ||
+    c.includes("सहावी") ||
+    c === "class 6" ||
+    c === "class_6" ||
+    c === "std 6" ||
+    c === "std_6" ||
+    c.includes("6th") ||
+    c.startsWith("6_") ||
+    c.startsWith("6-")
+  );
 }
 
 export function areSubjectsEquivalent(sub1: string, sub2: string): boolean {
@@ -217,9 +236,19 @@ export function areSubjectsEquivalent(sub1: string, sub2: string): boolean {
   const isArt2 = s2.includes("कला") || s2.includes("art");
   if (isArt1 && isArt2) return true;
 
-  // Work Exp aliases (कार्यानुभव, कार्यशिक्षण, कार्य, work)
-  const isWork1 = s1.includes("कार्य") || s1.includes("work");
-  const isWork2 = s2.includes("कार्य") || s2.includes("work");
+  // Work Exp / Vocational aliases (कार्यानुभव, कार्यशिक्षण, कार्य, व्यावसायिक अभ्यास, work)
+  const isWork1 =
+    s1.includes("कार्यानुभव") ||
+    s1.includes("कार्यशिक्षण") ||
+    s1.includes("कार्य") ||
+    s1.includes("work") ||
+    s1.includes("व्यावसायिक");
+  const isWork2 =
+    s2.includes("कार्यानुभव") ||
+    s2.includes("कार्यशिक्षण") ||
+    s2.includes("कार्य") ||
+    s2.includes("work") ||
+    s2.includes("व्यावसायिक");
   if (isWork1 && isWork2) return true;
 
   // PE aliases
@@ -244,6 +273,135 @@ export function areSubjectsEquivalent(sub1: string, sub2: string): boolean {
   return false;
 }
 
+/**
+ * Normalizes subject names so that "कला" becomes "कलाशिक्षण"
+ * and "कार्यानुभव" / "कार्यशिक्षण" becomes:
+ * - "व्यावसायिक अभ्यास" for Class 6 ONLY
+ * - "कार्यशिक्षण" for all other classes.
+ */
+export function normalizeSubjectTitle(name: string, selectedClass?: string): string {
+  if (!name || typeof name !== "string") return "";
+  const trimmed = name.trim();
+  const lower = trimmed.toLowerCase();
+
+  let effectiveClass = selectedClass;
+  if (!effectiveClass) {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        effectiveClass = localStorage.getItem("cce_selected_class") || localStorage.getItem("hpc_selected_class") || "";
+      }
+    } catch (e) {}
+  }
+
+  // Kala aliases -> always "कलाशिक्षण"
+  if (
+    trimmed === "कला" ||
+    lower === "art" ||
+    lower === "kala" ||
+    lower === "चित्रकला" ||
+    trimmed === "कलाशिक्षण" ||
+    lower === "kalashikshan"
+  ) {
+    return "कलाशिक्षण";
+  }
+
+  // Work Exp / Vocational aliases:
+  // For Class 6 ONLY: becomes "व्यावसायिक अभ्यास"
+  // For all other classes: becomes "कार्यशिक्षण"
+  // (Note: if name is already "व्यावसायिक अभ्यास", preserve it so it never gets accidentally reverted!)
+  if (
+    trimmed === "कार्यानुभव" ||
+    trimmed === "कार्यशिक्षण" ||
+    trimmed === "व्यावसायिक अभ्यास" ||
+    lower.includes("कार्यानुभव") ||
+    lower.includes("कार्यशिक्षण") ||
+    lower.includes("व्यावसायिक") ||
+    lower === "karyanubhav" ||
+    lower === "karyashikshan" ||
+    lower === "work" ||
+    lower === "work experience"
+  ) {
+    if (isClass6(effectiveClass) || trimmed === "व्यावसायिक अभ्यास" || lower.includes("व्यावसायिक")) {
+      return "व्यावसायिक अभ्यास";
+    }
+    return "कार्यशिक्षण";
+  }
+
+  return trimmed;
+}
+
+/**
+ * Deduplicates and normalizes an array of subject names:
+ * - Renames "कला" -> "कलाशिक्षण"
+ * - Renames "कार्यानुभव" / "कार्यशिक्षण" -> "व्यावसायिक अभ्यास" (Class 6 only) or "कार्यशिक्षण" (other classes)
+ * - Removes any duplicate subjects
+ */
+export function deduplicateAndNormalizeSubjects(subjects: string[], selectedClass?: string): string[] {
+  if (!Array.isArray(subjects)) return [];
+  const result: string[] = [];
+  const seenCanonicalKeys = new Set<string>();
+
+  let effectiveClass = selectedClass;
+  if (!effectiveClass) {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) {
+        effectiveClass = localStorage.getItem("cce_selected_class") || localStorage.getItem("hpc_selected_class") || "";
+      }
+    } catch (e) {}
+  }
+
+  for (const raw of subjects) {
+    if (!raw || typeof raw !== "string") continue;
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+
+    let norm = normalizeSubjectTitle(trimmed, effectiveClass);
+    const lower = norm.toLowerCase();
+
+    let canonicalKey = lower;
+    if (lower.includes("मराठी") || lower.includes("प्रथम")) {
+      canonicalKey = "marathi";
+    } else if (lower.includes("इंग्रजी") || lower.includes("english") || lower.includes("द्वितीय")) {
+      canonicalKey = "english";
+    } else if (lower.includes("हिंदी") || lower.includes("hindi") || lower.includes("तृतीय")) {
+      canonicalKey = "hindi";
+    } else if (lower.includes("गणित") || lower.includes("math")) {
+      canonicalKey = "math";
+    } else if (lower.includes("विज्ञान") || lower.includes("science")) {
+      canonicalKey = "science";
+    } else if (lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("evs")) {
+      if (lower.includes("१") || lower.includes("1")) canonicalKey = "evs1";
+      else if (lower.includes("२") || lower.includes("2")) canonicalKey = "evs2";
+      else canonicalKey = "evs";
+    } else if (lower.includes("सामाजिक") || lower.includes("social")) {
+      canonicalKey = "social";
+    } else if (lower.includes("कला") || lower.includes("art")) {
+      canonicalKey = "kala_kalashikshan";
+      norm = "कलाशिक्षण";
+    } else if (
+      lower.includes("कार्यानुभव") ||
+      lower.includes("कार्यशिक्षण") ||
+      lower.includes("व्यावसायिक") ||
+      lower.includes("कार्य") ||
+      lower.includes("work")
+    ) {
+      canonicalKey = "karya_karyashikshan";
+      norm = (isClass6(effectiveClass) || trimmed === "व्यावसायिक अभ्यास" || lower.includes("व्यावसायिक"))
+        ? "व्यावसायिक अभ्यास"
+        : "कार्यशिक्षण";
+    } else if (lower.includes("शारीरिक") || lower.includes("physical") || lower.includes("आरोग्य")) {
+      canonicalKey = "sharirik";
+    }
+
+    if (!seenCanonicalKeys.has(canonicalKey)) {
+      seenCanonicalKeys.add(canonicalKey);
+      result.push(norm);
+    }
+  }
+
+  return result;
+}
+
 export function getDefaultSubjectsForClass(selectedClass: string, medium?: string | any): string[] {
   let isSemi = false;
   if (medium && typeof medium === "string") {
@@ -257,7 +415,8 @@ export function getDefaultSubjectsForClass(selectedClass: string, medium?: strin
     } catch (e) {}
   }
   const map = isSemi ? DEFAULT_SEMI_SUBJECTS_MAP : DEFAULT_MARATHI_SUBJECTS_MAP;
-  return map[selectedClass] || map["1st"];
+  const rawList = map[selectedClass] || map["1st"];
+  return deduplicateAndNormalizeSubjects(rawList, selectedClass);
 }
 
 export interface ClassSubjectConfigItem {
@@ -278,7 +437,11 @@ const CO_CURRICULAR_SUBJECTS: ClassSubjectConfigItem[] = [
  * Map a CCE subject display name from cceSubjects.ts to its exact remark store key, label, and icon
  * matching CCERemarks.tsx (CCE Dashboard).
  */
-function mapDefaultSubjectToConfig(subName: string, isSemi: boolean): ClassSubjectConfigItem | null {
+function mapDefaultSubjectToConfig(
+  subName: string,
+  isSemi: boolean,
+  selectedClass?: string
+): ClassSubjectConfigItem | null {
   const s = subName.toLowerCase().trim();
   if (s.includes("प्रथम") || s.includes("मराठी")) {
     return { key: "prathambhasha", label: "प्रथम भाषा (मराठी)", icon: "📘" };
@@ -330,8 +493,9 @@ function mapDefaultSubjectToConfig(subName: string, isSemi: boolean): ClassSubje
   if (s.includes("कला") || s.includes("art")) {
     return { key: "kala", label: "कलाशिक्षण", icon: "🎨" };
   }
-  if (s.includes("कार्य") || s.includes("work")) {
-    return { key: "karyanubhav", label: "कार्यशिक्षण", icon: "🛠️" };
+  if (s.includes("कार्य") || s.includes("work") || s.includes("व्यावसायिक")) {
+    const isC6 = isClass6(selectedClass);
+    return { key: "karyanubhav", label: isC6 ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण", icon: "🛠️" };
   }
   if (s.includes("शारीरिक") || s.includes("physical")) {
     return { key: "sharirik", label: "शारीरिक शिक्षण व आरोग्य", icon: "⚽" };
@@ -359,7 +523,7 @@ export function getClassSpecificCCESubjects(
   const seenKeys = new Set<string>();
 
   for (const name of rawNames) {
-    const item = mapDefaultSubjectToConfig(name, isSemi);
+    const item = mapDefaultSubjectToConfig(name, isSemi, selectedClass);
     if (item && !seenKeys.has(item.key)) {
       seenKeys.add(item.key);
       result.push(item);

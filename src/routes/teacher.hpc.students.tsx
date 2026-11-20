@@ -15,6 +15,9 @@ import {
   BookOpen,
   Calendar,
   Loader2,
+  Save,
+  X,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { HpcStageId } from "@/hpc/types/hpc";
@@ -23,6 +26,8 @@ import {
   getHpcStudents,
   StudentInfoSummary,
   getHpcStudentProfile,
+  getHpcClassWorkingDays,
+  saveHpcClassWorkingDays,
 } from "@/hpc/services/hpcService";
 import {
   getCurrentAcademicYear,
@@ -68,6 +73,67 @@ function TeacherHpcStudentsPage() {
   const [students, setStudents] = useState<StudentInfoSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDivision, setSelectedDivision] = useState("all");
+
+  // Shared Class Working Days State
+  const [showWorkingDaysModal, setShowWorkingDaysModal] = useState(false);
+  const [workingDaysMap, setWorkingDaysMap] = useState<Record<string, number>>({});
+  const [loadingWorkingDays, setLoadingWorkingDays] = useState(false);
+  const [savingWorkingDays, setSavingWorkingDays] = useState(false);
+
+  const defaultWorkingDays: Record<string, number> = useMemo(
+    () => ({
+      june: 22,
+      july: 25,
+      august: 24,
+      september: 21,
+      october: 18,
+      november: 19,
+      december: 24,
+      january: 22,
+      february: 20,
+      march: 24,
+      april: 6,
+      may: 0,
+    }),
+    []
+  );
+
+  const handleOpenWorkingDaysModal = async () => {
+    setShowWorkingDaysModal(true);
+    setLoadingWorkingDays(true);
+    try {
+      const existing = await getHpcClassWorkingDays(selectedClass, academicYear);
+      if (existing && Object.keys(existing).length > 0) {
+        setWorkingDaysMap({ ...defaultWorkingDays, ...existing });
+      } else {
+        setWorkingDaysMap({ ...defaultWorkingDays });
+      }
+    } catch (err) {
+      setWorkingDaysMap({ ...defaultWorkingDays });
+    } finally {
+      setLoadingWorkingDays(false);
+    }
+  };
+
+  const handleSaveWorkingDays = async () => {
+    setSavingWorkingDays(true);
+    try {
+      const ok = await saveHpcClassWorkingDays(selectedClass, academicYear, workingDaysMap);
+      if (ok) {
+        const clsLabel = CLASSES_LIST.find((c) => c.id === selectedClass)?.label || selectedClass;
+        toast.success(
+          `${clsLabel} साठी ${academicYear} चे कामाचे दिवस सर्व विद्यार्थ्यांसाठी यशस्वीरीत्या जतन झाले!`
+        );
+        setShowWorkingDaysModal(false);
+      } else {
+        toast.error("कामाचे दिवस जतन करताना त्रुटी आली.");
+      }
+    } catch (err: any) {
+      toast.error("त्रुटी: " + err.message);
+    } finally {
+      setSavingWorkingDays(false);
+    }
+  };
 
   const stageId: HpcStageId = useMemo(() => {
     const match = CLASSES_LIST.find((c) => c.id === selectedClass);
@@ -225,6 +291,15 @@ function TeacherHpcStudentsPage() {
               <option value="ड">तुकडी ड</option>
             </select>
           </div>
+
+          {/* Class Working Days Button */}
+          <button
+            onClick={handleOpenWorkingDaysModal}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-2xl text-xs font-black shadow-xs transition-all cursor-pointer"
+          >
+            <Calendar className="size-3.5" />
+            <span>वर्गाचे कामाचे दिवस ({CLASSES_LIST.find((c) => c.id === selectedClass)?.label || selectedClass})</span>
+          </button>
         </div>
       </div>
 
@@ -306,6 +381,154 @@ function TeacherHpcStudentsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Class Working Days Modal */}
+      {showWorkingDaysModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="size-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-black">
+                  <Calendar className="size-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">
+                    वर्गाचे कामाचे दिवस (Class Working Days)
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-bold">
+                    {CLASSES_LIST.find((c) => c.id === selectedClass)?.label || selectedClass} • वर्ष: {academicYear}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowWorkingDaysModal(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 bg-amber-50/70 p-3 rounded-xl border border-amber-200/60 leading-relaxed">
+              💡 <b>महत्त्वाची नोंद:</b> येथे भरलेले कामाचे दिवस या शैक्षणिक वर्षातील <b>या वर्गाच्या सर्व विद्यार्थ्यांसाठी</b> आपोआप लागू होतील व HPC अहवालात (भाग अ व क) अचूक दिसतील.
+            </p>
+
+            {loadingWorkingDays ? (
+              <div className="py-8 text-center">
+                <Loader2 className="size-6 text-amber-600 animate-spin mx-auto mb-2" />
+                <span className="text-xs font-bold text-slate-500">दिवस लोड होत आहेत...</span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Term 1 Months */}
+                <div>
+                  <span className="text-xs font-black text-amber-800 block mb-2">
+                    प्रथम सत्र (जून ते ऑक्टोबर):
+                  </span>
+                  <div className="grid grid-cols-5 gap-2">
+                    {[
+                      { k: "june", l: "जून" },
+                      { k: "july", l: "जुलै" },
+                      { k: "august", l: "ऑगस्ट" },
+                      { k: "september", l: "सप्टें." },
+                      { k: "october", l: "ऑक्टो." },
+                    ].map(({ k, l }) => (
+                      <div key={k} className="text-center">
+                        <label className="text-[10px] font-bold text-slate-600 block mb-1">{l}</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="31"
+                          value={workingDaysMap[k] !== undefined ? workingDaysMap[k] : ""}
+                          onChange={(e) =>
+                            setWorkingDaysMap((prev) => ({
+                              ...prev,
+                              [k]: parseInt(e.target.value, 10) || 0,
+                            }))
+                          }
+                          className="w-full text-center text-xs font-black py-1.5 border border-slate-300 rounded-lg focus:border-amber-500 focus:outline-none"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Term 2 Months */}
+                <div>
+                  <span className="text-xs font-black text-amber-800 block mb-2">
+                    द्वितीय सत्र (नोव्हेंबर ते मे):
+                  </span>
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {[
+                      { k: "november", l: "नोव्हें." },
+                      { k: "december", l: "डिसें." },
+                      { k: "january", l: "जाने." },
+                      { k: "february", l: "फेब्रु." },
+                      { k: "march", l: "मार्च" },
+                      { k: "april", l: "एप्रिल" },
+                      { k: "may", l: "मे" },
+                    ].map(({ k, l }) => (
+                      <div key={k} className="text-center">
+                        <label className="text-[10px] font-bold text-slate-600 block mb-1">{l}</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="31"
+                          value={workingDaysMap[k] !== undefined ? workingDaysMap[k] : ""}
+                          onChange={(e) =>
+                            setWorkingDaysMap((prev) => ({
+                              ...prev,
+                              [k]: parseInt(e.target.value, 10) || 0,
+                            }))
+                          }
+                          className="w-full text-center text-xs font-black py-1.5 border border-slate-300 rounded-lg focus:border-amber-500 focus:outline-none"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Total Working Days Display */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs font-bold text-slate-800">
+                  <span>वार्षिक एकूण कामाचे दिवस:</span>
+                  <span className="text-sm font-black text-amber-700 font-mono">
+                    {Object.values(workingDaysMap).reduce((a, b) => a + (Number(b) || 0), 0)} दिवस
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setWorkingDaysMap({ ...defaultWorkingDays })}
+                className="text-xs font-bold text-slate-500 hover:text-slate-800 underline cursor-pointer"
+              >
+                डीफॉल्ट दिवस भरा
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowWorkingDaysModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                >
+                  रद्द करा
+                </button>
+                <button
+                  type="button"
+                  disabled={savingWorkingDays}
+                  onClick={handleSaveWorkingDays}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {savingWorkingDays ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                  <span>सर्व विद्यार्थ्यांसाठी जतन करा</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

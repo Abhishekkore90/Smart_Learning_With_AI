@@ -3,7 +3,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { ArrowLeft, ChevronDown, ChevronUp, RefreshCw, Plus, Trash2, Save, Globe } from "lucide-react";
 import { toast } from "sonner";
-import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { getDefaultSubjectsForClass, deduplicateAndNormalizeSubjects, normalizeSubjectTitle } from "@/data/cceSubjects";
 
 export function CCESubjectConfig({
   selectedClass,
@@ -19,7 +19,7 @@ export function CCESubjectConfig({
     return stored === "semi" ? "semi" : "marathi";
   });
 
-  const [subjects, setSubjects] = useState<string[]>(() => getDefaultSubjectsForClass(selectedClass, medium));
+  const [subjects, setSubjects] = useState<string[]>(() => deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, medium), selectedClass));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newSubject, setNewSubject] = useState("");
@@ -32,7 +32,7 @@ export function CCESubjectConfig({
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setSubjects(parsed);
+            setSubjects(deduplicateAndNormalizeSubjects(parsed, selectedClass));
             setLoading(false);
             return;
           }
@@ -43,12 +43,12 @@ export function CCESubjectConfig({
         if (snap.exists()) {
           const data = snap.data();
           if (data.subjects && data.subjects.length > 0) {
-            setSubjects(data.subjects);
+            setSubjects(deduplicateAndNormalizeSubjects(data.subjects, selectedClass));
           } else {
-            setSubjects(getDefaultSubjectsForClass(selectedClass, medium));
+            setSubjects(deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, medium), selectedClass));
           }
         } else {
-          setSubjects(getDefaultSubjectsForClass(selectedClass, medium));
+          setSubjects(deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, medium), selectedClass));
         }
       } catch (err) {
         console.error(err);
@@ -66,18 +66,18 @@ export function CCESubjectConfig({
       try {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setSubjects(parsed);
+          setSubjects(deduplicateAndNormalizeSubjects(parsed, selectedClass));
           toast.info(`माध्यम ${newMed === "semi" ? "सेमी-इंग्रजी" : "मराठी"} मध्ये बदलले व विषय लोड केले!`);
           return;
         }
       } catch (e) {}
     }
-    setSubjects(getDefaultSubjectsForClass(selectedClass, newMed));
+    setSubjects(deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, newMed), selectedClass));
     toast.info(`माध्यम ${newMed === "semi" ? "सेमी-इंग्रजी" : "मराठी"} मध्ये बदलले व विषय अपडेट झाले!`);
   };
 
   const handleResetDefault = () => {
-    const def = getDefaultSubjectsForClass(selectedClass, medium);
+    const def = deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, medium), selectedClass);
     setSubjects(def);
     toast.success(`इयत्ता ${selectedClass} (${medium === "semi" ? "सेमी" : "मराठी"}) साठी डिफॉल्ट विषय सेट केले!`);
   };
@@ -86,10 +86,11 @@ export function CCESubjectConfig({
     setSaving(true);
     try {
       const isSemi = medium === "semi";
+      const cleanSubs = deduplicateAndNormalizeSubjects(subjects);
       await setDoc(
         doc(db, "cce_settings", `${selectedClass}_${academicYear}_${medium}`),
         {
-          subjects,
+          subjects: cleanSubs,
           class: selectedClass,
           academicYear,
           medium: isSemi ? "सेमी-इंग्रजी - Semi-English" : "मराठी - Marathi",
@@ -98,8 +99,9 @@ export function CCESubjectConfig({
         },
         { merge: true }
       );
-      localStorage.setItem(`cce_subjects_${selectedClass}_${academicYear}_${medium}`, JSON.stringify(subjects));
+      localStorage.setItem(`cce_subjects_${selectedClass}_${academicYear}_${medium}`, JSON.stringify(cleanSubs));
       localStorage.setItem("cce_selected_medium", medium);
+      setSubjects(cleanSubs);
       toast.success("विषय यशस्वीरित्या जतन केले!");
     } catch (err: any) {
       toast.error("जतन अयशस्वी: " + err.message);
@@ -108,11 +110,15 @@ export function CCESubjectConfig({
   };
 
   const addSubject = () => {
-    if (newSubject.trim() && !subjects.includes(newSubject.trim())) {
-      setSubjects((prev) => [...prev, newSubject.trim()]);
-      setNewSubject("");
-    } else if (subjects.includes(newSubject.trim())) {
+    const trimmed = newSubject.trim();
+    if (!trimmed) return;
+    const norm = normalizeSubjectTitle(trimmed);
+    const updated = deduplicateAndNormalizeSubjects([...subjects, norm]);
+    if (updated.length === subjects.length) {
       toast.error("हा विषय आधीच जोडलेला आहे.");
+    } else {
+      setSubjects(updated);
+      setNewSubject("");
     }
   };
 

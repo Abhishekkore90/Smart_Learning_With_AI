@@ -272,7 +272,13 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         // Check if there is already a saved edited version in localStorage
         const savedHtml = localStorage.getItem(storageKey);
         if (savedHtml && !file) {
-          setHasSavedVersion(true);
+          // If the cached version was saved in a truncated/broken state (< 500 chars or missing subject content), discard it
+          if (savedHtml.length < 500 || (documentType === "homework" && !savedHtml.includes("मराठी") && !savedHtml.includes("इंग्रजी"))) {
+            localStorage.removeItem(storageKey);
+            setHasSavedVersion(false);
+          } else {
+            setHasSavedVersion(true);
+          }
         }
 
         let arrayBuffer: ArrayBuffer | null = null;
@@ -651,6 +657,12 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       setIsSaving(true);
       const currentHtml = containerRef.current.innerHTML;
 
+      if (documentType === "homework" && (currentHtml.length < 500 || (!currentHtml.includes("मराठी") && !currentHtml.includes("इंग्रजी")))) {
+        toast.error("गृहपाठ अपूर्ण दिसत असल्याने जतन करता आले नाही.");
+        setIsSaving(false);
+        return;
+      }
+
       // Save to localStorage for quick restore
       localStorage.setItem(storageKey, currentHtml);
 
@@ -672,6 +684,12 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
   const handleRestoreSaved = () => {
     const saved = localStorage.getItem(storageKey);
     if (saved && containerRef.current) {
+      if (saved.length < 500 || (documentType === "homework" && !saved.includes("मराठी") && !saved.includes("इंग्रजी"))) {
+        localStorage.removeItem(storageKey);
+        setHasSavedVersion(false);
+        toast.error("मागील जतन केलेली आवृत्ती अपूर्ण आढळल्याने रद्द करण्यात आली आहे.");
+        return;
+      }
       containerRef.current.innerHTML = saved;
       if (documentType === "homework") {
         paginateHomeworkDocument();
@@ -1593,127 +1611,27 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     applyHeaderInfo(schoolNameInput, val, kendraInput, talukaInput, jilhaInput, teacherNameInput, headmasterNameInput, false);
   };
 
-  // Paginate homework document into clean, exact A4 page sheets (Page 1 = Marathi, Page 2 = English + Math, etc.)
+  // Paginate homework document into clean, exact A4 page sheets without artificial blank gaps
   const paginateHomeworkDocument = () => {
     if (!containerRef.current) return;
 
-    // If already paginated with multiple sheets, don't re-run
-    const existingSheets = containerRef.current.querySelectorAll(".homework-page-sheet");
-    if (existingSheets.length > 1) return;
+    // docx-preview already generates <section class="docx"> for each page sheet.
+    // We simply mark each section as .homework-page-sheet and ensure clean presentation
+    // without ever deleting any sections or dropping any subject questions/tables!
+    const docxSections = Array.from(
+      containerRef.current.querySelectorAll<HTMLElement>(".docx-wrapper > section.docx, section.docx")
+    );
 
-    // Find the elements to paginate:
-    // docx-preview puts elements inside .docx-wrapper > section.docx > article
-    // Mammoth puts elements directly inside containerRef.current
-    let contentParent: HTMLElement | null = null;
-    const docxArticle = containerRef.current.querySelector<HTMLElement>(".docx-wrapper > section.docx > article");
-    const docxSection = containerRef.current.querySelector<HTMLElement>(".docx-wrapper > section.docx");
+    if (docxSections.length > 0) {
+      containerRef.current.style.backgroundColor = "transparent";
+      containerRef.current.style.boxShadow = "none";
 
-    if (docxArticle) {
-      contentParent = docxArticle;
-    } else if (docxSection) {
-      contentParent = docxSection;
-    } else {
-      contentParent = containerRef.current;
-    }
-
-    const rawChildren = Array.from(contentParent.children) as HTMLElement[];
-    if (rawChildren.length < 2) return;
-
-    // Clean empty spacer paragraphs from page transitions
-    const isBlankElement = (el: HTMLElement) => {
-      if (el.querySelector("img, svg, table, canvas, iframe")) return false;
-      const text = (el.textContent || "").trim();
-      return text.length === 0;
-    };
-
-    // Group elements into distinct pages
-    const pages: HTMLElement[][] = [[]];
-    let curPageIndex = 0;
-
-    for (let i = 0; i < rawChildren.length; i++) {
-      const el = rawChildren[i];
-      const text = (el.textContent || "").trim();
-
-      // Check for page break triggers:
-      // 1. Explicit page break classes/styles
-      const isExplicitBreak =
-        el.style.pageBreakBefore === "always" ||
-        el.style.breakBefore === "page" ||
-        el.classList.contains("docx-page-break") ||
-        el.classList.contains("page-break");
-
-      // 2. Secondary homework page header (e.g. "घरचा अभ्यास • इयत्ता..." or "घरचा अभ्यास -...")
-      const isHwPageHeader =
-        (text.includes("घरचा अभ्यास •") ||
-         text.includes("घरचा अभ्यास -") ||
-         text.includes("घरचा अभ्यास –") ||
-         text.includes("घरचा अभ्यास —") ||
-         (text.includes("घरचा अभ्यास") && text.includes("इयत्ता") && !text.includes("शाळेचे नाव"))) &&
-        pages[curPageIndex].length > 0;
-
-      // 3. New subject header (e.g. "२) My English Book", "३) गणित", "४) परिसर अभ्यास", "विषय : ...", etc.)
-      // Any new subject starts on a brand new page!
-      const isSubjectHeader =
-        // Matches subject names with number 2-9 (Marathi or English numerals)
-        ((/^[२-९2-9]\s*[\)\.\-–]\s*(My English Book|English|इंग्रजी|गणित|Mathematics|Maths|बालभारती|मराठी|परिसर अभ्यास|परिसर|Science|विज्ञान|इतिहास|भूगोल|हिंदी|Hindi|कला|कार्यानुभव|शारीरिक)/i.test(text) ||
-          // Matches "विषय :" or "Subject :" headings
-          /^(विषय\s*[:\-–]|Subject\s*[:\-–])/i.test(text) ||
-          // Matches generic numbered headings like "२) ...", "३) ...", "४) ..." with dash/colon, not starting with sub-question "("
-          (/^[२-९2-9]\s*[\)\.\-–]\s+[^\n\r]{3,}/.test(text) &&
-           !text.startsWith("(") &&
-           (text.includes("–") || text.includes("-") || text.includes(":")))) &&
-         pages[curPageIndex].length >= 2);
-
-      const shouldBreak = isExplicitBreak || isHwPageHeader || isSubjectHeader;
-
-      if (shouldBreak && pages[curPageIndex].length > 0) {
-        curPageIndex++;
-        pages[curPageIndex] = [];
-      }
-
-      pages[curPageIndex].push(el);
-    }
-
-    // Only apply if we split into 2 or more pages
-    if (pages.length <= 1) return;
-
-    // Clean container styling to transparent so each page sheet shows as its own white paper
-    containerRef.current.style.backgroundColor = "transparent";
-    containerRef.current.style.boxShadow = "none";
-
-    // Clean blank elements from start and end of each page
-    pages.forEach((pageEls) => {
-      while (pageEls.length > 0 && isBlankElement(pageEls[0])) {
-        pageEls.shift();
-      }
-      while (pageEls.length > 0 && isBlankElement(pageEls[pageEls.length - 1])) {
-        pageEls.pop();
-      }
-    });
-
-    // Build paginated container
-    const newWrapper = document.createElement("div");
-    newWrapper.className = "docx-wrapper hw-paginated-wrapper";
-
-    pages.forEach((pageEls, pIdx) => {
-      if (pageEls.length === 0) return;
-      const section = document.createElement("section");
-      section.className = "docx homework-page-sheet";
-      section.setAttribute("data-page-index", String(pIdx + 1));
-
-      const article = document.createElement("article");
-      article.className = "docx-article";
-
-      pageEls.forEach((child) => {
-        article.appendChild(child);
+      docxSections.forEach((sec, idx) => {
+        sec.classList.add("homework-page-sheet");
+        sec.setAttribute("data-page-index", String(idx + 1));
       });
-
-      section.appendChild(article);
-      newWrapper.appendChild(section);
-    });
-
-    containerRef.current.innerHTML = "";
-    containerRef.current.appendChild(newWrapper);
+      return;
+    }
   };
 
   // Apply all homework header fields and fit them properly across the page
@@ -1807,129 +1725,320 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     let updatedLine3 = false;
     let updatedSign = false;
 
-    // Helper to format Signature block: शिक्षकाचे नाव, स्वाक्षरी आणि मुख्याध्यापकाचे नाव, स्वाक्षरी व शिक्का
+    // Helper to format Signature block: 3 clean, balanced, centered columns: वर्गशिक्षक, मुख्याध्यापक व शिक्का, पालक स्वाक्षरी
     const teacherDisplay = escapeHtmlStr(activeTeacher || "....................................");
     const hmDisplay = escapeHtmlStr(activeHeadmaster || "....................................");
     const lineSignHtml = `
-      <table data-header-field="hw-signature-block" style="width: 100% !important; border-collapse: collapse !important; border: none !important; margin: 32px 0 12px 0 !important; font-size: 11.5pt !important; line-height: 1.5 !important; color: #000000 !important; background: transparent !important; table-layout: fixed !important;">
+      <table data-header-field="hw-signature-block" style="width: 100% !important; border-collapse: collapse !important; border: none !important; margin: 20px 0 6px 0 !important; font-size: 11pt !important; line-height: 1.4 !important; color: #000000 !important; background: transparent !important; table-layout: fixed !important;">
         <tbody>
           <tr style="border: none !important; background: transparent !important;">
-            <td style="border: none !important; padding: 6px 12px 6px 0 !important; text-align: left !important; width: 50% !important; vertical-align: bottom !important; background: transparent !important;">
-              <div style="font-size: 10pt; color: #334155; margin-bottom: 24px;">
-                स्वाक्षरी : <span style="display: inline-block; width: 140px; border-bottom: 1.5px dotted #64748b; vertical-align: middle;"></span>
+            <!-- Column 1: वर्गशिक्षक स्वाक्षरी -->
+            <td style="border: none !important; padding: 4px 6px !important; text-align: center !important; width: 33.33% !important; vertical-align: bottom !important; background: transparent !important;">
+              <div style="font-size: 9.5pt; color: #334155; margin-bottom: 16px; text-align: center;">
+                स्वाक्षरी : <span style="display: inline-block; width: 90px; border-bottom: 1.5px dotted #64748b; vertical-align: middle;"></span>
               </div>
-              <div style="font-weight: 700; font-size: 11.5pt; color: #0f172a;">
+              <div style="font-weight: 700; font-size: 10pt; color: #0f172a; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 शिक्षकाचे नाव : <span contenteditable="true" style="font-weight: 700; color: #1e293b;">${teacherDisplay}</span>
               </div>
-              <div style="font-size: 9.5pt; color: #64748b; margin-top: 3px;">(वर्ग शिक्षक स्वाक्षरी)</div>
+              <div style="font-size: 9.5pt; font-weight: 700; color: #334155; margin-top: 2px; text-align: center;">(वर्गशिक्षक स्वाक्षरी)</div>
             </td>
-            <td style="border: none !important; padding: 6px 0 6px 12px !important; text-align: right !important; width: 50% !important; vertical-align: bottom !important; background: transparent !important;">
-              <div style="font-size: 10pt; color: #334155; margin-bottom: 24px; text-align: right;">
-                स्वाक्षरी व शिक्का : <span style="display: inline-block; width: 140px; border-bottom: 1.5px dotted #64748b; vertical-align: middle;"></span>
+
+            <!-- Column 2: मुख्याध्यापक स्वाक्षरी -->
+            <td style="border: none !important; padding: 4px 6px !important; text-align: center !important; width: 33.33% !important; vertical-align: bottom !important; background: transparent !important;">
+              <div style="font-size: 9.5pt; color: #334155; margin-bottom: 16px; text-align: center;">
+                स्वाक्षरी व शिक्का : <span style="display: inline-block; width: 90px; border-bottom: 1.5px dotted #64748b; vertical-align: middle;"></span>
               </div>
-              <div style="font-weight: 700; font-size: 11.5pt; color: #0f172a; text-align: right;">
+              <div style="font-weight: 700; font-size: 10pt; color: #0f172a; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 मुख्याध्यापकाचे नाव : <span contenteditable="true" style="font-weight: 700; color: #1e293b;">${hmDisplay}</span>
               </div>
-              <div style="font-size: 9.5pt; color: #64748b; margin-top: 3px; text-align: right;">(मुख्याध्यापक स्वाक्षरी व शिक्का)</div>
+              <div style="font-size: 9.5pt; font-weight: 700; color: #334155; margin-top: 2px; text-align: center;">(मुख्याध्यापक स्वाक्षरी व शिक्का)</div>
+            </td>
+
+            <!-- Column 3: पालक स्वाक्षरी -->
+            <td style="border: none !important; padding: 4px 6px !important; text-align: center !important; width: 33.33% !important; vertical-align: bottom !important; background: transparent !important;">
+              <div style="font-size: 9.5pt; color: #334155; margin-bottom: 16px; text-align: center;">
+                स्वाक्षरी : <span style="display: inline-block; width: 90px; border-bottom: 1.5px dotted #64748b; vertical-align: middle;"></span>
+              </div>
+              <div style="font-weight: 700; font-size: 10pt; color: #0f172a; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                पालकाचे नाव : <span contenteditable="true" style="font-weight: 700; color: #64748b;">....................</span>
+              </div>
+              <div style="font-size: 9.5pt; font-weight: 700; color: #334155; margin-top: 2px; text-align: center;">(पालक स्वाक्षरी)</div>
             </td>
           </tr>
         </tbody>
       </table>
     `.trim();
 
-    // 1. Check if previously marked elements exist
+    // 0. FIRST: Check if the document has a structured header table (e.g. Table 1 from Word with शाळेचे नाव, केंद्र, तालुका, जिल्हा, वार, दिनांक, इयत्ता)
+    const topTables = Array.from(containerRef.current.querySelectorAll<HTMLElement>("table")).slice(0, 4);
+    for (const tbl of topTables) {
+      if (tbl.getAttribute("data-header-field") === "hw-signature-block") continue;
+      const tblText = (tbl.textContent || "").trim();
+      const hasSchool = tblText.includes("शाळेचे नाव");
+      const hasKendraOrTaluka = tblText.includes("केंद्र") || tblText.includes("तालुका");
+      const hasWarOrDate = tblText.includes("वार") || tblText.includes("दिनांक");
+
+      if (hasSchool && (hasKendraOrTaluka || hasWarOrDate)) {
+        tbl.setAttribute("data-header-field", "hw-header-table");
+
+        // Clean out any previously injected nested header tables inside its cells
+        const nestedHwTables = tbl.querySelectorAll('[data-header-field^="hw-line-"]');
+        nestedHwTables.forEach((nt) => nt.remove());
+
+        const cells = Array.from(tbl.querySelectorAll<HTMLElement>("td, th"));
+        for (const cell of cells) {
+          const cText = (cell.textContent || "").trim();
+
+          // 1. शाळेचे नाव
+          if (cText.includes("शाळेचे नाव")) {
+            cell.innerHTML = `<strong>शाळेचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displaySchool}</span>`;
+            cell.style.padding = "4px 6px";
+            cell.style.verticalAlign = "middle";
+            cell.style.fontSize = "10pt";
+            cell.style.lineHeight = "1.3";
+            cell.style.whiteSpace = "normal";
+            cell.style.wordBreak = "break-word";
+            updatedLine1 = true;
+          }
+          // 2. केंद्र
+          else if (cText.includes("केंद्र")) {
+            cell.innerHTML = `<strong>केंद्र : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayKendra}</span>`;
+            cell.style.padding = "4px 6px";
+            cell.style.verticalAlign = "middle";
+            cell.style.fontSize = "10pt";
+            cell.style.lineHeight = "1.3";
+            cell.style.whiteSpace = "normal";
+            cell.style.wordBreak = "break-word";
+            updatedLine1 = true;
+          }
+          // 3. तालुका
+          else if (cText.includes("तालुका")) {
+            cell.innerHTML = `<strong>तालुका : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayTaluka}</span>`;
+            cell.style.padding = "4px 6px";
+            cell.style.verticalAlign = "middle";
+            cell.style.fontSize = "10pt";
+            cell.style.lineHeight = "1.3";
+            cell.style.whiteSpace = "normal";
+            cell.style.wordBreak = "break-word";
+            updatedLine1 = true;
+          }
+          // 4. जिल्हा
+          else if (cText.includes("जिल्हा")) {
+            cell.innerHTML = `<strong>जिल्हा : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayDistrict}</span>`;
+            cell.style.padding = "4px 6px";
+            cell.style.verticalAlign = "middle";
+            cell.style.fontSize = "10pt";
+            cell.style.lineHeight = "1.3";
+            cell.style.whiteSpace = "normal";
+            cell.style.wordBreak = "break-word";
+            updatedLine1 = true;
+          }
+          // 5. वार
+          else if (cText.includes("वार")) {
+            cell.innerHTML = `<strong>वार : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwDayOfWeek || "शुक्रवार")}</span>`;
+            cell.style.padding = "4px 6px";
+            cell.style.verticalAlign = "middle";
+            cell.style.fontSize = "10pt";
+            cell.style.lineHeight = "1.3";
+            cell.style.whiteSpace = "normal";
+            cell.style.wordBreak = "break-word";
+            updatedLine2 = true;
+          }
+          // 6. दिनांक
+          else if (cText.includes("दिनांक")) {
+            cell.innerHTML = `<strong>दिनांक : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwDateStr || "२० नोव्हेंबर २०२६")}</span>`;
+            cell.style.padding = "4px 6px";
+            cell.style.verticalAlign = "middle";
+            cell.style.fontSize = "10pt";
+            cell.style.lineHeight = "1.3";
+            cell.style.whiteSpace = "normal";
+            cell.style.wordBreak = "break-word";
+            updatedLine2 = true;
+          }
+          // 7. इयत्ता
+          else if (cText.includes("इयत्ता")) {
+            cell.innerHTML = `<strong>इयत्ता : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwClassName || "१ ली")}</span>`;
+            cell.style.padding = "4px 6px";
+            cell.style.verticalAlign = "middle";
+            cell.style.fontSize = "10pt";
+            cell.style.lineHeight = "1.3";
+            cell.style.whiteSpace = "normal";
+            cell.style.wordBreak = "break-word";
+            updatedLine2 = true;
+          }
+        }
+        break;
+      }
+    }
+
+    // Format विद्यार्थ्याचे नाव (Student Name)
+    const studentDisplay = hwStudentName
+      ? escapeHtmlStr(hwStudentName)
+      : '<span style="color: #64748b; letter-spacing: 1px;">....................................................................................</span>';
+
+    const allStudentEls = Array.from(
+      containerRef.current.querySelectorAll<HTMLElement>("p, td, span, div")
+    ).filter((el) => {
+      // CRITICAL: NEVER match container elements (divs, sections, articles, tables) that have child paragraphs or tables!
+      if (el.querySelectorAll("p, table, section, article, div").length > 0) return false;
+      const t = (el.textContent || "").trim();
+      // Only match genuine leaf label elements (short text)
+      return t.includes("विद्यार्थ्याचे नाव") && t.length < 120;
+    });
+
+    for (const el of allStudentEls) {
+      el.innerHTML = `<strong>विद्यार्थ्याचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a; margin-left: 4px;">${studentDisplay}</span>`;
+      el.setAttribute("data-header-field", "hw-line-3");
+      updatedLine3 = true;
+    }
+
+    // 1. If previously marked loose elements exist, update them
     const existing1 = containerRef.current.querySelector('[data-header-field="hw-line-1"]');
     if (existing1) {
-      existing1.outerHTML = line1Html;
-      updatedLine1 = true;
+      if (existing1.closest("table[data-header-field='hw-header-table']")) {
+        existing1.remove();
+      } else if (!updatedLine1) {
+        existing1.outerHTML = line1Html;
+        updatedLine1 = true;
+      }
     }
 
     const existing2 = containerRef.current.querySelector('[data-header-field="hw-line-2"]');
     if (existing2) {
-      existing2.outerHTML = line2Html;
-      updatedLine2 = true;
+      if (existing2.closest("table[data-header-field='hw-header-table']")) {
+        existing2.remove();
+      } else if (!updatedLine2) {
+        existing2.outerHTML = line2Html;
+        updatedLine2 = true;
+      }
     }
 
-    const existing3 = containerRef.current.querySelector('[data-header-field="hw-line-3"]');
-    if (existing3) {
-      existing3.outerHTML = line3Html;
-      updatedLine3 = true;
+    // 2. If loose paragraphs were used instead of a table:
+    if (!updatedLine1 || !updatedLine2) {
+      const allPs = Array.from(containerRef.current.querySelectorAll<HTMLElement>("p")).filter(
+        (p) => !p.closest("table") || p.closest('[data-header-field^="hw-line-"]')
+      );
+      for (const el of allPs) {
+        if (el.querySelectorAll("table, div, section, article").length > 0) continue;
+        const txt = (el.textContent || "").trim();
+        if (txt.length < 200) {
+          if (!updatedLine1 && (txt.includes("शाळेचे नाव") || (txt.includes("केंद्र") && txt.includes("तालुका")))) {
+            el.outerHTML = line1Html;
+            updatedLine1 = true;
+            continue;
+          }
+          if (!updatedLine2 && ((txt.includes("वार") || txt.includes("वार :")) && (txt.includes("दिनांक") || txt.includes("इयत्ता")))) {
+            el.outerHTML = line2Html;
+            updatedLine2 = true;
+            continue;
+          }
+        }
+      }
     }
 
-    const existingSign = containerRef.current.querySelector('[data-header-field="hw-signature-block"]');
-    if (existingSign) {
-      existingSign.outerHTML = lineSignHtml;
+    // 3. Update existing signature block across all sheets
+    const existingSigns = containerRef.current.querySelectorAll('[data-header-field="hw-signature-block"]');
+    if (existingSigns.length > 0) {
+      existingSigns.forEach((s) => {
+        s.outerHTML = lineSignHtml;
+      });
       updatedSign = true;
     }
 
-    // 2. If not previously updated, search matching paragraph elements strictly (avoiding wrapper divs/sections)
-    const allPs = Array.from(containerRef.current.querySelectorAll<HTMLElement>("p"));
-    for (const el of allPs) {
-      const txt = (el.textContent || "").trim();
-      if (!updatedLine1 && (txt.includes("शाळेचे नाव") || (txt.includes("केंद्र") && txt.includes("तालुका")))) {
-        el.outerHTML = line1Html;
-        updatedLine1 = true;
-        continue;
-      }
-      if (!updatedLine2 && ((txt.includes("वार") || txt.includes("वार :")) && (txt.includes("दिनांक") || txt.includes("इयत्ता")))) {
-        el.outerHTML = line2Html;
-        updatedLine2 = true;
-        continue;
-      }
-      if (!updatedLine3 && txt.includes("विद्यार्थ्याचे नाव")) {
-        el.outerHTML = line3Html;
-        updatedLine3 = true;
-        continue;
-      }
-      if (
-        !updatedSign &&
-        ((txt.includes("शिक्षकाचे नाव") && (txt.includes("मुख्याध्यापक") || txt.includes("मुख्याध्यापकाचे"))) ||
-          (txt.includes("शिक्षक") && txt.includes("मुख्याध्यापक") && (txt.includes("नाव") || txt.includes("सही") || txt.includes("स्वाक्षरी"))))
-      ) {
-        el.outerHTML = lineSignHtml;
-        updatedSign = true;
-        continue;
+    // 4. Scan all tables in containerRef.current for signature cells
+    const allTables = Array.from(containerRef.current.querySelectorAll<HTMLElement>("table"));
+    for (const tbl of allTables) {
+      if (tbl.getAttribute("data-header-field")) continue;
+      // CRITICAL: A signature table must NOT contain nested tables (e.g. subject section tables)
+      if (tbl.querySelectorAll("table").length > 0) continue;
+
+      const tText = (tbl.textContent || "").trim();
+      // Must not be a large table with questions/content
+      if (tText.length > 350) continue;
+
+      const hasTeacher = tText.includes("शिक्षक") || tText.includes("वर्गशिक्षक");
+      const hasHm = tText.includes("मुख्याध्यापक") || tText.includes("मुख्याध्यापकाचे");
+      const hasParent = tText.includes("पालक");
+      const hasSign = tText.includes("स्वाक्षरी") || tText.includes("सही");
+
+      if ((hasTeacher || hasHm || hasParent) && hasSign) {
+        const rows = Array.from(tbl.querySelectorAll("tr"));
+        if (rows.length <= 2) {
+          tbl.outerHTML = lineSignHtml;
+          updatedSign = true;
+          break;
+        } else {
+          for (const row of rows) {
+            const rText = (row.textContent || "").trim();
+            if (
+              (rText.includes("शिक्षक") || rText.includes("मुख्याध्यापक") || rText.includes("पालक")) &&
+              (rText.includes("स्वाक्षरी") || rText.includes("सही"))
+            ) {
+              row.style.border = "none";
+              row.innerHTML = `<td colspan="10" style="border: none !important; padding: 0 !important; background: transparent !important;">${lineSignHtml}</td>`;
+              updatedSign = true;
+              break;
+            }
+          }
+          if (updatedSign) break;
+        }
       }
     }
 
-    // 3. Fallback: only if <p> was not found, check leaf elements (must not contain child p, div, table)
-    if (!updatedLine1 || !updatedLine2 || !updatedLine3 || !updatedSign) {
-      const leafEls = Array.from(containerRef.current.querySelectorAll<HTMLElement>("td, div, span")).filter(
-        (el) => el.querySelectorAll("p, table, div").length === 0
-      );
-      for (const el of leafEls) {
+    // 5. Scan paragraphs for signature line
+    if (!updatedSign) {
+      const allPs = Array.from(containerRef.current.querySelectorAll<HTMLElement>("p"));
+      for (const el of allPs) {
         const txt = (el.textContent || "").trim();
-        if (!updatedLine1 && (txt.includes("शाळेचे नाव") || (txt.includes("केंद्र") && txt.includes("तालुका")))) {
-          el.outerHTML = line1Html;
-          updatedLine1 = true;
-          continue;
-        }
-        if (!updatedLine2 && ((txt.includes("वार") || txt.includes("वार :")) && (txt.includes("दिनांक") || txt.includes("इयत्ता")))) {
-          el.outerHTML = line2Html;
-          updatedLine2 = true;
-          continue;
-        }
-        if (!updatedLine3 && txt.includes("विद्यार्थ्याचे नाव")) {
-          el.outerHTML = line3Html;
-          updatedLine3 = true;
-          continue;
-        }
         if (
-          !updatedSign &&
-          ((txt.includes("शिक्षकाचे नाव") && (txt.includes("मुख्याध्यापक") || txt.includes("मुख्याध्यापकाचे"))) ||
-            (txt.includes("शिक्षक") && txt.includes("मुख्याध्यापक") && (txt.includes("नाव") || txt.includes("सही") || txt.includes("स्वाक्षरी"))))
+          txt.length < 250 &&
+          el.querySelectorAll("table, div, section, article").length === 0 &&
+          (txt.includes("शिक्षक") || txt.includes("वर्गशिक्षक")) &&
+          (txt.includes("मुख्याध्यापक") || txt.includes("पालक")) &&
+          (txt.includes("स्वाक्षरी") || txt.includes("सही"))
         ) {
           el.outerHTML = lineSignHtml;
           updatedSign = true;
-          continue;
+          break;
         }
       }
     }
 
-    // 3b. Also check if separate elements exist for teacher and headmaster signatures
+    // 5b. Fallback: check leaf elements
+    if (!updatedSign) {
+      const leafEls = Array.from(containerRef.current.querySelectorAll<HTMLElement>("td, div, span")).filter(
+        (el) => el.querySelectorAll("p, table, div, section, article").length === 0
+      );
+      for (const el of leafEls) {
+        const txt = (el.textContent || "").trim();
+        if (
+          !updatedSign &&
+          txt.length < 250 &&
+          (txt.includes("शिक्षक") || txt.includes("वर्गशिक्षक")) &&
+          (txt.includes("मुख्याध्यापक") || txt.includes("पालक")) &&
+          (txt.includes("स्वाक्षरी") || txt.includes("सही"))
+        ) {
+          const closestTbl = el.closest("table");
+          if (
+            closestTbl &&
+            !closestTbl.getAttribute("data-header-field") &&
+            closestTbl.querySelectorAll("table").length === 0 &&
+            (closestTbl.textContent || "").trim().length < 350
+          ) {
+            closestTbl.outerHTML = lineSignHtml;
+          } else {
+            el.outerHTML = lineSignHtml;
+          }
+          updatedSign = true;
+          break;
+        }
+      }
+    }
+
+    // 5c. If separate elements exist for teacher and headmaster signatures
     if (!updatedSign) {
       const allLeafs = Array.from(containerRef.current.querySelectorAll<HTMLElement>("p, div, td")).filter(
-        (el) => el.querySelectorAll("p, table, div").length === 0
+        (el) => el.querySelectorAll("p, table, div, section, article").length === 0 && (el.textContent || "").trim().length < 150
       );
       const teacherEl = allLeafs.find((p) => {
         const t = (p.textContent || "").trim();
@@ -1939,29 +2048,51 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         const t = (p.textContent || "").trim();
         return t.includes("मुख्याध्यापक") || t.includes("मुख्याध्यापकाचे");
       });
-      if (teacherEl && hmEl && teacherEl !== hmEl) {
-        teacherEl.outerHTML = lineSignHtml;
-        hmEl.remove();
-        updatedSign = true;
-      } else if (teacherEl) {
-        teacherEl.outerHTML = lineSignHtml;
+      const palakEl = allLeafs.find((p) => {
+        const t = (p.textContent || "").trim();
+        return t.includes("पालक") && (t.includes("सही") || t.includes("स्वाक्षरी"));
+      });
+
+      if (teacherEl) {
+        const closestTbl = teacherEl.closest("table");
+        if (
+          closestTbl &&
+          !closestTbl.getAttribute("data-header-field") &&
+          closestTbl.querySelectorAll("table").length === 0 &&
+          (closestTbl.querySelectorAll("tr").length <= 2) &&
+          (closestTbl.textContent || "").trim().length < 350
+        ) {
+          closestTbl.outerHTML = lineSignHtml;
+        } else {
+          teacherEl.outerHTML = lineSignHtml;
+        }
+        if (hmEl && hmEl !== teacherEl && hmEl.parentNode) hmEl.remove();
+        if (palakEl && palakEl !== teacherEl && palakEl.parentNode) palakEl.remove();
         updatedSign = true;
       }
     }
 
-    // 3c. If signature line wasn't found in text, place it at the bottom of the worksheet sheet
+    // 5d. If signature line wasn't found in text, place it at the bottom of the last page sheet
     if (!updatedSign) {
+      const allSections = Array.from(
+        containerRef.current.querySelectorAll<HTMLElement>(
+          ".homework-page-sheet, .docx-wrapper > section.docx, section.docx"
+        )
+      );
+      const lastSection = allSections.length > 0 ? allSections[allSections.length - 1] : null;
       const targetParent =
-        containerRef.current.querySelector(".homework-page-sheet:last-of-type .docx-article") ||
-        containerRef.current.querySelector(".homework-page-sheet:last-of-type") ||
+        (lastSection ? (lastSection.querySelector("article") || lastSection) : null) ||
         containerRef.current.querySelector(".docx-wrapper") ||
         containerRef.current;
       if (targetParent) {
-        const tempDiv = document.createElement("div");
-        tempDiv.innerHTML = lineSignHtml;
-        if (tempDiv.firstElementChild) {
-          targetParent.appendChild(tempDiv.firstElementChild);
-          updatedSign = true;
+        const existingSign = targetParent.querySelector('[data-header-field="hw-signature-block"]');
+        if (!existingSign) {
+          const tempDiv = document.createElement("div");
+          tempDiv.innerHTML = lineSignHtml;
+          if (tempDiv.firstElementChild) {
+            targetParent.appendChild(tempDiv.firstElementChild);
+            updatedSign = true;
+          }
         }
       }
     }
@@ -2126,6 +2257,12 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     try {
       setIsDownloadingPdf(true);
       toast.info("PDF तयार होत आहे, कृपया प्रतीक्षा करा...", { duration: 3500 });
+
+      // Ensure homework documents are paginated and signatures formatted before PDF render
+      if (documentType === "homework") {
+        paginateHomeworkDocument();
+        applyHomeworkHeaderInfo(false);
+      }
 
       // Unfocus any active element to remove editor focus outlines
       if (document.activeElement instanceof HTMLElement) {
@@ -2320,6 +2457,12 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     if (!containerRef.current) return;
     setIsSharingWhatsApp(true);
     toast.info("WhatsApp साठी PDF तयार होत आहे...");
+
+    // Ensure homework documents are paginated and signatures formatted before PDF share
+    if (documentType === "homework") {
+      paginateHomeworkDocument();
+      applyHomeworkHeaderInfo(false);
+    }
 
     try {
       const filename = formatHomeworkFileName(homeworkClass || paperTitle);
@@ -3171,7 +3314,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           width: 100% !important;
           max-width: 794px !important;
           min-height: 1123px !important;
-          padding: 34px 40px !important;
+          padding: 30px 36px !important;
           box-sizing: border-box !important;
           position: relative !important;
         }
@@ -3196,23 +3339,23 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
         /* Compact, clean typography so each homework subject fits properly without overflow */
         .homework-page-sheet p {
-          margin: 4px 0 !important;
-          line-height: 1.5 !important;
-          font-size: 13.5px !important;
+          margin: 3px 0 !important;
+          line-height: 1.45 !important;
+          font-size: 13px !important;
         }
 
         .homework-page-sheet table {
           border-collapse: collapse !important;
           width: 100% !important;
-          margin: 6px 0 !important;
+          margin: 5px 0 !important;
         }
 
         .homework-page-sheet td, 
         .homework-page-sheet th {
           border: 1px solid #1e293b !important;
-          padding: 4px 8px !important;
+          padding: 4px 6px !important;
           vertical-align: middle !important;
-          font-size: 13px !important;
+          font-size: 12.5px !important;
         }
 
         .homework-page-sheet table[data-header-field^="hw-line-"],
@@ -3220,12 +3363,23 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         .homework-page-sheet table[data-header-field^="hw-line-"] td,
         .homework-page-sheet table[data-header-field="hw-signature-block"],
         .homework-page-sheet table[data-header-field="hw-signature-block"] tr,
-        .homework-page-sheet table[data-header-field="hw-signature-block"] td {
+        .homework-page-sheet table[data-header-field="hw-signature-block"] td,
+        .word-editor-paper table[data-header-field="hw-signature-block"],
+        .word-editor-paper table[data-header-field="hw-signature-block"] tr,
+        .word-editor-paper table[data-header-field="hw-signature-block"] td,
+        .homework-page-sheet tr:has([data-header-field="hw-signature-block"]),
+        .homework-page-sheet td:has([data-header-field="hw-signature-block"]) {
           border: none !important;
           outline: none !important;
           box-shadow: none !important;
           background: transparent !important;
-          padding: 2px 4px !important;
+        }
+
+        .homework-page-sheet table[data-header-field="hw-signature-block"] td {
+          width: 33.33% !important;
+          text-align: center !important;
+          vertical-align: bottom !important;
+          padding: 4px 6px !important;
         }
 
         .homework-page-sheet img {

@@ -72,12 +72,33 @@ export function MiddleHpcPdf({
           }
         }
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+          }
+          .hpc-pdf-document {
+            width: 794px !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+          }
           .hpc-pdf-document .pdf-page {
+            width: 794px !important;
+            height: 1123px !important;
+            max-height: 1123px !important;
             margin: 0 !important;
             box-shadow: none !important;
             border: none !important;
             page-break-after: always !important;
             break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
           }
         }
       `}</style>
@@ -108,20 +129,20 @@ export function MiddleHpcPdf({
               <div className="flex items-center gap-2">
                 <span className="font-black text-slate-800 w-24">विद्यार्थ्याचे नाव:</span>
                 <span className="font-bold border-b border-dotted border-slate-600 flex-1 text-slate-900">
-                  {student.fullName || student.name}
+                  {profile?.fullName || student.fullName || student.name}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   <span className="font-black text-slate-800">इयत्ता व तुकडी:</span>
                   <span className="font-black text-purple-900 border-b border-dotted border-slate-600 flex-1">
-                    {student.class || "इयत्ता ६ वी"} / {student.division || "अ"}
+                    {student.class || "इयत्ता ६ वी"} / {profile?.division || student.division || "अ"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-black text-slate-800">हजेरी क्रमांक:</span>
                   <span className="font-black text-slate-900 border-b border-dotted border-slate-600 flex-1">
-                    {student.rollNo}
+                    {profile?.rollNo || student.rollNo}
                   </span>
                 </div>
               </div>
@@ -129,13 +150,13 @@ export function MiddleHpcPdf({
                 <div className="flex items-center gap-2">
                   <span className="font-black text-slate-800">सरल आयडी:</span>
                   <span className="font-mono font-bold text-slate-900 border-b border-dotted border-slate-600 flex-1">
-                    {student.saralId || "-"}
+                    {profile?.saralId || student.saralId || "-"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-black text-slate-800">आधार क्रमांक:</span>
                   <span className="font-mono font-bold text-slate-900 border-b border-dotted border-slate-600 flex-1">
-                    {student.aadhaar || "-"}
+                    {profile?.aadhaar || student.aadhaar || "-"}
                   </span>
                 </div>
               </div>
@@ -143,13 +164,13 @@ export function MiddleHpcPdf({
                 <div className="flex items-center gap-2">
                   <span className="font-black text-slate-800">जन्मतारीख:</span>
                   <span className="font-bold text-slate-900 border-b border-dotted border-slate-600 flex-1">
-                    {student.dob || "-"}
+                    {profile?.dob || student.dob || "-"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-black text-slate-800">APAAR ID:</span>
                   <span className="font-mono font-bold text-slate-900 border-b border-dotted border-slate-600 flex-1">
-                    {student.aparId || "-"}
+                    {profile?.aparId || student.aparId || "-"}
                   </span>
                 </div>
               </div>
@@ -162,7 +183,7 @@ export function MiddleHpcPdf({
               <div className="flex items-center gap-2">
                 <span className="font-black text-slate-800 w-24">पालकांचे नाव:</span>
                 <span className="font-bold border-b border-dotted border-slate-600 flex-1 text-slate-900">
-                  {student.parentName || "-"}
+                  {profile?.parentName || profile?.fatherName || student.parentName || "-"}
                 </span>
               </div>
             </div>

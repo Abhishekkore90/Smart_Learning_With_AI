@@ -19,6 +19,7 @@ import {
   GraduationCap,
   Loader2,
   Upload,
+  Download,
   FileSpreadsheet,
   FileText,
   CheckCircle2,
@@ -85,6 +86,8 @@ import {
   deleteHpcCompetency,
   deleteAllHpcGoals,
   deleteAllHpcCompetencies,
+  deleteHpcActivitiesByClass,
+  clearSpecificClassHpcData,
 } from "@/hpc/services/hpcService";
 import { HPC_ACTIVITIES_BANK } from "@/hpc/data/hpcActivitiesBank";
 import {
@@ -122,6 +125,17 @@ const STAGE_CLASSES_MAP: Record<HpcStageId, { id: string; label: string }[]> = {
   ],
 };
 
+const CLASS_LABELS_MAP: Record<string, string> = {
+  "1st": "इयत्ता १ ली",
+  "2nd": "इयत्ता २ री",
+  "3rd": "इयत्ता ३ री",
+  "4th": "इयत्ता ४ थी",
+  "5th": "इयत्ता ५ वी",
+  "6th": "इयत्ता ६ वी",
+  "7th": "इयत्ता ७ वी",
+  "8th": "इयत्ता ८ वी",
+};
+
 function AdminHpcManagementPage() {
   const navigate = useNavigate();
 
@@ -139,6 +153,13 @@ function AdminHpcManagementPage() {
   const [explorerViewMode, setExplorerViewMode] = useState<"table" | "cards">("table");
   const [viewingActivityModal, setViewingActivityModal] = useState<HpcDynamicActivity | null>(null);
   const [showMatrix, setShowMatrix] = useState<boolean>(true);
+
+  // Single Class Data Deletion Modal
+  const [showClearClassModal, setShowClearClassModal] = useState(false);
+  const [targetClassToClear, setTargetClassToClear] = useState<string>("1st");
+  const [clearActivitiesCheck, setClearActivitiesCheck] = useState<boolean>(true);
+  const [clearAssessmentsCheck, setClearAssessmentsCheck] = useState<boolean>(false);
+  const [isClearingClass, setIsClearingClass] = useState<boolean>(false);
 
   // Custom goals & competencies from Firestore
   const [customGoals, setCustomGoals] = useState<HpcCurricularGoal[]>([]);
@@ -163,6 +184,30 @@ function AdminHpcManagementPage() {
       if (a.stageId === "foundational") counts.foundational++;
       else if (a.stageId === "preparatory") counts.preparatory++;
       else if (a.stageId === "middle") counts.middle++;
+    });
+    return counts;
+  }, [activitiesList]);
+
+  // Count by Class for instant class-wise indicators & clearing
+  const countByClass = useMemo(() => {
+    const counts: Record<string, number> = {
+      "1st": 0, "2nd": 0, "3rd": 0, "4th": 0, "5th": 0, "6th": 0, "7th": 0, "8th": 0
+    };
+    activitiesList.forEach((a) => {
+      let cid = a.classId;
+      if (!cid) {
+        if (a.id.startsWith("act_1st_")) cid = "1st";
+        else if (a.id.startsWith("act_2nd_")) cid = "2nd";
+        else if (a.id.startsWith("act_3rd_")) cid = "3rd";
+        else if (a.id.startsWith("act_4th_")) cid = "4th";
+        else if (a.id.startsWith("act_5th_")) cid = "5th";
+        else if (a.id.startsWith("act_6th_")) cid = "6th";
+        else if (a.id.startsWith("act_7th_")) cid = "7th";
+        else if (a.id.startsWith("act_8th_")) cid = "8th";
+      }
+      if (cid && counts[cid] !== undefined) {
+        counts[cid]++;
+      }
     });
     return counts;
   }, [activitiesList]);
@@ -283,6 +328,85 @@ function AdminHpcManagementPage() {
   const [isParsing, setIsParsing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<{ current: number; total: number } | null>(null);
+
+  // Preview filtering & view limit
+  const [previewLimit, setPreviewLimit] = useState<number | "all">(50);
+  const [previewSearch, setPreviewSearch] = useState<string>("");
+  const [previewSheetFilter, setPreviewSheetFilter] = useState<string>("all");
+
+  // Filter parsed activities by selected sheet filter & search query
+  const filteredParsedActivities = useMemo(() => {
+    return parsedActivities.filter((act) => {
+      if (previewSheetFilter !== "all" && act.sheetSource && act.sheetSource !== previewSheetFilter) {
+        return false;
+      }
+      if (!previewSearch) return true;
+      const q = previewSearch.toLowerCase();
+      return (
+        act.subjectOrArea?.toLowerCase().includes(q) ||
+        act.activityTitle?.toLowerCase().includes(q) ||
+        act.activityDescription?.toLowerCase().includes(q) ||
+        act.competencyCode?.toLowerCase().includes(q) ||
+        act.goalCode?.toLowerCase().includes(q) ||
+        act.teacherFeedbackSample?.toLowerCase().includes(q) ||
+        act.parentFeedbackSample?.toLowerCase().includes(q) ||
+        act.questions?.some((qu) => qu.toLowerCase().includes(q)) ||
+        act.learningOutcomes?.some((lo) => lo.toLowerCase().includes(q))
+      );
+    });
+  }, [parsedActivities, previewSheetFilter, previewSearch]);
+
+  const displayedParsedActivities = useMemo(() => {
+    if (previewLimit === "all") return filteredParsedActivities;
+    return filteredParsedActivities.slice(0, previewLimit);
+  }, [filteredParsedActivities, previewLimit]);
+
+  // Filter parsed remarks by selected sheet filter & search query
+  const filteredParsedRemarks = useMemo(() => {
+    return parsedRemarks.filter((r) => {
+      if (previewSheetFilter !== "all" && r.sheetSource && r.sheetSource !== previewSheetFilter) {
+        return false;
+      }
+      if (!previewSearch) return true;
+      const q = previewSearch.toLowerCase();
+      return (
+        r.subjectOrArea?.toLowerCase().includes(q) ||
+        r.level?.toLowerCase().includes(q) ||
+        r.remarkText?.toLowerCase().includes(q) ||
+        r.recommendationText?.toLowerCase().includes(q) ||
+        r.type?.toLowerCase().includes(q)
+      );
+    });
+  }, [parsedRemarks, previewSheetFilter, previewSearch]);
+
+  const displayedParsedRemarks = useMemo(() => {
+    if (previewLimit === "all") return filteredParsedRemarks;
+    return filteredParsedRemarks.slice(0, previewLimit);
+  }, [filteredParsedRemarks, previewLimit]);
+
+  // Filter parsed rubrics by selected sheet filter & search query
+  const filteredParsedRubrics = useMemo(() => {
+    return parsedRubrics.filter((rub) => {
+      if (previewSheetFilter !== "all" && rub.sheetSource && rub.sheetSource !== previewSheetFilter) {
+        return false;
+      }
+      if (!previewSearch) return true;
+      const q = previewSearch.toLowerCase();
+      return (
+        rub.activityTitle?.toLowerCase().includes(q) ||
+        rub.competencyCode?.toLowerCase().includes(q) ||
+        rub.dimension?.toLowerCase().includes(q) ||
+        rub.beginner?.toLowerCase().includes(q) ||
+        rub.proficient?.toLowerCase().includes(q) ||
+        rub.advanced?.toLowerCase().includes(q)
+      );
+    });
+  }, [parsedRubrics, previewSheetFilter, previewSearch]);
+
+  const displayedParsedRubrics = useMemo(() => {
+    if (previewLimit === "all") return filteredParsedRubrics;
+    return filteredParsedRubrics.slice(0, previewLimit);
+  }, [filteredParsedRubrics, previewLimit]);
 
   // New/Edit Goal Modal
   const [showAddGoal, setShowAddGoal] = useState(false);
@@ -721,6 +845,52 @@ function AdminHpcManagementPage() {
     }
   };
 
+  const handleClearSingleClass = async (
+    classId: string,
+    options: { deleteActivities: boolean; deleteAssessments: boolean } = {
+      deleteActivities: true,
+      deleteAssessments: false,
+    }
+  ) => {
+    const classLabel = CLASS_LABELS_MAP[classId] || `इयत्ता ${classId}`;
+    const actCount = countByClass[classId] || 0;
+
+    if (!options.deleteActivities && !options.deleteAssessments) {
+      toast.error("कृपया कमीत कमी एक पर्याय निवडा (उपक्रम किंवा मूल्यमापन).");
+      return;
+    }
+
+    if (options.deleteActivities && actCount === 0 && !options.deleteAssessments) {
+      toast.info(`'${classLabel}' मध्ये हटवण्यासाठी कोणतेही उपक्रम उपलब्ध नाहीत.`);
+      return;
+    }
+
+    const confirmMsg =
+      `सावधान: खरोखर फक्त '${classLabel}' चा डेटा डेटाबेसमधून कायमचा हटवायचा आहे का?\n\n` +
+      (options.deleteActivities ? `• उपक्रम व ५ प्रश्न: ${actCount} नोंदी डिलीट होतील\n` : "") +
+      (options.deleteAssessments ? `• विद्यार्थ्यांचे मूल्यमापन व वार्षिक सारांश नोंदी डिलीट होतील\n` : "") +
+      `\nमहत्त्वाचे: इतर सर्व इयत्तांचा डेटा पूर्णपणे सुरक्षित राहील आणि डिलीट होणार नाही.`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setIsClearingClass(true);
+      const res = await clearSpecificClassHpcData(classId, options);
+      let successMsg = `'${classLabel}' चा डेटा यशस्वीरीत्या हटवला गेला! `;
+      if (res.activitiesDeleted > 0) successMsg += `(${res.activitiesDeleted} उपक्रम) `;
+      if (res.assessmentsDeleted > 0 || res.summariesDeleted > 0) {
+        successMsg += `(${res.assessmentsDeleted + res.summariesDeleted} मूल्यमापन नोंदी) `;
+      }
+      toast.success(successMsg);
+      setShowClearClassModal(false);
+      await fetchActivities();
+    } catch (err: any) {
+      toast.error(`'${classLabel}' चा डेटा हटवताना त्रुटी: ` + err.message);
+    } finally {
+      setIsClearingClass(false);
+    }
+  };
+
   // Open Remark Modal
   const handleOpenAddRemark = () => {
     setEditingRemarkId(null);
@@ -955,10 +1125,12 @@ function AdminHpcManagementPage() {
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: "binary" });
+        const arrayBuffer = evt.target?.result as ArrayBuffer;
+        // Using array buffer with cellDates & UTF-8 preservation
+        const wb = XLSX.read(arrayBuffer, { type: "array", cellDates: true });
         setWorkbook(wb);
         setSheetNames(wb.SheetNames);
+        setPreviewSheetFilter("all");
 
         // Auto parse entire workbook across all sheets
         parseEntireWorkbook(wb);
@@ -968,7 +1140,7 @@ function AdminHpcManagementPage() {
         setIsParsing(false);
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
   const GOAL_TO_AREA_MAP: Record<string, string> = {
@@ -996,6 +1168,34 @@ function AdminHpcManagementPage() {
       .trim();
   };
 
+  const cleanQuestionText = (text: string): string => {
+    if (!text) return "";
+    return text
+      .trim()
+      .replace(/^([०-९0-9]+[.:)\-\s]+)+/, "")
+      .replace(/^प्रश्न\s*([०-९0-9]+)?[.:)\-\s]*/i, "")
+      .replace(/^Q[0-9]+[.:)\-\s]*/i, "")
+      .trim();
+  };
+
+  // SheetJS: Propagate merged cell contents across the entire merged range
+  const propagateMergedCells = (sheet: XLSX.WorkSheet) => {
+    if (!sheet || !sheet["!merges"]) return;
+    const merges = sheet["!merges"];
+    merges.forEach((merge) => {
+      const startCellAddress = XLSX.utils.encode_cell(merge.s);
+      const startCell = sheet[startCellAddress];
+      if (!startCell || startCell.v === undefined || startCell.v === null || startCell.v === "") return;
+      for (let r = merge.s.r; r <= merge.e.r; r++) {
+        for (let c = merge.s.c; c <= merge.e.c; c++) {
+          if (r === merge.s.r && c === merge.s.c) continue;
+          const targetAddress = XLSX.utils.encode_cell({ r, c });
+          sheet[targetAddress] = { ...startCell };
+        }
+      }
+    });
+  };
+
   const parseEntireWorkbook = (wb: XLSX.WorkBook) => {
     const allActivities: HpcDynamicActivity[] = [];
     const allRemarks: HpcDynamicRemark[] = [];
@@ -1006,6 +1206,9 @@ function AdminHpcManagementPage() {
     wb.SheetNames.forEach((sheetName) => {
       const sheet = wb.Sheets[sheetName];
       if (!sheet) return;
+
+      // Fill merged cells down and across so no sub-rows lose their goal, competency, or area
+      propagateMergedCells(sheet);
 
       const headerRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
       if (headerRows.length === 0) return;
@@ -1091,8 +1294,16 @@ function AdminHpcManagementPage() {
       let colLoIdx = -1;
       let colActIdx = -1;
       let colQIdx = -1;
+      let colQIndices: number[] = [];
       let colTeacherIdx = -1;
       let colParentIdx = -1;
+
+      // Column mapping for rubrics table
+      let colRubActIdx = -1;
+      let colRubDimIdx = -1;
+      let colRubBegIdx = -1;
+      let colRubProIdx = -1;
+      let colRubAdvIdx = -1;
 
       for (let rIdx = 0; rIdx < headerRows.length; rIdx++) {
         const rowArr = headerRows[rIdx];
@@ -1104,17 +1315,26 @@ function AdminHpcManagementPage() {
         const c2 = String(rowArr[2] || "").trim();
         const c3 = String(rowArr[3] || "").trim();
         const c4 = String(rowArr[4] || "").trim();
+        const c5 = String(rowArr[5] || "").trim();
 
         // ----------------- SECTION TRANSITION DETECTORS -----------------
         // 1. Rubrics Table Header Detection
         if (
           (rowStr.includes("निर्झर") && rowStr.includes("पर्वत") && rowStr.includes("आकाश")) ||
           (rowStr.includes("प्रारंभिक") && rowStr.includes("प्रवीण") && rowStr.includes("प्रगत")) ||
-          (rowArr.some((c) => String(c).includes("उपक्रम")) &&
-            rowArr.some((c) => String(c).includes("क्षमता") || String(c).includes("पैलू")) &&
+          (rowArr.some((c) => String(c).includes("उपक्रम") || String(c).includes("कृती")) &&
+            rowArr.some((c) => String(c).includes("क्षमता") || String(c).includes("पैलू") || String(c).includes("जाणीव")) &&
             rowArr.some((c) => String(c).includes("निर्झर") || String(c).includes("प्रारंभिक")))
         ) {
           currentSection = "rubrics";
+          rowArr.forEach((cVal, cIdx) => {
+            const s = String(cVal || "").trim().toLowerCase();
+            if (s.includes("उपक्रम") || s.includes("activity") || s.includes("कृती")) colRubActIdx = cIdx;
+            else if (s.includes("परिमाण") || s.includes("पैलू") || s.includes("जाणीव") || s.includes("dimension")) colRubDimIdx = cIdx;
+            else if (s.includes("प्रारंभिक") || s.includes("निर्झर") || s.includes("beginner") || s.includes("स्तर १") || s.includes("स्तर 1")) colRubBegIdx = cIdx;
+            else if (s.includes("प्रवीण") || s.includes("पर्वत") || s.includes("proficient") || s.includes("स्तर २") || s.includes("स्तर 2")) colRubProIdx = cIdx;
+            else if (s.includes("प्रगत") || s.includes("आकाश") || s.includes("advanced") || s.includes("स्तर ३") || s.includes("स्तर 3")) colRubAdvIdx = cIdx;
+          });
           continue;
         }
 
@@ -1158,23 +1378,42 @@ function AdminHpcManagementPage() {
         // 5. Activities Table Header Detection (Sheet 1)
         if (
           rowStr.includes("उपक्रम (थोडक्यात कृतीसह)") ||
-          ((rowStr.includes("विकास क्षेत्र") || rowStr.includes("ध्येय क्रमांक")) &&
-            rowStr.includes("उपक्रम") &&
+          rowStr.includes("उपक्रम") ||
+          rowStr.includes("कृती") ||
+          ((rowStr.includes("विकास क्षेत्र") || rowStr.includes("ध्येय क्रमांक") || rowStr.includes("विषय")) &&
+            (rowStr.includes("उपक्रम") || rowStr.includes("कृती")) &&
             !rowStr.includes("निर्झर"))
         ) {
-          currentSection = "activities";
-          rowArr.forEach((colVal, cIdx) => {
-            const s = String(colVal || "").trim();
-            if (s.includes("विकास क्षेत्र") || s.includes("विषय")) colSubIdx = cIdx;
-            else if (s.includes("ध्येय")) colGoalIdx = cIdx;
-            else if (s.includes("क्षमता")) colCompIdx = cIdx;
-            else if (s.includes("निष्पत्ती") || s.includes("learning")) colLoIdx = cIdx;
-            else if (s.includes("उपक्रम")) colActIdx = cIdx;
-            else if (s.includes("प्रश्न")) colQIdx = cIdx;
-            else if (s.includes("शिक्षकांचा अभिप्राय")) colTeacherIdx = cIdx;
-            else if (s.includes("पालकांचा अभिप्राय")) colParentIdx = cIdx;
-          });
-          continue;
+          // If this row is a header row
+          if (
+            rowArr.some((c) => String(c).includes("उपक्रम") || String(c).includes("कृती") || String(c).toLowerCase().includes("activity")) &&
+            rowArr.some((c) => String(c).includes("क्षमता") || String(c).includes("ध्येय") || String(c).includes("प्रश्न") || String(c).includes("विकास"))
+          ) {
+            currentSection = "activities";
+            colQIndices = [];
+            rowArr.forEach((colVal, cIdx) => {
+              const s = String(colVal || "").trim().toLowerCase();
+              if (s.includes("विकास क्षेत्र") || s.includes("विषय") || s.includes("क्षेत्र") || s.includes("subject") || s.includes("area")) {
+                colSubIdx = cIdx;
+              } else if (s.includes("ध्येय") || s.includes("goal") || s.startsWith("cg")) {
+                colGoalIdx = cIdx;
+              } else if (s.includes("क्षमता") || s.includes("competency") || s.includes("कौशल्य")) {
+                colCompIdx = cIdx;
+              } else if (s.includes("निष्पत्ती") || s.includes("learning") || s.includes("lo")) {
+                colLoIdx = cIdx;
+              } else if (s.includes("उपक्रम") || s.includes("कृती") || s.includes("activity")) {
+                colActIdx = cIdx;
+              } else if (s.includes("प्रश्न") || /^(q[0-9]|quest)/i.test(s)) {
+                colQIndices.push(cIdx);
+                if (colQIdx < 0) colQIdx = cIdx;
+              } else if (s.includes("शिक्षक") || s.includes("teacher")) {
+                colTeacherIdx = cIdx;
+              } else if (s.includes("पालक") || s.includes("parent")) {
+                colParentIdx = cIdx;
+              }
+            });
+            continue;
+          }
         }
 
         // ----------------- PARSE ACCORDING TO CURRENT SECTION -----------------
@@ -1186,21 +1425,24 @@ function AdminHpcManagementPage() {
           const compCol = colCompIdx >= 0 ? colCompIdx : 3;
           const loCol = colLoIdx >= 0 ? colLoIdx : 4;
           const actCol = colActIdx >= 0 ? colActIdx : 5;
-          const qCol = colQIdx >= 0 ? colQIdx : 6;
-          const teacherCol = colTeacherIdx >= 0 ? colTeacherIdx : 7;
-          const parentCol = colParentIdx >= 0 ? colParentIdx : 8;
+          const teacherCol = colTeacherIdx >= 0 ? colTeacherIdx : (colQIndices.length > 1 ? colQIndices[colQIndices.length - 1] + 1 : 7);
+          const parentCol = colParentIdx >= 0 ? colParentIdx : teacherCol + 1;
 
           const rowSub = String(rowArr[subCol] || "").trim();
           const rowGoal = String(rowArr[goalCol] || "").trim();
           const rowComp = String(rowArr[compCol] || "").trim();
           const rowLo = String(rowArr[loCol] || "").trim();
           const rowAct = String(rowArr[actCol] || "").trim();
-          const rowQ = String(rowArr[qCol] || "").trim();
           const rowTeacher = String(rowArr[teacherCol] || "").trim();
           const rowParent = String(rowArr[parentCol] || "").trim();
 
           // Skip header row if re-encountered
-          if (rowAct === "उपक्रम (थोडक्यात कृतीसह)" || rowComp === "क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन") {
+          if (
+            rowAct === "उपक्रम" ||
+            rowAct.includes("उपक्रम (थोडक्यात") ||
+            rowComp.includes("क्षमता क्रमांक") ||
+            rowSub.includes("विकास क्षेत्र")
+          ) {
             continue;
           }
 
@@ -1305,6 +1547,37 @@ function AdminHpcManagementPage() {
             }
           }
 
+          // Extract all questions for this row (supporting multi-column question banks Q1..Q5 or single column with newlines)
+          const rowQuestions: string[] = [];
+          if (colQIndices.length > 0) {
+            colQIndices.forEach((qColIdx) => {
+              const val = String(rowArr[qColIdx] || "").trim();
+              if (
+                val &&
+                !val.includes("प्रश्न क्र") &&
+                !val.startsWith("अ.क्र") &&
+                val !== "प्रश्न" &&
+                !val.toLowerCase().startsWith("question")
+              ) {
+                const qLines = val.split(/[\r\n]+/).map(cleanQuestionText).filter(Boolean);
+                rowQuestions.push(...qLines);
+              }
+            });
+          }
+          if (rowQuestions.length === 0 && colQIdx >= 0) {
+            const val = String(rowArr[colQIdx] || "").trim();
+            if (
+              val &&
+              !val.includes("प्रश्न क्र") &&
+              !val.startsWith("अ.क्र") &&
+              val !== "प्रश्न" &&
+              !val.toLowerCase().startsWith("question")
+            ) {
+              const qLines = val.split(/[\r\n]+/).map(cleanQuestionText).filter(Boolean);
+              rowQuestions.push(...qLines);
+            }
+          }
+
           if (rowAct) {
             let activityTitle = rowAct;
             let activityDesc = "";
@@ -1334,13 +1607,8 @@ function AdminHpcManagementPage() {
               activityTitle = numMatch[2].trim();
             }
 
-            const questions = rowQ
-              .split("\n")
-              .map((q) => q.replace(/^[0-9\u0966-\u096F]+[\.\)\-\s]\s*/, "").trim())
-              .filter(Boolean);
-
             const classPrefix = selectedUploadClass !== "all" ? selectedUploadClass : stage;
-            const docId = `act_${classPrefix}_${currCompCode || "comp"}_${activityNum}`;
+            const docId = `act_${classPrefix}_${currCompCode || "comp"}_${activityNum}_${rIdx}`;
 
             lastAct = {
               id: docId,
@@ -1357,18 +1625,47 @@ function AdminHpcManagementPage() {
               description: activityDesc,
               learningOutcomes: currLoList,
               learningOutcomeText: currLoText,
-              questions,
+              questions: rowQuestions,
               teacherFeedbackSample: rowTeacher,
               parentFeedbackSample: rowParent,
+              teacherFeedbackBank: rowTeacher ? [rowTeacher] : [],
+              parentFeedbackBank: rowParent ? [rowParent] : [],
+              sheetSource: sheetName,
               createdAt: new Date().toISOString(),
             };
 
             allActivities.push(lastAct);
-          } else if (lastAct && (rowTeacher || rowParent)) {
+          } else if (lastAct) {
+            // Continuation row: collect questions or feedback under the current activity
+            if (rowQuestions.length > 0) {
+              const existingQ = new Set(lastAct.questions || []);
+              rowQuestions.forEach((q) => {
+                if (!existingQ.has(q)) {
+                  lastAct!.questions.push(q);
+                  existingQ.add(q);
+                }
+              });
+            }
+            if (!lastAct.teacherFeedbackBank) {
+              lastAct.teacherFeedbackBank = lastAct.teacherFeedbackSample
+                ? lastAct.teacherFeedbackSample.split(/\s*\|\s*/).map((s) => s.trim()).filter(Boolean)
+                : [];
+            }
+            if (rowTeacher && !lastAct.teacherFeedbackBank.includes(rowTeacher)) {
+              lastAct.teacherFeedbackBank.push(rowTeacher);
+            }
             if (rowTeacher && !lastAct.teacherFeedbackSample?.includes(rowTeacher)) {
               lastAct.teacherFeedbackSample = lastAct.teacherFeedbackSample
                 ? `${lastAct.teacherFeedbackSample} | ${rowTeacher}`
                 : rowTeacher;
+            }
+            if (!lastAct.parentFeedbackBank) {
+              lastAct.parentFeedbackBank = lastAct.parentFeedbackSample
+                ? lastAct.parentFeedbackSample.split(/\s*\|\s*/).map((s) => s.trim()).filter(Boolean)
+                : [];
+            }
+            if (rowParent && !lastAct.parentFeedbackBank.includes(rowParent)) {
+              lastAct.parentFeedbackBank.push(rowParent);
             }
             if (rowParent && !lastAct.parentFeedbackSample?.includes(rowParent)) {
               lastAct.parentFeedbackSample = lastAct.parentFeedbackSample
@@ -1395,29 +1692,52 @@ function AdminHpcManagementPage() {
           }
 
           // Skip header row
-          if (c0 === "उपक्रम" && (c1 === "क्षमता" || c1 === "पैलू" || c1 === "जाणीवजागृती")) {
+          if (
+            (c0 === "उपक्रम" || c0 === "अ.क्र.") &&
+            (c1 === "क्षमता" || c1 === "पैलू" || c1 === "जाणीवजागृती" || c1 === "उपक्रम" || c1 === "ध्येय")
+          ) {
             continue;
           }
 
-          if (c0) {
-            currRubAct = c0;
+          let actVal = colRubActIdx >= 0 ? String(rowArr[colRubActIdx] || "").trim() : "";
+          let dimVal = colRubDimIdx >= 0 ? String(rowArr[colRubDimIdx] || "").trim() : "";
+          let begVal = colRubBegIdx >= 0 ? String(rowArr[colRubBegIdx] || "").trim() : "";
+          let proVal = colRubProIdx >= 0 ? String(rowArr[colRubProIdx] || "").trim() : "";
+          let advVal = colRubAdvIdx >= 0 ? String(rowArr[colRubAdvIdx] || "").trim() : "";
+
+          // Fallback if column indices were not detected
+          if (!dimVal && !begVal) {
+            if (/^[०-९0-9]+$/.test(c0)) {
+              // Row starts with Sr No (1, 2, 3...)
+              actVal = c1;
+              dimVal = c2;
+              begVal = c3;
+              proVal = c4;
+              advVal = c5;
+            } else {
+              // Row starts directly with activity
+              actVal = c0;
+              dimVal = c1;
+              begVal = c2;
+              proVal = c3;
+              advVal = c4;
+            }
           }
 
-          const dim = c1 || "";
-          const beg = c2 || "";
-          const pro = c3 || "";
-          const adv = c4 || "";
+          if (actVal && actVal !== "उपक्रम") {
+            currRubAct = actVal;
+          }
 
           if (
-            dim &&
-            !["क्षमता", "पैलू", "निकष", "परिमाण"].includes(dim) &&
-            (beg || pro || adv)
+            dimVal &&
+            !["क्षमता", "पैलू", "निकष", "परिमाण", "अ.क्र.", "अ.क्र"].includes(dimVal) &&
+            (begVal || proVal || advVal)
           ) {
-            const cleanDimKey = dim.includes("जाणीव")
+            const cleanDimKey = dimVal.includes("जाणीव")
               ? "awareness"
-              : dim.includes("संवेदन")
+              : dimVal.includes("संवेदन")
               ? "sensitivity"
-              : dim.includes("सर्जन")
+              : dimVal.includes("सर्जन")
               ? "creativity"
               : `dim_${rIdx}`;
 
@@ -1433,10 +1753,11 @@ function AdminHpcManagementPage() {
               goalCode: currRubGoal,
               competencyCode: currRubComp,
               activityTitle: cleanActivityTitle(currRubAct) || currRubAct,
-              dimension: dim,
-              beginner: beg,
-              proficient: pro,
-              advanced: adv,
+              dimension: dimVal,
+              beginner: begVal,
+              proficient: proVal,
+              advanced: advVal,
+              sheetSource: sheetName,
               createdAt: new Date().toISOString(),
             });
           }
@@ -1451,6 +1772,7 @@ function AdminHpcManagementPage() {
 
           if (
             c0 === "क्र." ||
+            c0 === "अ.क्र." ||
             c1 === "विकास क्षेत्र" ||
             c2 === "कामगिरी स्तर" ||
             rowStr.includes("शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)")
@@ -1458,11 +1780,19 @@ function AdminHpcManagementPage() {
             continue;
           }
 
-          const area = c1 || currDevArea;
-          const level = c2;
-          const remarkText = c3;
+          const knownLevels = ["प्रारंभिक", "प्रवीण", "प्रगत", "निर्झर", "पर्वत", "आकाश"];
+          let area = c1 || currDevArea;
+          let level = c2;
+          let remarkText = c3;
 
-          if (area && !area.startsWith("क्र.") && !area.startsWith("विकास क्षेत्र")) {
+          // If table has no Sr. No column: c0 is area, c1 is level, c2 is remark
+          if (knownLevels.some((kl) => c1.includes(kl))) {
+            area = c0 || currDevArea;
+            level = c1;
+            remarkText = c2;
+          }
+
+          if (area && !area.startsWith("क्र.") && !area.startsWith("विकास क्षेत्र") && !knownLevels.some((kl) => area.includes(kl))) {
             currDevArea = area;
           }
 
@@ -1476,6 +1806,7 @@ function AdminHpcManagementPage() {
               level,
               remarkText,
               type: "developmental_area",
+              sheetSource: sheetName,
               createdAt: new Date().toISOString(),
             });
           }
@@ -1486,6 +1817,7 @@ function AdminHpcManagementPage() {
           if (
             c0.includes("शीट 4") ||
             c0 === "क्र." ||
+            c0 === "अ.क्र." ||
             c1 === "कामगिरी स्तर" ||
             c2 === "शिक्षकांचा अंतिम सर्वंकष वार्षिक अभिप्राय"
           ) {
@@ -1500,7 +1832,8 @@ function AdminHpcManagementPage() {
             remarkText &&
             remarkText !== level &&
             level !== "कामगिरी स्तर" &&
-            level !== "क्र."
+            level !== "क्र." &&
+            level !== "अ.क्र."
           ) {
             const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
             allRemarks.push({
@@ -1510,6 +1843,7 @@ function AdminHpcManagementPage() {
               level,
               remarkText,
               type: "final_comprehensive",
+              sheetSource: sheetName,
               createdAt: new Date().toISOString(),
             });
           }
@@ -1520,6 +1854,7 @@ function AdminHpcManagementPage() {
           if (
             c0.includes("शीट 5") ||
             c0 === "क्र." ||
+            c0 === "अ.क्र." ||
             c1 === "कामगिरी स्तर" ||
             c2.includes("पुढील इयत्तेसाठी")
           ) {
@@ -1534,7 +1869,8 @@ function AdminHpcManagementPage() {
             remarkText &&
             remarkText !== level &&
             level !== "कामगिरी स्तर" &&
-            level !== "क्र."
+            level !== "क्र." &&
+            level !== "अ.क्र."
           ) {
             const cleanLvl = (level || "lvl").replace(/[^a-zA-Z0-9\u0900-\u097F]+/g, "_");
             allRemarks.push({
@@ -1545,6 +1881,7 @@ function AdminHpcManagementPage() {
               remarkText,
               recommendationText: remarkText,
               type: "next_class_recommendation",
+              sheetSource: sheetName,
               createdAt: new Date().toISOString(),
             });
           }
@@ -1569,8 +1906,264 @@ function AdminHpcManagementPage() {
     const nextRecCount = allRemarks.filter((r) => r.type === "next_class_recommendation").length;
 
     toast.success(
-      `एक्सेल फाईलमधून डेटा अचूक वाचला गेला! (उपक्रम: ${allActivities.length}, ध्येये: ${parsedG.length}, क्षमता: ${parsedC.length}, रुब्रिक्स: ${allRubrics.length}, शेरे: ${allRemarks.length} [विकासात्मक: ${devRemarksCount}, अंतिम: ${finalRemarksCount}, शिफारस: ${nextRecCount}])`
+      `एक्सेल फाईलमधून सर्व डेटा (${allActivities.length} उपक्रम, ${parsedG.length} ध्येये, ${parsedC.length} क्षमता, ${allRubrics.length} रुब्रिक्स, ${allRemarks.length} शेरे) यशस्वीरीत्या वाचला गेला!`
     );
+  };
+
+  // Generate and download standard 5-sheet sample Excel template
+  const handleDownloadSampleExcel = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: उपक्रम व ५ प्रश्न (Activities)
+      const ws1Data = [
+        ["महाराष्ट्र राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद (SCERT) - समग्र प्रगती पुस्तक (HPC) नमुना डेटा"],
+        ["इयत्ता: १ ली व २ री (पायाभूत स्तर) - उपक्रम, ५ प्रश्न व अभिप्राय नमुना"],
+        [
+          "अ.क्र.",
+          "विकास क्षेत्र / विषय",
+          "ध्येय क्रमांक व वर्णन",
+          "क्षमता क्रमांक व क्षमतेचे संपूर्ण वर्णन",
+          "अध्ययन निष्पत्ती (Learning Outcomes)",
+          "उपक्रम (थोडक्यात कृतीसह)",
+          "प्रश्न १",
+          "प्रश्न २",
+          "प्रश्न ३",
+          "प्रश्न ४",
+          "प्रश्न ५",
+          "शिक्षकांचा अभिप्राय (नमुना)",
+          "पालकांचा अभिप्राय (नमुना)",
+        ],
+        [
+          1,
+          "शारीरिक विकास",
+          "CG-1 मुलांमध्ये चांगल्या आरोग्याच्या आणि सुरक्षिततेच्या सवयी विकसित होतात",
+          "C-1.1 शरीराच्या विविध भागांची नावे ओळखणे व स्वच्छता ठेवणे",
+          "शरीराच्या विविध भागांची स्वच्छता राखतो/राखते\nहात धुण्याच्या पायऱ्या अचूक करतो/करते",
+          "माझे शरीर व स्वच्छता\nकृती: विद्यार्थ्यांना शरीराच्या विविध अवयवांची माहिती देणे व स्वच्छतेचे महत्त्व पटवून देणे.",
+          "जेवणापूर्वी हात स्वच्छ का धुवावेत?",
+          "आपण दात कधी कधी घासले पाहिजेत?",
+          "नखे कापली नाहीत तर काय होईल?",
+          "डोळ्यांची काळजी कशी घ्यावी?",
+          "स्नान रोज का करावे?",
+          "विद्यार्थी वैयक्तिक स्वच्छतेचे नियम समजून घेतो व दररोज पालन करतो.",
+          "घरी विद्यार्थी नियमित हात धुतो व दातांची स्वच्छता व्यवस्थित ठेवतो.",
+        ],
+        [
+          2,
+          "सामाजिक, भावनिक व नैतिक विकास",
+          "CG-4 मुले स्वतःबद्दल आणि इतरांबद्दल सकारात्मक जाणीव विकसित करतात",
+          "C-4.1 आपल्या भावना योग्य प्रकारे व्यक्त करणे व इतरांच्या भावनांचा आदर करणे",
+          "आनंद, दुःख, राग या भावना ओळखतो व व्यक्त करतो\nमित्रांना सहकार्य करतो",
+          "भावनांची ओळख व खेळ\nकृती: विविध भावनांचे चेहरे दाखवून विद्यार्थ्यांशी संवाद साधणे.",
+          "तुम्हाला सर्वात जास्त आनंद कधी होतो?",
+          "मित्राला मदत करताना तुम्हाला कसे वाटते?",
+          "राग आल्यावर तुम्ही काय करता?",
+          "दुसऱ्याला वाईट वाटेल असे बोलावे का?",
+          "मित्राचे खेळणे मोडले तर काय कराल?",
+          "इतरांच्या भावनांचा आदर करतो व मिळून-मिसळून खेळतो.",
+          "घरात भावंडांसोबत खेळताना वस्तूंची देवाणघेवाण करतो.",
+        ],
+        [
+          3,
+          "भाषा आणि साक्षरता विकास",
+          "CG-9 मुले प्रभावी संवादक बनतात आणि अर्थ समजून बोलतात",
+          "C-9.1 आपल्या आवडीच्या विषयावर सलग व अर्थपूर्ण बोलणे",
+          "चित्र पाहून गोष्ट सांगतो/सांगते\nस्वतःच्या शब्दांत अनुभव कथन करतो",
+          "चित्र वर्णन व अनुभव कथन\nकृती: बाजाराचे चित्र दाखवून त्याविषयी विद्यार्थ्यांना बोलण्यास प्रवृत्त करणे.",
+          "चित्रात तुम्हाला कोणकोणती दुकाने दिसत आहेत?",
+          "बाजारात भाजीपाला कसा विकला जातो?",
+          "तुम्ही बाजारात कोणासोबत जाता?",
+          "तुमच्या आवडीचे फळ कोणते व का?",
+          "बाजारात कोणकोणत्या गोष्टींची काळजी घ्यावी?",
+          "आत्मविश्वासाने आणि स्पष्ट आवाजात आपले विचार मांडतो.",
+          "घरी दिवसभरात घडलेल्या गोष्टी आवडीने सांगतो.",
+        ],
+        [
+          4,
+          "बोधात्मक विकास",
+          "CG-7 मुले संख्या, आकार आणि अवकाशाची संकल्पना समजून घेतात",
+          "C-7.1 १ ते २० अंकांचे दृढीकरण आणि आकार ओळख",
+          "वस्तू मोजून अचूक संख्या सांगतो\nभौमितिक आकार ओळखतो",
+          "संख्या मोजणी व आकार खेळ\nकृती: मणी, काड्या व बिया वापरून संख्या मोजणे व आकार तयार करणे.",
+          "टेबलावर किती मणी आहेत ते मोजून सांगा?",
+          "गोलाकार आणि त्रिकोणी वस्तूंमध्ये काय फरक आहे?",
+          "५ मध्ये २ मिळवल्यास किती होतात?",
+          "तुमच्या वर्गात चौकोनी आकाराच्या कोणत्या वस्तू आहेत?",
+          "१० नंतर येणारी संख्या कोणती?",
+          "संख्या संकल्पना स्पष्ट आहेत व आकारांची ओळख अचूक आहे.",
+          "घरातील वस्तू मोजून दाखवतो व गणितीय खेळ आवडीने खेळतो.",
+        ],
+        [
+          5,
+          "सौंदर्यदृष्टी आणि सांस्कृतिक विकास",
+          "CG-12 मुले कला, संगीत आणि हालचालींद्वारे स्वतःची अभिव्यक्ती करतात",
+          "C-12.1 कागदकाम, रंगकाम आणि हस्तकला करणे",
+          "रंगांची योग्य निवड करतो\nकागदाची घडी घालून विविध वस्तू बनवतो",
+          "ओरिगामी व रंगकाम\nकृती: कागदाच्या घड्या घालून होडी, विमान व टोपी तयार करणे आणि रंग भरणे.",
+          "कागदाची होडी पाण्यात का तरंगते?",
+          "होडी बनवताना कोणत्या घड्या घातल्या?",
+          "तुम्हाला आवडणारा रंग कोणता?",
+          "चित्रात रंग भरताना रेषेबाहेर का जाऊ नये?",
+          "कागदापासून आणखी काय बनवता येईल?",
+          "सर्जनशीलता उत्तम आहे, रंगकाम व कागदकामात विशेष रुची दाखवतो.",
+          "घरी कागदाच्या विविध कलाकृती तयार करून दाखवतो.",
+        ],
+      ];
+      const ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
+      XLSX.utils.book_append_sheet(wb, ws1, "उपक्रम व ५ प्रश्न");
+
+      // Sheet 2: मूल्यांकन रुब्रिक्स (Rubrics)
+      const ws2Data = [
+        ["समग्र प्रगती पुस्तक (HPC) - ३ स्तर मूल्यांकन निकष (Rubrics)"],
+        [
+          "अ.क्र.",
+          "ध्येय",
+          "क्षमता",
+          "उपक्रम",
+          "परिमाण / पैलू",
+          "प्रारंभिक (निर्झर) - स्तर १",
+          "प्रवीण (पर्वत) - स्तर २",
+          "प्रगत (आकाश) - स्तर ३",
+        ],
+        [
+          1,
+          "CG-1",
+          "C-1.1",
+          "माझे शरीर व स्वच्छता",
+          "जाणीवजागृती (Awareness)",
+          "स्वच्छतेची गरज शिक्षकांच्या मदतीने समजून घेतो.",
+          "वैयक्तिक स्वच्छतेची जाणीव ठेवून स्वतःहून कृती करतो.",
+          "इतरांनाही स्वच्छतेचे महत्त्व पटवून देतो व आदर्श वागतो.",
+        ],
+        [
+          2,
+          "CG-1",
+          "C-1.1",
+          "माझे शरीर व स्वच्छता",
+          "संवेदनशीलता (Sensitivity)",
+          "अस्वच्छता दिसल्यास शिक्षकांना सांगतो.",
+          "स्वतःचा परिसर स्वच्छ ठेवण्यास पुढाकार घेतो.",
+          "परिसर व वर्गाच्या स्वच्छतेसाठी मित्रांना प्रेरित करतो.",
+        ],
+        [
+          3,
+          "CG-1",
+          "C-1.1",
+          "माझे शरीर व स्वच्छता",
+          "सर्जनशीलता (Creativity)",
+          "स्वच्छतेच्या चित्रात रंग भरतो.",
+          "स्वच्छतेवर साधे घोषवाक्य किंवा नियम तयार करतो.",
+          "नाट्यीकरणातून किंवा चित्रातून स्वच्छतेचा संदेश प्रभावीपणे देतो.",
+        ],
+        [
+          4,
+          "CG-9",
+          "C-9.1",
+          "चित्र वर्णन व अनुभव कथन",
+          "जाणीवजागृती (Awareness)",
+          "चित्रातील मुख्य वस्तू विचारल्यावर दाखवतो.",
+          "चित्रातील प्रसंग ओळखून स्वतःहून २-३ वाक्ये बोलतो.",
+          "चित्रातील बारकावे ओळखून सलग व अर्थपूर्ण कथा सांगतो.",
+        ],
+        [
+          5,
+          "CG-9",
+          "C-9.1",
+          "चित्र वर्णन व अनुभव कथन",
+          "संवेदनशीलता (Sensitivity)",
+          "इतरांचे बोलणे शांतपणे ऐकतो.",
+          "मित्रांच्या अनुभवांना दाद देतो व संवाद साधतो.",
+          "इतरांच्या भावना समजून घेऊन सहानुभूतीपूर्वक बोलतो.",
+        ],
+        [
+          6,
+          "CG-9",
+          "C-9.1",
+          "चित्र वर्णन व अनुभव कथन",
+          "सर्जनशीलता (Creativity)",
+          "साध्या शब्दांत अनुभव सांगतो.",
+          "नवनवीन शब्द व म्हणी वापरून संवाद रंजक करतो.",
+          "कथेला स्वतःचा कल्पक शेवट देऊन नाट्यमय सादरीकरण करतो.",
+        ],
+      ];
+      const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
+      XLSX.utils.book_append_sheet(wb, ws2, "मूल्यांकन रुब्रिक्स");
+
+      // Sheet 3: विकासक्षेत्र शेरे (Remarks)
+      const ws3Data = [
+        ["शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश) - विकास क्षेत्रनिहाय शेरे"],
+        ["अ.क्र.", "विकास क्षेत्र", "कामगिरी स्तर", "शिक्षकांचा अभिप्राय (वर्षाच्या शेवटी सारांश)"],
+        [1, "शारीरिक विकास", "प्रारंभिक (निर्झर)", "शारीरिक हालचालींमध्ये सहभागासाठी शिक्षकांच्या प्रोत्साहनाची गरज असते."],
+        [2, "शारीरिक विकास", "प्रवीण (पर्वत)", "कवायत, खेळ व शारीरिक कौशल्यांमध्ये उत्साहाने व नियमित सहभागी होतो."],
+        [3, "शारीरिक विकास", "प्रगत (आकाश)", "उत्कृष्ट शारीरिक समन्वय, चपळाई व क्रीडा कौशल्यांमध्ये नेतृत्व करतो."],
+        [4, "सामाजिक, भावनिक व नैतिक विकास", "प्रारंभिक (निर्झर)", "इतरांशी मिसळताना थोडा संकोच करतो, मार्गदर्शनाची गरज आहे."],
+        [5, "सामाजिक, भावनिक व नैतिक विकास", "प्रवीण (पर्वत)", "मित्रांशी सहकार्याने वागतो आणि भावना योग्य प्रकारे व्यक्त करतो."],
+        [6, "सामाजिक, भावनिक व नैतिक विकास", "प्रगत (आकाश)", "उत्कृष्ट सामाजिक कौशल्ये, सर्वांना समजून घेऊन मदतीसाठी नेहमी तत्पर."],
+        [7, "बोधात्मक विकास", "प्रारंभिक (निर्झर)", "संख्या व आकार ओळखण्यासाठी दैनंदिन सरावाची आवश्यकता आहे."],
+        [8, "बोधात्मक विकास", "प्रवीण (पर्वत)", "संख्याज्ञान, तुलना व तर्कशुद्ध विचार उत्तम प्रकारे करतो."],
+        [9, "बोधात्मक विकास", "प्रगत (आकाश)", "गंभीर विचार व समस्या निराकरणात प्रगत असून स्वतः नवीन प्रश्न सोडवतो."],
+        [10, "भाषा आणि साक्षरता विकास", "प्रारंभिक (निर्झर)", "वाचन व बोलताना अधिक सरावाची आणि मार्गदर्शनाची गरज आहे."],
+        [11, "भाषा आणि साक्षरता विकास", "प्रवीण (पर्वत)", "स्पष्ट उच्चार, समृद्ध शब्दसंग्रह आणि आत्मविश्वासाने वाचन-लेखन करतो."],
+        [12, "भाषा आणि साक्षरता विकास", "प्रगत (आकाश)", "अप्रतिम भाषा प्रभुत्व, स्वतंत्र लेखन व प्रभावी वक्तृत्व कौशल्य."],
+        [13, "सौंदर्यदृष्टी आणि सांस्कृतिक विकास", "प्रारंभिक (निर्झर)", "कला व संगीतामध्ये हळूहळू रुची घेत आहे."],
+        [14, "सौंदर्यदृष्टी आणि सांस्कृतिक विकास", "प्रवीण (पर्वत)", "चित्रांकन, हस्तकला आणि गायनात आवडीने व उत्तम सहभाग घेतो."],
+        [15, "सौंदर्यदृष्टी आणि सांस्कृतिक विकास", "प्रगत (आकाश)", "अतिशय कल्पक व सृजनशील असून नवनवीन कलाकृती निर्माण करतो."],
+      ];
+      const ws3 = XLSX.utils.aoa_to_sheet(ws3Data);
+      XLSX.utils.book_append_sheet(wb, ws3, "विकासक्षेत्र शेरे");
+
+      // Sheet 4: अंतिम सर्वंकष वार्षिक अभिप्राय
+      const ws4Data = [
+        ["शिक्षकांचा अंतिम सर्वंकष वार्षिक अभिप्राय (Sheet 4)"],
+        ["अ.क्र.", "कामगिरी स्तर", "शिक्षकांचा अंतिम सर्वंकष वार्षिक अभिप्राय"],
+        [
+          1,
+          "प्रारंभिक (निर्झर)",
+          "विद्यार्थ्यामध्ये शिकण्याची चांगली क्षमता असून नियमित उपस्थिती आणि सरावाने लक्षणीय प्रगती होऊ शकते. पालकांनी घरी अभ्यासासाठी अधिक वेळ द्यावा.",
+        ],
+        [
+          2,
+          "प्रवीण (पर्वत)",
+          "विद्यार्थ्याने संपूर्ण शैक्षणिक वर्षात सर्व क्षेत्रांत समाधानकारक व चांगली प्रगती दाखवली आहे. अभ्यासू वृत्ती व सहकार्य प्रशंसनीय आहे.",
+        ],
+        [
+          3,
+          "प्रगत (आकाश)",
+          "विद्यार्थ्याने वर्षभरात सर्व विकास क्षेत्रांत उत्कृष्ट कामगिरी केली आहे. नेतृत्वगुण, कल्पकता आणि शिस्त वाखाणण्याजोगी आहे. अभिनंदन!",
+        ],
+      ];
+      const ws4 = XLSX.utils.aoa_to_sheet(ws4Data);
+      XLSX.utils.book_append_sheet(wb, ws4, "अंतिम सर्वंकष शेरे");
+
+      // Sheet 5: पुढील इयत्तेसाठी मार्गदर्शन व शिफारस
+      const ws5Data = [
+        ["पुढील इयत्तेसाठी विद्यार्थ्यास मार्गदर्शन व शिफारस (Sheet 5)"],
+        ["अ.क्र.", "कामगिरी स्तर", "पुढील इयत्तेसाठी मार्गदर्शन व शिफारस"],
+        [
+          1,
+          "प्रारंभिक (निर्झर)",
+          "पुढील इयत्तेत भाषा वाचन आणि मूलभूत गणितीय क्रियांचा नियमित सराव ठेवावा. पालकांनी दररोज वाचनाची सवय लावावी.",
+        ],
+        [
+          2,
+          "प्रवीण (पर्वत)",
+          "पुढील इयत्तेत संकल्पनांच्या सखोल आकलनावर भर द्यावा आणि अवांतर वाचन वाढवावे.",
+        ],
+        [
+          3,
+          "प्रगत (आकाश)",
+          "पुढील इयत्तेत उच्च स्तरीय स्पर्धा परीक्षा, प्रकल्प आणि वैज्ञानिक प्रयोगांमध्ये सहभागासाठी मार्गदर्शन करावे.",
+        ],
+      ];
+      const ws5 = XLSX.utils.aoa_to_sheet(ws5Data);
+      XLSX.utils.book_append_sheet(wb, ws5, "पुढील शिफारस");
+
+      XLSX.writeFile(wb, "HPC_SCERT_Sample_Template.xlsx");
+      toast.success("नमुना एक्सेल फाईल डाऊनलोड झाली!");
+    } catch (err: any) {
+      toast.error("नमुना फाईल डाऊनलोड करताना त्रुटी: " + err.message);
+    }
   };
 
   const handleSyncToFirestore = async () => {
@@ -2305,12 +2898,43 @@ function AdminHpcManagementPage() {
                                   handleClearStageActivities(stg.id);
                                 }}
                                 className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                                title={`फक्त ${stg.titleMarathi} मधील उपक्रम डेटाबेसमधून हटवा`}
+                                title={`फक्त ${stg.titleMarathi} मधील सर्व उपक्रम डेटाबेसमधून हटवा`}
                               >
                                 <Trash2 className="size-3" />
-                                <span>फक्त हा स्तर साफ करा</span>
+                                <span>संपूर्ण स्तर साफ करा</span>
                               </button>
                             )}
+                          </div>
+
+                          {/* Class-wise granular clear options inside this stage card */}
+                          <div className="mt-3 pt-2.5 border-t border-dashed border-slate-200 flex items-center justify-between gap-1.5 flex-wrap">
+                            <span className="text-[11px] font-bold text-slate-500">इयत्तानिहाय हटवा:</span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {STAGE_CLASSES_MAP[stg.id]
+                                .filter((c) => c.id !== "all")
+                                .map((cls) => {
+                                  const cCount = countByClass[cls.id] || 0;
+                                  return (
+                                    <button
+                                      key={cls.id}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setTargetClassToClear(cls.id);
+                                        setShowClearClassModal(true);
+                                      }}
+                                      className="px-2 py-1 rounded-lg bg-white hover:bg-rose-50 hover:border-rose-300 text-slate-700 hover:text-rose-700 border border-slate-200 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                                      title={`फक्त ${cls.label} चा डेटा हटवा`}
+                                    >
+                                      <Trash2 className="size-2.5 text-rose-500" />
+                                      <span>{cls.label}</span>
+                                      <span className="text-[9px] px-1 rounded-full bg-slate-100 text-slate-600 font-mono">
+                                        {cCount}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                            </div>
                           </div>
                         </div>
                       );
@@ -2361,6 +2985,29 @@ function AdminHpcManagementPage() {
                       <span>सविस्तर कार्डे (Cards)</span>
                     </button>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (explorerClassFilter !== "all") {
+                        setTargetClassToClear(explorerClassFilter);
+                      }
+                      setShowClearClassModal(true);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    title={
+                      explorerClassFilter !== "all"
+                        ? `फक्त ${CLASS_LABELS_MAP[explorerClassFilter] || explorerClassFilter} चा डेटा हटवा`
+                        : "विशिष्ट इयत्तेचा डेटा निवडून हटवा"
+                    }
+                  >
+                    <Trash2 className="size-3.5 text-rose-600" />
+                    <span>
+                      {explorerClassFilter !== "all"
+                        ? `फक्त ${CLASS_LABELS_MAP[explorerClassFilter] || explorerClassFilter} चा डेटा हटवा (${countByClass[explorerClassFilter] || 0})`
+                        : "विशिष्ट इयत्तेचा डेटा हटवा"}
+                    </span>
+                  </button>
 
                   <button
                     type="button"
@@ -3281,89 +3928,204 @@ function AdminHpcManagementPage() {
                 </p>
               </div>
 
-              {(activitiesList.length > 0 || remarksList.length > 0) && (
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={handleResetEntireDatabase}
-                  className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-                  title="सर्व HPC डेटाबेस स्वच्छ करा"
+                  type="button"
+                  onClick={() => setShowClearClassModal(true)}
+                  className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-black shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                  title="विशिष्ट एका इयत्तेचा डेटा निवडून हटवा"
                 >
-                  <Trash2 className="size-3.5" />
-                  <span>संपूर्ण डेटाबेस रीसेट करा (Reset Entire Master Database)</span>
+                  <Trash2 className="size-3.5 text-amber-600" />
+                  <span>विशिष्ट इयत्तेचा डेटा हटवा (Clear Single Class)</span>
                 </button>
-              )}
+
+                {(activitiesList.length > 0 || remarksList.length > 0) && (
+                  <button
+                    onClick={handleResetEntireDatabase}
+                    className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                    title="सर्व HPC डेटाबेस स्वच्छ करा"
+                  >
+                    <Trash2 className="size-3.5" />
+                    <span>संपूर्ण डेटाबेस रीसेट करा (Reset Entire Database)</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Class Selector for Upload */}
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-indigo-50/40 rounded-2xl border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="size-2.5 rounded-full bg-orange-500 animate-pulse" />
-                  <span className="text-xs sm:text-sm font-black text-slate-900">
-                    इयत्ता निवडा (Select Class for Excel Upload & Fetching):
+            {/* Step 1 & Step 2: Stage & Class Selectors for Upload */}
+            <div className="space-y-4">
+              {/* Step 1: Select Stage */}
+              <div className="p-4 sm:p-5 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="size-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center">
+                      १
+                    </span>
+                    <span className="text-xs sm:text-sm font-black text-slate-900">
+                      पायरी १: स्तर निवडा (Step 1: Select Stage for Upload):
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    प्रथम तुम्ही ज्या स्तराची सामग्री अपलोड करत आहात तो स्तर निवडा
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-600 font-semibold">
-                  प्रत्येक इयत्तेच्या अध्ययन निष्पत्ती वेगळ्या असल्याने, ज्या इयत्तेची फाईल अपलोड करत आहात ती इयत्ता निवडा
-                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {HPC_STAGES_INFO.map((stg) => {
+                    const isSelected = selectedUploadStage === stg.id;
+                    const theme =
+                      stg.id === "foundational"
+                        ? {
+                            border: isSelected
+                              ? "border-emerald-600 bg-emerald-50/70 text-emerald-950 ring-2 ring-emerald-500/20"
+                              : "border-slate-200 hover:border-emerald-300 bg-white",
+                            dot: "bg-emerald-500",
+                            badge: "bg-emerald-100 text-emerald-800",
+                          }
+                        : stg.id === "preparatory"
+                        ? {
+                            border: isSelected
+                              ? "border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-500/20"
+                              : "border-slate-200 hover:border-indigo-300 bg-white",
+                            dot: "bg-indigo-500",
+                            badge: "bg-indigo-100 text-indigo-800",
+                          }
+                        : {
+                            border: isSelected
+                              ? "border-purple-600 bg-purple-50/70 text-purple-950 ring-2 ring-purple-500/20"
+                              : "border-slate-200 hover:border-purple-300 bg-white",
+                            dot: "bg-purple-500",
+                            badge: "bg-purple-100 text-purple-800",
+                          };
+
+                    return (
+                      <button
+                        key={stg.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedUploadStage(stg.id);
+                          setSelectedUploadClass("all");
+                          setSelectedStage(stg.id);
+                        }}
+                        className={`p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between gap-2 shadow-2xs ${theme.border}`}
+                      >
+                        <div className="flex items-center justify-between gap-1.5 w-full">
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${theme.badge}`}>
+                            {stg.classesLabelMarathi}
+                          </span>
+                          {isSelected && (
+                            <span className="text-[10px] font-black text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-300 shadow-2xs">
+                              ✓ निवडलेला स्तर
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-xs sm:text-sm font-black flex items-center gap-1.5">
+                            <span className={`size-2 rounded-full ${theme.dot}`} />
+                            <span>{stg.titleMarathi}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                            {stg.id === "foundational" && "इ. १ली व २री वर्ग"}
+                            {stg.id === "preparatory" && "इ. ३री, ४थी व ५वी वर्ग"}
+                            {stg.id === "middle" && "इ. ६वी, ७वी व ८वी वर्ग"}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {[
-                  { id: "all", label: "सर्व वर्ग (All)" },
-                  { id: "1st", label: "इयत्ता १ ली" },
-                  { id: "2nd", label: "इयत्ता २ री" },
-                  { id: "3rd", label: "इयत्ता ३ री" },
-                  { id: "4th", label: "इयत्ता ४ थी" },
-                  { id: "5th", label: "इयत्ता ५ वी" },
-                  { id: "6th", label: "इयत्ता ६ वी" },
-                  { id: "7th", label: "इयत्ता ७ वी" },
-                  { id: "8th", label: "इयत्ता ८ वी" },
-                ].map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setSelectedUploadClass(c.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                      selectedUploadClass === c.id
-                        ? "bg-orange-600 text-white shadow-xs scale-105"
-                        : "bg-white text-slate-700 hover:bg-orange-100/50 border border-slate-200"
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
+              {/* Step 2: Select Class for the Selected Stage */}
+              <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-indigo-50/40 rounded-2xl border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="size-6 rounded-full bg-orange-600 text-white text-xs font-black flex items-center justify-center">
+                      २
+                    </span>
+                    <span className="text-xs sm:text-sm font-black text-slate-900">
+                      पायरी २: इयत्ता निवडा (Step 2: Select Class for {HPC_STAGES_INFO.find(s => s.id === selectedUploadStage)?.titleMarathi}):
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 font-semibold pl-8">
+                    निवडलेल्या स्तरातील ज्या इयत्तेची फाईल अपलोड करत आहात ती इयत्ता निवडा
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap pl-8 sm:pl-0">
+                  {STAGE_CLASSES_MAP[selectedUploadStage].map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setSelectedUploadClass(c.id)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                        selectedUploadClass === c.id
+                          ? "bg-orange-600 text-white shadow-xs scale-105"
+                          : "bg-white text-slate-700 hover:bg-orange-100/60 border border-slate-200"
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Upload Area */}
-            <div className="p-6 sm:p-8 border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-3xl text-center space-y-4">
-              <div className="size-14 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center mx-auto shadow-sm">
-                <FileSpreadsheet className="size-7" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-black text-slate-900">
-                  {uploadedFileName ? uploadedFileName : "येथे एक्सेल फाईल निवडा किंवा ड्रॅग करा"}
-                </h4>
-                <p className="text-xs text-slate-500 font-medium max-w-md mx-auto">
-                  सपोर्टेड फॉरमॅट: .xlsx, .xls, .csv (ध्येय-क्षमता सूची, ५ प्रश्न, मूल्यांकन रुब्रिक, वार्षिक सारांश शेरे)
-                </p>
+            {/* Step 3: Upload Area */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <span className="size-6 rounded-full bg-emerald-600 text-white text-xs font-black flex items-center justify-center">
+                  ३
+                </span>
+                <span className="text-xs sm:text-sm font-black text-slate-900">
+                  पायरी ३: एक्सेल / CSV फाईल अपलोड करा (Step 3: Upload Excel / CSV File):
+                </span>
               </div>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
+              <div className="p-6 sm:p-8 border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-3xl text-center space-y-4 shadow-xs">
+                {/* Selected Target Summary Pills */}
+                <div className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 bg-white/90 py-1.5 px-3.5 rounded-xl border border-indigo-200/80 shadow-2xs mx-auto">
+                  <span>🎯 निवडलेला स्तर: <b className="text-indigo-700">{HPC_STAGES_INFO.find(s => s.id === selectedUploadStage)?.titleMarathi}</b></span>
+                  <span className="text-slate-300">|</span>
+                  <span>🏫 निवडलेली इयत्ता: <b className="text-orange-700">{STAGE_CLASSES_MAP[selectedUploadStage].find(c => c.id === selectedUploadClass)?.label || "सर्व"}</b></span>
+                </div>
 
-              <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-sm transition-all cursor-pointer flex items-center gap-2"
-                >
-                  <Upload className="size-4" /> फाईल निवडा (Browse File)
-                </button>
+                <div className="size-14 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center mx-auto shadow-sm">
+                  <FileSpreadsheet className="size-7" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-black text-slate-900">
+                    {uploadedFileName ? uploadedFileName : "येथे एक्सेल फाईल निवडा किंवा ड्रॅग करा"}
+                  </h4>
+                  <p className="text-xs text-slate-500 font-medium max-w-md mx-auto">
+                    सपोर्टेड फॉरमॅट: .xlsx, .xls, .csv (ध्येय-क्षमता सूची, ५ प्रश्न, मूल्यांकन रुब्रिक, वार्षिक सारांश शेरे)
+                  </p>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+
+                <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-sm transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <Upload className="size-4" /> फाईल निवडा (Browse File)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadSampleExcel}
+                    className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold shadow-2xs transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <Download className="size-4 text-emerald-600" />
+                    <span>नमुना एक्सेल फाईल डाऊनलोड करा (Sample Template)</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -3371,25 +4133,53 @@ function AdminHpcManagementPage() {
             {sheetNames.length > 0 && (
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-600">उपलब्ध शीट्स (Sheets):</span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {sheetNames.map((name) => (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-slate-600">शीट फिल्टर (Sheet Filter):</span>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewSheetFilter("all")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                        previewSheetFilter === "all"
+                          ? "bg-slate-900 text-white shadow-xs"
+                          : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      सर्व शीट्स (All Sheets: {parsedActivities.length + parsedRemarks.length + parsedRubrics.length})
+                    </button>
+                    {sheetNames.map((name) => {
+                      const actCount = parsedActivities.filter((a) => a.sheetSource === name).length;
+                      const remCount = parsedRemarks.filter((r) => r.sheetSource === name).length;
+                      const rubCount = parsedRubrics.filter((ru) => ru.sheetSource === name).length;
+                      const totalInSheet = actCount + remCount + rubCount;
+                      return (
                         <button
                           key={name}
+                          type="button"
                           onClick={() => {
                             setSelectedSheetName(name);
+                            setPreviewSheetFilter(name);
                           }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            selectedSheetName === name
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                            previewSheetFilter === name
                               ? "bg-indigo-600 text-white font-black shadow-xs"
                               : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
                           }`}
                         >
-                          {name}
+                          <span>{name}</span>
+                          {totalInSheet > 0 && (
+                            <span
+                              className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                                previewSheetFilter === name
+                                  ? "bg-indigo-800 text-white"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {totalInSheet}
+                            </span>
+                          )}
                         </button>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
 
                   {/* Sync Button */}
@@ -3441,79 +4231,165 @@ function AdminHpcManagementPage() {
               </div>
             )}
 
-            {/* Parsed Preview Table */}
+            {/* Preview Controls Bar: Search & Limit selector */}
+            {(parsedActivities.length > 0 || parsedRemarks.length > 0 || parsedRubrics.length > 0) && (
+              <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={previewSearch}
+                      onChange={(e) => setPreviewSearch(e.target.value)}
+                      placeholder="वाचलेल्या डेटामध्ये शोधा (Search activities, questions, remarks...)"
+                      className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                    />
+                    {previewSearch && (
+                      <button
+                        onClick={() => setPreviewSearch("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="text-xs text-slate-500 font-bold hidden sm:block">
+                    एकूण डेटा: {parsedActivities.length} उपक्रम | {parsedRemarks.length} शेरे | {parsedRubrics.length} रुब्रिक्स
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-end md:self-auto">
+                  <span className="text-xs font-bold text-slate-600">नोंदी मर्यादा (Limit):</span>
+                  <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                    {[15, 50, 100, "all" as const].map((limitOption) => (
+                      <button
+                        key={limitOption}
+                        type="button"
+                        onClick={() => setPreviewLimit(limitOption)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          previewLimit === limitOption
+                            ? "bg-indigo-600 text-white font-black shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        {limitOption === "all" ? "सर्व (All)" : limitOption}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Parsed Preview Table: Activities & Questions */}
             {parsedActivities.length > 0 && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
                     <CheckCircle2 className="size-4 text-emerald-600" />
-                    <span>वाचलेले उपक्रम व ५ प्रश्न (Preview: {parsedActivities.length} नोंदी)</span>
+                    <span>वाचलेले उपक्रम व ५ प्रश्न बँक (Activities & 5 Questions)</span>
                   </h4>
                   <span className="text-xs text-slate-500 font-bold">
-                    पहिले १५ उपक्रम दाखवत आहे
+                    दाखवत आहे: {displayedParsedActivities.length} / {filteredParsedActivities.length} (एकूण: {parsedActivities.length})
                   </span>
                 </div>
 
                 <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
-                  <div className="overflow-x-auto max-h-96">
+                  <div className="overflow-x-auto max-h-[500px]">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
+                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200 z-10">
                         <tr>
                           <th className="p-3 w-12 text-center">क्र.</th>
+                          <th className="p-3 w-28">शीट नाव</th>
                           <th className="p-3 w-36">विषय / क्षेत्र</th>
                           <th className="p-3 w-28">क्षमता कोड</th>
-                          <th className="p-3 min-w-[200px]">अध्ययन निष्पत्ती (LO)</th>
-                          <th className="p-3 min-w-[200px]">उपक्रम नाव</th>
-                          <th className="p-3 min-w-[220px]">५ प्रश्न नमुना</th>
+                          <th className="p-3 min-w-[180px]">अध्ययन निष्पत्ती (LO)</th>
+                          <th className="p-3 min-w-[200px]">उपक्रम नाव व कृती</th>
+                          <th className="p-3 min-w-[260px]">५ प्रश्न नमुना (Questions)</th>
                           <th className="p-3 min-w-[160px]">शिक्षकांचा अभिप्राय</th>
+                          <th className="p-3 min-w-[160px]">पालकांचा अभिप्राय</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {parsedActivities.slice(0, 15).map((act, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
-                            <td className="p-3 font-bold text-slate-800">{act.subjectOrArea}</td>
-                            <td className="p-3">
-                              <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-mono font-bold text-[11px]">
-                                {act.competencyCode}
-                              </span>
-                            </td>
-                            <td className="p-3 text-[11px] text-indigo-900 font-medium">
-                              {act.learningOutcomes && act.learningOutcomes.length > 0 ? (
-                                <ul className="space-y-0.5 list-disc list-inside">
-                                  {act.learningOutcomes.slice(0, 2).map((lo, li) => (
-                                    <li key={li} className="truncate max-w-xs">{lo}</li>
-                                  ))}
-                                  {act.learningOutcomes.length > 2 && (
-                                    <span className="text-[10px] text-indigo-600 font-bold block">
-                                      +{act.learningOutcomes.length - 2} आणखी...
-                                    </span>
-                                  )}
-                                </ul>
-                              ) : (
-                                <span className="text-slate-400">-</span>
-                              )}
-                            </td>
-                            <td className="p-3 font-bold text-slate-900">{act.activityTitle}</td>
-                            <td className="p-3 text-[11px] text-slate-600">
-                              {act.questions && act.questions.length > 0 ? (
-                                <ol className="list-decimal list-inside space-y-0.5">
-                                  {act.questions.slice(0, 3).map((q, qi) => (
-                                    <li key={qi} className="truncate max-w-xs">{q}</li>
-                                  ))}
-                                  {act.questions.length > 3 && (
-                                    <li className="text-slate-400 font-medium">आणखी {act.questions.length - 3} प्रश्न...</li>
-                                  )}
-                                </ol>
-                              ) : (
-                                <span className="text-slate-400">प्रश्न नाहीत</span>
-                              )}
-                            </td>
-                            <td className="p-3 text-[11px] text-slate-600 truncate max-w-xs">
-                              {act.teacherFeedbackSample || "-"}
+                        {displayedParsedActivities.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="p-6 text-center text-slate-400 font-bold">
+                              निवडलेल्या फिल्टरनुसार कोणताही उपक्रम सापडला नाही.
                             </td>
                           </tr>
-                        ))}
+                        ) : (
+                          displayedParsedActivities.map((act, i) => (
+                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                              <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
+                              <td className="p-3">
+                                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[10px] truncate max-w-[100px] block">
+                                  {act.sheetSource || "-"}
+                                </span>
+                              </td>
+                              <td className="p-3 font-bold text-slate-800">{act.subjectOrArea}</td>
+                              <td className="p-3">
+                                <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-mono font-bold text-[11px] block text-center">
+                                  {act.competencyCode || "-"}
+                                </span>
+                                {act.goalCode && (
+                                  <span className="text-[10px] text-slate-500 font-mono block text-center mt-0.5">
+                                    {act.goalCode}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-[11px] text-indigo-900 font-medium">
+                                {act.learningOutcomes && act.learningOutcomes.length > 0 ? (
+                                  <ul className="space-y-0.5 list-disc list-inside">
+                                    {act.learningOutcomes.map((lo, li) => (
+                                      <li key={li} className="text-slate-700">{lo}</li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <span className="text-slate-400">-</span>
+                                )}
+                              </td>
+                              <td className="p-3">
+                                <div className="font-bold text-slate-900">{act.activityTitle}</div>
+                                {act.activityDescription && (
+                                  <div className="text-[11px] text-slate-600 mt-1 font-normal line-clamp-3">
+                                    {act.activityDescription}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-3 text-[11px] text-slate-700">
+                                {act.questions && act.questions.length > 0 ? (
+                                  <ol className="list-decimal list-inside space-y-1">
+                                    {act.questions.map((q, qi) => (
+                                      <li key={qi} className="text-slate-800 font-medium">
+                                        {q}
+                                      </li>
+                                    ))}
+                                  </ol>
+                                ) : (
+                                  <span className="text-slate-400 font-medium">प्रश्न उपलब्ध नाहीत</span>
+                                )}
+                              </td>
+                              <td className="p-3 text-[11px] text-slate-600 max-w-xs">
+                                {act.teacherFeedbackSample ? (
+                                  <div className="space-y-1">
+                                    {act.teacherFeedbackSample.split(/\s*\|\s*/).map((s, si) => (
+                                      <div key={si} className="p-1 rounded bg-amber-50/60 border border-amber-100 text-slate-800">{s}</div>
+                                    ))}
+                                  </div>
+                                ) : <span className="text-slate-400">-</span>}
+                              </td>
+                              <td className="p-3 text-[11px] text-slate-600 max-w-xs">
+                                {act.parentFeedbackSample ? (
+                                  <div className="space-y-1">
+                                    {act.parentFeedbackSample.split(/\s*\|\s*/).map((s, si) => (
+                                      <div key={si} className="p-1 rounded bg-purple-50/60 border border-purple-100 text-slate-800">{s}</div>
+                                    ))}
+                                  </div>
+                                ) : <span className="text-slate-400">-</span>}
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -3524,16 +4400,23 @@ function AdminHpcManagementPage() {
             {/* Parsed Remarks Preview */}
             {parsedRemarks.length > 0 && (
               <div className="space-y-3">
-                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-emerald-600" />
-                  <span>वाचलेले वार्षिक शेरे (Preview: {parsedRemarks.length} शेरे)</span>
-                </h4>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-emerald-600" />
+                    <span>वाचलेले वार्षिक शेरे (Annual Summary Remarks)</span>
+                  </h4>
+                  <span className="text-xs text-slate-500 font-bold">
+                    दाखवत आहे: {displayedParsedRemarks.length} / {filteredParsedRemarks.length} (एकूण: {parsedRemarks.length})
+                  </span>
+                </div>
+
                 <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
                   <div className="overflow-x-auto max-h-80">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
+                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200 z-10">
                         <tr>
                           <th className="p-3 w-12 text-center">क्र.</th>
+                          <th className="p-3 w-28">शीट नाव</th>
                           <th className="p-3 w-36">विषय / क्षेत्र</th>
                           <th className="p-3 w-32">शेरा प्रकार</th>
                           <th className="p-3 w-28">कामगिरी स्तर</th>
@@ -3541,27 +4424,40 @@ function AdminHpcManagementPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {parsedRemarks.slice(0, 15).map((r, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
-                            <td className="p-3 font-bold text-slate-800">{r.subjectOrArea}</td>
-                            <td className="p-3">
-                              <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-[10px]">
-                                {(r as any).type === "final_comprehensive"
-                                  ? "अंतिम सर्वंकष"
-                                  : (r as any).type === "next_class_recommendation"
-                                  ? "पुढील शिफारस"
-                                  : "विकासात्मक"}
-                              </span>
+                        {displayedParsedRemarks.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="p-6 text-center text-slate-400 font-bold">
+                              निवडलेल्या फिल्टरनुसार कोणताही शेरा सापडला नाही.
                             </td>
-                            <td className="p-3">
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-bold text-[11px]">
-                                {r.level}
-                              </span>
-                            </td>
-                            <td className="p-3 text-slate-700 font-medium">{r.remarkText}</td>
                           </tr>
-                        ))}
+                        ) : (
+                          displayedParsedRemarks.map((r, i) => (
+                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                              <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
+                              <td className="p-3">
+                                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[10px] truncate max-w-[100px] block">
+                                  {r.sheetSource || "-"}
+                                </span>
+                              </td>
+                              <td className="p-3 font-bold text-slate-800">{r.subjectOrArea}</td>
+                              <td className="p-3">
+                                <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-[10px]">
+                                  {(r as any).type === "final_comprehensive"
+                                    ? "अंतिम सर्वंकष"
+                                    : (r as any).type === "next_class_recommendation"
+                                    ? "पुढील शिफारस"
+                                    : "विकासात्मक"}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-bold text-[11px]">
+                                  {r.level}
+                                </span>
+                              </td>
+                              <td className="p-3 text-slate-700 font-medium">{r.remarkText}</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -3572,17 +4468,24 @@ function AdminHpcManagementPage() {
             {/* Parsed Rubrics Preview */}
             {parsedRubrics.length > 0 && (
               <div className="space-y-3">
-                <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <CheckCircle2 className="size-4 text-emerald-600" />
-                  <span>वाचलेले मूल्यांकन रुब्रिक्स (Preview: {parsedRubrics.length} निकष नोंदी)</span>
-                </h4>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-emerald-600" />
+                    <span>वाचलेले ३ स्तर मूल्यांकन रुब्रिक्स (Assessment Rubrics)</span>
+                  </h4>
+                  <span className="text-xs text-slate-500 font-bold">
+                    दाखवत आहे: {displayedParsedRubrics.length} / {filteredParsedRubrics.length} (एकूण: {parsedRubrics.length})
+                  </span>
+                </div>
+
                 <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
                   <div className="overflow-x-auto max-h-80">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
+                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200 z-10">
                         <tr>
                           <th className="p-3 w-12 text-center">क्र.</th>
-                          <th className="p-3 min-w-[180px]">उपक्रम</th>
+                          <th className="p-3 w-28">शीट नाव</th>
+                          <th className="p-3 min-w-[180px]">उपक्रम / क्षमता</th>
                           <th className="p-3 w-28">परिमाण</th>
                           <th className="p-3 min-w-[200px]">प्रारंभिक / निर्झर</th>
                           <th className="p-3 min-w-[200px]">प्रवीण / पर्वत</th>
@@ -3590,20 +4493,33 @@ function AdminHpcManagementPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {parsedRubrics.slice(0, 10).map((rub, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
-                            <td className="p-3 font-bold text-slate-800">{rub.activityTitle || "-"}</td>
-                            <td className="p-3">
-                              <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-bold text-[11px]">
-                                {rub.dimension}
-                              </span>
+                        {displayedParsedRubrics.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="p-6 text-center text-slate-400 font-bold">
+                              निवडलेल्या फिल्टरनुसार कोणताही रुब्रिक सापडला नाही.
                             </td>
-                            <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.beginner}</td>
-                            <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.proficient}</td>
-                            <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.advanced}</td>
                           </tr>
-                        ))}
+                        ) : (
+                          displayedParsedRubrics.map((rub, i) => (
+                            <tr key={i} className="hover:bg-slate-50 transition-colors">
+                              <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
+                              <td className="p-3">
+                                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold text-[10px] truncate max-w-[100px] block">
+                                  {rub.sheetSource || "-"}
+                                </span>
+                              </td>
+                              <td className="p-3 font-bold text-slate-800">{rub.activityTitle || rub.competencyCode || "-"}</td>
+                              <td className="p-3">
+                                <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-bold text-[11px]">
+                                  {rub.dimension}
+                                </span>
+                              </td>
+                              <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.beginner}</td>
+                              <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.proficient}</td>
+                              <td className="p-3 text-slate-600 text-[11px] font-medium">{rub.advanced}</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -3617,13 +4533,13 @@ function AdminHpcManagementPage() {
                 <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
                   <CheckCircle2 className="size-4 text-emerald-600" />
                   <span>
-                    वाचलेली ध्येये व क्षमता (Preview: {parsedGoals.length} ध्येये, {parsedCompetencies.length} क्षमता)
+                    वाचलेली ध्येये व क्षमता (Goals & Competencies: {parsedGoals.length} ध्येये, {parsedCompetencies.length} क्षमता)
                   </span>
                 </h4>
                 <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
                   <div className="overflow-x-auto max-h-80">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200">
+                      <thead className="bg-slate-100 text-slate-700 font-black sticky top-0 border-b border-slate-200 z-10">
                         <tr>
                           <th className="p-3 w-12 text-center">क्र.</th>
                           <th className="p-3 w-28">क्षमता कोड</th>
@@ -3632,7 +4548,7 @@ function AdminHpcManagementPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {parsedCompetencies.slice(0, 15).map((comp, i) => (
+                        {parsedCompetencies.slice(0, previewLimit === "all" ? undefined : previewLimit).map((comp, i) => (
                           <tr key={i} className="hover:bg-slate-50">
                             <td className="p-3 text-center font-bold text-slate-500">{i + 1}</td>
                             <td className="p-3 font-mono font-bold text-purple-900">{comp.code}</td>
@@ -4216,15 +5132,23 @@ function AdminHpcManagementPage() {
             {/* Teacher / Parent Feedback Samples */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {viewingActivityModal.teacherFeedbackSample && (
-                <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-100 text-xs space-y-1">
+                <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-100 text-xs space-y-1.5">
                   <span className="font-bold text-amber-900">शिक्षकांचा नमुना अभिप्राय:</span>
-                  <p className="text-slate-700">{viewingActivityModal.teacherFeedbackSample}</p>
+                  <div className="space-y-1">
+                    {viewingActivityModal.teacherFeedbackSample.split(/\s*\|\s*/).map((s, si) => (
+                      <p key={si} className="text-slate-800 p-1.5 bg-white rounded-lg border border-amber-200/50 shadow-2xs">{s}</p>
+                    ))}
+                  </div>
                 </div>
               )}
               {viewingActivityModal.parentFeedbackSample && (
-                <div className="p-3 bg-purple-50/50 rounded-2xl border border-purple-100 text-xs space-y-1">
+                <div className="p-3 bg-purple-50/50 rounded-2xl border border-purple-100 text-xs space-y-1.5">
                   <span className="font-bold text-purple-900">पालकांचा नमुना अभिप्राय:</span>
-                  <p className="text-slate-700">{viewingActivityModal.parentFeedbackSample}</p>
+                  <div className="space-y-1">
+                    {viewingActivityModal.parentFeedbackSample.split(/\s*\|\s*/).map((s, si) => (
+                      <p key={si} className="text-slate-800 p-1.5 bg-white rounded-lg border border-purple-200/50 shadow-2xs">{s}</p>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -4248,6 +5172,161 @@ function AdminHpcManagementPage() {
                 className="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer"
               >
                 बंद करा
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: CLEAR SINGLE SPECIFIC CLASS DATA */}
+      {/* ========================================================================= */}
+      {showClearClassModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="size-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center">
+                  <Trash2 className="size-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">
+                    विशिष्ट इयत्तेचा डेटा हटवा
+                  </h3>
+                  <p className="text-xs text-slate-500 font-semibold">
+                    Clear Single Specific Class Data
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowClearClassModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            {/* Select Class Buttons / Grid */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700">
+                १. ज्या इयत्तेचा डेटा हटवायचा आहे ती इयत्ता निवडा (Select Class):
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {(["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"] as const).map((clsId) => {
+                  const isSelected = targetClassToClear === clsId;
+                  const cCount = countByClass[clsId] || 0;
+                  return (
+                    <button
+                      key={clsId}
+                      type="button"
+                      onClick={() => setTargetClassToClear(clsId)}
+                      className={`p-2.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                        isSelected
+                          ? "bg-rose-600 text-white border-rose-600 shadow-sm ring-2 ring-rose-300"
+                          : "bg-slate-50 hover:bg-rose-50/50 border-slate-200 text-slate-800"
+                      }`}
+                    >
+                      <span className="text-xs font-black">
+                        {CLASS_LABELS_MAP[clsId]}
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                          isSelected ? "bg-rose-800 text-white" : "bg-white text-slate-500 border border-slate-200"
+                        }`}
+                      >
+                        {cCount} उपक्रम
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Selection Checkboxes */}
+            <div className="space-y-2.5 pt-2 border-t border-slate-100">
+              <label className="block text-xs font-bold text-slate-700">
+                २. या इयत्तेतील काय हटवायचे आहे ते निवडा (Select what to clear):
+              </label>
+
+              <label className="flex items-start gap-2.5 p-3 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 cursor-pointer transition-all">
+                <input
+                  type="checkbox"
+                  checked={clearActivitiesCheck}
+                  onChange={(e) => setClearActivitiesCheck(e.target.checked)}
+                  className="size-4 mt-0.5 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+                />
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-slate-800 block">
+                    उपक्रम व ५ प्रश्न बँक (Activities & 5 Questions Bank)
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium block">
+                    या इयत्तेचे सर्व अपलोड केलेले उपक्रम, ५ प्रश्न व शिक्षक/पालक शेरे ({countByClass[targetClassToClear] || 0} नोंदी)
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-2.5 p-3 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 cursor-pointer transition-all">
+                <input
+                  type="checkbox"
+                  checked={clearAssessmentsCheck}
+                  onChange={(e) => setClearAssessmentsCheck(e.target.checked)}
+                  className="size-4 mt-0.5 rounded text-rose-600 focus:ring-rose-500 cursor-pointer"
+                />
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-slate-800 block">
+                    विद्यार्थ्यांचे मूल्यमापन नोंदी (Student Assessments & Annual Summaries)
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium block">
+                    या इयत्तेतील विद्यार्थ्यांचे भरलेले सत्र १/२ चे मूल्यमापन व वार्षिक सारांश (ऐच्छिक)
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            {/* Safety Guarantee Notice */}
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-medium space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                <span>सुरक्षितता हमी (Safety Guarantee):</span>
+              </div>
+              <p className="text-[11px] text-emerald-700 pl-5 leading-relaxed">
+                फक्त निवडलेल्या <b>{CLASS_LABELS_MAP[targetClassToClear]}</b> चा डेटा हटवला जाईल. इतर सर्व ७ इयत्तांचा डेटा १००% सुरक्षित राहील व डिलीट होणार नाही.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowClearClassModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer transition-all"
+              >
+                रद्द करा (Cancel)
+              </button>
+              <button
+                type="button"
+                disabled={isClearingClass || (!clearActivitiesCheck && !clearAssessmentsCheck)}
+                onClick={() =>
+                  handleClearSingleClass(targetClassToClear, {
+                    deleteActivities: clearActivitiesCheck,
+                    deleteAssessments: clearAssessmentsCheck,
+                  })
+                }
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-black cursor-pointer shadow-sm transition-all flex items-center gap-2"
+              >
+                {isClearingClass ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>हटवले जात आहे...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="size-4" />
+                    <span>
+                      {CLASS_LABELS_MAP[targetClassToClear]} चा डेटा साफ करा
+                    </span>
+                  </>
+                )}
               </button>
             </div>
           </div>

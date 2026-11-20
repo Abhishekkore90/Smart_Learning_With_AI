@@ -403,7 +403,7 @@ function AdminHomeworkPage() {
 
   // Handle Delete
   const handleDelete = async (id: string, itemTitle: string) => {
-    if (!confirm(`तुम्हाला खात्री आहे का "${itemTitle}" हा गृहपाठ हटवायचा आहे?`)) return;
+    if (!confirm(`तुम्हाला खात्री आहे का "${itemTitle}" हा गृहपाठ डेटाबेसमधून कायमचा हटवायचा आहे?`)) return;
     try {
       const targetItem = homeworkList.find((item) => item.id === id);
 
@@ -412,14 +412,25 @@ function AdminHomeworkPage() {
         setActiveHomework(null);
       }
 
-      await deleteDoc(doc(db, "admin_homework", id));
+      // Delete from both admin_homework and legacy homework collections
+      await Promise.allSettled([
+        deleteDoc(doc(db, "admin_homework", id)),
+        deleteDoc(doc(db, "homework", id)),
+      ]);
 
-      if (targetItem?.fileUrl) {
-        deleteUploadedFile(targetItem.fileUrl).catch(() => {});
+      // Delete uploaded files from storage
+      const filesToDelete = [
+        targetItem?.fileUrl,
+        (targetItem as any)?.wordFileUrl,
+        (targetItem as any)?.originalFileUrl,
+      ].filter(Boolean) as string[];
+
+      for (const url of filesToDelete) {
+        deleteUploadedFile(url).catch(() => {});
       }
 
       await purgeDocumentAndAllEdits("homework", id);
-      toast.success("गृहपाठ हटवला गेला.");
+      toast.success("गृहपाठ डेटाबेसमधून यशस्वीरीत्या हटवला गेला.");
     } catch (err: any) {
       toast.error("हटवताना त्रुटी आली: " + err.message);
     }
@@ -542,13 +553,25 @@ function AdminHomeworkPage() {
             {activeHomework ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex-wrap">
-                  <button
-                    onClick={() => setActiveHomework(null)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                  >
-                    <ArrowLeft className="size-4" />
-                    <span>गृहपाठ यादी (Back to List)</span>
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => setActiveHomework(null)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    >
+                      <ArrowLeft className="size-4" />
+                      <span>गृहपाठ यादी (Back to List)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(activeHomework.id, activeHomework.title)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95"
+                      title="हा गृहपाठ डेटाबेसमधून कायमचा हटवा (Delete Homework from Database)"
+                    >
+                      <Trash2 className="size-4" />
+                      <span>गृहपाठ हटवा (Delete)</span>
+                    </button>
+                  </div>
 
                   <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200">
                     {(activeHomework.fileUrl || activeHomework.wordFileUrl) && (
@@ -941,11 +964,13 @@ function AdminHomeworkPage() {
 
                                     {/* Admin Delete Action */}
                                     <button
+                                      type="button"
                                       onClick={() => handleDelete(hw.id, hw.title)}
-                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
-                                      title="हटवा (Delete)"
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
+                                      title="हा गृहपाठ डेटाबेसमधून कायमचा हटवा (Delete)"
                                     >
-                                      <Trash2 className="size-4" />
+                                      <Trash2 className="size-3.5" />
+                                      <span>हटवा (Delete)</span>
                                     </button>
                                   </div>
 

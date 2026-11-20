@@ -513,11 +513,15 @@ export function DailyHomeworkCalendar({
                       {userRole === "admin" && onDeleteHomework && (
                         <button
                           type="button"
-                          onClick={() => onDeleteHomework(item.id, item.title)}
-                          className="p-1 rounded-lg text-slate-300 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer shrink-0"
-                          title="हटवा"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteHomework(item.id, item.title);
+                          }}
+                          className="px-2 py-1 rounded-lg text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-all cursor-pointer shrink-0 inline-flex items-center gap-1 text-[11px] font-black shadow-2xs active:scale-95"
+                          title="हा गृहपाठ डेटाबेसमधून कायमचा हटवा (Delete)"
                         >
-                          <Trash2 className="size-3" />
+                          <Trash2 className="size-3.5" />
+                          <span>हटवा (Delete)</span>
                         </button>
                       )}
                     </div>
@@ -569,6 +573,20 @@ export function DailyHomeworkCalendar({
                           >
                             <Download className="size-3" />
                           </a>
+                        )}
+
+                        {userRole === "admin" && onDeleteHomework && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteHomework(item.id, item.title);
+                            }}
+                            className="px-2 py-0.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded text-[10px] font-bold transition-all shadow-2xs cursor-pointer inline-flex items-center gap-0.5 active:scale-95"
+                            title="हा गृहपाठ हटवा"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
                         )}
                       </div>
                     </div>

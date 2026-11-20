@@ -315,7 +315,7 @@ export const matchAndMergeMarks = (students = [], currentMarks = {}, firestoreMa
         else if (lower.includes("विज्ञान") || lower.includes("science")) subData = stdFsMarks["General Science"] || stdFsMarks["science"] || stdFsMarks["सामान्य विज्ञान"];
         else if (lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("environment") || lower.includes("evs")) subData = stdFsMarks["parisar"] || stdFsMarks["evs"] || stdFsMarks["परिसर अभ्यास"] || stdFsMarks["आपले संभोवतालचे जग"] || stdFsMarks["parisar1"] || stdFsMarks["evs1"] || stdFsMarks["Environmental Studies"];
         else if (lower.includes("कला")) subData = stdFsMarks["kala"] || stdFsMarks["कलाशिक्षण"] || stdFsMarks["कला"] || stdFsMarks["Art"];
-        else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) subData = stdFsMarks["karyanubhav"] || stdFsMarks["कार्यशिक्षण"] || stdFsMarks["कार्यानुभव"] || stdFsMarks["Work Experience"];
+        else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक")) subData = stdFsMarks["व्यावसायिक अभ्यास"] || stdFsMarks["karyanubhav"] || stdFsMarks["कार्यशिक्षण"] || stdFsMarks["कार्यानुभव"] || stdFsMarks["Work Experience"];
         else if (lower.includes("शारीरिक")) subData = stdFsMarks["sharirik"] || stdFsMarks["शारीरिक शिक्षण"] || stdFsMarks["Physical Education"];
       }
 

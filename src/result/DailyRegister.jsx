@@ -1014,7 +1014,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
               </tr>
               <tr>
                 <td style="padding: 5px;">५</td>
-                <td class="left-align" style="font-weight: bold; padding: 5px;">कार्यशिक्षण</td>
+                <td class="left-align" style="font-weight: bold; padding: 5px;">${(classValue === "6th" || classValue === "6" || String(classValue).includes("६")) ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण"}</td>
                 <td class="left-align" style="padding: 5px; padding-left: 15px;">${studentRemarks.subjectRemarks?.workExperience?.selected?.join(", ") || studentRemarks.subjectRemarks?.workExperience?.custom || "-"}</td>
               </tr>
               <tr>

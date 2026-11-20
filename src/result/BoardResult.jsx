@@ -3,7 +3,7 @@ import { db } from "../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { Download, ArrowLeft, Loader2, AlertCircle, FileText, Copy } from "lucide-react";
 import { toast } from "sonner";
-import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { getDefaultSubjectsForClass, deduplicateAndNormalizeSubjects } from "@/data/cceSubjects";
 import { getTeacherId, matchStudentTeacherClassAndMedium } from "../lib/teacherIsolationHelper";
 import { fetchStudentsForClass, hasStudentFilledData, normalizeClassKey } from "./firestoreMarksHelper";
 import "./result.css";
@@ -415,7 +415,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
     headmasterSignature: "",
   });
 
-  const [subjects, setSubjects] = useState(DEFAULT_SUBJECTS);
+  const [subjects, setSubjects] = useState(() => deduplicateAndNormalizeSubjects(DEFAULT_SUBJECTS));
   const [students, setStudents] = useState([]);
   const [marksData, setMarksData] = useState({});
   const [remarksData, setRemarksData] = useState({});
@@ -531,7 +531,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               if (!teacherSignature) teacherSignature = data.signatureUrl || data.teacherSignature || "";
               if (!headmasterSignature) headmasterSignature = data.principalSignature || data.headmasterSignature || "";
               if (!customSubjects && data.subjects && Array.isArray(data.subjects) && data.subjects.length > 0) {
-                customSubjects = data.subjects;
+                customSubjects = deduplicateAndNormalizeSubjects(data.subjects);
               }
             }
           }
@@ -656,9 +656,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
         let classSubjects = [];
         if (customSubjects && Array.isArray(customSubjects) && customSubjects.length > 0) {
-          classSubjects = customSubjects;
+          classSubjects = deduplicateAndNormalizeSubjects(customSubjects);
         } else {
-          classSubjects = getDefaultSubjectsForClass(selectedClass, selectedMedium);
+          classSubjects = deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, selectedMedium));
         }
         setSubjects(classSubjects);
       } catch (e) {
@@ -1926,7 +1926,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             if (lower.includes("गणित")) return studentMarks["ganit"] || studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};
                             if (lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("evs")) return studentMarks["parisar"] || studentMarks["evs"] || studentMarks["परिसर अभ्यास"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["parisar1"] || studentMarks["evs1"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
                             if (lower.includes("कला")) return studentMarks["kala"] || studentMarks["art"] || studentMarks["कलाशिक्षण"] || studentMarks["कला"] || {};
-                            if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) return studentMarks["karyanubhav"] || studentMarks["work"] || studentMarks["कार्यशिक्षण"] || studentMarks["कार्यानुभव"] || {};
+                            if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक")) return studentMarks["व्यावसायिक अभ्यास"] || studentMarks["karyanubhav"] || studentMarks["work"] || studentMarks["कार्यशिक्षण"] || studentMarks["कार्यानुभव"] || {};
                             if (lower.includes("शारीरिक")) return studentMarks["sharirik"] || studentMarks["pe"] || studentMarks["शारीरिक शिक्षण"] || studentMarks["शारीरिक शिक्षण व आरोग्य"] || {};
 
                             for (const [k, v] of Object.entries(studentMarks)) {
@@ -1937,7 +1937,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                 (lower.includes("हिंदी") && kLower.includes("हिंदी")) ||
                                 (lower.includes("गणित") && kLower.includes("गणित")) ||
                                 (lower.includes("कला") && kLower.includes("कला")) ||
-                                ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("कार्य"))) ||
+                                ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("कार्य") || kLower.includes("व्यावसायिक") || kLower.includes("karyanubhav") || kLower.includes("work"))) ||
                                 (lower.includes("शारीरिक") && kLower.includes("शारीरिक")) ||
                                 ((lower.includes("विज्ञान") || lower.includes("science")) && (kLower.includes("विज्ञान") || kLower.includes("science") || kLower.includes("vijnan") || kLower.includes("vidnyan"))) ||
                                 ((lower.includes("सामाजिक") || lower.includes("social")) && (kLower.includes("सामाजिक") || kLower.includes("social") || kLower.includes("samajik") || kLower.includes("samajshastra"))) ||
@@ -2035,7 +2035,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           const subData = getSubData(subjectName);
                           const sw = getSubjectWeightage(subjectName, student.id, student.rollNo);
                           const hasWeightage = !!(sw && typeof sw === "object" && Object.values(sw).some(v => v !== undefined && v !== null && String(v).trim() !== ""));
-                          const isPracticalSub = subjectName.includes("कला") || subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण") || subjectName.includes("कार्य") || subjectName.includes("शारीरिक");
+                          const isPracticalSub = subjectName.includes("कला") || subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण") || subjectName.includes("कार्य") || subjectName.includes("व्यावसायिक") || subjectName.includes("शारीरिक");
 
                           const getWVal = (keys) => {
                             if (hasWeightage && sw && typeof sw === "object") {
@@ -2194,8 +2194,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                   val = remarksObj["samajik_shastra"] || remarksObj["samajshastra"] || remarksObj["सामाजिक शास्त्रे"];
                                 } else if (lower.includes("कला") || lower.includes("kala")) {
                                   val = remarksObj["kala"] || remarksObj["art"] || remarksObj["कलाशिक्षण"] || remarksObj["कला"];
-                                } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) {
-                                  val = remarksObj["karyanubhav"] || remarksObj["work"] || remarksObj["कार्यशिक्षण"] || remarksObj["कार्यानुभव"];
+                                } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक")) {
+                                  val = remarksObj["व्यावसायिक अभ्यास"] || remarksObj["karyanubhav"] || remarksObj["work"] || remarksObj["कार्यशिक्षण"] || remarksObj["कार्यानुभव"];
                                 } else if (lower.includes("शारीरिक") || lower.includes("sharirik")) {
                                   val = remarksObj["sharirik"] || remarksObj["pe"] || remarksObj["शारीरिक शिक्षण"] || remarksObj["शारीरिक शिक्षण व आरोग्य"];
                                 } else if (lower.includes("विशेष") || lower.includes("visheshpragati")) {
@@ -2219,7 +2219,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                     (lLower.includes("हिंदी") && (kLower.includes("हिंदी") || kLower.includes("tritiyabhasha"))) ||
                                     (lLower.includes("गणित") && (kLower.includes("गणित") || kLower.includes("ganit"))) ||
                                     (lLower.includes("कला") && (kLower.includes("कला") || kLower.includes("kala"))) ||
-                                    ((lLower.includes("कार्यानुभव") || lLower.includes("कार्यशिक्षण") || lLower.includes("कार्य")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("karyanubhav") || kLower.includes("कार्य"))) ||
+                                    ((lLower.includes("कार्यानुभव") || lLower.includes("कार्यशिक्षण") || lLower.includes("कार्य") || lLower.includes("व्यावसायिक")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("karyanubhav") || kLower.includes("कार्य") || kLower.includes("व्यावसायिक"))) ||
                                     (lLower.includes("शारीरिक") && (kLower.includes("शारीरिक") || kLower.includes("sharirik"))) ||
                                     ((lLower.includes("परिसर") || lLower.includes("संभोवतालचे")) && (kLower.includes("परिसर") || kLower.includes("parisar") || kLower.includes("संभोवतालचे"))) ||
                                     kLower === lLower
@@ -2243,13 +2243,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             };
 
                             const getR = getFormattedRemark;
-                            const allRemarksItems = [
+                            const allRemarksItems = deduplicateAndNormalizeSubjects([
                               ...subjects,
                               "विशेष प्रगती",
                               "सुधारणा आवश्यक",
                               "आवड / छंद",
                               "व्यक्तिमत्त्व गुणविशेष"
-                            ];
+                            ]);
 
                             if (subjects.length >= 8) {
                               const half = Math.ceil(allRemarksItems.length / 2);
@@ -2375,8 +2375,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                               val = remarksObj["parisar"] || remarksObj["evs"] || remarksObj["परिसर अभ्यास"] || remarksObj["आपले संभोवतालचे जग"] || remarksObj["parisar1"] || remarksObj["parisar2"];
                             } else if (lower.includes("कला") || lower.includes("kala")) {
                               val = remarksObj["kala"] || remarksObj["कलाशिक्षण"] || remarksObj["कला"];
-                            } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) {
-                              val = remarksObj["karyanubhav"] || remarksObj["कार्यशिक्षण"] || remarksObj["कार्यानुभव"];
+                            } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक")) {
+                              val = remarksObj["व्यावसायिक अभ्यास"] || remarksObj["karyanubhav"] || remarksObj["कार्यशिक्षण"] || remarksObj["कार्यानुभव"];
                             } else if (lower.includes("शारीरिक") || lower.includes("sharirik")) {
                               val = remarksObj["sharirik"] || remarksObj["शारीरिक शिक्षण"];
                             } else if (lower.includes("विशेष") || lower.includes("visheshpragati")) {
@@ -2503,8 +2503,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               subData = studentMarks["parisar"] || studentMarks["evs"] || studentMarks["परिसर अभ्यास"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
             } else if (lower.includes("कला")) {
               subData = studentMarks["kala"] || studentMarks["कलाशिक्षण"] || studentMarks["कला"] || {};
-            } else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) {
-              subData = studentMarks["karyanubhav"] || studentMarks["कार्यशिक्षण"] || studentMarks["कार्यानुभव"] || {};
+            } else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक")) {
+              subData = studentMarks["व्यावसायिक अभ्यास"] || studentMarks["karyanubhav"] || studentMarks["कार्यशिक्षण"] || studentMarks["कार्यानुभव"] || {};
             } else if (lower.includes("शारीरिक")) {
               subData = studentMarks["sharirik"] || studentMarks["शारीरिक शिक्षण"] || studentMarks["शारीरिक शिक्षण व आरोग्य"] || {};
             }
@@ -2518,7 +2518,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   (lower.includes("हिंदी") && kLower.includes("हिंदी")) ||
                   (lower.includes("गणित") && kLower.includes("गणित")) ||
                   (lower.includes("कला") && kLower.includes("कला")) ||
-                  ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("कार्य"))) ||
+                  ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("कार्य") || kLower.includes("व्यावसायिक") || kLower.includes("karyanubhav") || kLower.includes("work"))) ||
                   (lower.includes("शारीरिक") && kLower.includes("शारीरिक")) ||
                   ((lower.includes("विज्ञान") || lower.includes("science")) && (kLower.includes("विज्ञान") || kLower.includes("science") || kLower.includes("vijnan") || kLower.includes("vidnyan"))) ||
                   ((lower.includes("सामाजिक") || lower.includes("social")) && (kLower.includes("सामाजिक") || kLower.includes("social") || kLower.includes("samajik") || kLower.includes("samajshastra"))) ||
@@ -2531,7 +2531,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               }
             }
 
-            const isPracticalSub = lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("शारीरिक");
+            const isPracticalSub = lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक") || lower.includes("शारीरिक");
 
             const tondiKaamObt = Number(subData.tondiKaam ?? subData.tondi ?? subData.oral ?? 0);
             const pratyakshikPrayogObt = Number(subData.pratyakshikPrayog ?? subData.practical ?? subData.activity ?? 0);
@@ -2615,7 +2615,10 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             if (str.includes("गणित")) return "गणित";
             if (str.includes("परिसर") || str.includes("संभोवतालचे") || str.includes("evs")) return "परिसर अभ्यास";
             if (str.includes("कला")) return "कलाशिक्षण";
-            if (str.includes("कार्यानुभव") || str.includes("कार्यशिक्षण") || str.includes("कार्य")) return "कार्यशिक्षण";
+            if (str.includes("कार्यानुभव") || str.includes("कार्यशिक्षण") || str.includes("कार्य") || str.includes("व्यावसायिक")) {
+              const isC6 = selectedClass === "6th" || selectedClass === "6" || String(selectedClass).includes("६");
+              return isC6 ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण";
+            }
             if (str.includes("शारीरिक")) return "शारीरिक शिक्षण व आरोग्य";
             return str;
           };
@@ -2997,7 +3000,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                         </tr>
                         <tr className="text-black font-extrabold border-b border-lime-700">
                           {subjects.map((sub) => {
-                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("शारीरिक");
+                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("व्यावसायिक") || sub.includes("शारीरिक");
                             return isPractical ? (
                               <React.Fragment key={sub}>
                                 <th className={`border border-lime-700 bg-lime-200 p-0.5 ${subColCls} font-extrabold`} colSpan={2}>आकारिक (अ)</th>
@@ -3019,7 +3022,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           <td className="border border-lime-700 bg-lime-100 p-0 w-5"></td>
                           <td className="border border-lime-700 bg-lime-100 p-0.5 text-left font-extrabold">पैकी</td>
                           {subjects.map((sub) => {
-                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("शारीरिक");
+                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("कार्यशिक्षण") || sub.includes("कार्य") || sub.includes("व्यावसायिक") || sub.includes("शारीरिक");
                             const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
                             const semMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "30" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "40" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "60";
 

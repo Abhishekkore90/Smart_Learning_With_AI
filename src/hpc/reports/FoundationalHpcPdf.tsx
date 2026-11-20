@@ -22,69 +22,22 @@ import {
   FoundationalAreaConfig,
 } from "../data/foundationalHpcData";
 import { CLASSWISE_LEARNING_OUTCOMES } from "../data/hpcClasswiseCurricularData";
+import { PravinyaEmblem } from "../components/PravinyaEmblem";
 
 export type { FoundationalAreaConfig };
 
-function ProficiencyBadge({ level = "" }: { level?: string }) {
-  const norm = String(level || "").toLowerCase().trim();
-  const isAkash = norm === "आकाश" || norm === "advanced" || norm === "akash";
-  const isParvat = norm === "पर्वत" || norm === "proficient" || norm === "parvat";
-  const isNirjhar = norm === "निर्झर" || norm === "beginner" || norm === "nirjhar" || norm === "प्रवाह";
-
+function ProficiencyBadge({
+  level = "",
+  size = 125,
+  showSlider = true,
+}: {
+  level?: string;
+  size?: number;
+  showSlider?: boolean;
+}) {
   return (
-    <div className="flex items-center gap-2 shrink-0 my-0.5">
-      {/* Upward Arrow on Left (Pure CSS shapes) */}
-      <div className="flex flex-col items-center justify-center">
-        {/* Triangle Arrowhead */}
-        <div
-          style={{
-            width: 0,
-            height: 0,
-            borderLeft: "6px solid transparent",
-            borderRight: "6px solid transparent",
-            borderBottom: "10px solid #4338ca",
-          }}
-        />
-        {/* Arrow Stem */}
-        <div className="w-1.5 h-12 bg-indigo-700" />
-        <div className="text-[7.5px] font-black text-indigo-950 text-center leading-none mt-1">
-          <div>प्राविण्य</div>
-          <div>स्तर</div>
-        </div>
-      </div>
-
-      {/* 3-Tier Circular Badge (Pure CSS divs, 100% Canvas Safe) */}
-      <div
-        className="w-24 h-24 rounded-full border-2 border-sky-600 overflow-hidden flex flex-col shadow-xs bg-white text-center justify-between"
-        style={{ boxSizing: "border-box" }}
-      >
-        {/* Top Tier: आकाश (Sky/Top) */}
-        <div
-          className={`h-7 flex items-center justify-center text-[10px] font-black border-b border-sky-400 ${
-            isAkash ? "bg-sky-600 text-white" : "bg-sky-100 text-sky-900"
-          }`}
-        >
-          {isAkash ? "✓ आकाश" : "आकाश"}
-        </div>
-
-        {/* Middle Tier: पर्वत (शिखर) */}
-        <div
-          className={`h-10 flex items-center justify-center text-[10px] font-black border-b border-emerald-500 ${
-            isParvat ? "bg-emerald-600 text-white" : "bg-emerald-100 text-emerald-900"
-          }`}
-        >
-          {isParvat ? "✓ पर्वत (शिखर)" : "पर्वत (शिखर)"}
-        </div>
-
-        {/* Bottom Tier: निर्झर (Stream/Base) */}
-        <div
-          className={`h-7 flex items-center justify-center text-[9.5px] font-black ${
-            isNirjhar ? "bg-cyan-500 text-white" : "bg-cyan-100 text-cyan-900"
-          }`}
-        >
-          {isNirjhar ? "✓ निर्झर" : "निर्झर"}
-        </div>
-      </div>
+    <div className="flex items-center justify-center shrink-0 my-0.5">
+      <PravinyaEmblem level={level} size={size} showSlider={showSlider} />
     </div>
   );
 }
@@ -117,20 +70,20 @@ function SmileyOptions({
   selected?: "yes" | "no" | "dont_know" | "" | string;
 }) {
   return (
-    <div className="flex items-center justify-around gap-2 px-1 py-1">
+    <div className="flex items-center justify-around gap-1 px-1 py-1">
       {/* 1. होय */}
       <div className="flex flex-col items-center">
         <div
-          className={`size-8 rounded-full flex items-center justify-center border ${
+          className={`size-7 rounded-full flex items-center justify-center border transition-all ${
             selected === "yes"
               ? "bg-amber-100 border-amber-500 shadow-xs ring-2 ring-amber-400"
               : "bg-white border-slate-300"
           }`}
         >
-          <span className="text-base leading-none">😊</span>
+          <span className="text-sm leading-none">😊</span>
         </div>
         <span
-          className={`text-[10px] mt-0.5 font-bold ${
+          className={`text-[9px] mt-0.5 font-bold leading-none ${
             selected === "yes" ? "text-amber-800" : "text-slate-600"
           }`}
         >
@@ -141,16 +94,16 @@ function SmileyOptions({
       {/* 2. नाही */}
       <div className="flex flex-col items-center">
         <div
-          className={`size-8 rounded-full flex items-center justify-center border ${
+          className={`size-7 rounded-full flex items-center justify-center border transition-all ${
             selected === "no"
               ? "bg-slate-200 border-slate-500 shadow-xs ring-2 ring-slate-400"
               : "bg-white border-slate-300"
           }`}
         >
-          <span className="text-base leading-none">😐</span>
+          <span className="text-sm leading-none">😐</span>
         </div>
         <span
-          className={`text-[10px] mt-0.5 font-bold ${
+          className={`text-[9px] mt-0.5 font-bold leading-none ${
             selected === "no" ? "text-slate-800" : "text-slate-600"
           }`}
         >
@@ -161,16 +114,16 @@ function SmileyOptions({
       {/* 3. माहिती नाही */}
       <div className="flex flex-col items-center">
         <div
-          className={`size-8 rounded-full flex items-center justify-center border ${
+          className={`size-7 rounded-full flex items-center justify-center border transition-all ${
             selected === "dont_know"
               ? "bg-purple-100 border-purple-500 shadow-xs ring-2 ring-purple-400"
               : "bg-white border-slate-300"
           }`}
         >
-          <span className="text-base leading-none">🤔</span>
+          <span className="text-sm leading-none">🤔</span>
         </div>
         <span
-          className={`text-[10px] mt-0.5 font-bold ${
+          className={`text-[9px] mt-0.5 font-bold leading-none ${
             selected === "dont_know" ? "text-purple-800" : "text-slate-600"
           }`}
         >
@@ -181,7 +134,7 @@ function SmileyOptions({
   );
 }
 
-function HelpOptions({ selected = "" }: { selected?: string }) {
+function HelpOptions({ selected = "" }: { selected?: string | string[] }) {
   const options = [
     { id: "peer", label: "वर्गमित्र", icon: "👥" },
     { id: "teacher", label: "शिक्षक", icon: "🧑‍🏫" },
@@ -193,11 +146,13 @@ function HelpOptions({ selected = "" }: { selected?: string }) {
   return (
     <div className="flex items-center justify-between gap-1 px-1 py-1">
       {options.map((opt) => {
-        const isSel = selected === opt.id;
+        const isSel = Array.isArray(selected)
+          ? selected.includes(opt.id) || (opt.id === "peer" && selected.includes("friend"))
+          : selected === opt.id || (opt.id === "peer" && selected === "friend");
         return (
           <div key={opt.id} className="flex flex-col items-center">
             <div
-              className={`size-7 rounded-lg flex items-center justify-center border text-sm ${
+              className={`size-7 rounded-lg flex items-center justify-center border text-xs transition-all ${
                 isSel
                   ? "bg-rose-100 border-rose-500 ring-2 ring-rose-400 font-bold"
                   : "bg-white border-slate-300 text-slate-700"
@@ -206,8 +161,8 @@ function HelpOptions({ selected = "" }: { selected?: string }) {
               {opt.icon}
             </div>
             <span
-              className={`text-[9px] mt-0.5 leading-none font-bold text-center ${
-                isSel ? "text-rose-900" : "text-slate-600"
+              className={`text-[8.5px] mt-0.5 leading-none font-bold text-center ${
+                isSel ? "text-rose-900 font-black" : "text-slate-600 font-bold"
               }`}
             >
               {opt.label}
@@ -285,12 +240,42 @@ export function FoundationalHpcPdf({
       : "";
 
   const teacherName =
+    profile?.teacherName ||
     schoolSettings?.classTeacher ||
     schoolSettings?.teacherName ||
     student?.teacherName ||
     "वर्ग शिक्षक";
 
-  const hmName = schoolSettings?.headMaster || "मुख्याध्यापक";
+  const hmName = profile?.headmasterName || schoolSettings?.headMaster || "मुख्याध्यापक";
+
+  const studentGender = String(profile?.gender || student.gender || "").toLowerCase();
+  const studentAadhaar = String(profile?.aadhaar || student.aadhaar || (student as any)?.aadhaarNo || "").replace(/\D/g, "");
+  const studentPen = profile?.penNo || (student as any)?.penNo || "-";
+  const studentGrNo = profile?.grNo || student.grNo || (student as any)?.generalRegisterNo || "-";
+  const studentBloodGroup = profile?.bloodGroup || student.bloodGroup || (student as any)?.bloodGroup || "-";
+  const studentCategory = profile?.category || student.category || (student as any)?.category || "-";
+  const studentCaste = profile?.caste || student.caste || "";
+  const studentBirthPlace = profile?.birthPlace || (student as any)?.birthPlace || "";
+  const schoolCluster = profile?.cluster || (schoolSettings as any)?.cluster || (schoolSettings as any)?.kendra || "";
+  const schoolTaluka = profile?.taluka || (schoolSettings as any)?.taluka || "";
+  const schoolDistrict = profile?.district || (schoolSettings as any)?.district || (schoolSettings as any)?.jilha || "";
+
+  const getDisplayClassMarathi = (cls?: string) => {
+    if (!cls) return "पहिली";
+    const s = String(cls).toLowerCase().trim();
+    if (s === "1st" || s === "1" || s.includes("१") || s.includes("पहिल")) return "पहिली";
+    if (s === "2nd" || s === "2" || s.includes("२") || s.includes("दुसर")) return "दुसरी";
+    if (s === "balvatika_1" || s.includes("बालवाटिका १") || s.includes("बालवाटिका 1")) return "बालवाटिका १";
+    if (s === "balvatika_2" || s.includes("बालवाटिका २") || s.includes("बालवाटिका 2")) return "बालवाटिका २";
+    if (s === "balvatika_3" || s.includes("बालवाटिका ३") || s.includes("बालवाटिका 3")) return "बालवाटिका ३";
+    return cls;
+  };
+
+  const studentDisplayName = profile?.fullName || student.fullName || student.name || "";
+  const studentRollNo = profile?.rollNo || student.rollNo || "१";
+  const studentDivision = profile?.division || student.division || "अ";
+  const studentGrNoDisplay = profile?.grNo || student.grNo || (student as any)?.generalRegisterNo || "-";
+  const studentSchoolName = schoolName || "जिल्हा परिषद शाळा";
 
   // Attendance helpers
   const t1 = attendance?.term1 || {
@@ -312,10 +297,6 @@ export function FoundationalHpcPdf({
     totalWorking: 115,
     totalPresent: 0,
   };
-  const totalWorking = attendance?.annualTotalWorking || 0;
-  const totalPresent = attendance?.annualTotalPresent || (t1.totalPresent + t2.totalPresent);
-  const attendancePct = attendance?.attendancePercentage || "";
-
   // Attendance calculations: takes real numbers from CCE or HPC profile if entered, otherwise leaves blank
   const monthKeys = [
     "june", "july", "august", "september", "october",
@@ -332,10 +313,12 @@ export function FoundationalHpcPdf({
         : null;
 
     const w =
-      (profile as any)?.workingDays?.[key] !== undefined && (profile as any)?.workingDays?.[key] !== null
-        ? (profile as any).workingDays[key]
-        : attendance?.workingDays?.[key] !== undefined && attendance?.workingDays?.[key] !== null
+      attendance?.workingDays?.[key] !== undefined && attendance?.workingDays?.[key] !== null
         ? attendance.workingDays[key]
+        : profile?.monthlyWorkingDays?.[key] !== undefined && profile?.monthlyWorkingDays?.[key] !== null
+        ? profile.monthlyWorkingDays[key]
+        : (profile as any)?.workingDays?.[key] !== undefined && (profile as any)?.workingDays?.[key] !== null
+        ? (profile as any).workingDays[key]
         : null;
 
     const presentNum = p !== null && p !== "" && Number(p) >= 0 ? Number(p) : null;
@@ -352,6 +335,79 @@ export function FoundationalHpcPdf({
     };
   });
 
+  let calcTotalWorking = 0;
+  let calcTotalPresent = 0;
+  let calcT1Working = 0;
+  let calcT1Present = 0;
+  let calcT2Working = 0;
+  let calcT2Present = 0;
+  monthlyAttList.forEach((item, idx) => {
+    const w = Number(item.working) || 0;
+    const p = Number(item.present) || 0;
+    calcTotalWorking += w;
+    calcTotalPresent += p;
+    if (idx <= 4) {
+      calcT1Working += w;
+      calcT1Present += p;
+    } else {
+      calcT2Working += w;
+      calcT2Present += p;
+    }
+  });
+
+  const totalWorking = calcTotalWorking > 0 ? calcTotalWorking : attendance?.annualTotalWorking || 0;
+  const totalPresent = calcTotalPresent > 0 ? calcTotalPresent : attendance?.annualTotalPresent || (t1.totalPresent + t2.totalPresent);
+  const attendancePct =
+    totalWorking > 0
+      ? `${((totalPresent / totalWorking) * 100).toFixed(1)}%`
+      : attendance?.attendancePercentage || "";
+
+  const t1WorkingTotal = calcT1Working > 0 ? calcT1Working : t1.totalWorking || 0;
+  const t1PresentTotal = calcT1Present > 0 ? calcT1Present : t1.totalPresent || 0;
+  const t1Pct = t1WorkingTotal > 0 ? `${((t1PresentTotal / t1WorkingTotal) * 100).toFixed(1)}%` : "";
+
+  const t2WorkingTotal = calcT2Working > 0 ? calcT2Working : t2.totalWorking || 0;
+  const t2PresentTotal = calcT2Present > 0 ? calcT2Present : t2.totalPresent || 0;
+  const t2Pct = t2WorkingTotal > 0 ? `${((t2PresentTotal / t2WorkingTotal) * 100).toFixed(1)}%` : "";
+
+  // Helper to reliably find Area Summary for Page 16
+  const findAreaSummary = (areaKey: string) => {
+    if (!annualSummary?.areaSummaries) return null;
+    const summaries = annualSummary.areaSummaries;
+    if (summaries[areaKey]) return summaries[areaKey];
+    for (const [k, v] of Object.entries(summaries)) {
+      if (!v) continue;
+      const kLow = k.toLowerCase();
+      const name = (v.areaOrSubjectNameMarathi || "").toLowerCase();
+      if (areaKey === "physical_health" && (kLow.includes("physical") || name.includes("शारीरिक"))) return v;
+      if (areaKey === "socio_emotional" && (kLow.includes("socio") || name.includes("सामाजिक") || name.includes("भावनिक"))) return v;
+      if (areaKey === "cognitive" && (kLow.includes("cognitive") || name.includes("बोध"))) return v;
+      if (areaKey === "language_literacy" && (kLow.includes("language") || name.includes("भाषा") || name.includes("साक्षरता"))) return v;
+      if (areaKey === "aesthetic_cultural" && (kLow.includes("aesthetic") || name.includes("सौंदर्य") || name.includes("सांस्कृतिक") || name.includes("कला"))) return v;
+      if (areaKey === "positive_habits" && (kLow.includes("habit") || name.includes("सवयी"))) return v;
+    }
+    return null;
+  };
+
+  // Helper to reliably find Session Assessment for Pages 4 to 15
+  const findSessionAssessment = (sessData: HpcSessionAssessment | null | undefined, areaId: string) => {
+    if (!sessData?.areaAssessments) return null;
+    const map = sessData.areaAssessments;
+    if (map[areaId]) return map[areaId];
+    for (const [k, v] of Object.entries(map)) {
+      if (!v) continue;
+      const kLow = k.toLowerCase();
+      const name = (v.areaOrSubjectNameMarathi || "").toLowerCase();
+      if (areaId === "physical_health" && (kLow.includes("physical") || name.includes("शारीरिक"))) return v;
+      if (areaId === "socio_emotional" && (kLow.includes("socio") || name.includes("सामाजिक") || name.includes("भावनिक"))) return v;
+      if (areaId === "cognitive" && (kLow.includes("cognitive") || name.includes("बोध"))) return v;
+      if (areaId === "language_literacy" && (kLow.includes("language") || name.includes("भाषा") || name.includes("साक्षरता"))) return v;
+      if (areaId === "aesthetic_cultural" && (kLow.includes("aesthetic") || name.includes("सौंदर्य") || name.includes("सांस्कृतिक") || name.includes("कला"))) return v;
+      if (areaId === "positive_habits" && (kLow.includes("habit") || name.includes("सवयी"))) return v;
+    }
+    return null;
+  };
+
   return (
     <div className="hpc-pdf-document font-sans text-slate-900 bg-transparent flex flex-col items-center">
       <style>{`
@@ -363,12 +419,33 @@ export function FoundationalHpcPdf({
           }
         }
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+          }
+          .hpc-pdf-document {
+            width: 794px !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+          }
           .hpc-pdf-document .pdf-page {
+            width: 794px !important;
+            height: 1123px !important;
+            max-height: 1123px !important;
             margin: 0 !important;
             box-shadow: none !important;
             border: none !important;
             page-break-after: always !important;
             break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
           }
         }
       `}</style>
@@ -436,13 +513,60 @@ export function FoundationalHpcPdf({
         {/* Orange Horizontal Stripe Divider */}
         <div className="w-full h-3 bg-[#e86b24] shrink-0" />
 
-        {/* Full-Bleed Classroom Learning Photo Filling Lower Half */}
-        <div className="w-full flex-1 relative overflow-hidden bg-amber-100 flex items-center justify-center">
-          <img
-            src={HPC_BASE64_IMAGES.foundationalCoverKids}
-            alt="Foundational Stage Students"
-            className="w-full h-full object-cover object-top"
-          />
+        {/* Student Information Section on Cover Page */}
+        <div className="w-full flex-1 relative overflow-hidden bg-[#ffb988] flex flex-col items-center justify-center px-10 py-6">
+          <div className="w-full max-w-[620px] bg-[#f0f6ff] rounded-[24px] border border-[#ea580c] shadow-[0_4px_20px_-4px_rgba(234,88,12,0.15)] p-8 relative overflow-hidden">
+            <div className="space-y-4 text-base font-bold text-slate-900 relative z-10">
+              {/* Row 1: नाव */}
+              <div className="flex items-center">
+                <span className="w-32 text-[#d97706] font-black tracking-wide text-lg shrink-0">नाव</span>
+                <span className="mr-3 text-[#d97706] font-black text-lg">:</span>
+                <span className="flex-1 text-slate-900 text-lg font-black tracking-wide truncate">{studentDisplayName}</span>
+              </div>
+
+              {/* Row 2: हजेरी क्र. & तुकडी */}
+              <div className="flex items-center">
+                <span className="w-32 text-[#d97706] font-black tracking-wide text-lg shrink-0">हजेरी क्र.</span>
+                <span className="mr-3 text-[#d97706] font-black text-lg">:</span>
+                <div className="flex items-center gap-3 text-lg font-black text-slate-900">
+                  <span>{studentRollNo}</span>
+                  <span className="text-slate-400 font-light mx-2">|</span>
+                  <span className="text-[#d97706] font-black">तुकडी</span>
+                  <span className="text-[#d97706] font-black">:</span>
+                  <span>{studentDivision}</span>
+                </div>
+              </div>
+
+              {/* Row 3: जन. रजि. नं. */}
+              <div className="flex items-center">
+                <span className="w-32 text-[#d97706] font-black tracking-wide text-lg shrink-0">जन. रजि. नं.</span>
+                <span className="mr-3 text-[#d97706] font-black text-lg">:</span>
+                <span className="flex-1 text-slate-900 text-lg font-black font-mono">{studentGrNoDisplay}</span>
+              </div>
+
+              {/* Row 4: शाळा */}
+              <div className="flex items-center">
+                <span className="w-32 text-[#d97706] font-black tracking-wide text-lg shrink-0">शाळा</span>
+                <span className="mr-3 text-[#d97706] font-black text-lg">:</span>
+                <span className="flex-1 text-slate-900 text-lg font-black leading-snug">{studentSchoolName}</span>
+              </div>
+
+              {/* Row 5: इयत्ता */}
+              <div className="flex items-center">
+                <span className="w-32 text-[#d97706] font-black tracking-wide text-lg shrink-0">इयत्ता</span>
+                <span className="mr-3 text-[#d97706] font-black text-lg">:</span>
+                <span className="flex-1 text-slate-900 text-lg font-black">{getDisplayClassMarathi(student.class)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Academic Year Badge */}
+          <div className="mt-5 flex items-center justify-center">
+            <span className="inline-flex items-center gap-2 px-6 py-1.5 rounded-full bg-white/95 border border-[#e86b24]/40 text-xs font-black text-[#d9651a] shadow-xs tracking-wider">
+              <span>शैक्षणिक वर्ष :</span>
+              <span className="font-mono text-sm text-slate-900">{academicYear}</span>
+            </span>
+          </div>
         </div>
 
         {/* Bottom Orange Base Bar */}
@@ -452,34 +576,37 @@ export function FoundationalHpcPdf({
       {/* =========================================================================
           PAGE 2: STUDENT INFORMATION & ATTENDANCE (भाग अ (१) - 100% Exact Match)
       ========================================================================= */}
-      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden px-12 pt-7 pb-5 mx-auto bg-white flex flex-col justify-between relative box-border text-[11px] font-sans leading-normal">
+      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden px-10 pt-5 pb-3 mx-auto bg-white flex flex-col justify-between relative box-border text-xs font-sans leading-normal">
         {/* Title: भाग अ (१) */}
-        <div className="text-center mb-1">
-          <h2 className="text-xl font-black text-[#e6006e] tracking-wide">
+        <div className="text-center">
+          <h2 className="text-lg font-black text-[#e6006e] tracking-wide inline-block border-b-2 border-[#e6006e] pb-0.5 px-4">
             भाग अ (१)
           </h2>
         </div>
 
-        {/* Top School & Identification Details matching Image 3 */}
-        <div className="space-y-1.5 pb-1">
+        {/* Top School & Administrative Details */}
+        <div className="space-y-1.5 pb-0.5">
           {/* Row 1: शाळेचे नाव व पत्ता : with full-width underline */}
           <div className="flex items-center w-full gap-2">
             <span className="font-bold text-slate-900 whitespace-nowrap">शाळेचे नाव व पत्ता :</span>
-            <span className="border-b border-black flex-1 font-bold px-2 pb-0.5 min-h-[19px] truncate text-slate-900">
+            <span className="border-b border-black flex-1 font-bold px-2 pb-0.5 min-h-[22px] truncate text-slate-900">
               {schoolNameLine}
             </span>
           </div>
 
-          {/* Row 2: Second address line on left + Right-aligned पिन कोड : with 6 boxes */}
+          {/* Row 2: केंद्र / तालुका / जिल्हा + Right-aligned पिन कोड : with 6 boxes */}
           <div className="flex items-center justify-between gap-4">
-            <div className="border-b border-black flex-1 min-h-[19px] px-2 pb-0.5 font-bold text-slate-900 truncate">
-              {schoolAddressLine}
+            <div className="flex items-center gap-2 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">पत्ता / तालुका व जिल्हा :</span>
+              <div className="border-b border-black flex-1 min-h-[22px] px-2 pb-0.5 font-bold text-slate-900 truncate">
+                {[schoolAddressLine, schoolTaluka ? `तालुका: ${schoolTaluka}` : "", schoolDistrict ? `जिल्हा: ${schoolDistrict}` : ""].filter(Boolean).join(", ") || schoolAddressLine || "-"}
+              </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="font-bold text-slate-900 whitespace-nowrap">पिन कोड :</span>
               <div className="flex items-center">
                 {Array.from({ length: 6 }).map((_, i) => {
-                  const pinChars = String(schoolSettings?.pincode || "").replace(/\D/g, "").split("");
+                  const pinChars = String(profile?.pincode || schoolSettings?.pincode || "").replace(/\D/g, "").split("");
                   return (
                     <span
                       key={i}
@@ -525,95 +652,118 @@ export function FoundationalHpcPdf({
             </div>
           </div>
 
-          {/* Row 4: अपार आय.डी. : with 12 boxes */}
-          <div className="flex items-center gap-2 pt-0.5">
-            <span className="font-bold text-slate-900 whitespace-nowrap">अपार आय.डी. :</span>
-            <div className="flex items-center">
-              {Array.from({ length: 12 }).map((_, i) => {
-                const aparChars = String(profile?.aparId || (student as any)?.aparId || "")
-                  .replace(/\D/g, "")
-                  .split("");
-                return (
-                  <span
-                    key={i}
-                    className="w-5.5 h-5.5 border border-black font-mono font-bold text-xs flex items-center justify-center text-slate-900 bg-white -ml-px first:ml-0"
-                  >
-                    {aparChars[i] || ""}
-                  </span>
-                );
-              })}
+          {/* Row 4: अपार आय.डी. : with 12 boxes + जन. रजि. नं. */}
+          <div className="flex items-center justify-between gap-4 pt-0.5">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 whitespace-nowrap">अपार आय.डी. (APAAR) :</span>
+              <div className="flex items-center">
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const aparChars = String(profile?.aparId || (student as any)?.aparId || "")
+                    .replace(/\D/g, "")
+                    .split("");
+                  return (
+                    <span
+                      key={i}
+                      className="w-5.5 h-5.5 border border-black font-mono font-bold text-xs flex items-center justify-center text-slate-900 bg-white -ml-px first:ml-0"
+                    >
+                      {aparChars[i] || ""}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 whitespace-nowrap">जन. रजि. नं. (G.R. No.) :</span>
+              <div className="border-b border-black w-28 min-h-[22px] px-2 font-bold font-mono text-slate-900 text-center flex items-end justify-center">
+                {studentGrNo}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Subheader: सर्वसाधारण माहिती */}
-        <div className="text-center my-1.5">
-          <h3 className="font-black text-[#e6006e] text-base tracking-wide">
+        <div className="text-center my-0.5 bg-[#fef2f6] py-1 px-4 rounded-lg border border-[#fbcfe8]">
+          <h3 className="font-black text-[#e6006e] text-sm tracking-wide">
             सर्वसाधारण माहिती
           </h3>
-          <p className="text-[10px] font-bold text-slate-800">
+          <p className="text-[10px] font-bold text-slate-700">
             (पालकांशी चर्चा करून शिक्षकांनी भरावे.)
           </p>
         </div>
 
-        {/* Student Form Section matching Photo 3 */}
-        <div className="space-y-1.5">
-          {/* Top 4 Rows beside Photo Box */}
-          <div className="flex items-start justify-between gap-5">
-            {/* Left 4 lines */}
-            <div className="flex-1 space-y-1.5 text-[11px]">
-              {/* Row 1: विद्यार्थ्याचे नाव */}
+        {/* Student Form Section */}
+        <div className="space-y-1.5 text-xs">
+          {/* Top Rows beside Photo Box */}
+          <div className="flex items-start justify-between gap-4">
+            {/* Left lines */}
+            <div className="flex-1 space-y-1.5">
+              {/* Row 1: विद्यार्थ्याचे नाव (मराठी) */}
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-900 whitespace-nowrap">विद्यार्थ्याचे नाव :</span>
-                <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+                <div className="border-b border-black flex-1 min-h-[22px] px-2 font-bold text-slate-900 flex items-end">
                   {profile?.fullName || student.fullName || student.name}
                 </div>
               </div>
 
-              {/* Row 2: हजेरी क्र. + सरल आय. डी. */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5 w-36">
+              {/* Row 2: विद्यार्थ्याचे नाव (इंग्रजीत) */}
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-900 whitespace-nowrap text-[11px]">नाव (इंग्रजी):</span>
+                <div className="border-b border-black flex-1 min-h-[22px] px-2 font-bold font-mono uppercase text-slate-900 text-xs flex items-end">
+                  {profile?.englishName || (student as any)?.englishName || (student.fullName || student.name || "").toUpperCase()}
+                </div>
+              </div>
+
+              {/* Row 3: हजेरी क्र. + सरल आय. डी. + PEN No. */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 w-28">
                   <span className="font-bold text-slate-900 whitespace-nowrap">हजेरी क्र. :</span>
-                  <div className="border-b border-black flex-1 min-h-[19px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
+                  <div className="border-b border-black flex-1 min-h-[22px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
                     {profile?.rollNo || student.rollNo || "१"}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 flex-1">
                   <span className="font-bold text-slate-900 whitespace-nowrap">सरल आय. डी. :</span>
-                  <div className="border-b border-black flex-1 min-h-[19px] px-2 font-mono font-bold text-slate-900 flex items-end">
+                  <div className="border-b border-black flex-1 min-h-[22px] px-2 font-mono font-bold text-slate-900 flex items-end">
                     {profile?.saralId && profile.saralId !== "-" ? profile.saralId : student.saralId || ""}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 w-36">
+                  <span className="font-bold text-slate-900 whitespace-nowrap text-[11px]">PEN No. :</span>
+                  <div className="border-b border-black flex-1 min-h-[22px] px-1 font-mono font-bold text-slate-900 text-center flex items-end justify-center">
+                    {studentPen}
                   </div>
                 </div>
               </div>
 
-              {/* Row 3: इयत्ता Checkboxes */}
-              <div className="flex items-center gap-2 flex-wrap text-[10px] pt-0.5">
+              {/* Row 4: इयत्ता Checkboxes */}
+              <div className="flex items-center gap-2 flex-wrap text-[11px] pt-0.5">
                 <span className="font-bold text-slate-900 whitespace-nowrap">इयत्ता :</span>
-                <label className="inline-flex items-center gap-1 cursor-pointer">
+                <label className="inline-flex items-center gap-1">
                   <span>बालवाटिका १</span>
                   <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
                     {student.class === "balvatika_1" ? "✓" : ""}
                   </span>
                 </label>
-                <label className="inline-flex items-center gap-1 cursor-pointer">
+                <label className="inline-flex items-center gap-1">
                   <span>बालवाटिका २</span>
                   <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
                     {student.class === "balvatika_2" ? "✓" : ""}
                   </span>
                 </label>
-                <label className="inline-flex items-center gap-1 cursor-pointer">
+                <label className="inline-flex items-center gap-1">
                   <span>बालवाटिका ३</span>
                   <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
                     {student.class === "balvatika_3" ? "✓" : ""}
                   </span>
                 </label>
-                <label className="inline-flex items-center gap-1 cursor-pointer font-bold">
+                <label className="inline-flex items-center gap-1 font-bold">
                   <span>इ. पहिली</span>
                   <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
                     {student.class === "1st" || student.class === "इ. पहिली" ? "✓" : ""}
                   </span>
                 </label>
-                <label className="inline-flex items-center gap-1 cursor-pointer font-bold">
+                <label className="inline-flex items-center gap-1 font-bold">
                   <span>इ. दुसरी</span>
                   <span className="w-4 h-4 border border-black inline-flex items-center justify-center font-bold text-xs bg-white text-slate-900">
                     {student.class === "2nd" || student.class === "इ. दुसरी" ? "✓" : ""}
@@ -621,17 +771,34 @@ export function FoundationalHpcPdf({
                 </label>
               </div>
 
-              {/* Row 4: तुकडी + जन्म दिनांक */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5 w-36">
+              {/* Row 5: तुकडी + लिंग + जन्म दिनांक */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 w-24">
                   <span className="font-bold text-slate-900 whitespace-nowrap">तुकडी :</span>
-                  <div className="border-b border-black flex-1 min-h-[19px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
+                  <div className="border-b border-black flex-1 min-h-[22px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
                     {profile?.division || student.division || "अ"}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-900 whitespace-nowrap">लिंग :</span>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <label className="inline-flex items-center gap-0.5">
+                      <span>मुलगा</span>
+                      <span className="w-3.5 h-3.5 border border-black inline-flex items-center justify-center font-bold text-[10px] bg-white">
+                        {studentGender === "male" || studentGender === "मुलगा" ? "✓" : ""}
+                      </span>
+                    </label>
+                    <label className="inline-flex items-center gap-0.5">
+                      <span>मुलगी</span>
+                      <span className="w-3.5 h-3.5 border border-black inline-flex items-center justify-center font-bold text-[10px] bg-white">
+                        {studentGender === "female" || studentGender === "मुलगी" ? "✓" : ""}
+                      </span>
+                    </label>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 flex-1">
                   <span className="font-bold text-slate-900 whitespace-nowrap">जन्म दिनांक :</span>
-                  <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+                  <div className="border-b border-black flex-1 min-h-[22px] px-2 font-bold text-slate-900 flex items-end">
                     {profile?.dob && profile.dob !== "-" ? (
                       profile.dob
                     ) : student.dob && student.dob !== "-" ? (
@@ -644,163 +811,224 @@ export function FoundationalHpcPdf({
               </div>
             </div>
 
-            {/* Right Photo Frame matching Image 3 */}
-            <div className="w-32 h-38 border border-black flex flex-col items-center justify-center text-slate-800 font-bold text-base shrink-0 overflow-hidden bg-white shadow-2xs">
+            {/* Right Photo Frame */}
+            <div className="w-30 h-38 border-2 border-black flex flex-col items-center justify-center text-slate-800 font-bold text-sm shrink-0 overflow-hidden bg-white shadow-xs">
               <SafePhoto
                 src={profile?.photoUrl || student.photoUrl}
                 alt="विद्यार्थी फोटो"
                 className="w-full h-full object-cover object-top"
-                fallback={<span className="text-slate-800 font-bold text-lg">फोटो</span>}
+                fallback={
+                  <div className="flex flex-col items-center justify-center p-2 text-center text-slate-400">
+                    <span className="text-2xl mb-1">📷</span>
+                    <span className="text-[10px] font-bold text-slate-600">विद्यार्थी फोटो</span>
+                  </div>
+                }
               />
             </div>
           </div>
 
-          {/* Remaining Lines: 100% Full-Width spanning under the photo box matching Image 3 */}
-          {/* Row 5: पत्ता */}
+          {/* Full-Width Rows under Photo */}
+          {/* Row 6: आधार क्रमांक + रक्तगट + जन्म ठिकाण */}
+          <div className="flex items-center gap-4 w-full pt-0.5">
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">आधार क्रमांक :</span>
+              <div className="flex items-center">
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const aadhaarChars = studentAadhaar.split("");
+                  return (
+                    <span
+                      key={i}
+                      className={`w-4.5 h-5 border border-black font-mono font-bold text-[11px] flex items-center justify-center text-slate-900 bg-white -ml-px first:ml-0 ${
+                        i === 4 || i === 8 ? "ml-1" : ""
+                      }`}
+                    >
+                      {aadhaarChars[i] || ""}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 w-32">
+              <span className="font-bold text-slate-900 whitespace-nowrap">रक्तगट :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
+                {studentBloodGroup}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">जन्म ठिकाण :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-2 font-bold text-slate-900 truncate flex items-end">
+                {studentBirthPlace || "-"}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 7: धर्म, जात व प्रवर्ग + दिव्यांग (CWSN) व BPL */}
+          <div className="flex items-center gap-4 w-full">
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">धर्म, जात व प्रवर्ग :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-2 font-bold text-slate-900 flex items-end">
+                {[
+                  profile?.religion && !profile.religion.includes("इतर") ? profile.religion.split(" ")[0] : "",
+                  studentCaste,
+                  studentCategory !== "-" ? `(${studentCategory})` : ""
+                ].filter(Boolean).join(" - ") || "-"}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 flex-1">
+              <span className="font-bold text-slate-900 whitespace-nowrap">दिव्यांग (CWSN) / BPL :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-2 font-bold text-slate-900 flex items-end">
+                {[
+                  profile?.cwsn && profile.cwsn !== "नाही"
+                    ? `${profile.cwsn} ${profile?.udidNo ? `(UDID: ${profile.udidNo})` : ""}`
+                    : "दिव्यांग: नाही",
+                  profile?.bpl && profile.bpl !== "नाही" ? `BPL: होय` : ""
+                ].filter(Boolean).join(" | ")}
+              </div>
+            </div>
+          </div>
+
+          {/* Row 8: पत्ता */}
           <div className="flex items-center gap-2 w-full">
-            <span className="font-bold text-slate-900 whitespace-nowrap">पत्ता :</span>
-            <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 truncate flex items-end">
+            <span className="font-bold text-slate-900 whitespace-nowrap">संपूर्ण पत्ता :</span>
+            <div className="border-b border-black flex-1 min-h-[20px] px-2 font-bold text-slate-900 truncate flex items-end">
               {profile?.homeAddress && profile.homeAddress !== "-"
                 ? profile.homeAddress
                 : profile?.addressLine1 && profile.addressLine1 !== "-"
                 ? profile.addressLine1
                 : student.address && student.address !== "-"
                 ? student.address
-                : ""}
+                : "-"}
             </div>
           </div>
 
-          {/* Row 6: वजन + उंची */}
-          <div className="flex items-center gap-8 w-full">
-            <div className="flex items-center gap-1.5 w-52">
-              <span className="font-bold text-slate-900 whitespace-nowrap">वजन :</span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
-                {profile?.term1Weight ? `${profile.term1Weight} कि.ग्रॅ.` : ""}
+          {/* Row 9: शारीरिक मोजमापे (उंची व वजन - प्रथम व द्वितीय सत्र) */}
+          <div className="flex items-center gap-3 w-full bg-slate-50/80 px-2 py-0.5 rounded border border-slate-200">
+            <span className="font-bold text-slate-900 whitespace-nowrap text-[11px]">शारीरिक मोजमापे :</span>
+            <div className="flex items-center gap-4 flex-1 text-[11px]">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-slate-700">सत्र १ —</span>
+                <span className="font-bold text-slate-900">वजन:</span>
+                <span className="border-b border-black min-w-[50px] text-center font-bold px-1">
+                  {profile?.term1Weight ? `${profile.term1Weight} कि.ग्रॅ.` : "-"}
+                </span>
+                <span className="font-bold text-slate-900 ml-1">उंची:</span>
+                <span className="border-b border-black min-w-[50px] text-center font-bold px-1">
+                  {profile?.term1Height ? `${profile.term1Height} सें.मी.` : "-"}
+                </span>
               </div>
-            </div>
-            <div className="flex items-center gap-1.5 w-52">
-              <span className="font-bold text-slate-900 whitespace-nowrap">उंची :</span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
-                {profile?.term1Height ? `${profile.term1Height} सें.मी.` : ""}
+              <div className="w-px h-3.5 bg-slate-300" />
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-slate-700">सत्र २ —</span>
+                <span className="font-bold text-slate-900">वजन:</span>
+                <span className="border-b border-black min-w-[50px] text-center font-bold px-1">
+                  {profile?.term2Weight ? `${profile.term2Weight} कि.ग्रॅ.` : "-"}
+                </span>
+                <span className="font-bold text-slate-900 ml-1">उंची:</span>
+                <span className="border-b border-black min-w-[50px] text-center font-bold px-1">
+                  {profile?.term2Height ? `${profile.term2Height} सें.मी.` : "-"}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Row 7: आईचे/पालकांचे नाव + भ्रमणध्वनी */}
-          <div className="flex items-center gap-6 w-full">
+          {/* Row 10: आईचे नाव + आईचे शिक्षण + व्यवसाय + मोबाईल */}
+          <div className="flex items-center gap-4 w-full">
             <div className="flex items-center gap-1.5 flex-1">
-              <span className="font-bold text-slate-900 whitespace-nowrap">आईचे/पालकांचे नाव :</span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 truncate flex items-end">
-                {profile?.motherName && profile.motherName !== "-" ? profile.motherName : ""}
+              <span className="font-bold text-slate-900 whitespace-nowrap">आईचे नाव :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-2 font-bold text-slate-900 truncate flex items-end">
+                {profile?.motherName && profile.motherName !== "-" ? profile.motherName : "-"}
               </div>
             </div>
-            <div className="flex items-center gap-1.5 w-72">
-              <span className="font-bold text-slate-900 whitespace-nowrap text-[10.5px]">
-                भ्रमणध्वनी (मोबाइल क्र.) :
-              </span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
+            <div className="flex items-center gap-1.5 w-44">
+              <span className="font-bold text-slate-900 whitespace-nowrap text-[11px]">शिक्षण व व्यवसाय :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-1 font-bold text-slate-900 text-center truncate flex items-end justify-center">
+                {[profile?.motherEducation, profile?.motherOccupation].filter(Boolean).filter(v => v !== "-").join(", ") || "-"}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 w-48">
+              <span className="font-bold text-slate-900 whitespace-nowrap text-[11px]">मोबाईल क्र. :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-2 font-bold font-mono text-slate-900 flex items-end">
                 {profile?.motherPhone && profile.motherPhone !== "-"
                   ? profile.motherPhone
                   : student.parentPhone && student.parentPhone !== "-"
                   ? student.parentPhone
-                  : ""}
+                  : "-"}
               </div>
             </div>
           </div>
 
-          {/* Row 8: आईचे शिक्षण + आईचा व्यवसाय */}
-          <div className="flex items-center gap-6 w-full">
+          {/* Row 11: वडिलांचे नाव + वडिलांचे शिक्षण + व्यवसाय + मोबाईल */}
+          <div className="flex items-center gap-4 w-full">
             <div className="flex items-center gap-1.5 flex-1">
-              <span className="font-bold text-slate-900 whitespace-nowrap">आईचे/पालकांचे शिक्षण :</span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-                {profile?.motherEducation && profile.motherEducation !== "-" ? profile.motherEducation : ""}
+              <span className="font-bold text-slate-900 whitespace-nowrap">वडिलांचे नाव :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-2 font-bold text-slate-900 truncate flex items-end">
+                {profile?.fatherName && profile.fatherName !== "-" ? profile.fatherName : "-"}
               </div>
             </div>
-            <div className="flex items-center gap-1.5 flex-1">
-              <span className="font-bold text-slate-900 whitespace-nowrap">आई/पालकांचा व्यवसाय :</span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-                {profile?.motherOccupation && profile.motherOccupation !== "-" ? profile.motherOccupation : ""}
+            <div className="flex items-center gap-1.5 w-44">
+              <span className="font-bold text-slate-900 whitespace-nowrap text-[11px]">शिक्षण व व्यवसाय :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-1 font-bold text-slate-900 text-center truncate flex items-end justify-center">
+                {[profile?.fatherEducation, profile?.fatherOccupation].filter(Boolean).filter(v => v !== "-").join(", ") || "-"}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 w-48">
+              <span className="font-bold text-slate-900 whitespace-nowrap text-[11px]">मोबाईल क्र. :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-2 font-bold font-mono text-slate-900 flex items-end">
+                {profile?.fatherPhone && profile.fatherPhone !== "-"
+                  ? profile.fatherPhone
+                  : student.parentPhone && student.parentPhone !== "-"
+                  ? student.parentPhone
+                  : "-"}
               </div>
             </div>
           </div>
 
-          {/* Row 9: वडिलांचे/पालकांचे नाव + वडिलांचा व्यवसाय */}
-          <div className="flex items-center gap-6 w-full">
-            <div className="flex items-center gap-1.5 flex-1">
-              <span className="font-bold text-slate-900 whitespace-nowrap">वडिलांचे/पालकांचे नाव :</span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 truncate flex items-end">
-                {profile?.fatherName && profile.fatherName !== "-" ? profile.fatherName : ""}
+          {/* Row 12: भावंडे + मातृभाषा + माध्यम + ग्रामीण/शहरी */}
+          <div className="flex items-center gap-4 w-full">
+            <div className="flex items-center gap-1.5 w-36">
+              <span className="font-bold text-slate-900 whitespace-nowrap text-[11px]">भावंडे (संख्या/वय) :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-1 font-bold text-slate-900 text-center flex items-end justify-center text-[11px]">
+                {profile?.siblingCount ? `${profile.siblingCount} (${profile.siblingAge || "-"})` : "-"}
               </div>
             </div>
             <div className="flex items-center gap-1.5 flex-1">
-              <span className="font-bold text-slate-900 whitespace-nowrap">वडील/पालकांचा व्यवसाय :</span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-                {profile?.fatherOccupation && profile.fatherOccupation !== "-" ? profile.fatherOccupation : ""}
-              </div>
-            </div>
-          </div>
-
-          {/* Row 10: वडिलांचे शिक्षण */}
-          <div className="flex items-center gap-2 w-full">
-            <span className="font-bold text-slate-900 whitespace-nowrap">वडिलांचे/पालकांचे शिक्षण :</span>
-            <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-              {profile?.fatherEducation && profile.fatherEducation !== "-" ? profile.fatherEducation : ""}
-            </div>
-          </div>
-
-          {/* Row 11: भावंडांची संख्या + भावंडांचे वय */}
-          <div className="flex items-center gap-8 w-full">
-            <div className="flex items-center gap-1.5 w-52">
-              <span className="font-bold text-slate-900 whitespace-nowrap">भावंडांची संख्या :</span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
-                {profile?.siblingCount && profile.siblingCount !== "-" ? profile.siblingCount : ""}
+              <span className="font-bold text-slate-900 whitespace-nowrap text-[11px]">मातृभाषा :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
+                {profile?.motherTongue || (student as any)?.motherTongue || "मराठी"}
               </div>
             </div>
             <div className="flex items-center gap-1.5 flex-1">
-              <span className="font-bold text-slate-900 whitespace-nowrap">भावंडांचे वय :</span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-                {profile?.siblingAge && profile.siblingAge !== "-" ? profile.siblingAge : ""}
+              <span className="font-bold text-slate-900 whitespace-nowrap text-[11px]">शिक्षणाचे माध्यम :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
+                {profile?.mediumOfInstruction || (student as any)?.mediumOfInstruction || "मराठी"}
               </div>
             </div>
-          </div>
-
-          {/* Row 12: मातृभाषा + शिक्षणाचे माध्यम */}
-          <div className="flex items-center gap-8 w-full">
-            <div className="flex items-center gap-1.5 flex-1">
-              <span className="font-bold text-slate-900 whitespace-nowrap">मातृभाषा :</span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-                {profile?.motherTongue || (student as any)?.motherTongue || ""}
+            <div className="flex items-center gap-1.5 w-32">
+              <span className="font-bold text-slate-900 whitespace-nowrap text-[11px]">परिसर :</span>
+              <div className="border-b border-black flex-1 min-h-[20px] px-1 font-bold text-slate-900 text-center flex items-end justify-center">
+                {profile?.areaType || "ग्रामीण"}
               </div>
-            </div>
-            <div className="flex items-center gap-1.5 flex-1">
-              <span className="font-bold text-slate-900 whitespace-nowrap">शिक्षणाचे माध्यम :</span>
-              <div className="border-b border-black flex-1 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-                {profile?.mediumOfInstruction || (student as any)?.mediumOfInstruction || ""}
-              </div>
-            </div>
-          </div>
-
-          {/* Row 13: ग्रामीण / शहरी */}
-          <div className="flex items-center gap-2 w-full">
-            <span className="font-bold text-slate-900 whitespace-nowrap">ग्रामीण/शहरी :</span>
-            <div className="border-b border-black w-56 min-h-[19px] px-2 font-bold text-slate-900 flex items-end">
-              {profile?.areaType || ""}
             </div>
           </div>
         </div>
 
-        {/* Section: उपस्थिती Table Matching Image 3 & Image 5 100% */}
-        <div className="mt-1">
-          <h3 className="font-black text-[#e6006e] text-sm mb-1">
-            उपस्थिती
-          </h3>
+        {/* Section: उपस्थिती Table */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <h3 className="font-black text-[#e6006e] text-sm tracking-wide">
+              उपस्थिती नोंद
+            </h3>
+            <span className="text-[11px] font-bold text-slate-600">
+              वार्षिक एकूण उपस्थिती: <b className="text-slate-900">{totalPresent} / {totalWorking || "२२०"} दिवस ({attendancePct || "—"})</b>
+            </span>
+          </div>
 
-          <table className="w-full table-fixed border-collapse border border-[#e6006e] text-center text-[10px]">
+          <table className="w-full table-fixed border-collapse border border-[#e6006e] text-center text-xs">
             <thead>
               <tr className="border-b border-[#e6006e] bg-[#fef2e6] text-[#e6006e] font-black">
-                <th className="border-r border-[#e6006e] p-1 w-[16%] text-left pl-2">महिने</th>
+                <th className="border-r border-[#e6006e] py-1.5 px-2.5 w-[22%] text-left font-black text-xs">महिने</th>
                 {["जून", "जुलै", "ऑगस्ट", "सप्टें.", "ऑक्टो.", "नोव्हें.", "डिसें.", "जाने.", "फेब्रु.", "मार्च", "एप्रिल", "मे"].map((m) => (
-                  <th key={m} className="border-r border-[#e6006e] last:border-r-0 p-1 w-[7%] font-black whitespace-nowrap">
+                  <th key={m} className="border-r border-[#e6006e] last:border-r-0 py-1.5 px-0.5 w-[6.5%] font-black whitespace-nowrap text-[11px]">
                     {m}
                   </th>
                 ))}
@@ -809,11 +1037,11 @@ export function FoundationalHpcPdf({
             <tbody className="divide-y divide-[#e6006e] text-slate-900 font-bold">
               {/* Row 1: कामाचे दिवस */}
               <tr>
-                <td className="border-r border-[#e6006e] bg-[#fef2e6] p-1 w-[16%] text-left pl-2 font-black text-slate-900 whitespace-nowrap">
+                <td className="border-r border-[#e6006e] bg-[#fef2e6] py-1.5 px-2.5 w-[22%] text-left font-bold text-slate-900 text-xs">
                   कामाचे दिवस
                 </td>
                 {monthlyAttList.map((mAtt, i) => (
-                  <td key={i} className="border-r border-[#e6006e] last:border-r-0 p-1 w-[7%]">
+                  <td key={i} className="border-r border-[#e6006e] last:border-r-0 py-1.5 px-0.5 w-[6.5%] text-xs font-semibold text-slate-800">
                     {mAtt.working}
                   </td>
                 ))}
@@ -821,23 +1049,23 @@ export function FoundationalHpcPdf({
 
               {/* Row 2: उपस्थित दिवस */}
               <tr>
-                <td className="border-r border-[#e6006e] bg-[#fef2e6] p-1 w-[16%] text-left pl-2 font-black text-slate-900 whitespace-nowrap">
+                <td className="border-r border-[#e6006e] bg-[#fef2e6] py-1.5 px-2.5 w-[22%] text-left font-bold text-slate-900 text-xs">
                   उपस्थित दिवस
                 </td>
                 {monthlyAttList.map((mAtt, i) => (
-                  <td key={i} className="border-r border-[#e6006e] last:border-r-0 p-1 w-[7%] font-black text-slate-900">
+                  <td key={i} className="border-r border-[#e6006e] last:border-r-0 py-1.5 px-0.5 w-[6.5%] font-black text-slate-900 text-xs">
                     {mAtt.present}
                   </td>
                 ))}
               </tr>
 
-              {/* Row 3: उपस्थिती (% मध्ये) in PINK font matching Image 5 */}
+              {/* Row 3: उपस्थिती (% मध्ये) in PINK font */}
               <tr>
-                <td className="border-r border-[#e6006e] bg-[#fef2e6] p-1 w-[16%] text-left pl-2 font-black text-slate-900 whitespace-nowrap">
+                <td className="border-r border-[#e6006e] bg-[#fef2e6] py-1.5 px-2.5 w-[22%] text-left font-bold text-slate-900 text-xs">
                   उपस्थिती (% मध्ये)
                 </td>
                 {monthlyAttList.map((mAtt, i) => (
-                  <td key={i} className="border-r border-[#e6006e] last:border-r-0 p-1 w-[7%] font-black text-[#e6006e]">
+                  <td key={i} className="border-r border-[#e6006e] last:border-r-0 py-1.5 px-0.5 w-[6.5%] font-black text-[#e6006e] text-xs">
                     {mAtt.pct}
                   </td>
                 ))}
@@ -845,17 +1073,23 @@ export function FoundationalHpcPdf({
 
               {/* Row 4: उपस्थिती कमी असल्यास त्याची कारणे */}
               <tr>
-                <td className="border-r border-[#e6006e] bg-[#fef2e6] p-1 w-[16%] text-left pl-2 font-black text-slate-900 leading-tight">
+                <td className="border-r border-[#e6006e] bg-[#fef2e6] py-1.5 px-2.5 w-[22%] text-left font-bold text-slate-900 text-[11px] leading-tight">
                   <div>उपस्थिती कमी असल्यास</div>
-                  <div>त्याची कारणे</div>
+                  <div>त्याची कारणे :</div>
                 </td>
-                <td colSpan={12} className="p-1 px-3 align-middle bg-white w-[84%]">
-                  <div className="space-y-1.5 py-1">
-                    <div className="border-b border-black h-3.5 w-full flex items-end px-1 text-[10px]">
-                      {(profile as any)?.attendanceReason1 || ""}
+                <td colSpan={12} className="py-1 px-3 align-middle bg-white w-[78%] text-left">
+                  <div className="space-y-1 py-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-slate-500 font-bold shrink-0">१.</span>
+                      <div className="border-b border-black flex-1 min-h-[16px] px-1 text-[11px] font-medium text-slate-800">
+                        {(profile as any)?.attendanceReason1 || ""}
+                      </div>
                     </div>
-                    <div className="border-b border-black h-3.5 w-full flex items-end px-1 text-[10px]">
-                      {(profile as any)?.attendanceReason2 || ""}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-slate-500 font-bold shrink-0">२.</span>
+                      <div className="border-b border-black flex-1 min-h-[16px] px-1 text-[11px] font-medium text-slate-800">
+                        {(profile as any)?.attendanceReason2 || ""}
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -864,11 +1098,50 @@ export function FoundationalHpcPdf({
           </table>
         </div>
 
-        {/* Footer: Cyan Rule with Page Number 1 on the Right matching Image 3 */}
-        <div className="mt-auto pt-2">
+        {/* Verification & Official Signatures Section */}
+        <div className="pt-2 border-t border-slate-300">
+          <div className="grid grid-cols-4 gap-4 text-center text-xs">
+            {/* Signature 1: पालक स्वाक्षरी */}
+            <div className="flex flex-col items-center justify-end h-14">
+              <div className="w-32 border-b border-dotted border-black mb-1" />
+              <span className="font-bold text-slate-900 text-[11px]">पालकांची स्वाक्षरी</span>
+            </div>
+
+            {/* Signature 2: वर्गशिक्षक स्वाक्षरी */}
+            <div className="flex flex-col items-center justify-end h-14">
+              <div className="text-[11px] font-bold text-slate-800 mb-0.5 truncate max-w-[140px]">
+                {teacherName}
+              </div>
+              <div className="w-32 border-b border-dotted border-black mb-1" />
+              <span className="font-bold text-slate-900 text-[11px]">वर्गशिक्षकांची स्वाक्षरी</span>
+            </div>
+
+            {/* Signature 3: मुख्याध्यापक स्वाक्षरी व शिक्का */}
+            <div className="flex flex-col items-center justify-end h-14">
+              <div className="text-[11px] font-bold text-slate-800 mb-0.5 truncate max-w-[140px]">
+                {hmName}
+              </div>
+              <div className="w-32 border-b border-dotted border-black mb-1" />
+              <span className="font-bold text-slate-900 text-[11px]">मुख्याध्यापक स्वाक्षरी व शिक्का</span>
+            </div>
+
+            {/* Signature 4: दिनांक */}
+            <div className="flex flex-col items-center justify-end h-14">
+              <div className="text-[11px] font-mono font-bold text-slate-800 mb-0.5">
+                {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
+              </div>
+              <div className="w-24 border-b border-dotted border-black mb-1" />
+              <span className="font-bold text-slate-900 text-[11px]">दिनांक</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer: Cyan Rule with State Department Note and Page Number */}
+        <div className="mt-auto pt-1">
           <div className="w-full h-0.5 bg-[#00a0dc]" />
-          <div className="flex justify-end pr-1 pt-1 text-xs font-bold text-slate-800">
-            <span>1</span>
+          <div className="flex items-center justify-between pt-1 text-[10px] font-bold text-slate-600">
+            <span>महाराष्ट्र राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद (SCERT), पुणे — समग्र प्रगतिपत्रक</span>
+            <span className="text-slate-900 text-xs font-black">पृष्ठ १</span>
           </div>
         </div>
       </div>
@@ -1045,17 +1318,22 @@ export function FoundationalHpcPdf({
             {/* Cyan Border Card */}
             <div className="border-[5px] border-[#009fd9] bg-white p-3 rounded-none flex-1 flex flex-col justify-between min-h-[190px] relative">
               <div className="space-y-2.5">
-                {[0, 1, 2, 3, 4].map((idx) => {
-                  const frName = (profile?.friends || [])[idx] || "";
-                  return (
-                    <div key={idx} className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#8e237b] shrink-0" />
-                      <div className="border-b border-dotted border-slate-700 flex-1 h-4 flex items-end px-1 text-xs font-bold text-slate-900">
-                        {frName}
+                {(() => {
+                  const friendsList = (profile?.friends && Array.isArray(profile.friends) && profile.friends.length > 0)
+                    ? profile.friends
+                    : [profile?.bestFriend1, profile?.bestFriend2, profile?.bestFriend3].filter(Boolean) as string[];
+                  return [0, 1, 2, 3, 4].map((idx) => {
+                    const frName = friendsList[idx] || "";
+                    return (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#8e237b] shrink-0" />
+                        <div className="border-b border-dotted border-slate-700 flex-1 h-4 flex items-end px-1 text-xs font-bold text-slate-900">
+                          {frName}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
 
               {/* Starburst Banner attached at bottom */}
@@ -1191,9 +1469,11 @@ export function FoundationalHpcPdf({
                   const checked = Boolean(
                     profile?.hobbies && profile.hobbies.some((h) => h.includes(name) || name.includes(h))
                   );
+                  const isOther = name === "इतर";
+                  const otherLabel = isOther && profile?.otherHobby ? `इतर (${profile.otherHobby})` : name;
                   return (
                     <div key={name} className="flex items-center gap-1.5 shrink-0">
-                      <span className="font-bold text-slate-900 text-[11px] whitespace-nowrap">{name}</span>
+                      <span className="font-bold text-slate-900 text-[11px] whitespace-nowrap">{otherLabel}</span>
                       <span className="w-4.5 h-4.5 border border-black bg-white inline-flex items-center justify-center font-black text-rose-600 text-xs shrink-0">
                         {checked ? "✓" : ""}
                       </span>
@@ -1209,12 +1489,29 @@ export function FoundationalHpcPdf({
                 इतर व्यक्तींसोबत (वडील, आई, पालक, भावंड इ.) घरातील खालील कामे नियमित करतो/करते.
               </div>
               <div className="space-y-1 mt-1">
-                <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900">
-                  {profile?.regularHomeChores && profile.regularHomeChores !== "-"
+                {(() => {
+                  const choresText = profile?.regularHomeChores && profile.regularHomeChores !== "-"
                     ? profile.regularHomeChores
-                    : ""}
-                </div>
-                <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900" />
+                    : "";
+                  let line1 = choresText;
+                  let line2 = "";
+                  if (choresText.length > 50) {
+                    const mid = choresText.lastIndexOf(" ", 50);
+                    const splitIdx = mid > 20 ? mid : 50;
+                    line1 = choresText.substring(0, splitIdx);
+                    line2 = choresText.substring(splitIdx).trim();
+                  }
+                  return (
+                    <>
+                      <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900 truncate">
+                        {line1}
+                      </div>
+                      <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900 truncate">
+                        {line2}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -1242,8 +1539,8 @@ export function FoundationalHpcPdf({
         return (["session1", "session2"] as const).map((sess) => {
           const currentAssessment =
             sess === "session1"
-              ? session1?.areaAssessments?.[area.id]
-              : session2?.areaAssessments?.[area.id];
+              ? findSessionAssessment(session1, area.id)
+              : findSessionAssessment(session2, area.id);
 
           const sessLabel = sess === "session1" ? "सत्र - १" : "सत्र - २";
           const pageNum = 4 + areaIndex * 2 + (sess === "session1" ? 0 : 1);
@@ -1263,39 +1560,43 @@ export function FoundationalHpcPdf({
           return (
             <div
               key={`${area.id}_${sess}`}
-              className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden p-8 mx-auto bg-white flex flex-col justify-between border border-slate-300 relative box-border text-slate-900 text-xs"
+              className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden px-8 py-5 mx-auto bg-white flex flex-col justify-between border border-slate-300 relative box-border text-slate-900 text-xs"
             >
-              <div className="space-y-2">
+              <div className="flex-1 flex flex-col justify-between">
                 {/* Top Student Header */}
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-800 pb-0.5">
                   <div>
                     <span>विद्यार्थ्याचे नाव: </span>
-                    <span className="font-bold text-slate-900">{student.name}</span>
+                    <span className="font-bold text-slate-900">{studentDisplayName}</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-slate-600 text-[11px]">
+                    <span>इयत्ता: <b className="text-slate-900">{student.class ? (student.class === "1st" ? "१ ली" : student.class === "2nd" ? "२ री" : student.class) : "-"}</b></span>
+                    {student.rollNo && <span>हजेरी क्र.: <b className="text-slate-900">{student.rollNo}</b></span>}
                   </div>
                 </div>
 
                 {/* Area Title Box with Green Border */}
-                <div className="border border-[#059669] bg-white py-1.5 px-4 flex items-center justify-between">
+                <div className="border-2 border-[#059669] bg-emerald-50/40 py-1.5 px-4 rounded-lg flex items-center justify-between">
                   <span className="font-black text-sm text-slate-900 tracking-wide">
                     क्षेत्र क्र. {area.codeNum} : {area.nameMarathi}
                   </span>
-                  <span className="font-black text-sm text-[#c85a28]">
+                  <span className="font-black text-sm text-[#c85a28] px-2 py-0.5 rounded bg-white border border-[#c85a28]/30">
                     {sessLabel}
                   </span>
                 </div>
 
-                {/* Curricular Goals (अभ्यासक्रमाची ध्येये) */}
-                <div className="text-[11px] leading-tight text-slate-800">
-                  <span className="font-black text-[#c85a28]">
-                    अभ्यासक्रमाची ध्येये :{" "}
-                  </span>
-                  <span className="font-medium">{area.goalText}</span>
-                </div>
-
-                {/* Competencies (क्षमता) */}
-                <div className="text-[11px] leading-tight text-slate-800">
-                  <span className="font-black text-[#c85a28]">क्षमता : </span>
-                  <span className="font-medium">{area.competencyText}</span>
+                {/* Curricular Goals & Competencies Box */}
+                <div className="p-2.5 bg-slate-50/70 rounded-lg border border-slate-200 space-y-1 text-[10px] leading-relaxed text-slate-800">
+                  <div>
+                    <span className="font-black text-[#c85a28]">
+                      अभ्यासक्रमाची ध्येये :{" "}
+                    </span>
+                    <span className="font-medium text-slate-900">{area.goalText}</span>
+                  </div>
+                  <div>
+                    <span className="font-black text-[#c85a28]">क्षमता : </span>
+                    <span className="font-medium text-slate-900">{area.competencyText}</span>
+                  </div>
                 </div>
 
                 {/* अध्ययन निष्पत्ती (Learning Outcomes) - Class Specific */}
@@ -1327,7 +1628,7 @@ export function FoundationalHpcPdf({
                   if (displayLOs.length === 0) return null;
 
                   return (
-                    <div className="text-[10px] leading-tight text-slate-800 bg-[#fffdf0] p-1.5 rounded border border-[#fde68a]">
+                    <div className="text-[10px] leading-relaxed text-slate-800 bg-[#fffdf0] py-1 px-2.5 rounded-lg border border-[#fde68a]">
                       <span className="font-black text-[#c85a28]">
                         अध्ययन निष्पत्ती ({targetClass === "2nd" ? "इयत्ता २ री" : "इयत्ता १ ली"}) :{" "}
                       </span>
@@ -1338,125 +1639,149 @@ export function FoundationalHpcPdf({
                   );
                 })()}
 
-                {/* Activities & Questions: 2 Columns */}
-                <div className="grid grid-cols-2 gap-4 pt-1">
+                {/* Activities & Questions: 2 Columns Card */}
+                <div className="grid grid-cols-2 gap-3 p-2.5 bg-slate-50/70 rounded-lg border border-slate-200">
                   {/* Left Column: Activities */}
                   <div className="space-y-1">
-                    <span className="font-black text-xs text-[#c85a28] block">
+                    <span className="font-black text-[11px] text-[#c85a28] block border-b border-slate-200 pb-0.5">
                       मूल्यमापनासाठी केलेली कृती/उपक्रम:
                     </span>
-                    <div className="text-[11px] text-slate-800 space-y-0.5 pl-1 leading-tight font-medium">
-                      {area.activities.map((act, i) => (
-                        <div key={i}>{act}</div>
-                      ))}
+                    <div className="text-[10px] text-slate-800 space-y-1 pl-1 leading-snug font-medium">
+                      {(() => {
+                        const customActs = [
+                          currentAssessment?.activity1Title
+                            ? `${currentAssessment.activity1Title}${currentAssessment.activity1Description ? ` - ${currentAssessment.activity1Description}` : ""}`
+                            : "",
+                          currentAssessment?.activity2Title
+                            ? `${currentAssessment.activity2Title}${currentAssessment.activity2Description ? ` - ${currentAssessment.activity2Description}` : ""}`
+                            : "",
+                        ].filter(Boolean);
+                        const actsToDisplay = customActs.length > 0 ? customActs : area.activities;
+                        return actsToDisplay.slice(0, 2).map((act, i) => (
+                          <div key={i} className="line-clamp-2">
+                            <span className="font-bold text-[#c85a28] mr-1">•</span>
+                            {act}
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </div>
 
                   {/* Right Column: Questions */}
                   <div className="space-y-1">
-                    <span className="font-black text-xs text-[#c85a28] block">
+                    <span className="font-black text-[11px] text-[#c85a28] block border-b border-slate-200 pb-0.5">
                       मूल्यमापनाचे प्रश्न:
                     </span>
-                    <div className="text-[11px] text-slate-800 space-y-0.5 pl-1 leading-tight font-medium">
-                      {area.evalQuestions.map((q, i) => (
-                        <div key={i}>{q}</div>
-                      ))}
+                    <div className="text-[10px] text-slate-800 space-y-0.5 pl-1 leading-snug font-medium">
+                      {(() => {
+                        const customQs = (currentAssessment?.assessmentQuestions || []).filter(Boolean);
+                        const qsToDisplay = customQs.length > 0 ? customQs : area.evalQuestions;
+                        return qsToDisplay.slice(0, 5).map((q, i) => (
+                          <div key={i} className="line-clamp-1">
+                            <span className="font-bold text-slate-600 mr-1">{i + 1}.</span>
+                            {q.replace(/^[0-9]+[.)\s]+/, "")}
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </div>
                 </div>
 
-                {/* Rubrics Header */}
-                <div className="font-black text-xs text-[#c85a28] pt-1">
-                  मूल्यांकन निकषसंच (रुब्रिक)
+                {/* Rubrics Header & Table */}
+                <div className="space-y-1">
+                  <div className="font-black text-[11px] text-[#c85a28]">
+                    मूल्यांकन निकषसंच (रुब्रिक)
+                  </div>
+
+                  <table className="w-full border-collapse border border-slate-400 text-[9px]">
+                    <thead>
+                      <tr className="bg-[#eaf4ea] text-slate-900 font-bold">
+                        <th className="border border-slate-400 py-1 px-1.5 w-24 text-center">
+                          क्षमता
+                        </th>
+                        <th className="border border-slate-400 py-1 px-1.5 text-center">
+                          कामगिरी स्तर: निर्झर
+                        </th>
+                        <th className="border border-slate-400 py-1 px-1.5 text-center">
+                          कामगिरी स्तर: पर्वत
+                        </th>
+                        <th className="border border-slate-400 py-1 px-1.5 text-center">
+                          कामगिरी स्तर: आकाश
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {FOUNDATIONAL_RUBRICS.map((rubric) => {
+                        const rawLevel =
+                          rubric.dimension === "जाणीवजागृती"
+                            ? awLvl
+                            : rubric.dimension === "संवेदनशीलता"
+                            ? seLvl
+                            : crLvl;
+                        const lvlStr = String(rawLevel || "").toLowerCase();
+                        const isNirjhar =
+                          lvlStr === "beginner" || lvlStr === "nirjhar" || lvlStr === "निर्झर";
+                        const isAkash =
+                          lvlStr === "advanced" || lvlStr === "akash" || lvlStr === "आकाश";
+                        const isParvat =
+                          lvlStr === "proficient" ||
+                          lvlStr === "parvat" ||
+                          lvlStr === "पर्वत";
+
+                        return (
+                          <tr key={rubric.dimension}>
+                            <td className="border border-slate-400 py-1.5 px-2 font-bold text-slate-900 text-center bg-slate-50">
+                              {rubric.dimension}
+                            </td>
+                            <td
+                              className={`border border-slate-400 py-1.5 px-2 leading-snug ${
+                                isNirjhar ? "bg-amber-50 font-semibold" : ""
+                              }`}
+                            >
+                              <span className="font-bold mr-1">
+                                {isNirjhar ? "▣" : "☐"}
+                              </span>
+                              {rubric.nirjhar}
+                            </td>
+                            <td
+                              className={`border border-slate-400 py-1.5 px-2 leading-snug ${
+                                isParvat ? "bg-emerald-50 font-semibold" : ""
+                              }`}
+                            >
+                              <span className="font-bold mr-1">
+                                {isParvat ? "▣" : "☐"}
+                              </span>
+                              {rubric.parvat}
+                            </td>
+                            <td
+                              className={`border border-slate-400 py-1.5 px-2 leading-snug ${
+                                isAkash ? "bg-blue-50 font-semibold" : ""
+                              }`}
+                            >
+                              <span className="font-bold mr-1">
+                                {isAkash ? "▣" : "☐"}
+                              </span>
+                              {rubric.akash}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
-                {/* Rubrics Table */}
-                <table className="w-full border-collapse border border-slate-400 text-[10px]">
-                  <thead>
-                    <tr className="bg-[#eaf4ea] text-slate-900 font-bold">
-                      <th className="border border-slate-400 p-1 w-24 text-center">
-                        क्षमता
-                      </th>
-                      <th className="border border-slate-400 p-1 text-center">
-                        कामगिरी स्तर: निर्झर
-                      </th>
-                      <th className="border border-slate-400 p-1 text-center">
-                        कामगिरी स्तर: पर्वत
-                      </th>
-                      <th className="border border-slate-400 p-1 text-center">
-                        कामगिरी स्तर: आकाश
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {FOUNDATIONAL_RUBRICS.map((rubric) => {
-                      const rawLevel =
-                        rubric.dimension === "जाणीवजागृती"
-                          ? awLvl
-                          : rubric.dimension === "संवेदनशीलता"
-                          ? seLvl
-                          : crLvl;
-                      const lvlStr = String(rawLevel || "").toLowerCase();
-                      const isNirjhar =
-                        lvlStr === "beginner" || lvlStr === "nirjhar" || lvlStr === "निर्झर";
-                      const isAkash =
-                        lvlStr === "advanced" || lvlStr === "akash" || lvlStr === "आकाश";
-                      const isParvat =
-                        lvlStr === "proficient" ||
-                        lvlStr === "parvat" ||
-                        lvlStr === "पर्वत";
-
-                      return (
-                        <tr key={rubric.dimension}>
-                          <td className="border border-slate-400 p-1.5 font-bold text-slate-900 text-center bg-slate-50">
-                            {rubric.dimension}
-                          </td>
-                          <td
-                            className={`border border-slate-400 p-1.5 leading-snug ${
-                              isNirjhar ? "bg-amber-50 font-semibold" : ""
-                            }`}
-                          >
-                            <span className="font-bold mr-1">
-                              {isNirjhar ? "▣" : "☐"}
-                            </span>
-                            {rubric.nirjhar}
-                          </td>
-                          <td
-                            className={`border border-slate-400 p-1.5 leading-snug ${
-                              isParvat ? "bg-emerald-50 font-semibold" : ""
-                            }`}
-                          >
-                            <span className="font-bold mr-1">
-                              {isParvat ? "▣" : "☐"}
-                            </span>
-                            {rubric.parvat}
-                          </td>
-                          <td
-                            className={`border border-slate-400 p-1.5 leading-snug ${
-                              isAkash ? "bg-blue-50 font-semibold" : ""
-                            }`}
-                          >
-                            <span className="font-bold mr-1">
-                              {isAkash ? "▣" : "☐"}
-                            </span>
-                            {rubric.akash}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
-                {/* Proficiency Badge & Teacher Remark Row */}
-                <div className="flex items-center gap-4 py-1">
-                  <ProficiencyBadge level={awLvl} />
-                  <div className="flex-1 pl-2">
-                    <div className="text-xs leading-relaxed">
+                {/* Proficiency Badge & Teacher Remark Card */}
+                <div className="border border-amber-200 rounded-lg p-2 bg-amber-50/40 flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <ProficiencyBadge level={awLvl} />
+                  </div>
+                  <div className="flex-1 border-l border-amber-200 pl-3">
+                    <div className="text-[10.5px] leading-snug">
                       <span className="font-black text-[#c85a28]">
                         शिक्षक अभिप्राय:{" "}
                       </span>
                       <span className="text-slate-900 font-medium">
-                        {teacherRemark}
+                        {teacherRemark || "नियमित सराव व सहभागाने प्रगती समाधानकारक आहे."}
                       </span>
                     </div>
                   </div>
@@ -1464,30 +1789,30 @@ export function FoundationalHpcPdf({
 
                 {/* 360-Degree Evaluation Sections */}
                 {/* 1. Self Evaluation */}
-                <div>
+                <div className="border border-slate-300 rounded-lg p-2 bg-white">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-black text-xs text-[#c85a28]">
+                    <span className="font-black text-[11px] text-[#c85a28]">
                       स्वयंमूल्यांकन:
                     </span>
-                    <span className="text-[10px] text-slate-600 font-medium">
+                    <span className="text-[9.5px] text-slate-600 font-medium">
                       तू या कृतीत कसे काम केले हे दाखवणाऱ्या चित्रावर (✓) खूण करा:
                     </span>
                   </div>
                   <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-3 border border-slate-800 p-1 text-center bg-white">
-                      <div className="text-[11px] font-bold text-slate-800 mb-0.5">
+                    <div className="col-span-3 border border-slate-400 p-1 text-center bg-slate-50/50 rounded-md">
+                      <div className="text-[9.5px] font-bold text-slate-800 mb-0.5">
                         करायला आवडले.
                       </div>
                       <SmileyOptions selected={currentAssessment?.threeSixty?.selfAssessment?.likedActivity || ""} />
                     </div>
-                    <div className="col-span-3 border border-slate-800 p-1 text-center bg-white">
-                      <div className="text-[11px] font-bold text-slate-800 mb-0.5">
+                    <div className="col-span-3 border border-slate-400 p-1 text-center bg-slate-50/50 rounded-md">
+                      <div className="text-[9.5px] font-bold text-slate-800 mb-0.5">
                         सोपे वाटले.
                       </div>
                       <SmileyOptions selected={currentAssessment?.threeSixty?.selfAssessment?.feltEasy || ""} />
                     </div>
-                    <div className="col-span-6 border border-slate-800 p-1 text-center bg-white">
-                      <div className="text-[11px] font-bold text-slate-800 mb-0.5">
+                    <div className="col-span-6 border border-slate-400 p-1 text-center bg-slate-50/50 rounded-md">
+                      <div className="text-[9.5px] font-bold text-slate-800 mb-0.5">
                         करताना मदत लागते.
                       </div>
                       <HelpOptions selected={currentAssessment?.threeSixty?.selfAssessment?.neededHelpFrom?.[0] || ""} />
@@ -1496,30 +1821,30 @@ export function FoundationalHpcPdf({
                 </div>
 
                 {/* 2. Peer Evaluation */}
-                <div className="pt-0.5">
+                <div className="border border-slate-300 rounded-lg p-2 bg-white">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-black text-xs text-[#c85a28]">
+                    <span className="font-black text-[11px] text-[#c85a28]">
                       सहाध्यायी मूल्यांकन:
                     </span>
-                    <span className="text-[10px] text-slate-600 font-medium">
+                    <span className="text-[9.5px] text-slate-600 font-medium">
                       तुझ्या मित्राने या कृतीत कसे काम केले हे दाखवणाऱ्या चित्रावर (✓) खूण करा:
                     </span>
                   </div>
                   <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-3 border border-slate-800 p-1 text-center bg-white">
-                      <div className="text-[11px] font-bold text-slate-800 mb-0.5">
+                    <div className="col-span-3 border border-slate-400 p-1 text-center bg-slate-50/50 rounded-md">
+                      <div className="text-[9.5px] font-bold text-slate-800 mb-0.5">
                         करायला आवडले.
                       </div>
                       <SmileyOptions selected={currentAssessment?.threeSixty?.peerAssessment?.peerLiked || ""} />
                     </div>
-                    <div className="col-span-3 border border-slate-800 p-1 text-center bg-white">
-                      <div className="text-[11px] font-bold text-slate-800 mb-0.5">
+                    <div className="col-span-3 border border-slate-400 p-1 text-center bg-slate-50/50 rounded-md">
+                      <div className="text-[9.5px] font-bold text-slate-800 mb-0.5">
                         सोपे वाटले.
                       </div>
                       <SmileyOptions selected={currentAssessment?.threeSixty?.peerAssessment?.peerFeltEasy || ""} />
                     </div>
-                    <div className="col-span-6 border border-slate-800 p-1 text-center bg-white">
-                      <div className="text-[11px] font-bold text-slate-800 mb-0.5">
+                    <div className="col-span-6 border border-slate-400 p-1 text-center bg-slate-50/50 rounded-md">
+                      <div className="text-[9.5px] font-bold text-slate-800 mb-0.5">
                         करताना मदत लागते.
                       </div>
                       <HelpOptions selected={currentAssessment?.threeSixty?.peerAssessment?.peerNeededHelpFrom?.[0] || ""} />
@@ -1528,8 +1853,8 @@ export function FoundationalHpcPdf({
                 </div>
 
                 {/* 3. Parent Observation & Remark */}
-                <div className="border border-slate-800 p-2 mt-1 bg-white">
-                  <div className="text-[11px] font-bold text-slate-800 mb-1">
+                <div className="border border-purple-300 rounded-lg p-2.5 bg-purple-50/20">
+                  <div className="text-[10.5px] font-bold text-slate-800 mb-1">
                     <span className="font-black text-[#c85a28]">
                       पालकांचे निरीक्षण:{" "}
                     </span>
@@ -1538,31 +1863,61 @@ export function FoundationalHpcPdf({
                     </span>
                   </div>
                   <div className="grid grid-cols-8 gap-1 text-center">
-                    {HOME_RESOURCES.map((res) => (
-                      <div key={res.label} className="flex flex-col items-center">
-                        <div className="size-7 rounded-full border border-sky-400 bg-sky-50 flex items-center justify-center text-sm shadow-2xs">
-                          {res.icon}
-                        </div>
-                        <span className="text-[8px] mt-0.5 font-bold text-slate-700 leading-tight">
-                          {res.label}
-                        </span>
-                      </div>
-                    ))}
+                    {(() => {
+                      const selectedResources = (currentAssessment?.threeSixty?.parentFeedback?.learningResourcesAtHome || []) as string[];
+                      return HOME_RESOURCES.map((res) => {
+                        const isSelected = selectedResources.some((r) => {
+                          if (!r) return false;
+                          const rLow = r.toLowerCase();
+                          const lblLow = res.label.toLowerCase();
+                          return (
+                            lblLow.includes(rLow) ||
+                            rLow.includes(lblLow) ||
+                            (lblLow.includes("पुस्तके") && (rLow.includes("book") || rLow.includes("पुस्तके"))) ||
+                            (lblLow.includes("वृत्तपत्र") && (rLow.includes("newspaper") || rLow.includes("वृत्तपत्र"))) ||
+                            (lblLow.includes("खेळ") && (rLow.includes("toys") || rLow.includes("खेळ"))) ||
+                            (lblLow.includes("फोन") && (rLow.includes("phone") || rLow.includes("संगणक") || rLow.includes("computer"))) ||
+                            (lblLow.includes("इंटरनेट") && (rLow.includes("internet") || rLow.includes("आंतरजाल") || rLow.includes("इंटरनेट")))
+                          );
+                        });
+                        return (
+                          <div key={res.label} className="flex flex-col items-center">
+                            <div
+                              className={`size-7 rounded-full flex items-center justify-center text-xs shadow-2xs relative transition-all ${
+                                isSelected
+                                  ? "border-2 border-rose-600 bg-rose-50 ring-2 ring-rose-400"
+                                  : "border border-sky-400 bg-sky-50"
+                              }`}
+                            >
+                              {res.icon}
+                              {isSelected && (
+                                <span className="absolute -top-1 -right-1 size-3.5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[7.5px] font-black">
+                                  ✓
+                                </span>
+                              )}
+                            </div>
+                            <span className={`text-[8px] mt-0.5 leading-tight ${isSelected ? "font-black text-rose-700" : "font-bold text-slate-700"}`}>
+                              {res.label}
+                            </span>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
-                  <div className="text-xs pt-1.5 mt-1 border-t border-slate-200">
+                  <div className="text-[10.5px] pt-1.5 mt-1.5 border-t border-purple-200 leading-snug">
                     <span className="font-black text-[#c85a28]">
                       पालकांचा अभिप्राय:{" "}
                     </span>
                     <span className="text-slate-900 font-medium">
-                      {parentRemark}
+                      {parentRemark || "पालकांचा अभिप्राय उपलब्ध नाही."}
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-[11px] font-semibold text-slate-600">
-                <span>{student.name}</span>
+              <div className="pt-2 border-t-2 border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-600">
+                <span>{studentDisplayName}</span>
                 <span>{pageNum} of 19</span>
               </div>
             </div>
@@ -1591,142 +1946,151 @@ export function FoundationalHpcPdf({
           {/* Qualitative Summary Table with 3 Rows */}
           <div className="border border-slate-800 divide-y divide-slate-800">
             {/* Row 1: जाणीवजागृती (Areas 1 & 2) */}
-            <div className="grid grid-cols-12 items-center">
-              {/* Left Column: Proficiency Badge & Checkboxes */}
-              <div className="col-span-4 p-3 flex flex-col items-center justify-center border-r border-slate-800 bg-slate-50/50">
-                <span className="font-black text-sm text-[#c85a28] mb-1">
-                  जाणीवजागृती
-                </span>
-                <ProficiencyBadge level={annualSummary?.areaSummaries?.["physical_health"]?.finalLevel || ""} />
-                <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 mt-1">
-                  <span className={annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "advanced" ? "text-sky-700 font-bold" : "text-slate-600"}>
-                    {annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "advanced" ? "✓ " : "☐ "}✨ आकाश
-                  </span>
-                  <span className={annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "proficient" ? "text-emerald-700 font-bold" : "text-slate-600"}>
-                    {annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "proficient" ? "✓ " : "☐ "}⛰️ पर्वत
-                  </span>
-                  <span className={annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "beginner" ? "text-amber-700 font-bold" : "text-slate-600"}>
-                    {annualSummary?.areaSummaries?.["physical_health"]?.finalLevel === "beginner" ? "✓ " : "☐ "}प्रवाह
-                  </span>
-                </div>
-              </div>
+            {(() => {
+              const phySum = findAreaSummary("physical_health");
+              const socSum = findAreaSummary("socio_emotional");
+              const lvl = phySum?.finalLevel || socSum?.finalLevel || "";
+              return (
+                <div className="grid grid-cols-12 items-center">
+                  {/* Left Column: Proficiency Badge & Checkboxes */}
+                  <div className="col-span-4 p-3 flex flex-col items-center justify-center border-r border-slate-800 bg-slate-50/50">
+                    <span className="font-black text-sm text-[#c85a28] mb-1">
+                      जाणीवजागृती
+                    </span>
+                    <ProficiencyBadge level={lvl} />
+                    <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 mt-1">
+                      <span className={lvl === "advanced" ? "text-sky-700 font-bold" : "text-slate-600"}>
+                        {lvl === "advanced" ? "✓ " : "☐ "}✨ आकाश
+                      </span>
+                      <span className={lvl === "proficient" ? "text-emerald-700 font-bold" : "text-slate-600"}>
+                        {lvl === "proficient" ? "✓ " : "☐ "}⛰️ पर्वत
+                      </span>
+                      <span className={lvl === "beginner" ? "text-amber-700 font-bold" : "text-slate-600"}>
+                        {lvl === "beginner" ? "✓ " : "☐ "}प्रवाह
+                      </span>
+                    </div>
+                  </div>
 
-              {/* Right Column: Qualitative Area Statements */}
-              <div className="col-span-8 p-3 space-y-3 text-xs">
-                <div>
-                  <span className="font-black text-xs text-[#c85a28] block mb-0.5">
-                    क्षेत्र 1 : शारीरिक विकास
-                  </span>
-                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
-                    {annualSummary?.areaSummaries?.["physical_health"]?.qualitativeRemarks ||
-                     annualSummary?.areaSummaries?.["physical_health"]?.awarenessSummary ||
-                     ""}
-                  </p>
+                  {/* Right Column: Qualitative Area Statements */}
+                  <div className="col-span-8 p-3 space-y-3 text-xs">
+                    <div>
+                      <span className="font-black text-xs text-[#c85a28] block mb-0.5">
+                        क्षेत्र 1 : शारीरिक विकास
+                      </span>
+                      <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                        {phySum?.qualitativeRemarks || phySum?.awarenessSummary || ""}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-black text-xs text-[#c85a28] block mb-0.5">
+                        क्षेत्र 2 : सामाजिक, भावनिक आणि नैतिक विकास
+                      </span>
+                      <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                        {socSum?.qualitativeRemarks || socSum?.awarenessSummary || ""}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-black text-xs text-[#c85a28] block mb-0.5">
-                    क्षेत्र 2 : सामाजिक, भावनिक आणि नैतिक विकास
-                  </span>
-                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
-                    {annualSummary?.areaSummaries?.["socio_emotional"]?.qualitativeRemarks ||
-                     annualSummary?.areaSummaries?.["socio_emotional"]?.awarenessSummary ||
-                     ""}
-                  </p>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Row 2: संवेदनशीलता (Areas 3 & 4) */}
-            <div className="grid grid-cols-12 items-center">
-              {/* Left Column */}
-              <div className="col-span-4 p-3 flex flex-col items-center justify-center border-r border-slate-800 bg-slate-50/50">
-                <span className="font-black text-sm text-[#c85a28] mb-1">
-                  संवेदनशीलता
-                </span>
-                <ProficiencyBadge level={annualSummary?.areaSummaries?.["cognitive"]?.finalLevel || ""} />
-                <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 mt-1">
-                  <span className={annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "advanced" ? "text-sky-700 font-bold" : "text-slate-600"}>
-                    {annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "advanced" ? "✓ " : "☐ "}✨ आकाश
-                  </span>
-                  <span className={annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "proficient" ? "text-emerald-700 font-bold" : "text-slate-600"}>
-                    {annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "proficient" ? "✓ " : "☐ "}⛰️ पर्वत
-                  </span>
-                  <span className={annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "beginner" ? "text-amber-700 font-bold" : "text-slate-600"}>
-                    {annualSummary?.areaSummaries?.["cognitive"]?.finalLevel === "beginner" ? "✓ " : "☐ "}प्रवाह
-                  </span>
-                </div>
-              </div>
+            {(() => {
+              const cogSum = findAreaSummary("cognitive");
+              const lanSum = findAreaSummary("language_literacy");
+              const lvl = cogSum?.finalLevel || lanSum?.finalLevel || "";
+              return (
+                <div className="grid grid-cols-12 items-center">
+                  {/* Left Column */}
+                  <div className="col-span-4 p-3 flex flex-col items-center justify-center border-r border-slate-800 bg-slate-50/50">
+                    <span className="font-black text-sm text-[#c85a28] mb-1">
+                      संवेदनशीलता
+                    </span>
+                    <ProficiencyBadge level={lvl} />
+                    <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 mt-1">
+                      <span className={lvl === "advanced" ? "text-sky-700 font-bold" : "text-slate-600"}>
+                        {lvl === "advanced" ? "✓ " : "☐ "}✨ आकाश
+                      </span>
+                      <span className={lvl === "proficient" ? "text-emerald-700 font-bold" : "text-slate-600"}>
+                        {lvl === "proficient" ? "✓ " : "☐ "}⛰️ पर्वत
+                      </span>
+                      <span className={lvl === "beginner" ? "text-amber-700 font-bold" : "text-slate-600"}>
+                        {lvl === "beginner" ? "✓ " : "☐ "}प्रवाह
+                      </span>
+                    </div>
+                  </div>
 
-              {/* Right Column */}
-              <div className="col-span-8 p-3 space-y-3 text-xs">
-                <div>
-                  <span className="font-black text-xs text-[#c85a28] block mb-0.5">
-                    क्षेत्र 3 : बोधात्मक विकास
-                  </span>
-                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
-                    {annualSummary?.areaSummaries?.["cognitive"]?.qualitativeRemarks ||
-                     annualSummary?.areaSummaries?.["cognitive"]?.sensitivitySummary ||
-                     ""}
-                  </p>
+                  {/* Right Column */}
+                  <div className="col-span-8 p-3 space-y-3 text-xs">
+                    <div>
+                      <span className="font-black text-xs text-[#c85a28] block mb-0.5">
+                        क्षेत्र 3 : बोधात्मक विकास
+                      </span>
+                      <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                        {cogSum?.qualitativeRemarks || cogSum?.sensitivitySummary || ""}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-black text-xs text-[#c85a28] block mb-0.5">
+                        क्षेत्र 4 : भाषा आणि साक्षरता विकास
+                      </span>
+                      <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                        {lanSum?.qualitativeRemarks || lanSum?.sensitivitySummary || ""}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-black text-xs text-[#c85a28] block mb-0.5">
-                    क्षेत्र 4 : भाषा आणि साक्षरता विकास
-                  </span>
-                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
-                    {annualSummary?.areaSummaries?.["language_literacy"]?.qualitativeRemarks ||
-                     annualSummary?.areaSummaries?.["language_literacy"]?.sensitivitySummary ||
-                     ""}
-                  </p>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Row 3: सर्जनशीलता (Areas 5 & 5.1) */}
-            <div className="grid grid-cols-12 items-center">
-              {/* Left Column */}
-              <div className="col-span-4 p-3 flex flex-col items-center justify-center border-r border-slate-800 bg-slate-50/50">
-                <span className="font-black text-sm text-[#c85a28] mb-1">
-                  सर्जनशीलता
-                </span>
-                <ProficiencyBadge level={annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel || ""} />
-                <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 mt-1">
-                  <span className={annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "advanced" ? "text-sky-700 font-bold" : "text-slate-600"}>
-                    {annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "advanced" ? "✓ " : "☐ "}✨ आकाश
-                  </span>
-                  <span className={annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "proficient" ? "text-emerald-700 font-bold" : "text-slate-600"}>
-                    {annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "proficient" ? "✓ " : "☐ "}⛰️ पर्वत
-                  </span>
-                  <span className={annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "beginner" ? "text-amber-700 font-bold" : "text-slate-600"}>
-                    {annualSummary?.areaSummaries?.["aesthetic_cultural"]?.finalLevel === "beginner" ? "✓ " : "☐ "}प्रवाह
-                  </span>
-                </div>
-              </div>
+            {(() => {
+              const aesSum = findAreaSummary("aesthetic_cultural");
+              const habSum = findAreaSummary("positive_habits");
+              const lvl = aesSum?.finalLevel || habSum?.finalLevel || "";
+              return (
+                <div className="grid grid-cols-12 items-center">
+                  {/* Left Column */}
+                  <div className="col-span-4 p-3 flex flex-col items-center justify-center border-r border-slate-800 bg-slate-50/50">
+                    <span className="font-black text-sm text-[#c85a28] mb-1">
+                      सर्जनशीलता
+                    </span>
+                    <ProficiencyBadge level={lvl} />
+                    <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-800 mt-1">
+                      <span className={lvl === "advanced" ? "text-sky-700 font-bold" : "text-slate-600"}>
+                        {lvl === "advanced" ? "✓ " : "☐ "}✨ आकाश
+                      </span>
+                      <span className={lvl === "proficient" ? "text-emerald-700 font-bold" : "text-slate-600"}>
+                        {lvl === "proficient" ? "✓ " : "☐ "}⛰️ पर्वत
+                      </span>
+                      <span className={lvl === "beginner" ? "text-amber-700 font-bold" : "text-slate-600"}>
+                        {lvl === "beginner" ? "✓ " : "☐ "}प्रवाह
+                      </span>
+                    </div>
+                  </div>
 
-              {/* Right Column */}
-              <div className="col-span-8 p-3 space-y-3 text-xs">
-                <div>
-                  <span className="font-black text-xs text-[#c85a28] block mb-0.5">
-                    क्षेत्र 5 : सौंदर्यदृष्टी आणि सांस्कृतिक विकास
-                  </span>
-                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
-                    {annualSummary?.areaSummaries?.["aesthetic_cultural"]?.qualitativeRemarks ||
-                     annualSummary?.areaSummaries?.["aesthetic_cultural"]?.creativitySummary ||
-                     ""}
-                  </p>
+                  {/* Right Column */}
+                  <div className="col-span-8 p-3 space-y-3 text-xs">
+                    <div>
+                      <span className="font-black text-xs text-[#c85a28] block mb-0.5">
+                        क्षेत्र 5 : सौंदर्यदृष्टी आणि सांस्कृतिक विकास
+                      </span>
+                      <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                        {aesSum?.qualitativeRemarks || aesSum?.creativitySummary || ""}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-black text-xs text-[#c85a28] block mb-0.5">
+                        क्षेत्र 5.1 : सकारात्मक अध्ययन सवयी
+                      </span>
+                      <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
+                        {habSum?.qualitativeRemarks || habSum?.creativitySummary || ""}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-black text-xs text-[#c85a28] block mb-0.5">
-                    क्षेत्र 5.1 : सकारात्मक अध्ययन सवयी
-                  </span>
-                  <p className="text-slate-800 leading-relaxed font-medium min-h-[20px]">
-                    {annualSummary?.areaSummaries?.["positive_habits"]?.qualitativeRemarks ||
-                     annualSummary?.areaSummaries?.["positive_habits"]?.creativitySummary ||
-                     ""}
-                  </p>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
 
           {/* Footnote Box */}
@@ -1742,7 +2106,7 @@ export function FoundationalHpcPdf({
 
         {/* Footer */}
         <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-[11px] font-semibold text-slate-600">
-          <span>{student.name}</span>
+          <span>{studentDisplayName}</span>
           <span>16 of 19</span>
         </div>
       </div>
@@ -1755,7 +2119,7 @@ export function FoundationalHpcPdf({
           {/* Top Student Header */}
           <div className="text-xs font-semibold text-slate-800">
             <span>विद्यार्थ्याचे नाव: </span>
-            <span className="font-bold text-slate-900">{student.name}</span>
+            <span className="font-bold text-slate-900">{studentDisplayName}</span>
           </div>
 
           {/* Title */}
@@ -1765,77 +2129,119 @@ export function FoundationalHpcPdf({
             </h2>
           </div>
 
-          {/* Teacher's Final Annual Remark Box */}
-          <div className="border border-[#059669] rounded-lg p-4 bg-white min-h-[300px] flex flex-col">
-            <span className="font-black text-xs text-[#c85a28] block mb-2">
+          {/* Teacher's Final Annual Remark Box (Sheet 4 - शिक्षकांचा अंतिम सर्वंकष वार्षिक अभिप्राय) */}
+          <div className="border border-[#059669] rounded-lg p-3 bg-white min-h-[160px] flex flex-col">
+            <span className="font-black text-xs text-[#c85a28] block mb-1">
               शिक्षकांचा अंतिम सर्वकष वार्षिक अभिप्राय :
             </span>
-            {annualSummary?.finalTeacherRemarks ? (
-              <p className="text-xs font-medium text-slate-800 leading-relaxed px-1">
-                {annualSummary.finalTeacherRemarks}
-              </p>
-            ) : (
-              <div className="space-y-4 px-1 flex-1 flex flex-col justify-around py-2">
-                <div className="border-b border-slate-300 h-5" />
-                <div className="border-b border-slate-300 h-5" />
-                <div className="border-b border-slate-300 h-5" />
-                <div className="border-b border-slate-300 h-5" />
-                <div className="border-b border-slate-300 h-5" />
-                <div className="border-b border-slate-300 h-5" />
-              </div>
-            )}
+            {(() => {
+              const trRemark =
+                annualSummary?.finalTeacherRemarks ||
+                (annualSummary as any)?.teacherRemarks ||
+                (annualSummary as any)?.overallRemark ||
+                "";
+              return trRemark ? (
+                <p className="text-xs font-medium text-slate-800 leading-relaxed px-1 whitespace-pre-wrap">
+                  {trRemark}
+                </p>
+              ) : (
+                <div className="space-y-3 px-1 flex-1 flex flex-col justify-around py-1">
+                  <div className="border-b border-slate-300 h-4" />
+                  <div className="border-b border-slate-300 h-4" />
+                  <div className="border-b border-slate-300 h-4" />
+                </div>
+              );
+            })()}
           </div>
 
-          {/* NEP 2020 Principles Banner */}
-          <div className="border border-dashed border-slate-400 rounded-lg p-2.5 text-center text-[11px] font-bold text-slate-800 bg-slate-50/60">
-            <span>NEP 2020 - प्रमुख तत्त्वे: </span>
-            <span className="text-emerald-700">✓ सर्वांगीण विकास </span>
-            <span>· </span>
-            <span className="text-emerald-700">✓ अनुभवात्मक शिक्षण </span>
-            <span>· </span>
-            <span className="text-emerald-700">✓ खेळावर आधारित </span>
-            <span>· </span>
-            <span className="text-emerald-700">✓ मातृभाषेत शिक्षण </span>
-            <span>· </span>
-            <span className="text-emerald-700">✓ सर्जनशीलता </span>
-            <span>· </span>
-            <span className="text-emerald-700">✓ बहुभाषिकता</span>
+          {/* Next Class Guidance & Recommendations Box (Sheet 5 - पुढील इयत्तेसाठी मार्गदर्शन व शिफारस) */}
+          <div className="border border-[#059669] rounded-lg p-3 bg-white min-h-[140px] flex flex-col">
+            <span className="font-black text-xs text-[#c85a28] block mb-1">
+              पुढील इयत्तेसाठी विद्यार्थ्यास मार्गदर्शन व शिफारस (सुधारावयाच्या बाबी) :
+            </span>
+            {(() => {
+              const recRemark =
+                annualSummary?.recommendationsForNextClass ||
+                (annualSummary as any)?.nextClassRecommendation ||
+                (annualSummary as any)?.recommendation ||
+                "";
+              return recRemark ? (
+                <p className="text-xs font-medium text-slate-800 leading-relaxed px-1 whitespace-pre-wrap">
+                  {recRemark}
+                </p>
+              ) : (
+                <div className="space-y-3 px-1 flex-1 flex flex-col justify-around py-1">
+                  <div className="border-b border-slate-300 h-4" />
+                  <div className="border-b border-slate-300 h-4" />
+                  <div className="border-b border-slate-300 h-4" />
+                </div>
+              );
+            })()}
           </div>
 
           {/* Parent's Annual Remark Box */}
-          <div className="border border-[#059669] rounded-lg p-4 bg-white min-h-[190px] flex flex-col justify-between">
-            <span className="font-black text-xs text-[#c85a28] block mb-2">
+          <div className="border border-[#059669] rounded-lg p-3 bg-white min-h-[110px] flex flex-col justify-between">
+            <span className="font-black text-xs text-[#c85a28] block mb-1">
               पालकांचा वार्षिक अभिप्राय :
             </span>
-            <div className="space-y-4 px-1">
-              {annualSummary?.finalParentRemarks ? (
-                <p className="text-xs font-medium text-slate-800 leading-relaxed">
-                  {annualSummary.finalParentRemarks}
-                </p>
-              ) : (
-                <>
-                  <div className="border-b border-slate-300 h-5" />
-                  <div className="border-b border-slate-300 h-5" />
-                  <div className="border-b border-slate-300 h-5" />
-                  <div className="border-b border-slate-300 h-5" />
-                </>
-              )}
+            <div className="space-y-2.5 px-1">
+              {(() => {
+                const prRemark =
+                  annualSummary?.finalParentRemarks ||
+                  (annualSummary as any)?.parentRemarks ||
+                  "";
+                return prRemark ? (
+                  <p className="text-xs font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">
+                    {prRemark}
+                  </p>
+                ) : (
+                  <>
+                    <div className="border-b border-slate-300 h-4" />
+                    <div className="border-b border-slate-300 h-4" />
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Term 1 & Term 2 Attendance Summary */}
+          <div className="bg-[#fef9f5] border border-[#e86b24]/40 rounded-lg p-2 flex items-center justify-between text-[11px] font-bold text-slate-800">
+            <div>
+              <span className="text-[#c85a28] font-black">प्रथम सत्र : </span>
+              <span>कामाचे दिवस {t1WorkingTotal} | उपस्थित {t1PresentTotal} {t1Pct ? `(${t1Pct})` : ""}</span>
+            </div>
+            <div className="w-px h-4 bg-slate-300" />
+            <div>
+              <span className="text-[#c85a28] font-black">द्वितीय सत्र : </span>
+              <span>कामाचे दिवस {t2WorkingTotal} | उपस्थित {t2PresentTotal} {t2Pct ? `(${t2Pct})` : ""}</span>
+            </div>
+            <div className="w-px h-4 bg-slate-300" />
+            <div>
+              <span className="text-[#c85a28] font-black">वार्षिक एकूण : </span>
+              <span className="text-slate-900 font-black">{totalPresent} / {totalWorking} दिवस {attendancePct ? `(${attendancePct})` : ""}</span>
             </div>
           </div>
 
           {/* 3 Signatures */}
           <div className="grid grid-cols-3 gap-6 pt-6 pb-2 text-center text-xs font-bold text-slate-900">
             <div>
+              <div className="text-[11px] font-bold text-slate-800 mb-0.5 truncate max-w-[180px] mx-auto">
+                {teacherName}
+              </div>
               <div className="border-t-2 border-slate-800 pt-1">
                 वर्गशिक्षकाची स्वाक्षरी
               </div>
             </div>
             <div>
+              <div className="h-4" />
               <div className="border-t-2 border-slate-800 pt-1">
                 पालकाची स्वाक्षरी
               </div>
             </div>
             <div>
+              <div className="text-[11px] font-bold text-slate-800 mb-0.5 truncate max-w-[180px] mx-auto">
+                {hmName}
+              </div>
               <div className="border-t-2 border-slate-800 pt-1">
                 मुख्याध्यापकाची स्वाक्षरी व शिक्का
               </div>
@@ -1853,7 +2259,7 @@ export function FoundationalHpcPdf({
 
         {/* Page Footer */}
         <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-[11px] font-semibold text-slate-600">
-          <span>{student.name}</span>
+          <span>{studentDisplayName}</span>
           <span>17 of 19</span>
         </div>
       </div>
@@ -1868,14 +2274,35 @@ export function FoundationalHpcPdf({
             <h2 className="text-xl font-black text-[#c85a28] tracking-wide">
               माझ्या नोंदी : प्रथम सत्र
             </h2>
+            <p className="text-xs font-bold text-slate-600 mt-0.5">
+              विद्यार्थ्याचे नाव: <span className="font-extrabold text-slate-900">{studentDisplayName}</span>
+            </p>
           </div>
 
-          {/* Ruled Lines (24 Lines) */}
-          <div className="space-y-4 px-2">
-            {Array.from({ length: 24 }).map((_, i) => (
-              <div key={i} className="border-b border-slate-400 h-7" />
-            ))}
-          </div>
+          {/* Ruled Lines (24 Lines) with User-filled Student Reflection / Notes */}
+          {(() => {
+            const s1Notes =
+              profile?.studentSelfReflection ||
+              (session1 as any)?.studentNotes ||
+              session1?.teacherGeneralRemarks ||
+              "";
+            const noteParagraphs = s1Notes ? s1Notes.split("\n").filter(Boolean) : [];
+            return (
+              <div className="space-y-0 px-2 relative min-h-[672px]">
+                {Array.from({ length: 24 }).map((_, i) => {
+                  const lineText = noteParagraphs[i] || "";
+                  return (
+                    <div
+                      key={i}
+                      className="border-b border-slate-400 h-7 flex items-end px-2 text-xs font-medium text-slate-900 leading-none pb-0.5"
+                    >
+                      {lineText}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Quote at bottom of notes */}
           <div className="pt-4 text-center text-xs font-semibold text-slate-600">
@@ -1885,7 +2312,7 @@ export function FoundationalHpcPdf({
 
         {/* Footer */}
         <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-[11px] font-semibold text-slate-600">
-          <span>{student.name}</span>
+          <span>{studentDisplayName}</span>
           <span>18 of 19</span>
         </div>
       </div>
@@ -1900,14 +2327,35 @@ export function FoundationalHpcPdf({
             <h2 className="text-xl font-black text-[#c85a28] tracking-wide">
               माझ्या नोंदी : द्वितीय सत्र
             </h2>
+            <p className="text-xs font-bold text-slate-600 mt-0.5">
+              विद्यार्थ्याचे नाव: <span className="font-extrabold text-slate-900">{studentDisplayName}</span>
+            </p>
           </div>
 
-          {/* Ruled Lines (24 Lines) */}
-          <div className="space-y-4 px-2">
-            {Array.from({ length: 24 }).map((_, i) => (
-              <div key={i} className="border-b border-slate-400 h-7" />
-            ))}
-          </div>
+          {/* Ruled Lines (24 Lines) with User-filled Student Notes / Collaboration Notes */}
+          {(() => {
+            const s2Notes =
+              (session2 as any)?.studentNotes ||
+              profile?.parentCollaborationNotes ||
+              session2?.teacherGeneralRemarks ||
+              "";
+            const noteParagraphs = s2Notes ? s2Notes.split("\n").filter(Boolean) : [];
+            return (
+              <div className="space-y-0 px-2 relative min-h-[672px]">
+                {Array.from({ length: 24 }).map((_, i) => {
+                  const lineText = noteParagraphs[i] || "";
+                  return (
+                    <div
+                      key={i}
+                      className="border-b border-slate-400 h-7 flex items-end px-2 text-xs font-medium text-slate-900 leading-none pb-0.5"
+                    >
+                      {lineText}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Quote at bottom of notes */}
           <div className="pt-4 text-center text-xs font-semibold text-slate-600">
@@ -1917,7 +2365,7 @@ export function FoundationalHpcPdf({
 
         {/* Footer */}
         <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-[11px] font-semibold text-slate-600">
-          <span>{student.name}</span>
+          <span>{studentDisplayName}</span>
           <span>19 of 19</span>
         </div>
       </div>

@@ -2488,6 +2488,10 @@ function Page9() {
 function StudentPortfolioPage() {
   const { lang } = useLanguage();
   const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
   const [studentPhoto, setStudentPhoto] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState(0);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -2631,8 +2635,11 @@ function StudentPortfolioPage() {
     if (sheets.length === 0) {
       setDownloading(false);
       setIsPrinting(false);
+      setDownloadProgress(null);
       return;
     }
+
+    setDownloadProgress({ current: 0, total: sheets.length });
 
     try {
       const pdf = new jsPDF({
@@ -2643,6 +2650,7 @@ function StudentPortfolioPage() {
       });
 
       for (let i = 0; i < sheets.length; i++) {
+        setDownloadProgress({ current: i + 1, total: sheets.length });
         const sheet = sheets[i] as HTMLElement;
 
         // Hide margins and shadows to get a clean layout
@@ -2672,8 +2680,25 @@ function StudentPortfolioPage() {
 
         const imgData = canvas.toDataURL("image/jpeg", 0.95);
 
-        // A4 page dimensions in mm
-        pdf.addImage(imgData, "JPEG", 0, 0, 210, 297);
+        // A4 page dimensions in mm (210 x 297 mm)
+        // Keep blank space (margins) outside the border properly on the page
+        const marginX = 6; // 6mm blank space on left & right
+        const maxPrintW = 210 - marginX * 2; // 198mm
+        const maxPrintH = 297 - 14; // keep at least 7mm blank space top & bottom (283mm)
+
+        const canvasRatio = canvas.height / canvas.width;
+        let printWidth = maxPrintW;
+        let printHeight = printWidth * canvasRatio;
+
+        if (printHeight > maxPrintH) {
+          printHeight = maxPrintH;
+          printWidth = printHeight / canvasRatio;
+        }
+
+        const actualMarginX = (210 - printWidth) / 2;
+        const actualMarginY = (297 - printHeight) / 2;
+
+        pdf.addImage(imgData, "JPEG", actualMarginX, actualMarginY, printWidth, printHeight);
 
         if (i < sheets.length - 1) {
           pdf.addPage();
@@ -2686,6 +2711,7 @@ function StudentPortfolioPage() {
     } finally {
       setIsPrinting(false);
       setDownloading(false);
+      setDownloadProgress(null);
     }
   };
 
@@ -2773,6 +2799,51 @@ function StudentPortfolioPage() {
           user-select: none;
         }
       `}</style>
+      {/* Mobile-friendly Centered PDF Generation Modal */}
+      {downloadProgress && (
+        <div className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 select-none">
+          <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-xs w-full flex flex-col items-center text-center space-y-3.5 border-2 border-[#c9a227] animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-blue-900 border-2 border-[#c9a227] shadow-inner">
+              <Loader2 className="size-8 animate-spin text-[#0d1b4b]" />
+            </div>
+            <div className="space-y-1">
+              <h3
+                className="text-base font-black text-[#0d1b4b]"
+                style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+              >
+                PDF तयार होत आहे
+              </h3>
+              <p
+                className="text-xs font-bold text-slate-500"
+                style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+              >
+                कृपया थोडा वेळ थांबा...
+              </p>
+              {downloadProgress.total > 0 && (
+                <div
+                  className="mt-2 inline-block px-3.5 py-1 bg-amber-100/70 text-amber-900 rounded-full text-xs font-black border border-amber-300"
+                  style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+                >
+                  पान {downloadProgress.current} / {downloadProgress.total} तयार होत आहे
+                </div>
+              )}
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
+              <div
+                className="bg-gradient-to-r from-[#0d1b4b] via-indigo-700 to-[#c9a227] h-full transition-all duration-300 rounded-full"
+                style={{
+                  width: `${Math.round(
+                    (downloadProgress.current /
+                      Math.max(1, downloadProgress.total)) *
+                      100,
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Custom Vidyarthi Sanchika Navbar styled with light theme */}
       {!isPrinting && (
         <header className="bg-white border-b-2 border-[#c9a227] text-slate-900 fixed top-0 left-0 right-0 z-[60] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-all">
@@ -3021,7 +3092,7 @@ function StudentPortfolioPage() {
         {/* Sheets presentation workspace */}
         <div
           ref={workspaceRef}
-          className="bg-[#0d1b4b]/30 p-2 sm:p-4 pb-2 rounded-2xl sm:rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto overflow-x-hidden"
+          className="bg-[#0d1b4b]/30 p-2 sm:p-4 pb-2 rounded-2xl sm:rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto overflow-visible"
           style={{ width: "100%", maxWidth: "930px", height: "fit-content" }}
         >
           {/* Floating Next/Prev Arrow Controllers anchored symmetrically on left and right upper sides */}

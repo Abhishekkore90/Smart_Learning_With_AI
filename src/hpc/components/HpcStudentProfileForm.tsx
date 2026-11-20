@@ -53,6 +53,8 @@ import {
   deleteHpcStudentPhoto,
   getHpcSchoolSettings,
   getHpcStudentAttendance,
+  getHpcClassWorkingDays,
+  saveHpcClassWorkingDays,
   StudentInfoSummary,
 } from "../services/hpcService";
 
@@ -79,6 +81,7 @@ export const ATTENDANCE_MONTHS = [
   { key: "february", labelMarathi: "फेब्रुवारी", defaultWorkingDays: 20, term: 2 },
   { key: "march", labelMarathi: "मार्च", defaultWorkingDays: 24, term: 2 },
   { key: "april", labelMarathi: "एप्रिल", defaultWorkingDays: 6, term: 2 },
+  { key: "may", labelMarathi: "मे", defaultWorkingDays: 0, term: 2 },
 ];
 
 export const BLOOD_GROUPS = ["-- निवडा --", "A+", "B+", "AB+", "O+", "A-", "B-", "AB-", "O-", "माहित नाही"];
@@ -371,11 +374,13 @@ export function HpcStudentProfileForm({
   // School context info
   const [schoolName, setSchoolName] = useState("");
   const [udiseNumber, setUdiseNumber] = useState("");
+  const [pincode, setPincode] = useState("");
   const [cluster, setCluster] = useState("");
   const [taluka, setTaluka] = useState("");
   const [district, setDistrict] = useState("");
   const [headmasterName, setHeadmasterName] = useState("");
   const [teacherPhone, setTeacherPhone] = useState("");
+  const [teacherIdNumber, setTeacherIdNumber] = useState("");
 
   // ---------------- SECTION 2: उंची व वजन (सर्व सत्रे) ----------------
   const [term1Height, setTerm1Height] = useState("");
@@ -470,6 +475,8 @@ export function HpcStudentProfileForm({
   const [attendedDays, setAttendedDays] = useState<Record<string, number>>(() =>
     Object.fromEntries(ATTENDANCE_MONTHS.map((m) => [m.key, 0]))
   );
+  const [attendanceReason1, setAttendanceReason1] = useState("");
+  const [attendanceReason2, setAttendanceReason2] = useState("");
 
   // Load existing profile, school info & student records
   useEffect(() => {
@@ -488,6 +495,9 @@ export function HpcStudentProfileForm({
         setHeadmasterName(schoolSettings.headmasterName || schoolSettings.hmName || "");
         setTeacherName(schoolSettings.teacherName || "");
         setTeacherPhone(schoolSettings.teacherPhone || schoolSettings.phone || "");
+        if (schoolSettings.pincode) setPincode(String(schoolSettings.pincode));
+        const rawTId = (schoolSettings as any).teacherIdNumber || (schoolSettings as any).shalarthId || "";
+        if (rawTId) setTeacherIdNumber(String(rawTId));
       }
 
       // 2. Fetch Student Summary
@@ -517,26 +527,39 @@ export function HpcStudentProfileForm({
         if (st.photoUrl) setPhotoUrl(st.photoUrl);
       }
 
-      // 3. Fetch Attendance Record
-      const attData = await getHpcStudentAttendance(classId, academicYear, studentId);
-      if (isMounted && attData) {
-        const loadedAttended: Record<string, number> = {};
-        if (attData.term1) {
-          loadedAttended.june = attData.term1.june || 0;
-          loadedAttended.july = attData.term1.july || 0;
-          loadedAttended.august = attData.term1.august || 0;
-          loadedAttended.september = attData.term1.september || 0;
-          loadedAttended.october = attData.term1.october || 0;
+      // 3. Fetch Attendance Record & Class Working Days
+      const [attData, classWd] = await Promise.all([
+        getHpcStudentAttendance(classId, academicYear, studentId),
+        getHpcClassWorkingDays(classId, academicYear),
+      ]);
+
+      if (isMounted) {
+        if (classWd && Object.keys(classWd).length > 0) {
+          setWorkingDays((prev) => ({ ...prev, ...classWd }));
+        } else if (attData && (attData as any).workingDays) {
+          setWorkingDays((prev) => ({ ...prev, ...(attData as any).workingDays }));
         }
-        if (attData.term2) {
-          loadedAttended.november = attData.term2.november || 0;
-          loadedAttended.december = attData.term2.december || 0;
-          loadedAttended.january = attData.term2.january || 0;
-          loadedAttended.february = attData.term2.february || 0;
-          loadedAttended.march = attData.term2.march || 0;
-          loadedAttended.april = attData.term2.april || 0;
+
+        if (attData) {
+          const loadedAttended: Record<string, number> = {};
+          if (attData.term1) {
+            loadedAttended.june = attData.term1.june || 0;
+            loadedAttended.july = attData.term1.july || 0;
+            loadedAttended.august = attData.term1.august || 0;
+            loadedAttended.september = attData.term1.september || 0;
+            loadedAttended.october = attData.term1.october || 0;
+          }
+          if (attData.term2) {
+            loadedAttended.november = attData.term2.november || 0;
+            loadedAttended.december = attData.term2.december || 0;
+            loadedAttended.january = attData.term2.january || 0;
+            loadedAttended.february = attData.term2.february || 0;
+            loadedAttended.march = attData.term2.march || 0;
+            loadedAttended.april = attData.term2.april || 0;
+            loadedAttended.may = (attData.term2 as any).may || 0;
+          }
+          setAttendedDays((prev) => ({ ...prev, ...loadedAttended }));
         }
-        setAttendedDays((prev) => ({ ...prev, ...loadedAttended }));
       }
 
       // 4. Fetch Existing HPC Student Profile
@@ -568,9 +591,13 @@ export function HpcStudentProfileForm({
         if (existing.aparId) setAparId(existing.aparId);
         if (existing.penNo) setPenNo(existing.penNo);
         if (existing.saralId) setSaralId(existing.saralId);
+        if (existing.udiseNumber) setUdiseNumber(existing.udiseNumber);
+        if (existing.teacherIdNumber) setTeacherIdNumber(existing.teacherIdNumber);
         if (existing.aadhaar) setAadhaar(existing.aadhaar);
         if (existing.udidNo) setUdidNo(existing.udidNo);
         if (existing.regNo) setRegNo(existing.regNo);
+        if (existing.pincode) setPincode(existing.pincode);
+        if (existing.headmasterName) setHeadmasterName(existing.headmasterName);
 
         // Section 4: Social & Category
         if (existing.religion) setReligion(existing.religion);
@@ -633,12 +660,16 @@ export function HpcStudentProfileForm({
         if (existing.monthlyAttendance) {
           setAttendedDays((prev) => ({ ...prev, ...existing.monthlyAttendance }));
         }
-        if (existing.monthlyWorkingDays) {
+        if (classWd && Object.keys(classWd).length > 0) {
+          setWorkingDays((prev) => ({ ...prev, ...classWd }));
+        } else if (existing.monthlyWorkingDays) {
           setWorkingDays((prev) => ({ ...prev, ...existing.monthlyWorkingDays }));
         }
         if (existing.regularHomeChores) setRegularHomeChores(existing.regularHomeChores);
         if (existing.studentSelfReflection) setStudentSelfReflection(existing.studentSelfReflection);
         if (existing.parentCollaborationNotes) setParentCollaborationNotes(existing.parentCollaborationNotes);
+        if (existing.attendanceReason1) setAttendanceReason1(existing.attendanceReason1);
+        if (existing.attendanceReason2) setAttendanceReason2(existing.attendanceReason2);
       }
 
       setLoading(false);
@@ -718,8 +749,36 @@ export function HpcStudentProfileForm({
     }
   };
 
+  const handleWorkingDaysChange = (monthKey: string, valStr: string) => {
+    const clean = valStr.replace(/[^0-9]/g, "");
+    if (clean === "") {
+      setWorkingDays((prev) => ({ ...prev, [monthKey]: 0 }));
+      return;
+    }
+    const num = Math.min(31, Math.max(0, parseInt(clean, 10) || 0));
+    setWorkingDays((prev) => {
+      const next = { ...prev, [monthKey]: num };
+      // Bounded attended days if exceeded
+      setAttendedDays((aPrev) => {
+        if ((aPrev[monthKey] || 0) > num) {
+          return { ...aPrev, [monthKey]: num };
+        }
+        return aPrev;
+      });
+      return next;
+    });
+  };
+
+  const handleFillDefaultWorkingDays = () => {
+    const defaultMap = Object.fromEntries(
+      ATTENDANCE_MONTHS.map((m) => [m.key, m.defaultWorkingDays])
+    );
+    setWorkingDays(defaultMap);
+    toast.success("सर्व महिन्यांचे प्रमाणभूत कामकाज दिवस (Default Working Days) भरले!");
+  };
+
   const handleAttendanceChange = (monthKey: string, valStr: string) => {
-    const totalAllowed = workingDays[monthKey] || 31;
+    const totalAllowed = workingDays[monthKey] !== undefined ? workingDays[monthKey] : 31;
     const clean = valStr.replace(/[^0-9]/g, "");
     if (clean === "") {
       setAttendedDays((prev) => ({ ...prev, [monthKey]: 0 }));
@@ -756,12 +815,14 @@ export function HpcStudentProfileForm({
         // School context
         schoolName,
         udiseNumber,
+        pincode,
         cluster,
         taluka,
         district,
         headmasterName,
         teacherName,
         teacherPhone,
+        teacherIdNumber,
 
         // Section 2: Physical Measurements
         term1Height,
@@ -840,9 +901,12 @@ export function HpcStudentProfileForm({
         // Attendance Record
         monthlyAttendance: attendedDays,
         monthlyWorkingDays: workingDays,
+        attendanceReason1,
+        attendanceReason2,
       };
 
       await saveHpcStudentProfile(profileData);
+      await saveHpcClassWorkingDays(classId, academicYear, workingDays);
 
       if (activeTab === "a1") {
         toast.success("भाग A(1) ची माहिती जतन झाली! आता पुढील भाग A(2) (उपस्थिती व आवड) उघडले आहे.");
@@ -1363,7 +1427,7 @@ export function HpcStudentProfileForm({
             <div className="p-5 sm:p-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  APAAR ID (अपार आय.डी.)
+                  APAAR ID (अपार आय.डी. - १२ कप्पे)
                 </label>
                 <input
                   type="text"
@@ -1389,20 +1453,46 @@ export function HpcStudentProfileForm({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  SARAL ID / युडायस क्रमांक
+                  SARAL ID (सरल आय. डी.)
                 </label>
                 <input
                   type="text"
                   value={saralId}
                   onChange={(e) => setSaralId(e.target.value)}
-                  placeholder="उदा. 2725..."
+                  placeholder="उदा. 20212725..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  आधार क्रमांक (Aadhaar No)
+                  युडायस नंबर (UDISE No - ११ कप्पे)
+                </label>
+                <input
+                  type="text"
+                  value={udiseNumber}
+                  onChange={(e) => setUdiseNumber(e.target.value)}
+                  placeholder="उदा. 27250100101"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  अंगणवाडी सेविका / शिक्षक आय.डी. (HPC पान २)
+                </label>
+                <input
+                  type="text"
+                  value={teacherIdNumber}
+                  onChange={(e) => setTeacherIdNumber(e.target.value)}
+                  placeholder="उदा. शालार्थ आय.डी. / शिक्षक आय.डी."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  आधार क्रमांक (Aadhaar No - १२ कप्पे)
                 </label>
                 <input
                   type="text"
@@ -1435,6 +1525,19 @@ export function HpcStudentProfileForm({
                   value={regNo}
                   onChange={(e) => setRegNo(e.target.value)}
                   placeholder="शालेय नोंदणी क्रमांक"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  मुख्याध्यापक / शाळाप्रमुख नाव (HPC स्वाक्षरी)
+                </label>
+                <input
+                  type="text"
+                  value={headmasterName}
+                  onChange={(e) => setHeadmasterName(e.target.value)}
+                  placeholder="मुख्याध्यापकांचे नाव"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
                 />
               </div>
@@ -1733,9 +1836,9 @@ export function HpcStudentProfileForm({
                 </div>
               </div>
 
-              {/* Address Lines */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
+              {/* Address Lines & Pincode */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                <div className="sm:col-span-5">
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     पत्ता - ओळ १
                   </label>
@@ -1748,7 +1851,7 @@ export function HpcStudentProfileForm({
                   />
                 </div>
 
-                <div>
+                <div className="sm:col-span-4">
                   <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     पत्ता - ओळ २
                   </label>
@@ -1756,8 +1859,22 @@ export function HpcStudentProfileForm({
                     type="text"
                     value={addressLine2}
                     onChange={(e) => setAddressLine2(e.target.value)}
-                    placeholder="गावाचे नाव, पोस्ट, पिनकोड"
+                    placeholder="गावाचे नाव, पोस्ट"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                  />
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    पिन कोड (६ कप्पे - HPC पान २)
+                  </label>
+                  <input
+                    type="text"
+                    value={pincode}
+                    maxLength={6}
+                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="उदा. 416416"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono font-bold text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
                   />
                 </div>
               </div>
@@ -1946,6 +2063,31 @@ export function HpcStudentProfileForm({
               </div>
             </div>
 
+            {/* Working Days & Attendance Quick Info & Action Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl">
+              <div className="flex items-center gap-2.5">
+                <CalendarCheck className="size-5 text-emerald-700 shrink-0" />
+                <div>
+                  <span className="text-xs font-black text-emerald-950 block">
+                    प्रत्येक महिन्याचे 'कामाचे दिवस' व 'हजर दिवस' थेट भरा
+                  </span>
+                  <span className="text-[11px] font-semibold text-emerald-800 block">
+                    (हे भरलेले कामकाज दिवस वर्ग पातळीवर सेव्ह होतात व सर्व विद्यार्थ्यांसाठी उपलब्ध राहतात)
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleFillDefaultWorkingDays}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer self-start sm:self-auto shrink-0"
+                title="महाराष्ट्र शासनाचे मानक कामकाज दिवस भरा"
+              >
+                <Sparkles className="size-3.5 text-emerald-600" />
+                <span>मानक कामकाज दिवस भरा (Auto-fill Standard Days)</span>
+              </button>
+            </div>
+
             {/* Term 1 Attendance Table */}
             <div>
               <div className="flex items-center justify-between mb-2.5">
@@ -1959,42 +2101,61 @@ export function HpcStudentProfileForm({
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {ATTENDANCE_MONTHS.filter((m) => m.term === 1).map((m) => {
-                  const workingVal = workingDays[m.key] || 0;
+                  const workingVal = workingDays[m.key] !== undefined ? workingDays[m.key] : 0;
                   const presentVal = attendedDays[m.key] ?? 0;
                   return (
                     <div
                       key={m.key}
-                      className="p-3 rounded-2xl bg-slate-50/70 border border-slate-200/90 hover:border-blue-300 transition-all"
+                      className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200/90 hover:border-blue-300 transition-all shadow-xs"
                     >
-                      <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-200/60">
                         <span className="text-xs font-black text-slate-800">{m.labelMarathi}</span>
-                        <span className="text-[10px] font-bold text-slate-400">कामकाज: {workingVal}</span>
-                      </div>
-                      <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-600 focus-within:ring-1 focus-within:ring-blue-100">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={presentVal === 0 ? "" : presentVal}
-                          onChange={(e) => handleAttendanceChange(m.key, e.target.value)}
-                          placeholder="0"
-                          className="w-full px-3 py-1.5 text-xs font-black text-slate-900 outline-none"
-                        />
-                        <span className="pr-2.5 text-[10px] font-bold text-slate-400 whitespace-nowrap">
-                          /{workingVal}
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border ${
+                          workingVal > 0 && presentVal > 0
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : "bg-white text-slate-400 border-slate-200"
+                        }`}>
+                          {workingVal > 0 ? `${Math.round((presentVal / workingVal) * 100)}%` : "—"}
                         </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-left">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">कामाचे दिवस</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={workingVal === 0 ? "" : workingVal}
+                            onChange={(e) => handleWorkingDaysChange(m.key, e.target.value)}
+                            placeholder="22"
+                            className="w-full px-2 py-1.5 text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-xl text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">हजर दिवस</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={presentVal === 0 ? "" : presentVal}
+                            onChange={(e) => handleAttendanceChange(m.key, e.target.value)}
+                            placeholder="0"
+                            className="w-full px-2 py-1.5 text-xs font-black text-slate-900 bg-white border border-slate-200 rounded-xl text-center focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                          />
+                        </div>
                       </div>
                     </div>
                   );
                 })}
 
                 {/* Term 1 Summary Box */}
-                <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200 flex flex-col justify-center text-center">
+                <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200 flex flex-col justify-center text-center">
                   <span className="text-[11px] font-bold text-blue-800">सत्र १ उपस्थिती</span>
                   <span className="text-base font-black text-blue-950 mt-0.5">
-                    {term1Summary.present} दिवस
+                    {term1Summary.present} / {term1Summary.working} दिवस
                   </span>
                   <span className="text-[10px] text-blue-600 font-semibold">
-                    (एकूण {term1Summary.working} पैकी)
+                    ({term1Summary.working > 0 ? Math.round((term1Summary.present / term1Summary.working) * 100) : 0}%)
                   </span>
                 </div>
               </div>
@@ -2013,43 +2174,101 @@ export function HpcStudentProfileForm({
 
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
                 {ATTENDANCE_MONTHS.filter((m) => m.term === 2).map((m) => {
-                  const workingVal = workingDays[m.key] || 0;
+                  const workingVal = workingDays[m.key] !== undefined ? workingDays[m.key] : 0;
                   const presentVal = attendedDays[m.key] ?? 0;
                   return (
                     <div
                       key={m.key}
-                      className="p-3 rounded-2xl bg-slate-50/70 border border-slate-200/90 hover:border-purple-300 transition-all"
+                      className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-200/90 hover:border-purple-300 transition-all shadow-xs"
                     >
-                      <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-200/60">
                         <span className="text-xs font-black text-slate-800">{m.labelMarathi}</span>
-                        <span className="text-[10px] font-bold text-slate-400">कामकाज: {workingVal}</span>
-                      </div>
-                      <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:border-purple-600 focus-within:ring-1 focus-within:ring-purple-100">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={presentVal === 0 ? "" : presentVal}
-                          onChange={(e) => handleAttendanceChange(m.key, e.target.value)}
-                          placeholder="0"
-                          className="w-full px-3 py-1.5 text-xs font-black text-slate-900 outline-none"
-                        />
-                        <span className="pr-2.5 text-[10px] font-bold text-slate-400 whitespace-nowrap">
-                          /{workingVal}
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border ${
+                          workingVal > 0 && presentVal > 0
+                            ? "bg-purple-50 text-purple-700 border-purple-200"
+                            : "bg-white text-slate-400 border-slate-200"
+                        }`}>
+                          {workingVal > 0 ? `${Math.round((presentVal / workingVal) * 100)}%` : "—"}
                         </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-left">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-1">कामाचे दिवस</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={workingVal === 0 ? "" : workingVal}
+                            onChange={(e) => handleWorkingDaysChange(m.key, e.target.value)}
+                            placeholder="22"
+                            className="w-full px-2 py-1.5 text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-xl text-center focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-100"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-700 block mb-1">हजर दिवस</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={presentVal === 0 ? "" : presentVal}
+                            onChange={(e) => handleAttendanceChange(m.key, e.target.value)}
+                            placeholder="0"
+                            className="w-full px-2 py-1.5 text-xs font-black text-slate-900 bg-white border border-slate-200 rounded-xl text-center focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-100"
+                          />
+                        </div>
                       </div>
                     </div>
                   );
                 })}
 
                 {/* Term 2 Summary Box */}
-                <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200 flex flex-col justify-center text-center">
+                <div className="p-3.5 rounded-2xl bg-purple-50/90 border border-purple-200 flex flex-col justify-center text-center col-span-2 sm:col-span-1">
                   <span className="text-[11px] font-bold text-purple-800">सत्र २ उपस्थिती</span>
                   <span className="text-base font-black text-purple-950 mt-0.5">
-                    {term2Summary.present} दिवस
+                    {term2Summary.present} / {term2Summary.working} दिवस
                   </span>
                   <span className="text-[10px] text-purple-600 font-semibold">
-                    (एकूण {term2Summary.working} पैकी)
+                    ({term2Summary.working > 0 ? Math.round((term2Summary.present / term2Summary.working) * 100) : 0}%)
                   </span>
+                </div>
+              </div>
+            </div>
+
+            {/* HPC Page 2: उपस्थिती कमी असल्यास त्याची कारणे */}
+            <div className="p-4 sm:p-5 rounded-2xl border border-amber-200/90 bg-amber-50/40 space-y-3">
+              <div className="flex items-center justify-between border-b border-amber-200/60 pb-2">
+                <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                  <span className="text-amber-700">✍️</span>
+                  <span>उपस्थिती कमी असल्यास त्याची कारणे (Reasons for Low Attendance — HPC पान २)</span>
+                </span>
+                <span className="text-[11px] font-bold text-amber-800">
+                  (लागू असल्यास भरावे)
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    कारण १ (Reason 1)
+                  </label>
+                  <input
+                    type="text"
+                    value={attendanceReason1}
+                    onChange={(e) => setAttendanceReason1(e.target.value)}
+                    placeholder="उदा. आजारपण / कौटुंबिक अडचणी"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    कारण २ (Reason 2)
+                  </label>
+                  <input
+                    type="text"
+                    value={attendanceReason2}
+                    onChange={(e) => setAttendanceReason2(e.target.value)}
+                    placeholder="उदा. प्रवासाची गैरसोय / स्थलांतर"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-800 focus:outline-none focus:border-emerald-600 bg-white"
+                  />
                 </div>
               </div>
             </div>

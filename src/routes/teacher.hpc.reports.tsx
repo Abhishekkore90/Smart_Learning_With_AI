@@ -30,6 +30,7 @@ import {
   getHpcAnnualSummary,
   getHpcStudentAttendance,
   getHpcSchoolSettings,
+  getHpcClassWorkingDays,
 } from "@/hpc/services/hpcService";
 import { generateHpcPdf, downloadBlob } from "@/hpc/reports/HpcPdfGenerator";
 import { FoundationalHpcPdf } from "@/hpc/reports/FoundationalHpcPdf";
@@ -141,7 +142,7 @@ function TeacherHpcReportsPage() {
     try {
       const existingStudent = students.find((s) => s.id === studentId);
 
-      const [stRes, profRes, s1Res, s2Res, annRes, attRes, schoolRes] = await Promise.allSettled([
+      const [stRes, profRes, s1Res, s2Res, annRes, attRes, schoolRes, classWdRes] = await Promise.allSettled([
         getHpcStudentById(studentId),
         getHpcStudentProfile(studentId, academicYear),
         getHpcSessionAssessment(studentId, academicYear, "session1"),
@@ -149,6 +150,7 @@ function TeacherHpcReportsPage() {
         getHpcAnnualSummary(studentId, academicYear),
         getHpcStudentAttendance(selectedClass, academicYear, studentId),
         getHpcSchoolSettings(),
+        getHpcClassWorkingDays(selectedClass, academicYear),
       ]);
 
       const st =
@@ -170,6 +172,12 @@ function TeacherHpcReportsPage() {
       const ann = annRes.status === "fulfilled" ? annRes.value : null;
       const att = attRes.status === "fulfilled" ? attRes.value : null;
       const school = schoolRes.status === "fulfilled" ? schoolRes.value : {};
+      const classWd = classWdRes.status === "fulfilled" && classWdRes.value ? classWdRes.value : {};
+
+      const mergedAtt = att ? { ...att } : { workingDays: {}, attendedDays: {} };
+      if (classWd && Object.keys(classWd).length > 0) {
+        mergedAtt.workingDays = { ...classWd, ...(mergedAtt.workingDays || {}) };
+      }
 
       const previewData = {
         student: st,
@@ -177,7 +185,7 @@ function TeacherHpcReportsPage() {
         session1: s1,
         session2: s2,
         annualSummary: ann,
-        attendance: att,
+        attendance: mergedAtt,
         schoolSettings: school,
       };
 

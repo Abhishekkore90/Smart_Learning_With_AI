@@ -5,6 +5,7 @@ import { Link } from '@tanstack/react-router';
 // import Sidebar from '../../components/Sidebar';
 import AlertMessage from "../../AlertMessage";
 import { printReportContent } from '../utils/printHelper';
+import { deduplicateAndNormalizeSubjects } from '../data/cceSubjects';
 
 
 const Result5th8th = () => {
@@ -86,9 +87,11 @@ const Result5th8th = () => {
       }
       const data = await response.json();
       // Assuming the data is an object with numeric keys
-      const orderedSubjects = Object.keys(data)
-        .sort((a, b) => parseInt(a) - parseInt(b)) // Sort by numeric keys
-        .map((key) => data[key]); // Map keys to subject names
+      const orderedSubjects = deduplicateAndNormalizeSubjects(
+        Object.keys(data)
+          .sort((a, b) => parseInt(a) - parseInt(b)) // Sort by numeric keys
+          .map((key) => data[key]) // Map keys to subject names
+      );
       setSubjectSequence(orderedSubjects);
     } catch (error) {
       console.error('Error fetching subject sequence:', error);
@@ -662,9 +665,9 @@ const Result5th8th = () => {
       const resultsWithTotal = {};
 
       // Combine all subjects from both semesters
-      const allSubjects = new Set([
-        ...Object.keys(firstSemesterData).filter(key => key !== 'studentInfo' && key !== 'remark' && key !== 'nondi'),
-        ...Object.keys(secondSemesterData).filter(key => key !== 'studentInfo' && key !== 'remark' && key !== 'nondi')
+      const allSubjects = deduplicateAndNormalizeSubjects([
+        ...Object.keys(firstSemesterData || {}).filter(key => key !== 'studentInfo' && key !== 'remark' && key !== 'nondi'),
+        ...Object.keys(secondSemesterData || {}).filter(key => key !== 'studentInfo' && key !== 'remark' && key !== 'nondi')
       ]);
 
       allSubjects.forEach((subject) => {
@@ -1055,11 +1058,14 @@ const Result5th8th = () => {
     { name: "computer", akarikMarks: 100 }, // New subject added
   ];
 
+  const isC6 = classValue === "6th" || classValue === "6" || String(classValue).includes("६");
   const marathiSubjects = [
     { name: "चित्रकला", akarikMarks: 100 }, // New subject added
     { name: "शारीरिक शिक्षण", akarikMarks: 100 }, // New subject added
     { name: "संगणक", akarikMarks: 100 }, // New subject added
     { name: "कलाशिक्षण", akarikMarks: 100 },
+    { name: isC6 ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण", akarikMarks: 100 },
+    { name: "व्यावसायिक अभ्यास", akarikMarks: 100 },
     { name: "कार्यशिक्षण", akarikMarks: 100 },
   ];
   try {
@@ -1276,7 +1282,10 @@ const Result5th8th = () => {
                   </thead>
                   <tbody>
                     {subjectSequence && subjectSequence.filter(s => s).map((subject, index) => {
-                      const marks = selectedStudentResults.results[subject] || {};
+                      const res = selectedStudentResults.results || {};
+                      const marks = res[subject] ||
+                        (subject.includes("कला") ? (res["कलाशिक्षण"] || res["कला"] || {}) : null) ||
+                        (subject.includes("कार्य") || subject.includes("व्यावसायिक") ? (res["व्यावसायिक अभ्यास"] || res["कार्यशिक्षण"] || res["कार्यानुभव"] || {}) : null) || {};
 
                       // Check if it's an extra/grade-based subject (Art, PE, etc.)
                       const isExtraSubject = [...englishSubjects, ...marathiSubjects].some(
@@ -1308,7 +1317,7 @@ const Result5th8th = () => {
                   <tfoot>
                     {(() => {
                       const academicResults = Object.keys(selectedStudentResults.results).filter(subj =>
-                        !['Art', 'Work Experience', 'Physical Education', 'कला', 'कलाशिक्षण', 'कार्यानुभव', 'कार्यशिक्षण', 'शारीरिक शिक्षण'].includes(subj)
+                        !['Art', 'Work Experience', 'Physical Education', 'कला', 'कलाशिक्षण', 'कार्यानुभव', 'कार्यशिक्षण', 'व्यावसायिक अभ्यास', 'शारीरिक शिक्षण'].includes(subj)
                       );
                       const totalM = academicResults.reduce((sum, s) => sum + (selectedStudentResults.results[s]?.total || 0), 0);
                       const totalS = academicResults.length;

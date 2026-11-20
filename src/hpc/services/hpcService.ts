@@ -569,6 +569,52 @@ export async function getHpcStudentAttendance(
   };
 }
 
+/**
+ * Get shared class working days for a specific academic year and class
+ */
+export async function getHpcClassWorkingDays(
+  classId: string,
+  academicYear: string
+): Promise<Record<string, number>> {
+  try {
+    const docId = `${academicYear}_${classId}`;
+    const snap = await getDoc(doc(db, "hpc_class_working_days", docId));
+    if (snap.exists()) {
+      return (snap.data().workingDays as Record<string, number>) || {};
+    }
+  } catch (err) {
+    console.error("Error fetching class working days:", err);
+  }
+  return {};
+}
+
+/**
+ * Save shared class working days for a specific academic year and class
+ */
+export async function saveHpcClassWorkingDays(
+  classId: string,
+  academicYear: string,
+  workingDays: Record<string, number>
+): Promise<boolean> {
+  try {
+    const docId = `${academicYear}_${classId}`;
+    await setDoc(
+      doc(db, "hpc_class_working_days", docId),
+      {
+        classId,
+        academicYear,
+        workingDays,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+    return true;
+  } catch (err) {
+    console.error("Error saving class working days:", err);
+    return false;
+  }
+}
+
 // ---------------- HPC Student Profile (Part A) ----------------
 export async function getHpcStudentProfile(
   studentId: string,
@@ -986,13 +1032,31 @@ export async function getHpcActivityBankForCompetency(
       });
 
       const staticData = HPC_ACTIVITIES_BANK[competencyCode];
-      const teacherRemarks = dynamicList
-        .map((d) => d.teacherFeedbackSample || (d as any).teacherFeedbackBank?.[0])
-        .filter((r): r is string => Boolean(r && r.trim()));
+      const teacherRemarks = Array.from(
+        new Set(
+          dynamicList
+            .flatMap((d) => {
+              const bank = Array.isArray((d as any).teacherFeedbackBank) ? (d as any).teacherFeedbackBank : [];
+              const sample = d.teacherFeedbackSample ? d.teacherFeedbackSample.split(/\s*\|\s*/) : [];
+              return [...bank, ...sample];
+            })
+            .map((r) => (typeof r === "string" ? r.trim() : ""))
+            .filter(Boolean)
+        )
+      );
 
-      const parentRemarks = dynamicList
-        .map((d) => d.parentFeedbackSample || (d as any).parentFeedbackBank?.[0])
-        .filter((r): r is string => Boolean(r && r.trim()));
+      const parentRemarks = Array.from(
+        new Set(
+          dynamicList
+            .flatMap((d) => {
+              const bank = Array.isArray((d as any).parentFeedbackBank) ? (d as any).parentFeedbackBank : [];
+              const sample = d.parentFeedbackSample ? d.parentFeedbackSample.split(/\s*\|\s*/) : [];
+              return [...bank, ...sample];
+            })
+            .map((r) => (typeof r === "string" ? r.trim() : ""))
+            .filter(Boolean)
+        )
+      );
 
       const targetCls = classId || (stageId === "foundational" ? "1st" : "all");
       const loList =
@@ -1028,12 +1092,30 @@ export async function getHpcActivityBankForCompetency(
       if (matched.length > 0) {
         const first = matched[0];
         const staticData = HPC_ACTIVITIES_BANK[competencyCode];
-        const matchedTeachers = matched
-          .map((d) => d.teacherFeedbackSample || (d as any).teacherFeedbackBank?.[0])
-          .filter(Boolean) as string[];
-        const matchedParents = matched
-          .map((d) => d.parentFeedbackSample || (d as any).parentFeedbackBank?.[0])
-          .filter(Boolean) as string[];
+        const matchedTeachers = Array.from(
+          new Set(
+            matched
+              .flatMap((d) => {
+                const bank = Array.isArray((d as any).teacherFeedbackBank) ? (d as any).teacherFeedbackBank : [];
+                const sample = d.teacherFeedbackSample ? d.teacherFeedbackSample.split(/\s*\|\s*/) : [];
+                return [...bank, ...sample];
+              })
+              .map((r) => (typeof r === "string" ? r.trim() : ""))
+              .filter(Boolean)
+          )
+        );
+        const matchedParents = Array.from(
+          new Set(
+            matched
+              .flatMap((d) => {
+                const bank = Array.isArray((d as any).parentFeedbackBank) ? (d as any).parentFeedbackBank : [];
+                const sample = d.parentFeedbackSample ? d.parentFeedbackSample.split(/\s*\|\s*/) : [];
+                return [...bank, ...sample];
+              })
+              .map((r) => (typeof r === "string" ? r.trim() : ""))
+              .filter(Boolean)
+          )
+        );
 
         const targetCls = classId || (stageId === "foundational" ? "1st" : "all");
         const loList =
@@ -1283,6 +1365,111 @@ export async function bulkUploadHpcRemarks(
     }
   }
   return count;
+}
+
+/**
+ * Delete dynamic HPC activities for a specific class (e.g. "1st", "2nd", "3rd", etc.)
+ */
+export async function deleteHpcActivitiesByClass(classId: string): Promise<number> {
+  const colRef = collection(db, "hpc_activities");
+  const snap = await getDocs(colRef);
+  let count = 0;
+
+  const docsToDelete = snap.docs.filter((d) => {
+    const data = d.data() as HpcDynamicActivity;
+    // 1. Direct class match
+    if (data.classId === classId) return true;
+    // 2. ID prefix match (e.g. act_1st_...)
+    if (d.id.startsWith(`act_${classId}_`)) return true;
+    return false;
+  });
+
+  const chunkSize = 400;
+  for (let i = 0; i < docsToDelete.length; i += chunkSize) {
+    const chunk = docsToDelete.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const d of chunk) {
+      batch.delete(d.ref);
+      count++;
+    }
+    await batch.commit();
+  }
+  return count;
+}
+
+/**
+ * Delete student assessments and annual summaries for a specific class
+ */
+export async function deleteHpcStudentAssessmentsByClass(classId: string): Promise<{
+  assessmentsDeleted: number;
+  summariesDeleted: number;
+}> {
+  let assessmentsDeleted = 0;
+  let summariesDeleted = 0;
+
+  try {
+    // 1. Assessments
+    const assessSnap = await getDocs(collection(db, "hpc_assessments"));
+    const assessToDelete = assessSnap.docs.filter((d) => d.data().classId === classId);
+    const chunkSize = 400;
+    for (let i = 0; i < assessToDelete.length; i += chunkSize) {
+      const chunk = assessToDelete.slice(i, i + chunkSize);
+      const batch = writeBatch(db);
+      for (const d of chunk) {
+        batch.delete(d.ref);
+        assessmentsDeleted++;
+      }
+      await batch.commit();
+    }
+
+    // 2. Annual Summaries
+    const sumSnap = await getDocs(collection(db, "hpc_annual_summaries"));
+    const sumToDelete = sumSnap.docs.filter((d) => d.data().classId === classId);
+    for (let i = 0; i < sumToDelete.length; i += chunkSize) {
+      const chunk = sumToDelete.slice(i, i + chunkSize);
+      const batch = writeBatch(db);
+      for (const d of chunk) {
+        batch.delete(d.ref);
+        summariesDeleted++;
+      }
+      await batch.commit();
+    }
+  } catch (err) {
+    console.error("Error deleting student assessments for class:", err);
+  }
+
+  return { assessmentsDeleted, summariesDeleted };
+}
+
+/**
+ * Clear data for a single specific class with granular options
+ */
+export async function clearSpecificClassHpcData(
+  classId: string,
+  options: {
+    deleteActivities?: boolean;
+    deleteAssessments?: boolean;
+  } = { deleteActivities: true, deleteAssessments: false }
+): Promise<{
+  activitiesDeleted: number;
+  assessmentsDeleted: number;
+  summariesDeleted: number;
+}> {
+  let activitiesDeleted = 0;
+  let assessmentsDeleted = 0;
+  let summariesDeleted = 0;
+
+  if (options.deleteActivities) {
+    activitiesDeleted = await deleteHpcActivitiesByClass(classId);
+  }
+
+  if (options.deleteAssessments) {
+    const res = await deleteHpcStudentAssessmentsByClass(classId);
+    assessmentsDeleted = res.assessmentsDeleted;
+    summariesDeleted = res.summariesDeleted;
+  }
+
+  return { activitiesDeleted, assessmentsDeleted, summariesDeleted };
 }
 
 // ===========================================================================
@@ -1670,11 +1857,23 @@ export function getHpcAreasForStage(
   dynamicGoals?: HpcCurricularGoal[],
   dynamicActivities?: HpcDynamicActivity[]
 ): HpcAreaDefinition[] {
+  // For foundational stage, SCERT strictly mandates the 6 developmental areas
+  if (stageId === "foundational") {
+    return getAreasForStage("foundational");
+  }
+
+  const defaultAreas = getAreasForStage(stageId);
   const subjectSet = new Set<string>();
 
   if (dynamicGoals && dynamicGoals.length > 0) {
     dynamicGoals.forEach((g) => {
-      if (g.areaOrSubjectId && g.areaOrSubjectId !== "general") {
+      if (
+        g.areaOrSubjectId &&
+        g.areaOrSubjectId !== "general" &&
+        g.areaOrSubjectId.length <= 40 &&
+        !g.areaOrSubjectId.includes("\n") &&
+        !g.areaOrSubjectId.startsWith("C-")
+      ) {
         subjectSet.add(g.areaOrSubjectId.trim());
       }
     });
@@ -1682,14 +1881,19 @@ export function getHpcAreasForStage(
 
   if (dynamicActivities && dynamicActivities.length > 0) {
     dynamicActivities.forEach((a) => {
-      if (a.subjectOrArea && a.stageId === stageId) {
+      if (
+        a.subjectOrArea &&
+        a.stageId === stageId &&
+        a.subjectOrArea.length <= 40 &&
+        !a.subjectOrArea.includes("\n") &&
+        !a.subjectOrArea.startsWith("C-")
+      ) {
         subjectSet.add(a.subjectOrArea.trim());
       }
     });
   }
 
   if (subjectSet.size > 0) {
-    const defaultAreas = getAreasForStage(stageId);
     return Array.from(subjectSet).map((sub, index) => {
       const matchDefault = defaultAreas.find(
         (a) => a.id === sub || a.nameMarathi === sub || a.code === sub
@@ -1706,5 +1910,5 @@ export function getHpcAreasForStage(
     });
   }
 
-  return getAreasForStage(stageId);
+  return defaultAreas;
 }

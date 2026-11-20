@@ -4,7 +4,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { matchStudentClassAndMedium, fetchStudentsForClass, fetchFirestoreMarks, hasStudentFilledData } from "./firestoreMarksHelper";
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
-import { DEFAULT_MARATHI_SUBJECTS_MAP, getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { DEFAULT_MARATHI_SUBJECTS_MAP, getDefaultSubjectsForClass, deduplicateAndNormalizeSubjects } from "@/data/cceSubjects";
 import { toast } from "sonner";
 
 // Default Class Definitions
@@ -284,7 +284,12 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
               }
             });
 
-            const classSubjects = getDefaultSubjectsForClass(clsObj.id, currentMedium) || DEFAULT_MARATHI_SUBJECTS_MAP[clsObj.id] || DEFAULT_MARATHI_SUBJECTS_MAP["1st"];
+            const classSubjects = deduplicateAndNormalizeSubjects(
+              getDefaultSubjectsForClass(clsObj.id, currentMedium) ||
+                DEFAULT_MARATHI_SUBJECTS_MAP[clsObj.id] ||
+                DEFAULT_MARATHI_SUBJECTS_MAP["1st"],
+              clsObj.id
+            );
             const totalMax = classSubjects.length * 100;
 
             const activeStudents = classStudents;
@@ -342,8 +347,8 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                   subData = studentMarks["parisar"] || studentMarks["evs"] || studentMarks["परिसर अभ्यास"] || studentMarks["आपले संभोवतालचे जग"] || studentMarks["parisar1"] || studentMarks["evs1"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
                 } else if (lower.includes("कला")) {
                   subData = studentMarks["kala"] || studentMarks["कलाशिक्षण"] || studentMarks["कला"] || {};
-                } else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) {
-                  subData = studentMarks["karyanubhav"] || studentMarks["कार्यशिक्षण"] || studentMarks["कार्यानुभव"] || {};
+                } else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक")) {
+                  subData = studentMarks["व्यावसायिक अभ्यास"] || studentMarks["karyanubhav"] || studentMarks["कार्यशिक्षण"] || studentMarks["कार्यानुभव"] || {};
                 } else if (lower.includes("शारीरिक")) {
                   subData = studentMarks["sharirik"] || studentMarks["शारीरिक शिक्षण"] || studentMarks["शारीरिक शिक्षण व आरोग्य"] || {};
                 }
@@ -357,7 +362,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                       (lower.includes("हिंदी") && kLower.includes("हिंदी")) ||
                       (lower.includes("गणित") && kLower.includes("गणित")) ||
                       (lower.includes("कला") && kLower.includes("कला")) ||
-                      ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("कार्य"))) ||
+                      ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक")) && (kLower.includes("कार्यानुभव") || kLower.includes("कार्यशिक्षण") || kLower.includes("कार्य") || kLower.includes("व्यावसायिक"))) ||
                       (lower.includes("शारीरिक") && kLower.includes("शारीरिक")) ||
                       ((lower.includes("परिसर") || lower.includes("संभोवतालचे")) && (kLower.includes("परिसर") || kLower.includes("संभोवतालचे"))) ||
                       kLower === lower
@@ -368,7 +373,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                   }
                 }
 
-                const isPracticalSub = lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("शारीरिक");
+                const isPracticalSub = lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक") || lower.includes("शारीरिक");
 
                 const tondiKaamObt = Number(subData.tondiKaam ?? subData.tondi ?? subData.oral ?? 0);
                 const pratyakshikPrayogObt = Number(subData.pratyakshikPrayog ?? subData.practical ?? subData.activity ?? 0);

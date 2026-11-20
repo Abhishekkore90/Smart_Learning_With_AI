@@ -1085,11 +1085,14 @@ const ResultEntry = () => {
     { name: "Computer", akarikMarks: 100 }, // New subject added
   ];
 
+  const isC6 = classValue === "6th" || classValue === "6" || String(classValue).includes("६");
   const marathiSubjects = [
     { name: "चित्रकला", akarikMarks: 100 }, // New subject added
     { name: "शारीरिक शिक्षण", akarikMarks: 100 }, // New subject added
     { name: "संगणक", akarikMarks: 100 }, // New subject added
     { name: "कलाशिक्षण", akarikMarks: 100 },
+    { name: isC6 ? "व्यावसायिक अभ्यास" : "कार्यशिक्षण", akarikMarks: 100 },
+    { name: "व्यावसायिक अभ्यास", akarikMarks: 100 },
     { name: "कार्यशिक्षण", akarikMarks: 100 },
     { name: "शा.शिक्षण", akarikMarks: 100 },
   ];
