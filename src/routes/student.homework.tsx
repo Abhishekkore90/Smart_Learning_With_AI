@@ -58,6 +58,12 @@ function StudentHomeworkPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [calendarDate, setCalendarDate] = useState<string>(() => formatISODate(new Date()));
+  const todayStr = useMemo(() => formatISODate(new Date()), []);
+  const tomorrowStr = useMemo(() => {
+    const t = new Date();
+    t.setDate(t.getDate() + 1);
+    return formatISODate(t);
+  }, []);
 
   const [homeworkList, setHomeworkList] = useState<HomeworkItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +108,7 @@ function StudentHomeworkPage() {
   }, [selectedClass, selectedMedium]);
 
   // Filter homework by medium, class, subject, date, and search
+  // Allows all previous homework, and allows only up to next day (tomorrow) for future
   const filteredData = useMemo(() => {
     return homeworkList.filter((hw) => {
       const matchClass = hw.class === selectedClass;
@@ -115,9 +122,13 @@ function StudentHomeworkPage() {
         hw.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         hw.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         hw.subject?.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchClass && matchMedium && matchSubject && matchDate && matchSearch;
+
+      const d = (hw.homeworkDate || (hw as any).date || (hw as any).createdAt || "").slice(0, 10);
+      const isNotAheadOfTomorrow = !d || d <= tomorrowStr;
+
+      return matchClass && matchMedium && matchSubject && matchDate && matchSearch && isNotAheadOfTomorrow;
     });
-  }, [homeworkList, selectedClass, selectedMedium, selectedSubject, filterDate, searchTerm]);
+  }, [homeworkList, selectedClass, selectedMedium, selectedSubject, filterDate, searchTerm, tomorrowStr]);
 
   if (!mounted) return null;
 
@@ -370,15 +381,30 @@ function StudentHomeworkPage() {
                     <div className="relative">
                       <input
                         type="date"
-                        value={filterDate}
-                        onChange={(e) => setFilterDate(e.target.value)}
+                        max={tomorrowStr}
+                        value={calendarDate}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val && val > tomorrowStr) {
+                            setCalendarDate(tomorrowStr);
+                            setFilterDate(tomorrowStr);
+                          } else {
+                            setCalendarDate(val);
+                            setFilterDate(val);
+                          }
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 cursor-pointer"
+                        title="तारीख निवडा (मागील सर्व किंवा उद्याचा गृहपाठ)"
                       />
-                      {filterDate && (
+                      {calendarDate && (
                         <button
-                          onClick={() => setFilterDate("")}
+                          onClick={() => {
+                            const now = formatISODate(new Date());
+                            setCalendarDate(now);
+                            setFilterDate("");
+                          }}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 text-xs font-bold"
-                          title="तारीख काढा"
+                          title="आजच्या तारखेवर जा"
                         >
                           ✕
                         </button>
@@ -413,6 +439,8 @@ function StudentHomeworkPage() {
                     initialClass={selectedClass || "1st"}
                     initialMedium={(selectedMedium as any) || "marathi"}
                     initialSubject={selectedSubject || "all"}
+                    initialDate={calendarDate}
+                    onDateChange={(d) => setCalendarDate(d)}
                   />
                 ) : (
                   <>

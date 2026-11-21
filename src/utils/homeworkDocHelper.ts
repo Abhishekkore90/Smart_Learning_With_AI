@@ -241,34 +241,34 @@ export const addHomeworkFooterLinksToPdf = (pdf: jsPDF | null): jsPDF | null => 
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
 
-    const margin = 24;
-    const gap = 12;
-    const btnHeight = 18;
-    const footerY = pageHeight - btnHeight - 8; // 8 pt padding from bottom edge
+    const margin = 28;
+    const gap = 14;
+    const btnHeight = 22;
+    const footerY = pageHeight - btnHeight - 12; // 12 pt padding from bottom edge
     const btnWidth = (pageWidth - margin * 2 - gap) / 2;
 
     // Draw clean solid white background strip behind the footer bar to avoid any overlapping
     pdf.setFillColor(255, 255, 255);
-    pdf.rect(0, footerY - 5, pageWidth, pageHeight - (footerY - 5), "F");
+    pdf.rect(0, footerY - 7, pageWidth, pageHeight - (footerY - 7), "F");
 
     // Top divider line
-    pdf.setDrawColor(226, 232, 240); // slate-200
-    pdf.setLineWidth(0.6);
-    pdf.line(margin, footerY - 4, pageWidth - margin, footerY - 4);
+    pdf.setDrawColor(203, 213, 225); // slate-300
+    pdf.setLineWidth(0.75);
+    pdf.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
 
     // 1. WhatsApp Button (Left)
     const waX = margin;
     const waY = footerY;
     pdf.setFillColor(37, 211, 102); // #25D366 (WhatsApp Green)
     pdf.setDrawColor(22, 163, 74); // #16a34a border
-    pdf.setLineWidth(0.5);
-    pdf.roundedRect(waX, waY, btnWidth, btnHeight, 3.5, 3.5, "FD");
+    pdf.setLineWidth(0.6);
+    pdf.roundedRect(waX, waY, btnWidth, btnHeight, 4, 4, "FD");
 
     // WhatsApp text
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(8.5);
-    pdf.text("WhatsApp Group: Click to Join", waX + btnWidth / 2, waY + 12, {
+    pdf.setFontSize(9);
+    pdf.text("WhatsApp Group: Click to Join", waX + btnWidth / 2, waY + 14.5, {
       align: "center",
     });
 
@@ -282,14 +282,14 @@ export const addHomeworkFooterLinksToPdf = (pdf: jsPDF | null): jsPDF | null => 
     const webY = footerY;
     pdf.setFillColor(30, 58, 138); // #1e3a8a (Navy/Blue)
     pdf.setDrawColor(29, 78, 216); // #1d4ed8 border
-    pdf.setLineWidth(0.5);
-    pdf.roundedRect(webX, webY, btnWidth, btnHeight, 3.5, 3.5, "FD");
+    pdf.setLineWidth(0.6);
+    pdf.roundedRect(webX, webY, btnWidth, btnHeight, 4, 4, "FD");
 
     // Website text
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(8.5);
-    pdf.text(`Website: ${HOMEWORK_WEBSITE_LABEL} (Click Here)`, webX + btnWidth / 2, webY + 12, {
+    pdf.setFontSize(9);
+    pdf.text(`Website: ${HOMEWORK_WEBSITE_LABEL} (Click Here)`, webX + btnWidth / 2, webY + 14.5, {
       align: "center",
     });
 

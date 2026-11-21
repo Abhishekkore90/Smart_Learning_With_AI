@@ -150,6 +150,7 @@ function AdminHomeworkPage() {
   const [filterDate, setFilterDate] = useState<string>("");
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [calendarDate, setCalendarDate] = useState<string>(() => formatISODate(new Date()));
+  const todayStr = useMemo(() => formatISODate(new Date()), []);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Homework list state (real-time from canonical admin_homework)
@@ -905,6 +906,8 @@ function AdminHomeworkPage() {
                         initialClass={selectedClass || "1st"}
                         initialMedium={(selectedMedium as any) || "marathi"}
                         initialSubject={selectedSubject || "all"}
+                        initialDate={calendarDate}
+                        onDateChange={(d) => setCalendarDate(d)}
                       />
                     ) : (
                       <>
@@ -921,7 +924,7 @@ function AdminHomeworkPage() {
                           }`}
                         >
                           <Calendar className="size-3.5" />
-                          <span>कॅलेंडर दृश्य (Calendar View)</span>
+                          <span>आजचा गृहपाठ (Today's Homework)</span>
                         </button>
 
                         <button
@@ -934,14 +937,40 @@ function AdminHomeworkPage() {
                           }`}
                         >
                           <Layers className="size-3.5" />
-                          <span>यादी दृश्य (List View) ({filteredHomework.length})</span>
+                          <span>सर्व गृहपाठ यादी (All Homework List) ({filteredHomework.length})</span>
                         </button>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-500 font-semibold hidden md:block">
-                          * कॅलेंडरवर तारखेवर क्लिक करून गृहपाठ जोडा किंवा पहा
-                        </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Small Calendar Button */}
+                        <div className="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100/90 border border-amber-300 rounded-xl px-2.5 sm:px-3 py-1.5 transition-all shadow-2xs">
+                          <Calendar className="size-3.5 text-amber-700 shrink-0" />
+                          <span className="text-xs font-bold text-amber-950">
+                            {calendarDate === todayStr ? "तारीख:" : "निवडलेली तारीख:"}
+                          </span>
+                          <input
+                            type="date"
+                            value={calendarDate}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                setCalendarDate(e.target.value);
+                              }
+                            }}
+                            className="bg-transparent border-none outline-none font-black text-xs text-amber-900 cursor-pointer"
+                            title="कॅलेंडरमधून तारीख निवडा व त्या दिवसाचा गृहपाठ पहा"
+                          />
+                          {calendarDate !== todayStr && (
+                            <button
+                              type="button"
+                              onClick={() => setCalendarDate(todayStr)}
+                              className="ml-1 px-2 py-0.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black cursor-pointer shadow-2xs active:scale-95 transition-all"
+                              title="आजच्या गृहपाठावर परत जा (Today)"
+                            >
+                              आज (Today)
+                            </button>
+                          )}
+                        </div>
+
                         <button
                           onClick={() => handleOpenAddModal()}
                           className="text-xs font-black text-amber-700 hover:text-amber-800 flex items-center gap-1 cursor-pointer bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-200"

@@ -1613,9 +1613,115 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     applyHeaderInfo(schoolNameInput, val, kendraInput, talukaInput, jilhaInput, teacherNameInput, headmasterNameInput, false);
   };
 
+  /**
+   * Automatically detects subject header banners across the homework document
+   * (e.g. |१) मराठी, |२) इंग्रजी (My English Book), |३) गणित, |४) कार्यशिक्षण, etc.)
+   * and ensures that after one subject completes, there is a clean 1 to 2 line space
+   * (approx 22px to 26px margin-top) before starting the next subject!
+   */
+  const formatSubjectSectionSpacing = () => {
+    if (!containerRef.current) return;
+
+    // Pattern matching subject headers:
+    const isSubjectBannerText = (raw: string): boolean => {
+      const clean = raw.replace(/[\r\n\t]/g, " ").trim();
+      if (clean.length < 2 || clean.length > 80) return false;
+
+      // Check if starts with |१) or 1) or १) etc. followed by a recognized subject
+      const hasSubjectNumber = /^\|?\s*(?:[१२३४५६७८९१०]|[1-9]|10)\s*[\).–—\-:]/i.test(clean);
+      const hasSubjectWord = /(?:मराठी|भाषा|बालभारती|इंग्रजी|english|my\s*english|गणित|math|mathematics|कार्यशिक्षण|कार्यानुभव|परिसर|विज्ञान|चित्रकला|कला|शा\.?\s*शिक्षण|शारीरिक|हिंदी|urdu)/i.test(clean);
+
+      if (hasSubjectNumber && hasSubjectWord) return true;
+
+      // Also check for explicit "विषय :" or "Subject :" banners
+      if (/^(?:विषय|subject)\s*[:\-–—]\s*(?:मराठी|भाषा|बालभारती|इंग्रजी|english|गणित|math|कार्यशिक्षण|कार्यानुभव|परिसर|विज्ञान|चित्रकला|कला|शा\.?\s*शिक्षण|शारीरिक|हिंदी|urdu)/i.test(clean)) {
+        return true;
+      }
+
+      return false;
+    };
+
+    // Remove any previously injected spacers to avoid duplicate accumulation
+    containerRef.current.querySelectorAll(".hw-subject-spacer").forEach((s) => s.remove());
+
+    // Find all elements that match subject banners
+    const allCandidates = Array.from(
+      containerRef.current.querySelectorAll<HTMLElement>("p, tr, table, div, h1, h2, h3, h4")
+    );
+
+    const matchedBanners: HTMLElement[] = [];
+    for (const el of allCandidates) {
+      if (el.getAttribute("data-header-field")) continue;
+      // Skip if contains child block elements (unless it's a table row)
+      if (el.querySelectorAll("p, table, div, h1, h2, h3, h4").length > 0 && el.tagName !== "TR") {
+        continue;
+      }
+      const txt = (el.textContent || "").trim();
+      if (isSubjectBannerText(txt)) {
+        // If it's a table row or single-row table, choose the table
+        const closestTable = el.closest("table");
+        const targetBlock: HTMLElement =
+          closestTable && closestTable.querySelectorAll("tr").length <= 2
+            ? closestTable
+            : (el.closest("p, div") || el);
+
+        if (!matchedBanners.includes(targetBlock)) {
+          matchedBanners.push(targetBlock);
+        }
+      }
+    }
+
+    // Now, for each matched subject banner:
+    matchedBanners.forEach((banner, index) => {
+      banner.setAttribute("data-subject-banner", String(index + 1));
+
+      // After Subject 1 completes, add 1 to 2 lines space (22px to 26px) before Subject 2, Subject 3, Subject 4, etc.
+      if (index > 0) {
+        // Create an explicit 1-2 line spacer block (approx 22px height) before the new subject
+        const spacer = document.createElement("div");
+        spacer.className = "hw-subject-spacer";
+        spacer.style.height = "22px";
+        spacer.style.minHeight = "22px";
+        spacer.style.lineHeight = "22px";
+        spacer.style.width = "100%";
+        spacer.style.clear = "both";
+        spacer.style.display = "block";
+        spacer.style.boxSizing = "border-box";
+        spacer.setAttribute("aria-hidden", "true");
+
+        if (banner.parentNode) {
+          banner.parentNode.insertBefore(spacer, banner);
+        }
+
+        // Apply comfortable margin-top on the banner itself
+        banner.style.marginTop = "8px";
+        banner.style.setProperty("margin-top", "8px", "important");
+      } else {
+        // For Subject 1 (under student name), ensure standard comfortable separation
+        banner.style.marginTop = "10px";
+        banner.style.setProperty("margin-top", "10px", "important");
+      }
+
+      banner.style.clear = "both";
+      banner.style.boxSizing = "border-box";
+
+      // Also ensure the preceding sibling (like the previous question table) has a clean bottom margin
+      const prev = banner.previousElementSibling as HTMLElement | null;
+      if (prev && !prev.classList.contains("hw-subject-spacer")) {
+        if (prev.tagName === "TABLE" || prev.tagName === "DIV" || prev.tagName === "P") {
+          prev.style.marginBottom = "10px";
+          prev.style.setProperty("margin-bottom", "10px", "important");
+        }
+      }
+    });
+  };
+
   // Paginate homework document into clean, exact A4 page sheets without artificial blank gaps
   const paginateHomeworkDocument = () => {
     if (!containerRef.current) return;
+
+    // Apply 1 to 2 line spaces before starting each new subject
+    formatSubjectSectionSpacing();
 
     // docx-preview generates <section class="docx"> for each page sheet.
     const docxSections = Array.from(
@@ -1728,9 +1834,10 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     if (!hwTeacherName && activeTeacher) setHwTeacherName(activeTeacher);
     if (!hwHeadmasterName && activeHeadmaster) setHwHeadmasterName(activeHeadmaster);
 
-    // Dynamic font size for Line 1 to guarantee 100% fit on one line without breaking margins
+    // Dynamic font size and layout adaptation for School Name to guarantee 100% fit without clipping
     const schoolLen = activeSchool.length;
-    const line1FontSize = schoolLen > 36 ? "11.5pt" : schoolLen > 24 ? "12pt" : "12.5pt";
+    const isVeryLongSchool = schoolLen > 38;
+    const line1FontSize = schoolLen > 50 ? "9.5pt" : schoolLen > 36 ? "10.5pt" : schoolLen > 24 ? "11.5pt" : "12pt";
 
     const displaySchool = activeSchool
       ? escapeHtmlStr(activeSchool)
@@ -1745,46 +1852,70 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       ? escapeHtmlStr(activeDistrict)
       : '<span style="color: #64748b; letter-spacing: 1px;">................</span>';
 
-    // Helper to format Line 1: शाळेचे नाव, केंद्र, तालुका, जिल्हा (Borderless 4-cell table)
-    const line1Html = `
-      <table data-header-field="hw-line-1" style="width: 100% !important; border-collapse: collapse !important; border: none !important; margin: 6px 0 4px 0 !important; font-size: ${line1FontSize} !important; line-height: 1.4 !important; color: #000000 !important; background: transparent !important; table-layout: fixed !important;">
-        <tbody>
-          <tr style="border: none !important; background: transparent !important;">
-            <td style="border: none !important; padding: 3px 6px 3px 0 !important; text-align: left !important; width: 40% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
-              <strong style="white-space: nowrap !important; font-weight: 800;">शाळेचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${displaySchool}</span>
-            </td>
-            <td style="border: none !important; padding: 3px 6px !important; text-align: center !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
-              <strong style="white-space: nowrap !important; font-weight: 800;">केंद्र : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${displayKendra}</span>
-            </td>
-            <td style="border: none !important; padding: 3px 6px !important; text-align: center !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
-              <strong style="white-space: nowrap !important; font-weight: 800;">तालुका : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${displayTaluka}</span>
-            </td>
-            <td style="border: none !important; padding: 3px 0 3px 6px !important; text-align: right !important; width: 20% !important; vertical-align: middle !important; background: transparent !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
-              <strong style="white-space: nowrap !important; font-weight: 800;">जिल्हा : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${displayDistrict}</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    // Strip 1: If school name is long (>38 chars), automatically give it a dedicated full-width top line;
+    // otherwise fit in a single balanced flex row alongside केंद्र, तालुका, जिल्हा!
+    const schoolLocationStripHtml = isVeryLongSchool
+      ? `
+        <!-- Row 1a: Full width School Name for long names -->
+        <div style="padding: 6px 12px !important; background-color: #f1f5f9 !important; border-bottom: 1px dashed #cbd5e1 !important; font-size: ${line1FontSize} !important; color: #0f172a !important; text-align: left !important; box-sizing: border-box !important; word-break: break-word !important;">
+          <strong style="font-weight: 800; color: #0f172a;">शाळेचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displaySchool}</span>
+        </div>
+        <!-- Row 1b: Kendra, Taluka, Jilha Strip -->
+        <div style="display: flex !important; justify-content: space-between !important; align-items: center !important; padding: 5px 12px !important; background-color: #f8fafc !important; border-bottom: 1.5px solid #0f172a !important; font-size: 10.5pt !important; color: #334155 !important; box-sizing: border-box !important;">
+          <div style="text-align: left !important; flex: 1 !important;">
+            <strong style="font-weight: 800; color: #475569;">केंद्र : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayKendra}</span>
+          </div>
+          <div style="text-align: center !important; flex: 1 !important;">
+            <strong style="font-weight: 800; color: #475569;">तालुका : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayTaluka}</span>
+          </div>
+          <div style="text-align: right !important; flex: 1 !important;">
+            <strong style="font-weight: 800; color: #475569;">जिल्हा : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayDistrict}</span>
+          </div>
+        </div>
+      `.trim()
+      : `
+        <div style="display: flex !important; justify-content: space-between !important; align-items: center !important; padding: 7px 12px !important; background-color: #f1f5f9 !important; border-bottom: 1.5px solid #0f172a !important; font-size: ${line1FontSize} !important; color: #0f172a !important; gap: 8px !important; box-sizing: border-box !important;">
+          <div style="flex: 2.2 !important; text-align: left !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">
+            <strong style="font-weight: 800; color: #0f172a;">शाळेचे नाव : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displaySchool}</span>
+          </div>
+          <div style="flex: 1 !important; text-align: center !important; white-space: nowrap !important;">
+            <strong style="font-weight: 800; color: #334155;">केंद्र : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayKendra}</span>
+          </div>
+          <div style="flex: 1 !important; text-align: center !important; white-space: nowrap !important;">
+            <strong style="font-weight: 800; color: #334155;">तालुका : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayTaluka}</span>
+          </div>
+          <div style="flex: 1 !important; text-align: right !important; white-space: nowrap !important;">
+            <strong style="font-weight: 800; color: #334155;">जिल्हा : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${displayDistrict}</span>
+          </div>
+        </div>
+      `.trim();
+
+    // Helper to format Header Card: Beautiful modern structured card format instead of an ugly grid table
+    const headerCardHtml = `
+      <div data-header-field="hw-header-card" style="width: 100% !important; margin: 6px 0 10px 0 !important; border: 1.5px solid #0f172a !important; border-radius: 8px !important; overflow: hidden !important; background: #ffffff !important; box-sizing: border-box !important;">
+        <!-- Strip 1: School & Location Details (Adaptive) -->
+        ${schoolLocationStripHtml}
+
+        <!-- Strip 2: Day, Date, Class Session Details -->
+        <div style="display: flex !important; justify-content: space-between !important; align-items: center !important; padding: 6px 14px !important; background-color: #ffffff !important; font-size: 11.5pt !important; color: #0f172a !important; box-sizing: border-box !important;">
+          <div style="text-align: left !important; flex: 1 !important;">
+            <strong style="font-weight: 800; color: #0f172a;">वार : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwDayOfWeek || "शुक्रवार")}</span>
+          </div>
+          <div style="text-align: center !important; flex: 1.5 !important;">
+            <strong style="font-weight: 800; color: #0f172a;">दिनांक : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwDateStr || "२० नोव्हेंबर २०२६")}</span>
+          </div>
+          <div style="text-align: right !important; flex: 1 !important;">
+            <strong style="font-weight: 800; color: #0f172a;">इयत्ता : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwClassName || "१ ली")}</span>
+          </div>
+        </div>
+      </div>
     `.trim();
 
-    // Helper to format Line 2: वार, दिनांक, इयत्ता (Borderless 3-cell table)
-    const line2Html = `
-      <table data-header-field="hw-line-2" style="width: 100% !important; border-collapse: collapse !important; border: none !important; margin: 4px 0 5px 0 !important; font-size: 12.5pt !important; line-height: 1.4 !important; color: #000000 !important; background: transparent !important; table-layout: fixed !important;">
-        <tbody>
-          <tr style="border: none !important; background: transparent !important;">
-            <td style="border: none !important; padding: 3px 6px 3px 0 !important; text-align: left !important; width: 30% !important; vertical-align: middle !important; background: transparent !important;">
-              <strong style="font-weight: 800;">वार : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${escapeHtmlStr(hwDayOfWeek || "शुक्रवार")}</span>
-            </td>
-            <td style="border: none !important; padding: 3px 6px !important; text-align: center !important; width: 45% !important; vertical-align: middle !important; background: transparent !important;">
-              <strong style="font-weight: 800;">दिनांक : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${escapeHtmlStr(hwDateStr || "१२ ऑक्टोबर २०२६")}</span>
-            </td>
-            <td style="border: none !important; padding: 3px 0 3px 6px !important; text-align: right !important; width: 25% !important; vertical-align: middle !important; background: transparent !important;">
-              <strong style="font-weight: 800;">इयत्ता : </strong><span contenteditable="true" style="font-weight: 700; color: #000000;">${escapeHtmlStr(hwClassName || "१ ली")}</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    `.trim();
+    // Helper to format Line 1: शाळेचे नाव, केंद्र, तालुका, जिल्हा (Fallback)
+    const line1Html = headerCardHtml;
+
+    // Helper to format Line 2: वार, दिनांक, इयत्ता (Fallback)
+    const line2Html = "";
 
     // Helper to format Line 3: विद्यार्थ्याचे नाव
     const line3Html = `
@@ -1830,107 +1961,31 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       </table>
     `.trim();
 
-    // 0. FIRST: Check if the document has a structured header table (e.g. Table 1 from Word with शाळेचे नाव, केंद्र, तालुका, जिल्हा, वार, दिनांक, इयत्ता)
-    const topTables = Array.from(containerRef.current.querySelectorAll<HTMLElement>("table")).slice(0, 4);
-    for (const tbl of topTables) {
-      if (tbl.getAttribute("data-header-field") === "hw-signature-block") continue;
-      const tblText = (tbl.textContent || "").trim();
-      const hasSchool = tblText.includes("शाळेचे नाव");
-      const hasKendraOrTaluka = tblText.includes("केंद्र") || tblText.includes("तालुका");
-      const hasWarOrDate = tblText.includes("वार") || tblText.includes("दिनांक");
+    // 0. Update existing header card if already present
+    const existingCard = containerRef.current.querySelector('[data-header-field="hw-header-card"]');
+    if (existingCard) {
+      existingCard.outerHTML = headerCardHtml;
+      updatedLine1 = true;
+      updatedLine2 = true;
+    }
 
-      if (hasSchool && (hasKendraOrTaluka || hasWarOrDate)) {
-        tbl.setAttribute("data-header-field", "hw-header-table");
-        tbl.style.fontSize = "12.5pt";
-        tbl.style.lineHeight = "1.4";
+    // FIRST: Check if the document has a structured header table from Word (with शाळेचे नाव, केंद्र, तालुका, जिल्हा, वार, दिनांक, इयत्ता)
+    // Replace that entire black-bordered grid table with our beautiful modern structured header card!
+    if (!updatedLine1 || !updatedLine2) {
+      const topTables = Array.from(containerRef.current.querySelectorAll<HTMLElement>("table")).slice(0, 4);
+      for (const tbl of topTables) {
+        if (tbl.getAttribute("data-header-field") === "hw-signature-block") continue;
+        const tblText = (tbl.textContent || "").trim();
+        const hasSchool = tblText.includes("शाळेचे नाव");
+        const hasKendraOrTaluka = tblText.includes("केंद्र") || tblText.includes("तालुका");
+        const hasWarOrDate = tblText.includes("वार") || tblText.includes("दिनांक");
 
-        // Clean out any previously injected nested header tables inside its cells
-        const nestedHwTables = tbl.querySelectorAll('[data-header-field^="hw-line-"]');
-        nestedHwTables.forEach((nt) => nt.remove());
-
-        const cells = Array.from(tbl.querySelectorAll<HTMLElement>("td, th"));
-        for (const cell of cells) {
-          const cText = (cell.textContent || "").trim();
-
-          // 1. शाळेचे नाव
-          if (cText.includes("शाळेचे नाव")) {
-            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">शाळेचे नाव : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${displaySchool}</span>`;
-            cell.style.padding = "5px 8px";
-            cell.style.verticalAlign = "middle";
-            cell.style.fontSize = schoolLen > 36 ? "11.5pt" : "12.5pt";
-            cell.style.lineHeight = "1.4";
-            cell.style.whiteSpace = "normal";
-            cell.style.wordBreak = "break-word";
-            updatedLine1 = true;
-          }
-          // 2. केंद्र
-          else if (cText.includes("केंद्र")) {
-            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">केंद्र : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${displayKendra}</span>`;
-            cell.style.padding = "5px 8px";
-            cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "12.5pt";
-            cell.style.lineHeight = "1.4";
-            cell.style.whiteSpace = "normal";
-            cell.style.wordBreak = "break-word";
-            updatedLine1 = true;
-          }
-          // 3. तालुका
-          else if (cText.includes("तालुका")) {
-            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">तालुका : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${displayTaluka}</span>`;
-            cell.style.padding = "5px 8px";
-            cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "12.5pt";
-            cell.style.lineHeight = "1.4";
-            cell.style.whiteSpace = "normal";
-            cell.style.wordBreak = "break-word";
-            updatedLine1 = true;
-          }
-          // 4. जिल्हा
-          else if (cText.includes("जिल्हा")) {
-            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">जिल्हा : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${displayDistrict}</span>`;
-            cell.style.padding = "5px 8px";
-            cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "12.5pt";
-            cell.style.lineHeight = "1.4";
-            cell.style.whiteSpace = "normal";
-            cell.style.wordBreak = "break-word";
-            updatedLine1 = true;
-          }
-          // 5. वार
-          else if (cText.includes("वार")) {
-            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">वार : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${escapeHtmlStr(hwDayOfWeek || "शुक्रवार")}</span>`;
-            cell.style.padding = "5px 8px";
-            cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "12.5pt";
-            cell.style.lineHeight = "1.4";
-            cell.style.whiteSpace = "normal";
-            cell.style.wordBreak = "break-word";
-            updatedLine2 = true;
-          }
-          // 6. दिनांक
-          else if (cText.includes("दिनांक")) {
-            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">दिनांक : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${escapeHtmlStr(hwDateStr || "२० नोव्हेंबर २०२६")}</span>`;
-            cell.style.padding = "5px 8px";
-            cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "12.5pt";
-            cell.style.lineHeight = "1.4";
-            cell.style.whiteSpace = "normal";
-            cell.style.wordBreak = "break-word";
-            updatedLine2 = true;
-          }
-          // 7. इयत्ता
-          else if (cText.includes("इयत्ता")) {
-            cell.innerHTML = `<strong style="font-size: inherit; font-weight: 800; color: #000000;">इयत्ता : </strong><span contenteditable="true" style="font-weight: 700; font-size: inherit; color: #000000;">${escapeHtmlStr(hwClassName || "१ ली")}</span>`;
-            cell.style.padding = "5px 8px";
-            cell.style.verticalAlign = "middle";
-            cell.style.fontSize = "12.5pt";
-            cell.style.lineHeight = "1.4";
-            cell.style.whiteSpace = "normal";
-            cell.style.wordBreak = "break-word";
-            updatedLine2 = true;
-          }
+        if (hasSchool && (hasKendraOrTaluka || hasWarOrDate)) {
+          tbl.outerHTML = headerCardHtml;
+          updatedLine1 = true;
+          updatedLine2 = true;
+          break;
         }
-        break;
       }
     }
 
@@ -1959,25 +2014,15 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       updatedLine3 = true;
     }
 
-    // 1. If previously marked loose elements exist, update them
+    // 1. If previously marked loose line elements exist, remove them (since headerCardHtml replaces both lines)
     const existing1 = containerRef.current.querySelector('[data-header-field="hw-line-1"]');
     if (existing1) {
-      if (existing1.closest("table[data-header-field='hw-header-table']")) {
-        existing1.remove();
-      } else if (!updatedLine1) {
-        existing1.outerHTML = line1Html;
-        updatedLine1 = true;
-      }
+      existing1.remove();
     }
 
     const existing2 = containerRef.current.querySelector('[data-header-field="hw-line-2"]');
     if (existing2) {
-      if (existing2.closest("table[data-header-field='hw-header-table']")) {
-        existing2.remove();
-      } else if (!updatedLine2) {
-        existing2.outerHTML = line2Html;
-        updatedLine2 = true;
-      }
+      existing2.remove();
     }
 
     // 2. If loose paragraphs were used instead of a table:
@@ -1990,13 +2035,13 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         const txt = (el.textContent || "").trim();
         if (txt.length < 200) {
           if (!updatedLine1 && (txt.includes("शाळेचे नाव") || (txt.includes("केंद्र") && txt.includes("तालुका")))) {
-            el.outerHTML = line1Html;
+            el.outerHTML = headerCardHtml;
             updatedLine1 = true;
+            updatedLine2 = true;
             continue;
           }
-          if (!updatedLine2 && ((txt.includes("वार") || txt.includes("वार :")) && (txt.includes("दिनांक") || txt.includes("इयत्ता")))) {
-            el.outerHTML = line2Html;
-            updatedLine2 = true;
+          if (updatedLine1 && (txt.includes("वार") || txt.includes("दिनांक") || txt.includes("इयत्ता"))) {
+            el.remove();
             continue;
           }
         }
@@ -2013,41 +2058,24 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     }
 
     // 4. Scan all tables in containerRef.current for signature cells
-    const allTables = Array.from(containerRef.current.querySelectorAll<HTMLElement>("table"));
-    for (const tbl of allTables) {
-      if (tbl.getAttribute("data-header-field")) continue;
-      // CRITICAL: A signature table must NOT contain nested tables (e.g. subject section tables)
-      if (tbl.querySelectorAll("table").length > 0) continue;
+    if (!updatedSign) {
+      const allTables = Array.from(containerRef.current.querySelectorAll<HTMLElement>("table"));
+      for (const tbl of allTables) {
+        if (tbl.getAttribute("data-header-field")) continue;
+        if (tbl.querySelectorAll("table").length > 0) continue;
 
-      const tText = (tbl.textContent || "").trim();
-      // Must not be a large table with questions/content
-      if (tText.length > 350) continue;
+        const tText = (tbl.textContent || "").trim();
+        if (tText.length > 350) continue;
 
-      const hasTeacher = tText.includes("शिक्षक") || tText.includes("वर्गशिक्षक");
-      const hasHm = tText.includes("मुख्याध्यापक") || tText.includes("मुख्याध्यापकाचे");
-      const hasParent = tText.includes("पालक");
-      const hasSign = tText.includes("स्वाक्षरी") || tText.includes("सही");
+        const hasTeacher = tText.includes("शिक्षक") || tText.includes("वर्गशिक्षक");
+        const hasHm = tText.includes("मुख्याध्यापक") || tText.includes("मुख्याध्यापकाचे");
+        const hasParent = tText.includes("पालक");
+        const hasSign = tText.includes("स्वाक्षरी") || tText.includes("सही");
 
-      if ((hasTeacher || hasHm || hasParent) && hasSign) {
-        const rows = Array.from(tbl.querySelectorAll("tr"));
-        if (rows.length <= 2) {
+        if ((hasTeacher || hasHm || hasParent) && hasSign) {
           tbl.outerHTML = lineSignHtml;
           updatedSign = true;
           break;
-        } else {
-          for (const row of rows) {
-            const rText = (row.textContent || "").trim();
-            if (
-              (rText.includes("शिक्षक") || rText.includes("मुख्याध्यापक") || rText.includes("पालक")) &&
-              (rText.includes("स्वाक्षरी") || rText.includes("सही"))
-            ) {
-              row.style.border = "none";
-              row.innerHTML = `<td colspan="10" style="border: none !important; padding: 0 !important; background: transparent !important;">${lineSignHtml}</td>`;
-              updatedSign = true;
-              break;
-            }
-          }
-          if (updatedSign) break;
         }
       }
     }
@@ -2164,6 +2192,48 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       }
     }
 
+    // 5e. THOROUGH CLEANUP: Remove ANY duplicate/legacy signature tables, rows, or paragraphs
+    // so that "स्वाक्षरी : ______" or "(वर्गशिक्षक स्वाक्षरी) (मुख्याध्यापक...) (पालक स्वाक्षरी)" NEVER appear double!
+    const candidateElements = Array.from(
+      containerRef.current.querySelectorAll<HTMLElement>("table, tr, p, div, span")
+    );
+    for (const el of candidateElements) {
+      if (el.closest('[data-header-field="hw-signature-block"]')) continue;
+      if (el.querySelectorAll("section, article").length > 0) continue;
+      // Never delete tables that have nested questions
+      if (el.tagName === "TABLE" && el.querySelectorAll("table").length > 0) continue;
+
+      const txt = (el.textContent || "").trim();
+      if (txt.length === 0 || txt.length > 300) continue;
+
+      const isLegacySignRow =
+        (txt.includes("स्वाक्षरी") || txt.includes("सही")) &&
+        (txt.includes("शिक्षक") || txt.includes("मुख्याध्यापक") || txt.includes("पालक") || txt.includes("पालकाचे") || txt.includes("शिक्का"));
+
+      const isUnderlineSignOnly =
+        txt.includes("स्वाक्षरी") && (txt.includes("शिक्का") || /_{3,}|\.{3,}/.test(txt));
+
+      const isPalakDuplicate =
+        (txt.includes("पालक स्वाक्षरी") || txt.includes("पालकाचे नाव")) &&
+        (txt.includes("(") || txt.includes(":") || /_{3,}|\.{3,}/.test(txt));
+
+      if (isLegacySignRow || isUnderlineSignOnly || isPalakDuplicate) {
+        if (el.tagName === "TR") {
+          const parentTable = el.closest("table");
+          el.remove();
+          if (parentTable && parentTable.querySelectorAll("tr").length === 0) {
+            parentTable.remove();
+          }
+        } else if (el.tagName === "TABLE") {
+          el.remove();
+        } else if (el.tagName === "P" || el.tagName === "DIV") {
+          if (el.querySelectorAll("table").length === 0) {
+            el.remove();
+          }
+        }
+      }
+    }
+
     // Clean up any previously injected HTML footer links so they never duplicate with the clickable PDF footer
     try {
       const existingFooters = containerRef.current.querySelectorAll('[data-header-field="hw-footer-links"]');
@@ -2181,6 +2251,9 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         p.style.margin = "6px 0 10px 0";
       }
     }
+
+    // Ensure 1-2 line spaces exist before every new subject
+    formatSubjectSectionSpacing();
 
     // Remember School, Kendra, Taluka, District, Teacher Name, Headmaster Name in localStorage only when user explicitly submits
     if (notify) {
@@ -2242,6 +2315,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
     // 3. Clone the element
     const clone = pageEl.cloneNode(true) as HTMLElement;
+    // Clean up any HTML footer buttons or ignored elements from clone before rasterization
+    clone.querySelectorAll('[data-header-field="hw-footer-links"], [data-html2canvas-ignore="true"]').forEach((el) => el.remove());
     clone.style.width = `${targetWidthPx}px`;
     clone.style.minWidth = `${targetWidthPx}px`;
     clone.style.maxWidth = `${targetWidthPx}px`;

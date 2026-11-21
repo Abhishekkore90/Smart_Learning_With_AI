@@ -69,6 +69,8 @@ export interface MCQHomeworkSectionProps {
   sharedTeacherName?: string;
   sharedSchoolName?: string;
   initialMedium?: "marathi" | "semi" | "all";
+  initialDate?: string;
+  onDateChange?: (dateStr: string) => void;
 }
 
 export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
@@ -81,6 +83,8 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
   sharedTeacherName,
   sharedSchoolName,
   initialMedium = "all",
+  initialDate,
+  onDateChange,
 }) => {
   const { user, profile } = useAuth();
 
@@ -100,7 +104,18 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
   const [selectedClass, setSelectedClass] = useState<string>(initialClass && initialClass !== "all" ? initialClass : "1st");
   const [selectedMedium, setSelectedMedium] = useState<"marathi" | "semi" | "all">(initialMedium || "all");
   const [selectedSubject, setSelectedSubject] = useState(initialSubject);
-  const [selectedDate, setSelectedDate] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<string>(initialDate || "all");
+
+  useEffect(() => {
+    if (initialDate && initialDate !== selectedDate) {
+      setSelectedDate(initialDate);
+    }
+  }, [initialDate]);
+
+  const handleDateSelect = (d: string) => {
+    setSelectedDate(d);
+    onDateChange?.(d);
+  };
 
   // Modal mode: "admin" (Admin MCQ Uploader) or "custom" (Custom MCQ Creator) or null (closed)
   const [creatorModalMode, setCreatorModalMode] = useState<"admin" | "custom" | null>(null);
@@ -567,11 +582,13 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
             <MCQHomeworkCalendar
               quizzes={currentTabQuizzes}
               selectedDate={selectedDate !== "all" ? selectedDate : todayStr}
-              onSelectDate={(d) => setSelectedDate(d)}
+              onSelectDate={handleDateSelect}
               onTakeQuiz={(id) => setActiveQuizId(id)}
               defaultRole={defaultRole}
               userName={userName}
               onDeleteQuiz={handleDeleteQuiz}
+              selectedClass={selectedClass}
+              selectedMedium={selectedMedium}
             />
           )}
     </div>

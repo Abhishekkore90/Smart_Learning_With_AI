@@ -127,6 +127,28 @@ function HomeworkPage() {
   const [filterDate, setFilterDate] = useState<string>("");
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [calendarDate, setCalendarDate] = useState<string>(() => formatISODate(new Date()));
+  const todayStr = useMemo(() => formatISODate(new Date()), []);
+  const tomorrowStr = useMemo(() => {
+    const t = new Date();
+    t.setDate(t.getDate() + 1);
+    return formatISODate(t);
+  }, []);
+  const [selectedHomeworkId, setSelectedHomeworkId] = useState<string>("");
+
+  // Normalize date string for reliable matching (YYYY-MM-DD or DD-MM-YYYY)
+  const normalizeDate = (dStr?: string): string => {
+    if (!dStr) return "";
+    const clean = dStr.trim().slice(0, 10);
+    const parts = clean.split(/[-/]/);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+      } else {
+        return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+      }
+    }
+    return clean;
+  };
 
   // Homework List state
   const [homeworkList, setHomeworkList] = useState<HomeworkItem[]>([]);
@@ -243,6 +265,7 @@ function HomeworkPage() {
   const currentMediumObj = MEDIUM_OPTIONS.find((m) => m.id === selectedMedium);
 
   // Filter ONLY what matches selected medium, class, subject, date, search
+  // Shows all previous homework, and for the future allows only up to next day (tomorrow)
   const filteredHomework = useMemo(() => {
     return homeworkList.filter((item) => {
       const matchMedium = item.medium === selectedMedium;
@@ -255,9 +278,38 @@ function HomeworkPage() {
         !searchTerm ||
         item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchMedium && matchClass && matchSubject && matchDate && matchSearch;
+      
+      const itemDate = normalizeDate(item.homeworkDate || (item as any).date || (item as any).createdAt);
+      const isNotAheadOfTomorrow = !itemDate || itemDate <= tomorrowStr;
+
+      return matchMedium && matchClass && matchSubject && matchDate && matchSearch && isNotAheadOfTomorrow;
     });
-  }, [homeworkList, selectedMedium, selectedClass, selectedSubject, filterDate, searchTerm]);
+  }, [homeworkList, selectedMedium, selectedClass, selectedSubject, filterDate, searchTerm, tomorrowStr]);
+
+  // Current day's homework items based on selectedClass, selectedMedium, and calendarDate
+  // Shows all previous homework, next day homework, but restricts other days ahead
+  const currentDayHomeworks = useMemo(() => {
+    const targetDate = normalizeDate(calendarDate);
+    // If date is beyond tomorrow, do not show any homework
+    if (targetDate > tomorrowStr) return [];
+
+    return homeworkList.filter((item) => {
+      const matchMedium = item.medium === selectedMedium;
+      const matchClass = item.class === selectedClass;
+      const d = item.homeworkDate || (item as any).date || (item as any).createdAt;
+      const matchDate = normalizeDate(d) === targetDate;
+      return matchMedium && matchClass && matchDate;
+    });
+  }, [homeworkList, selectedMedium, selectedClass, calendarDate, tomorrowStr]);
+
+  const currentHomework = useMemo(() => {
+    if (currentDayHomeworks.length === 0) return null;
+    if (selectedHomeworkId) {
+      const found = currentDayHomeworks.find((h) => h.id === selectedHomeworkId);
+      if (found) return found;
+    }
+    return currentDayHomeworks[0];
+  }, [currentDayHomeworks, selectedHomeworkId]);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
@@ -269,142 +321,49 @@ function HomeworkPage() {
       <main className="pt-20 pb-16 px-3 sm:px-6 max-w-7xl mx-auto space-y-6">
         <ModulePaywall moduleId="homework" defaultTitle="दैनिक गृहपाठ (Daily Homework)">
           {/* Back to Dashboard Button */}
-          {!activeHomework && (
-            <div className="no-print">
-              <Link
-                to="/teacher"
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
-              >
-                <ArrowLeft className="size-4 text-indigo-600" />
-                <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
-              </Link>
-            </div>
-          )}
+          <div className="no-print">
+            <Link
+              to="/teacher"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+            >
+              <ArrowLeft className="size-4 text-indigo-600" />
+              <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
+            </Link>
+          </div>
 
           {/* SECTION 1: Clean Header with only Information Fill Option */}
-          {!activeHomework && (
-            <div className="no-print bg-gradient-to-r from-teal-800 via-emerald-800 to-indigo-950 rounded-2xl p-3.5 sm:p-5 text-white shadow-lg relative overflow-hidden border border-emerald-600/30">
-              <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <h1 className="text-base sm:text-xl font-black tracking-tight flex items-center gap-2">
-                    <BookOpen className="size-5 text-emerald-300 shrink-0" />
-                    <span>गृहपाठ व्यवस्थापन (Homework Viewer & Editor)</span>
-                  </h1>
-                  {hwProfile.schoolName && (
-                    <p className="text-xs text-emerald-200 font-medium">
-                      शाळा: {hwProfile.schoolName} {hwProfile.teacherName ? `• शिक्षक: ${hwProfile.teacherName}` : ""}
-                    </p>
-                  )}
-                </div>
-
-                {/* Only Information Fill Option */}
-                <button
-                  type="button"
-                  onClick={openProfileModal}
-                  className="px-3.5 sm:px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs sm:text-sm shadow-md flex items-center gap-2 active:scale-95 transition-all cursor-pointer shrink-0"
-                  title="शाळा व शिक्षक माहिती भरा किंवा बदला"
-                >
-                  <Building2 className="size-4 text-amber-950" />
-                  <span>माहिती भरा</span>
-                  <Edit3 className="size-3.5 text-amber-950/70" />
-                </button>
+          <div className="no-print bg-gradient-to-r from-teal-800 via-emerald-800 to-indigo-950 rounded-2xl p-3.5 sm:p-5 text-white shadow-lg relative overflow-hidden border border-emerald-600/30">
+            <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <h1 className="text-base sm:text-xl font-black tracking-tight flex items-center gap-2">
+                  <BookOpen className="size-5 text-emerald-300 shrink-0" />
+                  <span>गृहपाठ व्यवस्थापन (Homework Viewer & Editor)</span>
+                </h1>
+                {hwProfile.schoolName && (
+                  <p className="text-xs text-emerald-200 font-medium">
+                    शाळा: {hwProfile.schoolName} {hwProfile.teacherName ? `• शिक्षक: ${hwProfile.teacherName}` : ""}
+                  </p>
+                )}
               </div>
+
+              {/* Only Information Fill Option */}
+              <button
+                type="button"
+                onClick={openProfileModal}
+                className="px-3.5 sm:px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs sm:text-sm shadow-md flex items-center gap-2 active:scale-95 transition-all cursor-pointer shrink-0"
+                title="शाळा व शिक्षक माहिती भरा किंवा बदला"
+              >
+                <Building2 className="size-4 text-amber-950" />
+                <span>माहिती भरा</span>
+                <Edit3 className="size-3.5 text-amber-950/70" />
+              </button>
             </div>
-          )}
+          </div>
 
-          {/* ACTIVE DOCUMENT VIEWER / TEMPLATE MODE */}
-          {activeHomework ? (
-            <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex-wrap">
-                    <button
-                      onClick={() => setActiveHomework(null)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                    >
-                      <ArrowLeft className="size-4" />
-                      <span>गृहपाठ यादी (Back to List)</span>
-                    </button>
-
-                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200">
-                      {(activeHomework.fileUrl || activeHomework.wordFileUrl) && (
-                        <button
-                          onClick={() => setPreviewTab("doc")}
-                          className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${previewTab === "doc"
-                            ? "bg-teal-700 text-white shadow-xs"
-                            : "text-slate-600 hover:text-slate-900"
-                            }`}
-                        >
-                          {isWordHomework(activeHomework)
-                            ? "Word गृहपाठ (Word Homework)"
-                            : "मूळ दस्तऐवज (Document)"}
-                        </button>
-                      )}
-                      {!activeHomework.fileUrl && !activeHomework.wordFileUrl && (
-                        <button
-                          onClick={() => setPreviewTab("template")}
-                          className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${previewTab === "template"
-                            ? "bg-teal-700 text-white shadow-xs"
-                            : "text-slate-600 hover:text-slate-900"
-                            }`}
-                        >
-                          दैनिक कार्यपुस्तिका (Worksheet)
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {previewTab === "doc" && (activeHomework.fileUrl || activeHomework.wordFileUrl) ? (
-                    isWordHomework(activeHomework) ? (
-                      <WordQuestionPaperEditor
-                        fileUrl={activeHomework.wordFileUrl || activeHomework.fileUrl}
-                        paperTitle={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate || "दैनिक"})`}
-                        paperId={activeHomework.id}
-                        subject={activeHomework.subject}
-                        userId={user?.uid || "guest"}
-                        userRole={profile?.role || "teacher"}
-                        documentType="homework"
-                        homeworkDate={activeHomework.homeworkDate}
-                        homeworkClass={activeHomework.class}
-                        onClose={() => setActiveHomework(null)}
-                      />
-                    ) : (
-                      <DocumentEditorViewer
-                        documentId={activeHomework.id}
-                        fileUrl={activeHomework.fileUrl || ""}
-                        fileName={activeHomework.fileName}
-                        documentType="homework"
-                        title={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate || "दैनिक"})`}
-                        userId={user?.uid || "guest"}
-                        userRole={profile?.role || "teacher"}
-                        userName={profile?.fullName || "शिक्षक"}
-                        canEdit={true}
-                        onBack={() => setActiveHomework(null)}
-                        metadataBadge={
-                          <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
-                            <span>दिनांक: {activeHomework.homeworkDate}</span>
-                            <span>•</span>
-                            <span>इयत्ता: {activeHomework.class}</span>
-                            <span>•</span>
-                            <span>विषय: {activeHomework.subject}</span>
-                          </div>
-                        }
-                      />
-                    )
-                  ) : (
-                    <DailyHomeworkTemplate
-                      homework={activeHomework}
-                      userId={user?.uid || "guest_teacher"}
-                      userRole={profile?.role || "teacher"}
-                      userName={profile?.fullName || "शिक्षक"}
-                      canEdit={true}
-                      onBack={() => setActiveHomework(null)}
-                    />
-                  )}
-                </div>
-              ) : (
-                /* STEPPING SELECTION WORKFLOW */
-                <div>
-                  {/* STEP 1: MEDIUM */}
-                  {step === "medium" && (
+          {/* STEPPING SELECTION WORKFLOW */}
+          <div>
+            {/* STEP 1: MEDIUM */}
+            {step === "medium" && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                       <div className="flex items-center justify-between">
                         <h2 className="text-xl sm:text-2xl font-black text-slate-800">
@@ -489,7 +448,7 @@ function HomeworkPage() {
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                       {/* Context Breadcrumb & Class Switcher */}
                       <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between gap-3 flex-wrap">
-                        <div className="flex items-center gap-2 text-xs sm:text-sm">
+                        <div className="flex items-center gap-2 text-xs sm:text-sm flex-wrap">
                           <span className="px-3 py-1.5 rounded-xl bg-amber-100 text-amber-900 font-bold">
                             {currentMediumObj?.labelMr}
                           </span>
@@ -503,13 +462,74 @@ function HomeworkPage() {
                           </span>
                         </div>
 
-                        <button
-                          onClick={() => setStep("class")}
-                          className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer flex items-center gap-1.5 transition-all shadow-2xs active:scale-95"
-                        >
-                          <ChevronLeft className="size-3.5" />
-                          <span>इयत्ता बदला (Change Class)</span>
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Small Calendar Button */}
+                          <div
+                            className={`flex items-center gap-1.5 border rounded-xl px-2.5 sm:px-3 py-1.5 transition-all shadow-2xs ${
+                              mainTab === "homework"
+                                ? "bg-emerald-50 hover:bg-emerald-100/90 border-emerald-300 text-emerald-950"
+                                : "bg-purple-50 hover:bg-purple-100/90 border-purple-300 text-purple-950"
+                            }`}
+                          >
+                            <Calendar
+                              className={`size-3.5 shrink-0 ${
+                                mainTab === "homework" ? "text-emerald-700" : "text-purple-700"
+                              }`}
+                            />
+                            <span className="text-xs font-bold">
+                              {calendarDate === todayStr
+                                ? "आजचा दिनांक:"
+                                : calendarDate === tomorrowStr
+                                ? "उद्याचा दिनांक:"
+                                : "निवडलेला दिनांक:"}
+                            </span>
+                            <input
+                              type="date"
+                              max={tomorrowStr}
+                              value={calendarDate}
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  if (e.target.value > tomorrowStr) {
+                                    toast.info(
+                                      mainTab === "homework"
+                                        ? "केवळ उद्याचा (Next Day) गृहपाठ उपलब्ध आहे. पुढील दिवसांचे गृहपाठ अजून उपलब्ध नाहीत."
+                                        : "केवळ उद्याचा (Next Day) स्वाध्याय उपलब्ध आहे. पुढील दिवसांचे स्वाध्याय अजून उपलब्ध नाहीत."
+                                    );
+                                    setCalendarDate(tomorrowStr);
+                                  } else {
+                                    setCalendarDate(e.target.value);
+                                  }
+                                }
+                              }}
+                              className={`bg-transparent border-none outline-none font-black text-xs cursor-pointer ${
+                                mainTab === "homework" ? "text-emerald-800" : "text-purple-800"
+                              }`}
+                              title="कॅलेंडरमधून तारीख निवडा (मागील सर्व किंवा उद्यापर्यंतचा दिनांक)"
+                            />
+                            {calendarDate !== todayStr && (
+                              <button
+                                type="button"
+                                onClick={() => setCalendarDate(todayStr)}
+                                className={`ml-1 px-2 py-0.5 rounded-md text-white text-[10px] font-black cursor-pointer shadow-2xs active:scale-95 transition-all ${
+                                  mainTab === "homework"
+                                    ? "bg-emerald-600 hover:bg-emerald-700"
+                                    : "bg-purple-600 hover:bg-purple-700"
+                                }`}
+                                title="आजच्या दिनांकावर परत जा (Today)"
+                              >
+                                आज (Today)
+                              </button>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={() => setStep("class")}
+                            className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer flex items-center gap-1.5 transition-all shadow-2xs active:scale-95"
+                          >
+                            <ChevronLeft className="size-3.5" />
+                            <span>इयत्ता बदला (Change Class)</span>
+                          </button>
+                        </div>
                       </div>
 
                       {/* Prominent, Highly Attractive Mode Selector */}
@@ -584,51 +604,6 @@ function HomeworkPage() {
                         </div>
                       </div>
 
-                      {/* Filter Bar (Only for Regular Homework) */}
-                      {mainTab === "homework" && (
-                        <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-                          <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                            <Calendar className="size-4 text-emerald-600" />
-                            <span>तारीखनिहाय दैनिक गृहपाठ कॅलेंडर व यादी</span>
-                          </div>
-
-                          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-                            {/* Date Picker Filter */}
-                            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
-                              <Calendar className="size-3.5 text-amber-600" />
-                              <span className="text-slate-500 font-medium">दिनांक:</span>
-                              <input
-                                type="date"
-                                value={filterDate}
-                                onChange={(e) => setFilterDate(e.target.value)}
-                                className="bg-transparent border-none outline-none font-bold text-slate-800 cursor-pointer"
-                              />
-                              {filterDate && (
-                                <button
-                                  onClick={() => setFilterDate("")}
-                                  className="text-slate-400 hover:text-red-500 ml-1 font-bold"
-                                  title="तारीख फिल्टर काढा"
-                                >
-                                  ✕
-                                </button>
-                              )}
-                            </div>
-
-                            {/* Search Input */}
-                            <div className="relative flex-1 sm:w-56">
-                              <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                              <input
-                                type="text"
-                                placeholder="शोध करा..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:bg-white focus:border-amber-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
                       {/* Content based on Class-wise mainTab */}
                       {mainTab === "mcq" ? (
                         <MCQHomeworkSection
@@ -638,137 +613,127 @@ function HomeworkPage() {
                           initialClass={selectedClass || "1st"}
                           initialMedium={(selectedMedium as any) || "marathi"}
                           initialSubject={selectedSubject || "all"}
+                          initialDate={calendarDate}
+                          onDateChange={(d) => setCalendarDate(d)}
                         />
                       ) : (
-                        <>
-                          {/* CALENDAR VIEW */}
-                      {viewMode === "calendar" && (
-                        <DailyHomeworkCalendar
-                          homeworkList={filteredHomework}
-                          selectedDate={calendarDate}
-                          onSelectDate={(d) => {
-                            setCalendarDate(d);
-                            setFilterDate(d);
-                          }}
-                          onPreviewHomework={(item) => setActiveHomework(item)}
-                          userRole="teacher"
-                          accentColor="emerald"
-                          selectedClass={selectedClass}
-                          selectedMedium={selectedMedium}
-                          schoolProfile={hwProfile}
-                          userId={user?.uid || "guest"}
-                        />
-                      )}
-
-                      {/* List Cards (visible in List View) */}
-                      {viewMode === "list" && (
-                        <>
-                          {loading ? (
-                            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200">
-                              <Loader2 className="size-8 animate-spin text-amber-600 mx-auto mb-2" />
-                              <p className="text-xs font-bold text-slate-500">गृहपाठ लोड होत आहे...</p>
-                            </div>
-                          ) : filteredHomework.length === 0 ? (
-                            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-3">
-                              <div className="size-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
-                                <BookOpen className="size-8" />
-                              </div>
-                              <h4 className="text-base font-bold text-slate-800">
-                                {filterDate ? `दिनांक ${filterDate} साठी कोणताही गृहपाठ सापडला नाही` : "कोणताही गृहपाठ उपलब्ध नाही"}
-                              </h4>
-                              <p className="text-xs text-slate-500 max-w-md mx-auto">
-                                {filterDate
-                                  ? "इतर तारीख निवडा किंवा फिल्टर काढून सर्व गृहपाठ तपासा."
-                                  : `${currentMediumObj?.labelMr} • ${currentClassObj?.mr} साठी ॲडमिनने अद्याप गृहपाठ अपलोड केलेला नाही.`}
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {filteredHomework.map((hw) => (
-                                <div
+                        <div className="space-y-4">
+                          {/* If multiple subjects exist on that day (e.g. Marathi, English, Maths), show subject selector pills */}
+                          {currentDayHomeworks.length > 1 && (
+                            <div className="bg-white p-2.5 sm:p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-slate-500 mr-1">
+                                उपलब्ध विषय:
+                              </span>
+                              {currentDayHomeworks.map((hw) => (
+                                <button
                                   key={hw.id}
-                                  className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-amber-400 shadow-sm hover:shadow-lg transition-all space-y-4 flex flex-col justify-between"
+                                  type="button"
+                                  onClick={() => setSelectedHomeworkId(hw.id)}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                    currentHomework?.id === hw.id
+                                      ? "bg-emerald-600 text-white shadow-xs"
+                                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                  }`}
                                 >
-                                  <div className="space-y-2.5">
-                                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
-                                        <Calendar className="size-3" />
-                                        दिनांक: {hw.homeworkDate}
-                                      </span>
-                                      {hw.dueDate && (
-                                        <span className="text-[11px] font-semibold text-slate-500">
-                                          पूर्ण करण्याची तारीख: {hw.dueDate}
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    <h3 className="text-lg font-black text-slate-900 leading-snug">
-                                      {hw.title}
-                                    </h3>
-
-                                    {hw.description && (
-                                      <p className="text-xs text-slate-600 font-medium line-clamp-3 leading-relaxed">
-                                        {hw.description}
-                                      </p>
-                                    )}
-                                  </div>
-
-                                  {/* Interactive Buttons */}
-                                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 truncate">
-                                      <FileText className="size-4 text-amber-600 shrink-0" />
-                                      <span className="truncate">
-                                        {hw.fileName || (hw.variables ? "दैनिक कार्यपुस्तिका" : "स्वाध्याय दस्तऐवज")}
-                                      </span>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDirectSharePdf(hw)}
-                                        disabled={isSharingPdf}
-                                        className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50"
-                                        title="हा गृहपाठ PDF स्वरूपात थेट WhatsApp वर पाठवा"
-                                      >
-                                        {isSharingPdf ? (
-                                          <Loader2 className="size-3.5 animate-spin" />
-                                        ) : (
-                                          <MessageCircle className="size-3.5" />
-                                        )}
-                                        <span>WhatsApp वर पाठवा</span>
-                                      </button>
-
-                                      <button
-                                        onClick={() => setActiveHomework(hw)}
-                                        className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
-                                      >
-                                        <Eye className="size-3.5" />
-                                        <span>पहा व संपादन करा</span>
-                                      </button>
-                                      {hw.fileUrl && (
-                                        <a
-                                          href={hw.fileUrl}
-                                          download={hw.fileName || "homework.pdf"}
-                                          className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all"
-                                          title="मूळ फाईल डाउनलोड"
-                                        >
-                                          <Download className="size-4" />
-                                        </a>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
+                                  {hw.subject || hw.title}
+                                </button>
                               ))}
                             </div>
                           )}
-                        </>
+
+                          {/* Direct Homework Editor / Preview Embed */}
+                          {currentHomework ? (
+                            <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[600px]">
+                              {isWordHomework(currentHomework) ? (
+                                <WordQuestionPaperEditor
+                                  fileUrl={currentHomework.wordFileUrl || currentHomework.fileUrl}
+                                  paperTitle={`${currentHomework.title} — ${currentHomework.class} (${currentHomework.homeworkDate || "दैनिक"})`}
+                                  paperId={currentHomework.id}
+                                  subject={currentHomework.subject}
+                                  userId={user?.uid || "guest"}
+                                  userRole={profile?.role || "teacher"}
+                                  documentType="homework"
+                                  homeworkDate={currentHomework.homeworkDate || calendarDate}
+                                  homeworkClass={currentHomework.class || selectedClass}
+                                  schoolName={hwProfile.schoolName}
+                                  teacherName={hwProfile.teacherName}
+                                  headmasterName={hwProfile.headmasterName}
+                                  kendra={hwProfile.kendra}
+                                  taluka={hwProfile.taluka}
+                                  jilha={hwProfile.district}
+                                />
+                              ) : (currentHomework.fileUrl || currentHomework.wordFileUrl) ? (
+                                <DocumentEditorViewer
+                                  documentId={currentHomework.id}
+                                  fileUrl={currentHomework.fileUrl || ""}
+                                  fileName={currentHomework.fileName}
+                                  documentType="homework"
+                                  title={`${currentHomework.title} — ${currentHomework.class} (${currentHomework.homeworkDate || "दैनिक"})`}
+                                  userId={user?.uid || "guest"}
+                                  userRole={profile?.role || "teacher"}
+                                  userName={profile?.fullName || "शिक्षक"}
+                                  canEdit={true}
+                                  metadataBadge={
+                                    <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                                      <span>दिनांक: {currentHomework.homeworkDate}</span>
+                                      <span>•</span>
+                                      <span>इयत्ता: {currentHomework.class}</span>
+                                      <span>•</span>
+                                      <span>विषय: {currentHomework.subject}</span>
+                                    </div>
+                                  }
+                                />
+                              ) : (
+                                <DailyHomeworkTemplate
+                                  homework={currentHomework}
+                                  userId={user?.uid || "guest_teacher"}
+                                  userRole={profile?.role || "teacher"}
+                                  userName={profile?.fullName || "शिक्षक"}
+                                  canEdit={true}
+                                />
+                              )}
+                            </div>
+                          ) : (
+                            <div className="bg-white rounded-3xl p-10 sm:p-14 text-center border-2 border-dashed border-slate-200 space-y-4">
+                              <div className="size-16 rounded-2xl bg-amber-100/70 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
+                                <BookOpen className="size-8" />
+                              </div>
+                              <div className="space-y-1">
+                                <h3 className="text-lg font-black text-slate-800">
+                                  {calendarDate > tomorrowStr
+                                    ? "पुढील दिवसांचे गृहपाठ उपलब्ध नाहीत"
+                                    : calendarDate === tomorrowStr
+                                    ? "उद्याचा गृहपाठ अद्याप प्रकाशित झालेला नाही"
+                                    : calendarDate === todayStr
+                                    ? "आजचा कोणताही दैनिक गृहपाठ प्रकाशित झालेला नाही"
+                                    : `दिनांक ${calendarDate} साठी कोणताही दैनिक गृहपाठ उपलब्ध नाही`}
+                                </h3>
+                                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                                  {calendarDate > tomorrowStr
+                                    ? "आपण मागील सर्व तारखांचे किंवा केवळ उद्याचा (Next Day) गृहपाठ पाहू शकता."
+                                    : calendarDate === tomorrowStr
+                                    ? "उद्याच्या तारखेसाठी अद्याप दैनिक गृहपाठ प्रकाशित झालेला नाही."
+                                    : calendarDate === todayStr
+                                    ? "आजच्या तारखेसाठी अद्याप दैनिक गृहपाठ प्रकाशित झालेला नाही."
+                                    : "कृपया वरील कॅलेंडरमधून आजची किंवा मागील तारीख निवडा."}
+                                </p>
+                              </div>
+                              {calendarDate !== todayStr && (
+                                <button
+                                  type="button"
+                                  onClick={() => setCalendarDate(todayStr)}
+                                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all shadow-xs active:scale-95 cursor-pointer inline-flex items-center gap-1.5"
+                                >
+                                  <span>आजचा गृहपाठ पहा (Show Today)</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </>
-                  )}
-                </motion.div>
+                    </motion.div>
                   )}
                 </div>
-              )}
           {/* Homework Dashboard Header Setup Modal */}
           {showProfileModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-150">
