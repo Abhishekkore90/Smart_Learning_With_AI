@@ -240,7 +240,7 @@ function StudentHomeworkPage() {
                     <BookOpen className="size-3.5" /> दैनंदिन गृहपाठ प्रणाली
                   </div>
                   <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-                    माझा गृहपाठ (My Class Homework)
+                    घरचा अभ्यास (Daily Homework)
                   </h1>
                   <p className="text-xs text-slate-500 font-medium mt-1">
                     शिक्षकांनी व ॲडमिनने अपलोड केलेला दैनंदिन स्वाध्याय येथे तपासा व सोडवा.

@@ -354,7 +354,7 @@ export const DICTIONARY = {
     courses: "कोर्सेस",
     results: "CCE निकाल",
     hpcCard: "HPC Card",
-    homework: "माझा गृहपाठ",
+    homework: "घरचा अभ्यास",
     questionBank: "प्रश्न पेढी",
     timetable: "वर्गाचे वेळापत्रक",
     notices: "सूचना",

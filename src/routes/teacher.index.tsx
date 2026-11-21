@@ -170,7 +170,7 @@ const MODULE_CARDS = [
   {
     moduleId: "homework",
     labelKey: "homework",
-    fallbackLabel: "१३. गृहपाठ (Homework)",
+    fallbackLabel: "१३. घरचा अभ्यास (Daily Homework)",
     to: "/teacher/homework",
     icon: BookOpen,
     description: "या विभागात आपणास इयत्ता पहिली ते आठवी मराठी व सेमी माध्यमासाठी विषयनिहाय गृहपाठ तयार करता येईल व विद्यार्थ्यांना पाठवता येईल.",
