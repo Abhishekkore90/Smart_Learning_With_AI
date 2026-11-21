@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -17,6 +17,8 @@ import {
   Loader2,
   FileQuestion,
   ShieldCheck,
+  FileText,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -24,6 +26,7 @@ import { auth } from "@/lib/firebase";
 import type { MCQHomeworkSet, MCQQuestion } from "@/types/mcqHomework";
 import { createMCQHomework } from "@/services/mcqHomeworkService";
 import { MCQShareModal } from "./MCQShareModal";
+import { parseMCQWordFile, parseMCQPastedText, type ParsedMCQResult } from "@/utils/mcqWordParser";
 
 interface MCQCreatorModalProps {
   isOpen: boolean;
@@ -103,6 +106,121 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [createdQuizId, setCreatedQuizId] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isPasteModalOpen, setIsPasteModalOpen] = useState(false);
+  const [pastedContent, setPastedContent] = useState("");
+
+  const handleImportPastedContent = () => {
+    if (!pastedContent.trim()) {
+      toast.error("कृपया मजकूर पेस्ट करा.");
+      return;
+    }
+    try {
+      const result = parseMCQPastedText(pastedContent);
+      if (result.questions.length === 0) {
+        toast.error("पेस्ट केलेल्या मजकुरात कोणतेही प्रश्न आढळले नाहीत. कृपया प्रश्नांचे फॉरमॅट 1) प्रश्न आणि (1) पर्याय तपासा.");
+        return;
+      }
+      setParsedDocxData(result);
+      setActiveImportSection("all");
+      if (result.title) setTitle(result.title);
+      if (result.detectedClass && CLASS_OPTIONS.includes(result.detectedClass)) setClassId(result.detectedClass);
+      if (result.detectedMedium) setMedium(result.detectedMedium);
+      setQuestions(result.questions);
+      setIsPasteModalOpen(false);
+      setPastedContent("");
+      toast.success(`🎉 ${result.totalQuestions} प्रश्न, पर्याय आणि अचूक उत्तरांसह आयात झाले!`);
+    } catch (err: any) {
+      toast.error("मजकूर वाचताना त्रुटी: " + err.message);
+    }
+  };
+
+  // Word (.docx) Import State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImportingDocx, setIsImportingDocx] = useState(false);
+  const [parsedDocxData, setParsedDocxData] = useState<ParsedMCQResult | null>(null);
+  const [activeImportSection, setActiveImportSection] = useState<string>("all");
+
+  const handleWordFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".docx")) {
+      toast.error("कृपया वैध Word (.docx) फाईल निवडा.");
+      return;
+    }
+
+    setIsImportingDocx(true);
+    const toastId = toast.loading("Word फाईलमधून प्रश्न व उत्तरे वाचत आहे...");
+
+    try {
+      const result = await parseMCQWordFile(file);
+
+      if (result.questions.length === 0) {
+        toast.dismiss(toastId);
+        toast.error(
+          "या Word फाईलमध्ये कोणताही प्रश्न किंवा पर्याय आढळला नाही. कृपया प्रश्नांचे फॉरमॅट (1), (2), (3), (4) तपासा."
+        );
+        return;
+      }
+
+      setParsedDocxData(result);
+      setActiveImportSection("all");
+
+      // Auto-set title if detected
+      if (result.title) {
+        setTitle(result.title);
+      }
+
+      // Auto-set class if detected
+      if (result.detectedClass && CLASS_OPTIONS.includes(result.detectedClass)) {
+        setClassId(result.detectedClass);
+      }
+
+      // Auto-set medium if detected
+      if (result.detectedMedium) {
+        setMedium(result.detectedMedium);
+      }
+
+      // Populate questions
+      setQuestions(result.questions);
+
+      toast.dismiss(toastId);
+      toast.success(
+        `🎉 यशस्वी! Word फाईलमधून ${result.totalQuestions} प्रश्न, पर्याय आणि योग्य उत्तरांसह थेट आयात केले गेले!`
+      );
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      toast.error("Word फाईल वाचताना त्रुटी आली: " + (err.message || "अनोळखी त्रुटी"));
+    } finally {
+      setIsImportingDocx(false);
+      if (e.target) {
+        e.target.value = "";
+      }
+    }
+  };
+
+  const handleSelectSection = (sectionKey: string) => {
+    if (!parsedDocxData) return;
+    setActiveImportSection(sectionKey);
+
+    if (sectionKey === "all") {
+      setQuestions(parsedDocxData.questions);
+      toast.info(`सर्व विषयांचे एकूण ${parsedDocxData.totalQuestions} प्रश्न निवडले.`);
+    } else {
+      const secQs = parsedDocxData.sectionQuestions[sectionKey] || [];
+      setQuestions(secQs);
+
+      // Auto adjust subject if section matches standard subject names
+      if (sectionKey.includes("मराठी")) setSubject("मराठी");
+      else if (sectionKey.includes("गणित")) setSubject("गणित");
+      else if (sectionKey.includes("इंग्रजी") || sectionKey.toLowerCase().includes("english")) setSubject("इंग्रजी");
+      else if (sectionKey.includes("विज्ञान")) setSubject("विज्ञान");
+      else if (sectionKey.includes("सामाजिक")) setSubject("सामाजिक शास्त्रे");
+      else if (sectionKey.includes("बुद्धिमत्ता")) setSubject("सामान्य ज्ञान");
+
+      toast.success(`'${sectionKey}' विभागाचे ${secQs.length} प्रश्न निवडले.`);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -524,6 +642,105 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
 
               </div>
 
+              {/* Word (.docx) Auto-Import Banner */}
+              <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-800 dark:to-indigo-950/40 p-4 rounded-2xl border-2 border-dashed border-indigo-300 dark:border-indigo-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-center gap-3.5">
+                  <div className="size-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                    <FileText className="size-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs sm:text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                      <span>Word (.docx) फाईलवरून प्रश्न आपोआप भरा</span>
+                      <span className="bg-gradient-to-r from-amber-400 to-orange-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider shadow-2xs">
+                        Auto-Fetch
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      तुमच्या Word फाईलमधील प्रश्न, ४ पर्याय आणि उत्तरसूचीतील उत्तरे एका क्लिकवर थेट भरली जातात.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setIsPasteModalOpen(true)}
+                    className="px-3.5 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs sm:text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
+                    title="Word किंवा WhatsApp वरील प्रश्न व उत्तरपत्रिका थेट कॉपी-पेस्ट करा"
+                  >
+                    <Copy className="size-4" />
+                    <span>मजकूर पेस्ट करा</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isImportingDocx}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs sm:text-sm font-black rounded-xl flex items-center justify-center gap-2 shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-60 shrink-0"
+                  >
+                    {isImportingDocx ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Upload className="size-4" />
+                    )}
+                    <span>{isImportingDocx ? "वाचत आहे..." : "Word फाईल निवडा (.docx)"}</span>
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    className="hidden"
+                    onChange={handleWordFileUpload}
+                  />
+                </div>
+              </div>
+
+              {/* If Parsed Document has multiple subjects/sections */}
+              {parsedDocxData && parsedDocxData.sections.length > 1 && (
+                <div className="bg-amber-50/90 dark:bg-amber-950/40 p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800 space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-xs font-black text-amber-950 dark:text-amber-200 flex items-center gap-1.5">
+                      <Sparkles className="size-3.5 text-amber-600" />
+                      <span>या फाईलमध्ये {parsedDocxData.sections.length} विषय आढळले आहेत. कोणता भाग भरायचा आहे?</span>
+                    </span>
+                    <span className="text-[11px] text-amber-800/80 dark:text-amber-300 font-bold">
+                      एकूण {parsedDocxData.totalQuestions} प्रश्न
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSection("all")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                        activeImportSection === "all"
+                          ? "bg-amber-600 text-white shadow-xs scale-102"
+                          : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      सर्व विषय एकत्रित ({parsedDocxData.totalQuestions} प्रश्न)
+                    </button>
+                    {parsedDocxData.sections.map((sec) => {
+                      const count = parsedDocxData.sectionQuestions[sec]?.length || 0;
+                      return (
+                        <button
+                          key={sec}
+                          type="button"
+                          onClick={() => handleSelectSection(sec)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                            activeImportSection === sec
+                              ? "bg-purple-600 text-white shadow-xs scale-102"
+                              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 hover:bg-slate-100"
+                          }`}
+                        >
+                          {sec} ({count} प्रश्न)
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Questions Builder */}
               <div className="space-y-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -744,6 +961,64 @@ export const MCQCreatorModal: React.FC<MCQCreatorModalProps> = ({
             classId,
           }}
         />
+      )}
+
+      {/* Direct Paste Modal */}
+      {isPasteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b pb-3 border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-2">
+                <FileText className="size-5 text-indigo-600" />
+                <h4 className="font-black text-slate-900 dark:text-white text-base">
+                  प्रश्न व उत्तरपत्रिका थेट पेस्ट करा (Paste MCQ Text)
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPasteModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 shrink-0">
+              Word किंवा WhatsApp वरून कॉपी केलेला प्रश्न व उत्तरसूचीचा मजकूर खाली पेस्ट करा. सिस्टीम सर्व प्रश्न, ४ पर्याय आणि योग्य उत्तरे आपोआप ओळखून भरेल:
+            </p>
+
+            <textarea
+              rows={12}
+              value={pastedContent}
+              onChange={(e) => setPastedContent(e.target.value)}
+              placeholder={`उदा.
+1) 'सूर्य' या शब्दाचा समानार्थी शब्द कोणता?
+(1) चंद्र  (2) रवी
+(3) तारा  (4) शशी
+उत्तर : (2) रवी
+
+किंवा शेवटी उत्तरसूची तक्ता...`}
+              className="w-full flex-1 p-3 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 font-mono text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 resize-none min-h-[220px]"
+            />
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsPasteModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                रद्द करा
+              </button>
+              <button
+                type="button"
+                onClick={handleImportPastedContent}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-md cursor-pointer transition-all active:scale-95"
+              >
+                प्रश्न तयार करा (Import Now) 🚀
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
