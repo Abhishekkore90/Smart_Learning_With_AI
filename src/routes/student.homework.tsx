@@ -441,7 +441,7 @@ function StudentHomeworkPage() {
                     userName={profile?.fullName || (profile as any)?.name || user?.displayName || "विद्यार्थी"}
                     initialClass={selectedClass || "1st"}
                     initialMedium={(selectedMedium as any) || "marathi"}
-                    initialSubject={selectedSubject || "all"}
+                    initialSubject="all"
                     initialDate={calendarDate}
                     onDateChange={(d) => setCalendarDate(d)}
                   />

@@ -2497,7 +2497,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
 
         const cleanTitle =
           documentType === "homework"
-            ? formatHomeworkFileName(homeworkClass || paperTitle)
+            ? formatHomeworkFileName(homeworkClass || paperTitle, homeworkDate)
             : `${(paperTitle || "question_paper").replace(/[/\\?%*:|"<>]/g, "_")}.pdf`;
 
         // Support Android WebView native download bridge if present, fallback to standard pdf.save
@@ -2534,7 +2534,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     }
 
     try {
-      const filename = formatHomeworkFileName(homeworkClass || paperTitle);
+      const filename = formatHomeworkFileName(homeworkClass || paperTitle, homeworkDate);
 
       const vmlPages = Array.from(
         containerRef.current.querySelectorAll<HTMLElement>(".vml-page-wrapper")

@@ -203,11 +203,12 @@ export const getMarathiClassLabel = (cls?: string): string => {
 };
 
 /**
- * Generates a clean, WhatsApp-compatible ASCII filename in the exact requested format:
- * "Class [X] Homework.pdf" (e.g. "Class 1st Homework.pdf")
- * This eliminates Unicode / Devanagari mojibake in WhatsApp and all OS file receivers.
+ * Generates a clean, WhatsApp-compatible ASCII filename in the format:
+ * "Class [X] Homework ([Date]).pdf" (e.g. "Class 1st Homework (24-11-2026).pdf")
+ * Keeps the "Class [X] Homework" base name and adds that day's date in DD-MM-YYYY format.
+ * This prevents duplicate file clashes like "Class 1st Homework (6)" in user downloads.
  */
-export const formatHomeworkFileName = (cls?: string): string => {
+export const formatHomeworkFileName = (cls?: string, dateStr?: string): string => {
   let classLabel = "1st";
   if (cls) {
     const c = cls.trim().toLowerCase();
@@ -233,7 +234,45 @@ export const formatHomeworkFileName = (cls?: string): string => {
     }
   }
 
-  return `Class ${classLabel} Homework.pdf`;
+  // Extract or format date cleanly as DD-MM-YYYY
+  let formattedDate = "";
+  if (dateStr && dateStr.trim()) {
+    const clean = dateStr.trim().slice(0, 10);
+    const parts = clean.split(/[-/.]/);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        // YYYY-MM-DD -> DD-MM-YYYY
+        formattedDate = `${parts[2].padStart(2, "0")}-${parts[1].padStart(2, "0")}-${parts[0]}`;
+      } else {
+        // DD-MM-YYYY
+        formattedDate = `${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}-${parts[2]}`;
+      }
+    }
+  }
+
+  // If dateStr was not passed or invalid, check if cls or paperTitle string contains a date
+  if (!formattedDate && cls) {
+    const ymdMatch = cls.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+    if (ymdMatch) {
+      formattedDate = `${ymdMatch[3].padStart(2, "0")}-${ymdMatch[2].padStart(2, "0")}-${ymdMatch[1]}`;
+    } else {
+      const dmyMatch = cls.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+      if (dmyMatch) {
+        formattedDate = `${dmyMatch[1].padStart(2, "0")}-${dmyMatch[2].padStart(2, "0")}-${dmyMatch[3]}`;
+      }
+    }
+  }
+
+  // If still no date found, fallback to today's date
+  if (!formattedDate) {
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, "0");
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const y = now.getFullYear();
+    formattedDate = `${d}-${m}-${y}`;
+  }
+
+  return `Class ${classLabel} Homework (${formattedDate}).pdf`;
 };
 
 export const HOMEWORK_WHATSAPP_LINK =

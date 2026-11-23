@@ -57,7 +57,7 @@ import { QuestionPaperRenderer } from "@/components/homework/QuestionPaperRender
 import { MCQHomeworkSection } from "@/components/homework/MCQHomeworkSection";
 import { purgeDocumentAndAllEdits } from "@/services/documentEngine";
 import { WordQuestionPaperEditor } from "@/components/questionPaper/WordQuestionPaperEditor";
-import { isWordHomework } from "@/utils/homeworkDocHelper";
+import { isWordHomework, formatHomeworkFileName } from "@/utils/homeworkDocHelper";
 
 export const Route = createFileRoute("/admin/homework")({
   head: () => ({
@@ -925,7 +925,7 @@ function AdminHomeworkPage() {
                         userName="सुपर ॲडमिन"
                         initialClass={selectedClass || "1st"}
                         initialMedium={(selectedMedium as any) || "marathi"}
-                        initialSubject={selectedSubject || "all"}
+                        initialSubject="all"
                         initialDate={calendarDate}
                         onDateChange={(d) => setCalendarDate(d)}
                       />
@@ -1118,7 +1118,7 @@ function AdminHomeworkPage() {
                                     {hw.fileUrl && (
                                       <a
                                         href={hw.fileUrl}
-                                        download={hw.fileName || "homework.pdf"}
+                                        download={hw.fileName || formatHomeworkFileName(hw.class, hw.homeworkDate)}
                                         className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all"
                                         title="मूळ फाईल डाउनलोड"
                                       >

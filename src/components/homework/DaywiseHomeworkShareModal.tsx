@@ -253,7 +253,7 @@ export const DaywiseHomeworkShareModal: React.FC<DaywiseHomeworkShareModalProps>
     const pdf = addCanvasPagesToPdf(null, canvas, true);
     addHomeworkFooterLinksToPdf(pdf);
     const blob = pdf.output("blob");
-    const fileName = formatHomeworkFileName(classId);
+    const fileName = formatHomeworkFileName(classId, dateStr);
 
     return { blob, fileName };
   };

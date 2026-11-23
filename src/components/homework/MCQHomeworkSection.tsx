@@ -109,7 +109,7 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
   // Class and Medium Filters (Class-wise logic)
   const [selectedClass, setSelectedClass] = useState<string>(initialClass && initialClass !== "all" ? initialClass : "1st");
   const [selectedMedium, setSelectedMedium] = useState<"marathi" | "semi" | "all">(initialMedium || "all");
-  const [selectedSubject, setSelectedSubject] = useState(initialSubject);
+  const [selectedSubject, setSelectedSubject] = useState(embedded ? "all" : initialSubject);
   const [selectedDate, setSelectedDate] = useState<string>(initialDate || "all");
 
   useEffect(() => {
@@ -214,14 +214,14 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
         if (q.medium && q.medium !== selectedMedium) return false;
       }
 
-      // Filter by Subject
-      if (selectedSubject && selectedSubject !== "all") {
+      // Filter by Subject (bypassed in embedded mode to show all subjects' questions together)
+      if (!embedded && selectedSubject && selectedSubject !== "all") {
         if (q.subject && q.subject !== selectedSubject) return false;
       }
 
       return true;
     });
-  }, [allQuizzes, selectedClass, selectedMedium, selectedSubject]);
+  }, [allQuizzes, selectedClass, selectedMedium, selectedSubject, embedded]);
 
   // Tab 2: Custom / Personal Question Bank (strictly for the creator/teacher only, also filtered class-wise)
   const customQuizzes = useMemo(() => {
@@ -239,8 +239,8 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
         if (q.medium && q.medium !== selectedMedium) return false;
       }
 
-      // Filter by Subject
-      if (selectedSubject && selectedSubject !== "all") {
+      // Filter by Subject (bypassed in embedded mode to show all subjects' questions together)
+      if (!embedded && selectedSubject && selectedSubject !== "all") {
         if (q.subject && q.subject !== selectedSubject) return false;
       }
 
@@ -262,7 +262,7 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
 
       return false;
     });
-  }, [allQuizzes, defaultRole, user?.uid, userName, profile?.fullName, selectedClass, selectedMedium, selectedSubject]);
+  }, [allQuizzes, defaultRole, user?.uid, userName, profile?.fullName, selectedClass, selectedMedium, selectedSubject, embedded]);
 
   // Currently active tab's list
   const currentTabQuizzes = activeSubTab === "admin" ? adminQuizzes : customQuizzes;
@@ -397,22 +397,6 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
                       या इयत्तेचे प्रश्न सोडवा किंवा स्वतः तयार करून WhatsApp द्वारे थेट विद्यार्थ्यांना पाठवा.
                     </p>
                   </div>
-                </div>
-
-                {/* Subject Filter inside embedded mode */}
-                <div className="flex items-center gap-2 self-start sm:self-auto">
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">विषय:</span>
-                  <select
-                    value={selectedSubject}
-                    onChange={(e) => setSelectedSubject(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-xs"
-                  >
-                    {SUBJECTS.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
 

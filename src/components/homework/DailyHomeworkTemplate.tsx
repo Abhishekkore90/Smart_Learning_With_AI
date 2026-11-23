@@ -204,7 +204,7 @@ export function DailyHomeworkTemplate({
 
       const pdf = addCanvasPagesToPdf(null, canvas, true);
       addHomeworkFooterLinksToPdf(pdf);
-      pdf.save(formatHomeworkFileName(homework.class));
+      pdf.save(formatHomeworkFileName(homework.class, homework.homeworkDate));
       toast.success("गृहपाठ PDF यशस्वीरित्या डाउनलोड झाली!");
     } catch (err: any) {
       console.error("PDF download error:", err);
@@ -225,7 +225,7 @@ export function DailyHomeworkTemplate({
       const pdf = addCanvasPagesToPdf(null, canvas, true);
       addHomeworkFooterLinksToPdf(pdf);
 
-      const fileName = formatHomeworkFileName(homework.class);
+      const fileName = formatHomeworkFileName(homework.class, homework.homeworkDate);
       const pdfBlob = pdf.output("blob");
       const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" });
 

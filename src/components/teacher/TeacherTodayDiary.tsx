@@ -1441,18 +1441,20 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               ""
             ).trim();
             if (!rawRemarks) {
-              return `<div style="display: flex; align-items: flex-end; gap: 6px; margin-bottom: 4px;">
-                <span style="font-size: 11px; font-weight: 900; color: #0f172a; white-space: nowrap; line-height: 1.2;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span>
+              return `<div style="display: flex; align-items: flex-end; gap: 6px; margin-bottom: 4px; width: 100%;">
+                <span style="font-size: 11px; font-weight: 900; color: #0f172a; white-space: nowrap; line-height: 1.2; flex-shrink: 0;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span>
                 <div style="flex: 1; border-bottom: 1px dashed #cbd5e1; height: 12px;"></div>
-              </div>
-              <div style="border-bottom: 1px dashed #cbd5e1; height: 14px; margin-bottom: 2px;"></div>`;
+              </div>`;
             }
             const safeRemarks = rawRemarks
               .replace(/&/g, "&amp;")
               .replace(/</g, "&lt;")
               .replace(/>/g, "&gt;");
-            return `<div style="font-size: 11.5px; line-height: 1.45; color: #0f172a; margin-bottom: 4px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 3px; word-break: break-word; white-space: pre-wrap;">
-              <span style="font-weight: 900; margin-right: 6px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span><span style="font-weight: 700;">${safeRemarks}</span>
+            const len = safeRemarks.length;
+            const fontSize = len > 95 ? "8.5px" : len > 70 ? "9.5px" : len > 45 ? "10.5px" : "11px";
+            return `<div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; width: 100%; overflow: hidden;">
+              <span style="font-size: 11px; font-weight: 900; color: #0f172a; white-space: nowrap; line-height: 1.2; flex-shrink: 0;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span>
+              <span style="font-size: ${fontSize}; font-weight: 700; color: #0f172a; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">${safeRemarks}</span>
             </div>`;
           })()}
           

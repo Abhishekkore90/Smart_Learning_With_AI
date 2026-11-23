@@ -635,7 +635,7 @@ function HomeworkPage() {
                           onClassChange={(cls) => setSelectedClass(cls)}
                           onBackStep={() => setStep("class")}
                           initialMedium={(selectedMedium as any) || "marathi"}
-                          initialSubject={selectedSubject || "all"}
+                          initialSubject="all"
                           initialDate={calendarDate}
                           onDateChange={(d) => setCalendarDate(d)}
                         />

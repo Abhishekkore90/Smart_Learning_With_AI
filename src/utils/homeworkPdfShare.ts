@@ -38,7 +38,7 @@ export async function directShareHomeworkPdfToWhatsApp({
   variables,
 }: DirectShareHomeworkPdfOptions): Promise<void> {
   const items = singleItem ? [singleItem] : homeworkItems;
-  const fileName = formatHomeworkFileName(classId);
+  const fileName = formatHomeworkFileName(classId, dateStr);
 
   toast.info("गृहपाठ PDF WhatsApp साठी तयार होत आहे...");
 
