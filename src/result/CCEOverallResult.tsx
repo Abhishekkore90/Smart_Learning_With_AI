@@ -34,14 +34,18 @@ const gradeColor = (grade: string) => {
 };
 
 const getSubjectKey = (subjectName: string): string => {
-  if (subjectName.includes("मराठी")) return "marathi";
-  if (subjectName.includes("इंग्रजी")) return "english";
-  if (subjectName.includes("गणित")) return "math";
-  if (subjectName.includes("कला")) return "art";
-  if (subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण") || subjectName.includes("कार्य")) return "work";
-  if (subjectName.includes("शारीरिक")) return "pe";
-  if (subjectName.includes("परिसर") || subjectName.includes("संभोवतालचे")) return "evs";
-  return "marathi";
+  const s = (subjectName || "").toLowerCase().trim();
+  if (s.includes("मराठी") || s.includes("marathi")) return "marathi";
+  if (s.includes("हिंदी") || s.includes("hindi")) return "hindi";
+  if (s.includes("इंग्रजी") || s.includes("english")) return "english";
+  if (s.includes("गणित") || s.includes("math")) return "math";
+  if (s.includes("विज्ञान") || s.includes("science")) return "science";
+  if (s.includes("सामाजिक") || s.includes("social") || s.includes("इतिहास") || s.includes("भूगोल") || s.includes("history") || s.includes("geography")) return "social_science";
+  if (s.includes("कला") || s.includes("art")) return "art";
+  if (s.includes("कार्यानुभव") || s.includes("कार्यशिक्षण") || s.includes("कार्य") || s.includes("work") || s.includes("व्यावसायिक")) return "work";
+  if (s.includes("शारीरिक") || s.includes("pe") || s.includes("physical") || s.includes("आरोग्य")) return "pe";
+  if (s.includes("परिसर") || s.includes("संभोवतालचे") || s.includes("evs")) return "evs";
+  return s;
 };
 
 // Blue theme tokens
@@ -60,7 +64,18 @@ const T = {
   shadow:   "0 10px 25px -5px rgba(0,0,0,0.1)",
 };
 
-export function CCEOverallResult({ selectedClass, academicYear, onBack }: { selectedClass: string; academicYear: string; onBack: () => void }) {
+export function CCEOverallResult({
+  selectedClass,
+  academicYear,
+  selectedMedium: propMedium,
+  onBack,
+}: {
+  selectedClass: string;
+  academicYear: string;
+  selectedMedium?: string;
+  onBack: () => void;
+}) {
+  const currentMedium = propMedium || localStorage.getItem("cce_selected_medium") || "marathi";
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [allMarks, setAllMarks] = useState<Record<string, any>>({});
@@ -71,13 +86,12 @@ export function CCEOverallResult({ selectedClass, academicYear, onBack }: { sele
     const q = query(collection(db, "users"), where("role", "==", "student"));
     const unsub = onSnapshot(q, (snap) => {
       const teacherId = getTeacherId();
-      const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
       const raw = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Student[];
       const filtered = raw.filter(s => matchStudentTeacherClassAndMedium(s, teacherId, selectedClass, currentMedium));
       setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
     });
     return () => unsub();
-  }, [selectedClass]);
+  }, [selectedClass, currentMedium]);
 
   useEffect(() => {
     const loadAll = async () => {
@@ -85,20 +99,34 @@ export function CCEOverallResult({ selectedClass, academicYear, onBack }: { sele
       const result: Record<string, any> = {};
       for (const examKey of EXAMS) {
         try {
-          const ref = doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_${examKey}`);
-          const snap = await getDoc(ref);
-          result[examKey] = snap.exists() ? (snap.data().records || {}) : {};
+          const docIds = [
+            currentMedium === "semi" ? `${selectedClass}_${currentMedium}_${academicYear}_${examKey}` : null,
+            `${selectedClass}_${academicYear}_${examKey}`,
+          ].filter(Boolean) as string[];
+
+          let recs: any = {};
+          for (const dId of docIds) {
+            const ref = doc(db, "cce_marks_v2", dId);
+            const snap = await getDoc(ref);
+            if (snap.exists() && (snap.data().records || snap.data().marksData)) {
+              recs = snap.data().records || snap.data().marksData || {};
+              break;
+            }
+          }
+          result[examKey] = recs;
         } catch { result[examKey] = {}; }
       }
       setAllMarks(result);
       setLoading(false);
     };
     loadAll();
-  }, [selectedClass, academicYear]);
+  }, [selectedClass, academicYear, currentMedium]);
 
   useEffect(() => {
     const currentTeacherId = getTeacherId();
     const docIds = [
+      currentTeacherId && currentMedium === "semi" ? `${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}` : null,
+      currentMedium === "semi" ? `${selectedClass}_${currentMedium}_${academicYear}` : null,
       currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}` : null,
       `${selectedClass}_${academicYear}`,
     ].filter(Boolean) as string[];
@@ -132,7 +160,7 @@ export function CCEOverallResult({ selectedClass, academicYear, onBack }: { sele
       }
     };
     loadWeightages();
-  }, [selectedClass, academicYear]);
+  }, [selectedClass, academicYear, currentMedium]);
 
   const findSubjectWeightage = (subjectsObj: Record<string, any>, subjectName: string) => {
     if (!subjectsObj) return null;
@@ -149,20 +177,28 @@ export function CCEOverallResult({ selectedClass, academicYear, onBack }: { sele
     for (const [sKey, sVal] of Object.entries(subjectsObj)) {
       const sLower = String(sKey).toLowerCase().trim();
       if (
-        (lower.includes("मराठी") && sLower.includes("मराठी")) ||
-        (lower.includes("इंग्रजी") && sLower.includes("इंग्रजी")) ||
-        (lower.includes("हिंदी") && sLower.includes("हिंदी")) ||
-        (lower.includes("गणित") && sLower.includes("गणित")) ||
-        (lower.includes("कला") && sLower.includes("कला")) ||
-        ((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य")) && (sLower.includes("कार्यानुभव") || sLower.includes("कार्यशिक्षण") || sLower.includes("कार्य"))) ||
-        (lower.includes("शारीरिक") && sLower.includes("शारीरिक")) ||
-        ((lower.includes("परिसर") || lower.includes("संभोवतालचे")) && (sLower.includes("परिसर") || sLower.includes("संभोवतालचे")))
+        ((lower.includes("मराठी") || lower.includes("marathi")) && (sLower.includes("मराठी") || sLower.includes("marathi"))) ||
+        ((lower.includes("इंग्रजी") || lower.includes("english")) && (sLower.includes("इंग्रजी") || sLower.includes("english"))) ||
+        ((lower.includes("हिंदी") || lower.includes("hindi")) && (sLower.includes("हिंदी") || sLower.includes("hindi"))) ||
+        ((lower.includes("गणित") || lower.includes("math")) && (sLower.includes("गणित") || sLower.includes("math"))) ||
+        ((lower.includes("विज्ञान") || lower.includes("science")) && (sLower.includes("विज्ञान") || sLower.includes("science"))) ||
+        ((lower.includes("सामाजिक") || lower.includes("social") || lower.includes("इतिहास") || lower.includes("भूगोल")) && (sLower.includes("सामाजिक") || sLower.includes("social") || sLower.includes("इतिहास") || sLower.includes("भूगोल"))) ||
+        ((lower.includes("कला") || lower.includes("art")) && (sLower.includes("कला") || sLower.includes("art"))) ||
+        (((lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक") || lower.includes("work"))) &&
+         ((sLower.includes("कार्यानुभव") || sLower.includes("कार्यशिक्षण") || sLower.includes("कार्य") || sLower.includes("व्यावसायिक") || sLower.includes("work")))) ||
+        ((lower.includes("शारीरिक") || lower.includes("pe") || lower.includes("physical") || lower.includes("आरोग्य")) &&
+         ((sLower.includes("शारीरिक") || sLower.includes("pe") || sLower.includes("physical") || sLower.includes("आरोग्य")))) ||
+        ((lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("evs")) &&
+         ((sLower.includes("परिसर") || sLower.includes("संभोवतालचे") || sLower.includes("evs"))))
       ) {
         return sVal;
       }
     }
     const subKey = getSubjectKey(subjectName);
     if (subjectsObj[subKey]) return subjectsObj[subKey];
+    for (const [sKey, sVal] of Object.entries(subjectsObj)) {
+      if (getSubjectKey(sKey) === subKey) return sVal;
+    }
     return null;
   };
 

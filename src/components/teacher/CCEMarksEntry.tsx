@@ -226,9 +226,14 @@ export function CCEMarksEntry({
       }
     })();
 
-    const primaryDocId = `${selectedClass}_${academicYear}_${activeSemester}`;
-    const teacherDocId = currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_${activeSemester}` : primaryDocId;
-    const generalDocId = `${selectedClass}_${academicYear}`;
+    const mediumDocId = `${selectedClass}_${selectedMedium}_${academicYear}_${activeSemester}`;
+    const primaryDocId = selectedMedium === "semi" ? mediumDocId : `${selectedClass}_${academicYear}_${activeSemester}`;
+    const teacherDocId = currentTeacherId
+      ? (selectedMedium === "semi"
+          ? `${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}_${activeSemester}`
+          : `${currentTeacherId}_${selectedClass}_${academicYear}_${activeSemester}`)
+      : primaryDocId;
+    const generalDocId = selectedMedium === "semi" ? `${selectedClass}_${selectedMedium}_${academicYear}` : `${selectedClass}_${academicYear}`;
 
     const unsubMarks = onSnapshot(doc(db, "cce_marks_v2", primaryDocId), async (snap) => {
       let recs: Record<string, Record<string, SubjectMarks>> = {};
@@ -274,14 +279,27 @@ export function CCEMarksEntry({
           } catch (e) {}
         }
 
+        // If still empty and medium is semi, check legacy general doc as fallback
+        if ((!recs || Object.keys(recs).length === 0) && selectedMedium === "semi") {
+          try {
+            const legacySnap = await getDoc(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_${activeSemester}`));
+            if (legacySnap.exists()) {
+              const ld = legacySnap.data();
+              const lRecs = ld.records || ld.marksData || ld.data || {};
+              if (lRecs && Object.keys(lRecs).length > 0) recs = lRecs;
+            }
+          } catch (e) {}
+        }
+
         // Fallback: Bunny CDN
         if (!recs || Object.keys(recs).length === 0) {
           try {
             const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+            const bunnyPrefix = selectedMedium === "semi" ? `${selectedClass}_semi_${academicYear}` : `${selectedClass}_${academicYear}`;
             const bunnyFile = activeSemester === "sem1" 
-              ? `cce_results/${selectedClass}_${academicYear}_marks_first.json`
-              : `cce_results/${selectedClass}_${academicYear}_marks_second.json`;
-            const bunnySemFile = `cce_results/${selectedClass}_${academicYear}_marks_${activeSemester}.json`;
+              ? `cce_results/${bunnyPrefix}_marks_first.json`
+              : `cce_results/${bunnyPrefix}_marks_second.json`;
+            const bunnySemFile = `cce_results/${bunnyPrefix}_marks_${activeSemester}.json`;
 
             const bData = (await fetchJsonFromBunny(bunnySemFile)) || (await fetchJsonFromBunny(bunnyFile));
             if (bData && typeof bData === "object") {
@@ -304,6 +322,8 @@ export function CCEMarksEntry({
   useEffect(() => {
     const currentTeacherId = getTeacherId();
     const docIds = [
+      currentTeacherId && selectedMedium === "semi" ? `${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}` : null,
+      selectedMedium === "semi" ? `${selectedClass}_${selectedMedium}_${academicYear}` : null,
       currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}` : null,
       `${selectedClass}_${academicYear}`,
     ].filter(Boolean) as string[];
@@ -377,7 +397,7 @@ export function CCEMarksEntry({
       window.removeEventListener("cce_weightage_updated", handleCustomWeightageUpdate);
       window.removeEventListener("storage", handleCustomWeightageUpdate);
     };
-  }, [selectedClass, academicYear]);
+  }, [selectedClass, academicYear, selectedMedium]);
 
   // Sync subjects directly from Weightage configuration if available
   useEffect(() => {
@@ -635,22 +655,29 @@ export function CCEMarksEntry({
       };
 
       const docIdsToSave = [
-        `${selectedClass}_${academicYear}_${activeSemester}`,
         `${selectedClass}_${selectedMedium}_${academicYear}_${activeSemester}`,
       ];
 
+      // Only save to generic doc without medium if medium is marathi (preserves Marathi legacy, prevents Semi from clobbering Marathi)
+      if (selectedMedium === "marathi") {
+        docIdsToSave.push(`${selectedClass}_${academicYear}_${activeSemester}`);
+      }
+
       if (currentTeacherId) {
-        docIdsToSave.push(`${currentTeacherId}_${selectedClass}_${academicYear}_${activeSemester}`);
         docIdsToSave.push(`${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}_${activeSemester}`);
+        if (selectedMedium === "marathi") {
+          docIdsToSave.push(`${currentTeacherId}_${selectedClass}_${academicYear}_${activeSemester}`);
+        }
       }
 
       // Fire network saves in parallel in the background without blocking the UI
       Promise.allSettled([
         ...docIdsToSave.map((dId) => setDoc(doc(db, "cce_marks_v2", dId), docData, { merge: true })),
         setDoc(
-          doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}`),
+          doc(db, "cce_marks_v2", selectedMedium === "semi" ? `${selectedClass}_${selectedMedium}_${academicYear}` : `${selectedClass}_${academicYear}`),
           {
             class: selectedClass,
+            medium: selectedMedium,
             academicYear,
             [activeSemester]: allMarks,
             [activeSemester === "sem1" ? "semester1" : "semester2"]: allMarks,
@@ -661,13 +688,14 @@ export function CCEMarksEntry({
         (async () => {
           try {
             const { saveJsonToBunny } = await import("@/lib/bunnyStorage");
+            const bunnyPrefix = selectedMedium === "semi" ? `${selectedClass}_semi_${academicYear}` : `${selectedClass}_${academicYear}`;
             await saveJsonToBunny(
-              `cce_results/${selectedClass}_${academicYear}_marks_${activeSemester}.json`,
+              `cce_results/${bunnyPrefix}_marks_${activeSemester}.json`,
               allMarks
             );
             const aliasBunnyFile = activeSemester === "sem1" 
-              ? `cce_results/${selectedClass}_${academicYear}_marks_first.json`
-              : `cce_results/${selectedClass}_${academicYear}_marks_second.json`;
+              ? `cce_results/${bunnyPrefix}_marks_first.json`
+              : `cce_results/${bunnyPrefix}_marks_second.json`;
             await saveJsonToBunny(aliasBunnyFile, allMarks);
           } catch (e) {}
         })(),

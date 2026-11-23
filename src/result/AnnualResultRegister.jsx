@@ -258,12 +258,21 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
         (async () => {
           let merged = {};
           try {
-            const docIds = [
-              `${currentTeacherId}_${selectedClass}_${academicYear}_sem1`,
-              `${selectedClass}_${academicYear}_sem1`,
-              `${currentTeacherId}_${docId}`,
-              docId,
-            ];
+            const docIds = selectedMedium === "semi"
+              ? [
+                  currentTeacherId ? `${currentTeacherId}_${selectedClass}_semi_${academicYear}_sem1` : null,
+                  `${selectedClass}_semi_${academicYear}_sem1`,
+                  currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_sem1` : null,
+                  `${selectedClass}_${academicYear}_sem1`,
+                  currentTeacherId ? `${currentTeacherId}_${docId}` : null,
+                  docId,
+                ].filter(Boolean)
+              : [
+                  currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_sem1` : null,
+                  `${selectedClass}_${academicYear}_sem1`,
+                  currentTeacherId ? `${currentTeacherId}_${docId}` : null,
+                  docId,
+                ].filter(Boolean);
             const snaps = await Promise.all(docIds.map(id => getDoc(doc(db, "cce_marks_v2", id)).catch(() => null)));
             for (const snap of snaps) {
               if (snap && snap.exists()) {
@@ -280,12 +289,21 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
         (async () => {
           let merged = {};
           try {
-            const docIds = [
-              `${currentTeacherId}_${selectedClass}_${academicYear}_sem2`,
-              `${selectedClass}_${academicYear}_sem2`,
-              `${currentTeacherId}_${docId}`,
-              docId,
-            ];
+            const docIds = selectedMedium === "semi"
+              ? [
+                  currentTeacherId ? `${currentTeacherId}_${selectedClass}_semi_${academicYear}_sem2` : null,
+                  `${selectedClass}_semi_${academicYear}_sem2`,
+                  currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_sem2` : null,
+                  `${selectedClass}_${academicYear}_sem2`,
+                  currentTeacherId ? `${currentTeacherId}_${docId}` : null,
+                  docId,
+                ].filter(Boolean)
+              : [
+                  currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_sem2` : null,
+                  `${selectedClass}_${academicYear}_sem2`,
+                  currentTeacherId ? `${currentTeacherId}_${docId}` : null,
+                  docId,
+                ].filter(Boolean);
             const snaps = await Promise.all(docIds.map(id => getDoc(doc(db, "cce_marks_v2", id)).catch(() => null)));
             for (const snap of snaps) {
               if (snap && snap.exists()) {

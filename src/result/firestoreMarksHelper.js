@@ -223,8 +223,10 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
 /**
  * Fetch marks for a class & academicYear & term from all Firestore & Bunny CDN sources
  */
-export const fetchFirestoreMarks = async (selectedClass, academicYear, term = "first", teacherId = null) => {
+export const fetchFirestoreMarks = async (selectedClass, academicYear, term = "first", teacherId = null, medium = null) => {
   const activeTeacherId = teacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
+  const selectedMedium = medium || (typeof localStorage !== "undefined" ? localStorage.getItem("cce_selected_medium") : "marathi");
+  const isSemi = selectedMedium === "semi";
   
   let bunnyMarksSec = {};
   let bunnyMarksFirst = {};
@@ -243,17 +245,27 @@ export const fetchFirestoreMarks = async (selectedClass, academicYear, term = "f
   let mergedMarks = {};
 
   const loadDocData = async (examKey) => {
-    if (activeTeacherId) {
+    const docIds = isSemi
+      ? [
+          activeTeacherId ? `${activeTeacherId}_${selectedClass}_semi_${academicYear}_${examKey}` : null,
+          `${selectedClass}_semi_${academicYear}_${examKey}`,
+          activeTeacherId ? `${activeTeacherId}_${selectedClass}_${academicYear}_${examKey}` : null,
+          `${selectedClass}_${academicYear}_${examKey}`,
+        ].filter(Boolean)
+      : [
+          activeTeacherId ? `${activeTeacherId}_${selectedClass}_${academicYear}_${examKey}` : null,
+          `${selectedClass}_${academicYear}_${examKey}`,
+        ].filter(Boolean);
+
+    for (const dId of docIds) {
       try {
-        const snap = await getDoc(doc(db, "cce_marks_v2", `${activeTeacherId}_${selectedClass}_${academicYear}_${examKey}`));
-        if (snap.exists()) return snap.data().records || snap.data().marksData || snap.data();
+        const snap = await getDoc(doc(db, "cce_marks_v2", dId));
+        if (snap.exists()) {
+          const recs = snap.data().records || snap.data().marksData || snap.data();
+          if (recs && Object.keys(recs).length > 0) return recs;
+        }
       } catch (e) {}
     }
-    // Fallback if no activeTeacherId or for legacy
-    try {
-      const snap = await getDoc(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_${examKey}`));
-      if (snap.exists()) return snap.data().records || snap.data().marksData || snap.data();
-    } catch (e) {}
     return {};
   };
 
@@ -311,8 +323,10 @@ export const matchAndMergeMarks = (students = [], currentMarks = {}, firestoreMa
         const lower = String(sub).toLowerCase();
         if (lower.includes("मराठी")) subData = stdFsMarks["marathi"] || stdFsMarks["प्रथम भाषा : मराठी"] || stdFsMarks["Marathi"];
         else if (lower.includes("इंग्रजी") || lower === "english") subData = stdFsMarks["english"] || stdFsMarks["English"] || stdFsMarks["द्वितीय भाषा : इंग्रजी"];
+        else if (lower.includes("हिंदी") || lower.includes("hindi")) subData = stdFsMarks["hindi"] || stdFsMarks["Hindi"] || stdFsMarks["तृतीय भाषा : हिंदी"] || stdFsMarks["हिंदी"];
         else if (lower.includes("गणित") || lower.includes("math")) subData = stdFsMarks["Mathematics"] || stdFsMarks["math"] || stdFsMarks["maths"] || stdFsMarks["गणित"];
         else if (lower.includes("विज्ञान") || lower.includes("science")) subData = stdFsMarks["General Science"] || stdFsMarks["science"] || stdFsMarks["सामान्य विज्ञान"];
+        else if (lower.includes("सामाजिक") || lower.includes("social") || lower.includes("इतिहास") || lower.includes("भूगोल")) subData = stdFsMarks["samajik_shastra"] || stdFsMarks["सामाजिक शास्त्रे"] || stdFsMarks["Social Sciences"] || stdFsMarks["social_science"] || stdFsMarks["इतिहास व नागरिकशास्त्र"] || stdFsMarks["भूगोल"];
         else if (lower.includes("परिसर") || lower.includes("संभोवतालचे") || lower.includes("environment") || lower.includes("evs")) subData = stdFsMarks["parisar"] || stdFsMarks["evs"] || stdFsMarks["परिसर अभ्यास"] || stdFsMarks["आपले संभोवतालचे जग"] || stdFsMarks["parisar1"] || stdFsMarks["evs1"] || stdFsMarks["Environmental Studies"];
         else if (lower.includes("कला")) subData = stdFsMarks["kala"] || stdFsMarks["कलाशिक्षण"] || stdFsMarks["कला"] || stdFsMarks["Art"];
         else if (lower.includes("कार्यानुभव") || lower.includes("कार्यशिक्षण") || lower.includes("कार्य") || lower.includes("व्यावसायिक")) subData = stdFsMarks["व्यावसायिक अभ्यास"] || stdFsMarks["karyanubhav"] || stdFsMarks["कार्यशिक्षण"] || stdFsMarks["कार्यानुभव"] || stdFsMarks["Work Experience"];

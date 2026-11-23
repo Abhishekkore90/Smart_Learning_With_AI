@@ -674,12 +674,19 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         let mergedMarks = {};
 
         const loadMarksDoc = async (examKey) => {
-          const docIdsToTry = [
-            `${currentTeacherId}_${selectedClass}_${academicYear}_${examKey}`,
-            `${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}_${examKey}`,
-            `${selectedClass}_${academicYear}_${examKey}`,
-            `${selectedClass}_${selectedMedium}_${academicYear}_${examKey}`,
-          ];
+          const docIdsToTry = selectedMedium === "semi"
+            ? [
+                currentTeacherId ? `${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}_${examKey}` : null,
+                `${selectedClass}_${selectedMedium}_${academicYear}_${examKey}`,
+                currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_${examKey}` : null,
+                `${selectedClass}_${academicYear}_${examKey}`,
+              ].filter(Boolean)
+            : [
+                currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_${examKey}` : null,
+                currentTeacherId ? `${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}_${examKey}` : null,
+                `${selectedClass}_${academicYear}_${examKey}`,
+                `${selectedClass}_${selectedMedium}_${academicYear}_${examKey}`,
+              ].filter(Boolean);
           const snaps = await Promise.allSettled(docIdsToTry.map(dId => getDoc(doc(db, "cce_marks_v2", dId))));
           for (const res of snaps) {
             if (res.status === "fulfilled" && res.value && res.value.exists()) {

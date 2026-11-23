@@ -1226,13 +1226,13 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
     const schemaTerm = term === "sem2" ? (student.term2 || student.sem2) : (student.term1 || student.sem1);
     if (schemaTerm && schemaTerm.grades) {
       const g = schemaTerm.grades;
-      if (subLower.includes("मराठी") && g.firstLanguage) return g.firstLanguage;
-      if (subLower.includes("इंग्रजी") && g.secondLanguage) return g.secondLanguage;
-      if (subLower.includes("हिंदी") && g.thirdLanguage) return g.thirdLanguage;
-      if (subLower.includes("गणित") && (g.maths || g.math)) return g.maths || g.math;
-      if (subLower.includes("कला") && g.art) return g.art;
-      if ((subLower.includes("कार्या") || subLower.includes("कार्य") || subLower.includes("व्यावसायिक")) && (g.workExperience || g.work)) return g.workExperience || g.work;
-      if (subLower.includes("शारीरिक") && (g.physicalEdu || g.pe)) return g.physicalEdu || g.pe;
+      if ((subLower.includes("मराठी") || subLower.includes("marathi")) && g.firstLanguage) return g.firstLanguage;
+      if ((subLower.includes("इंग्रजी") || subLower.includes("english")) && g.secondLanguage) return g.secondLanguage;
+      if ((subLower.includes("हिंदी") || subLower.includes("hindi")) && g.thirdLanguage) return g.thirdLanguage;
+      if ((subLower.includes("गणित") || subLower.includes("math")) && (g.maths || g.math)) return g.maths || g.math;
+      if ((subLower.includes("कला") || subLower.includes("art")) && g.art) return g.art;
+      if ((subLower.includes("कार्या") || subLower.includes("कार्य") || subLower.includes("व्यावसायिक") || subLower.includes("work")) && (g.workExperience || g.work)) return g.workExperience || g.work;
+      if ((subLower.includes("शारीरिक") || subLower.includes("pe") || subLower.includes("physical")) && (g.physicalEdu || g.pe)) return g.physicalEdu || g.pe;
       if ((subLower.includes("विज्ञान") || subLower.includes("science")) && (g.science || g.vijnan || g.vidnyan)) return g.science || g.vijnan || g.vidnyan;
       if ((subLower.includes("सामाजिक") || subLower.includes("social")) && (g.social || g.samajikShastra || g.history)) return g.social || g.samajikShastra || g.history;
       if ((subLower.includes("परिसर") || subLower.includes("संभोवतालचे") || subLower.includes("evs")) && (g.evs || g.parisar || g.evs1)) return g.evs || g.parisar || g.evs1;
@@ -1371,13 +1371,13 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             for (const [k, v] of Object.entries(termMap)) {
               const kLower = String(k).toLowerCase();
               if (
-                (subLower.includes("मराठी") && (kLower.includes("मराठी") || kLower.includes("marathi") || kLower.includes("firstlanguage") || kLower === "lang1")) ||
-                (subLower.includes("इंग्रजी") && (kLower.includes("इंग्रजी") || kLower.includes("english") || kLower.includes("secondlanguage") || kLower === "lang2")) ||
-                (subLower.includes("हिंदी") && (kLower.includes("हिंदी") || kLower.includes("hindi") || kLower.includes("thirdlanguage") || kLower === "lang3")) ||
-                (subLower.includes("गणित") && (kLower.includes("गणित") || kLower.includes("math") || kLower.includes("maths"))) ||
-                (subLower.includes("कला") && (kLower.includes("कला") || kLower.includes("art") || kLower.includes("kala"))) ||
-                ((subLower.includes("कार्या") || subLower.includes("कार्य") || subLower.includes("व्यावसायिक")) && (kLower.includes("कार्या") || kLower.includes("कार्य") || kLower.includes("work") || kLower.includes("karyanubhav") || kLower.includes("व्यावसायिक"))) ||
-                (subLower.includes("शारीरिक") && (kLower.includes("शारीरिक") || kLower.includes("sharirik") || kLower === "pe" || kLower.includes("physical"))) ||
+                ((subLower.includes("मराठी") || subLower.includes("marathi")) && (kLower.includes("मराठी") || kLower.includes("marathi") || kLower.includes("firstlanguage") || kLower === "lang1")) ||
+                ((subLower.includes("इंग्रजी") || subLower.includes("english")) && (kLower.includes("इंग्रजी") || kLower.includes("english") || kLower.includes("secondlanguage") || kLower === "lang2")) ||
+                ((subLower.includes("हिंदी") || subLower.includes("hindi")) && (kLower.includes("हिंदी") || kLower.includes("hindi") || kLower.includes("thirdlanguage") || kLower === "lang3")) ||
+                ((subLower.includes("गणित") || subLower.includes("math")) && (kLower.includes("गणित") || kLower.includes("math") || kLower.includes("maths"))) ||
+                ((subLower.includes("कला") || subLower.includes("art")) && (kLower.includes("कला") || kLower.includes("art") || kLower.includes("kala"))) ||
+                ((subLower.includes("कार्या") || subLower.includes("कार्य") || subLower.includes("व्यावसायिक") || subLower.includes("work")) && (kLower.includes("कार्या") || kLower.includes("कार्य") || kLower.includes("work") || kLower.includes("karyanubhav") || kLower.includes("व्यावसायिक"))) ||
+                ((subLower.includes("शारीरिक") || subLower.includes("pe") || subLower.includes("physical")) && (kLower.includes("शारीरिक") || kLower.includes("sharirik") || kLower === "pe" || kLower.includes("physical"))) ||
                 ((subLower.includes("विज्ञान") || subLower.includes("science")) && (kLower.includes("विज्ञान") || kLower.includes("science") || kLower.includes("vijnan") || kLower.includes("vidnyan"))) ||
                 ((subLower.includes("सामाजिक") || subLower.includes("social")) && (kLower.includes("सामाजिक") || kLower.includes("social") || kLower.includes("samajik") || kLower.includes("samajshastra") || kLower.includes("history"))) ||
                 ((subLower.includes("परिसर") || subLower.includes("संभोवतालचे") || subLower.includes("evs")) && (kLower.includes("परिसर") || kLower.includes("संभोवतालचे") || kLower.includes("evs") || kLower.includes("parisar")))

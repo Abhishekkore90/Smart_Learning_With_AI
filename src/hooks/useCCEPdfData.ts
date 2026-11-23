@@ -120,6 +120,8 @@ export function useCCEPdfData(currentClass: string, academicYear: string, medium
 
         // 3. Fetch CCE Weightages
         const weightageDocIds = [
+          teacherId && medium === "semi" ? `${teacherId}_${currentClass}_${medium}_${academicYear}` : null,
+          medium === "semi" ? `${currentClass}_${medium}_${academicYear}` : null,
           teacherId ? `${teacherId}_${currentClass}_${academicYear}` : null,
           `${currentClass}_${academicYear}`,
         ].filter(Boolean) as string[];
@@ -151,12 +153,28 @@ export function useCCEPdfData(currentClass: string, academicYear: string, medium
         }
         setWeightages(loadedWeightage);
 
-        // 4. Fetch CCE Marks
+        // 4. Fetch CCE Marks (Medium-aware)
         const exams = ["test1", "test2", "semester1", "test3", "test4", "semester2"];
         const marksData: Record<string, any> = {};
         for (const ex of exams) {
-          const mSnap = await getDoc(doc(db, "cce_marks_v2", `${currentClass}_${academicYear}_${ex}`));
-          marksData[ex] = mSnap.exists() ? mSnap.data().records || {} : {};
+          let recs: any = {};
+          const candidateDocIds = [
+            medium === "semi" ? `${currentClass}_${medium}_${academicYear}_${ex}` : null,
+            teacherId && medium === "semi" ? `${teacherId}_${currentClass}_${medium}_${academicYear}_${ex}` : null,
+            teacherId ? `${teacherId}_${currentClass}_${academicYear}_${ex}` : null,
+            `${currentClass}_${academicYear}_${ex}`,
+          ].filter(Boolean) as string[];
+
+          for (const dId of candidateDocIds) {
+            try {
+              const mSnap = await getDoc(doc(db, "cce_marks_v2", dId));
+              if (mSnap.exists() && (mSnap.data().records || mSnap.data().marksData)) {
+                recs = mSnap.data().records || mSnap.data().marksData || {};
+                break;
+              }
+            } catch (e) {}
+          }
+          marksData[ex] = recs;
         }
         setAllMarks(marksData);
 
@@ -223,7 +241,7 @@ export function useCCEPdfData(currentClass: string, academicYear: string, medium
       }
     };
     loadAllData();
-  }, [currentClass, academicYear]);
+  }, [currentClass, academicYear, medium]);
 
   const dataBundle: CCEDataBundle = {
     students,

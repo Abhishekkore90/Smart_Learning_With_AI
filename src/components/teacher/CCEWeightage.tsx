@@ -249,12 +249,15 @@ function WeightageInput({
 export function CCEWeightage({
   selectedClass,
   academicYear,
+  selectedMedium: propMedium,
   onBack,
 }: {
   selectedClass: string;
   academicYear: string;
+  selectedMedium?: string;
   onBack: () => void;
 }) {
+  const selectedMedium = propMedium || localStorage.getItem("cce_selected_medium") || "marathi";
   const [data, setData] = useState<WeightageData>({ semester1: [], semester2: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -262,49 +265,71 @@ export function CCEWeightage({
   const [editingItem, setEditingItem] = useState<WeightageItem | null>(null);
   const [subjectIndex, setSubjectIndex] = useState(0);
   const [students, setStudents] = useState<{ id: string; name: string; rollNo: string }[]>([]);
-  const [dynamicSubjects, setDynamicSubjects] = useState<string[]>(() => deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass), selectedClass));
+  const [dynamicSubjects, setDynamicSubjects] = useState<string[]>(() => deduplicateAndNormalizeSubjects(getDefaultSubjectsForClass(selectedClass, selectedMedium), selectedClass));
 
   // Instant cache & real-time sync for subjects from CCESubjectConfig
   useEffect(() => {
     try {
-      const cached = localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}`);
+      const cached = localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}_${selectedMedium}`) ||
+                     localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}`);
       if (cached) {
         setDynamicSubjects(deduplicateAndNormalizeSubjects(JSON.parse(cached), selectedClass));
       }
     } catch (e) { }
 
-    const unsubSettings = onSnapshot(doc(db, "cce_settings", `${selectedClass}_${academicYear}`), (snap) => {
+    const settingDocId = selectedMedium === "semi" ? `${selectedClass}_${academicYear}_${selectedMedium}` : `${selectedClass}_${academicYear}`;
+    const unsubSettings = onSnapshot(doc(db, "cce_settings", settingDocId), (snap) => {
       if (snap.exists() && snap.data().subjects) {
         const subs = snap.data().subjects;
         const cleanSubs = deduplicateAndNormalizeSubjects(subs, selectedClass);
         setDynamicSubjects(cleanSubs);
-        localStorage.setItem(`cce_subjects_${selectedClass}_${academicYear}`, JSON.stringify(cleanSubs));
+        localStorage.setItem(`cce_subjects_${selectedClass}_${academicYear}_${selectedMedium}`, JSON.stringify(cleanSubs));
       }
     });
     return () => unsubSettings();
-  }, [selectedClass, academicYear]);
+  }, [selectedClass, academicYear, selectedMedium]);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
         let loadedSubjects = deduplicateAndNormalizeSubjects(dynamicSubjects, selectedClass);
-        const settingsRef = doc(db, "cce_settings", `${selectedClass}_${academicYear}`);
-        const settingsSnap = await getDoc(settingsRef);
-        if (settingsSnap.exists() && settingsSnap.data().subjects) {
-          loadedSubjects = deduplicateAndNormalizeSubjects(settingsSnap.data().subjects, selectedClass);
-          setDynamicSubjects(loadedSubjects);
-        } else {
-          setDynamicSubjects(loadedSubjects);
+        const settingDocIds = [
+          selectedMedium === "semi" ? `${selectedClass}_${academicYear}_${selectedMedium}` : null,
+          `${selectedClass}_${academicYear}`,
+        ].filter(Boolean) as string[];
+
+        for (const sId of settingDocIds) {
+          try {
+            const settingsSnap = await getDoc(doc(db, "cce_settings", sId));
+            if (settingsSnap.exists() && settingsSnap.data().subjects) {
+              loadedSubjects = deduplicateAndNormalizeSubjects(settingsSnap.data().subjects, selectedClass);
+              setDynamicSubjects(loadedSubjects);
+              break;
+            }
+          } catch (e) {}
         }
 
         const teacherId = getTeacherId();
-        let snap = await getDoc(doc(db, "cce_weightage_v2", `${teacherId}_${selectedClass}_${academicYear}`));
-        if (!snap.exists()) {
-          snap = await getDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`));
+        const weightageDocIds = [
+          teacherId && selectedMedium === "semi" ? `${teacherId}_${selectedClass}_${selectedMedium}_${academicYear}` : null,
+          selectedMedium === "semi" ? `${selectedClass}_${selectedMedium}_${academicYear}` : null,
+          teacherId ? `${teacherId}_${selectedClass}_${academicYear}` : null,
+          `${selectedClass}_${academicYear}`,
+        ].filter(Boolean) as string[];
+
+        let snap: any = null;
+        for (const wId of weightageDocIds) {
+          try {
+            const s = await getDoc(doc(db, "cce_weightage_v2", wId));
+            if (s.exists() && (s.data().data || s.data().semester1)) {
+              snap = s;
+              break;
+            }
+          } catch (e) {}
         }
 
-        if (snap.exists()) {
+        if (snap && snap.exists()) {
           const docData = snap.data();
           const loadedData = (docData.data || docData) as WeightageData;
           const sem1 = (loadedData.semester1 || docData.semester1 || []).map((i: WeightageItem) =>
@@ -358,7 +383,7 @@ export function CCEWeightage({
       setLoading(false);
     };
     load();
-  }, [selectedClass, academicYear]);
+  }, [selectedClass, academicYear, selectedMedium]);
 
   useEffect(() => {
     const q = query(
@@ -413,10 +438,13 @@ export function CCEWeightage({
     setSaving(true);
     try {
       const teacherId = getTeacherId();
-      const docKey = teacherId ? `${teacherId}_${selectedClass}_${academicYear}` : `${selectedClass}_${academicYear}`;
-      const generalKey = `${selectedClass}_${academicYear}`;
+      const docKey = teacherId
+        ? (selectedMedium === "semi" ? `${teacherId}_${selectedClass}_${selectedMedium}_${academicYear}` : `${teacherId}_${selectedClass}_${academicYear}`)
+        : (selectedMedium === "semi" ? `${selectedClass}_${selectedMedium}_${academicYear}` : `${selectedClass}_${academicYear}`);
+      const generalKey = selectedMedium === "semi" ? `${selectedClass}_${selectedMedium}_${academicYear}` : `${selectedClass}_${academicYear}`;
       const weightageDoc = {
         class: selectedClass,
+        medium: selectedMedium,
         academicYear,
         teacherId,
         data,
@@ -428,12 +456,18 @@ export function CCEWeightage({
       try {
         localStorage.setItem(`cce_weightage_cache_${docKey}`, JSON.stringify(data));
         localStorage.setItem(`cce_weightage_cache_${generalKey}`, JSON.stringify(data));
+        if (selectedMedium === "marathi") {
+          localStorage.setItem(`cce_weightage_cache_${selectedClass}_${academicYear}`, JSON.stringify(data));
+        }
         window.dispatchEvent(new Event("cce_weightage_updated"));
       } catch (e) { }
 
       await setDoc(doc(db, "cce_weightage_v2", docKey), weightageDoc, { merge: true });
       if (docKey !== generalKey) {
         await setDoc(doc(db, "cce_weightage_v2", generalKey), weightageDoc, { merge: true });
+      }
+      if (selectedMedium === "marathi" && generalKey !== `${selectedClass}_${academicYear}`) {
+        await setDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), weightageDoc, { merge: true });
       }
       toast.success("भारांश जतन झाला!");
     } catch (err: any) {
@@ -478,10 +512,13 @@ export function CCEWeightage({
 
   const saveWeightageDocs = async (updatedData: WeightageData) => {
     const teacherId = getTeacherId();
-    const docKey = teacherId ? `${teacherId}_${selectedClass}_${academicYear}` : `${selectedClass}_${academicYear}`;
-    const generalKey = `${selectedClass}_${academicYear}`;
+    const docKey = teacherId
+      ? (selectedMedium === "semi" ? `${teacherId}_${selectedClass}_${selectedMedium}_${academicYear}` : `${teacherId}_${selectedClass}_${academicYear}`)
+      : (selectedMedium === "semi" ? `${selectedClass}_${selectedMedium}_${academicYear}` : `${selectedClass}_${academicYear}`);
+    const generalKey = selectedMedium === "semi" ? `${selectedClass}_${selectedMedium}_${academicYear}` : `${selectedClass}_${academicYear}`;
     const docData = {
       class: selectedClass,
+      medium: selectedMedium,
       academicYear,
       data: updatedData,
       semester1: updatedData.semester1,
@@ -492,12 +529,18 @@ export function CCEWeightage({
     try {
       localStorage.setItem(`cce_weightage_cache_${docKey}`, JSON.stringify(updatedData));
       localStorage.setItem(`cce_weightage_cache_${generalKey}`, JSON.stringify(updatedData));
+      if (selectedMedium === "marathi") {
+        localStorage.setItem(`cce_weightage_cache_${selectedClass}_${academicYear}`, JSON.stringify(updatedData));
+      }
       window.dispatchEvent(new Event("cce_weightage_updated"));
     } catch (e) { }
 
     await setDoc(doc(db, "cce_weightage_v2", docKey), docData, { merge: true });
     if (docKey !== generalKey) {
       await setDoc(doc(db, "cce_weightage_v2", generalKey), docData, { merge: true });
+    }
+    if (selectedMedium === "marathi" && generalKey !== `${selectedClass}_${academicYear}`) {
+      await setDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), docData, { merge: true });
     }
   };
 

@@ -970,6 +970,7 @@ function TeacherResultsPage() {
               <CCEWeightage 
                 selectedClass={selectedClass} 
                 academicYear={academicYear} 
+                selectedMedium={selectedMedium}
                 onBack={() => navigate({ to: "/teacher/result", search: { tab: "dashboard" } as any })}
               />
             </motion.div>
@@ -1003,6 +1004,7 @@ function TeacherResultsPage() {
               <CCEOverallResult 
                 selectedClass={selectedClass} 
                 academicYear={academicYear} 
+                selectedMedium={selectedMedium}
                 onBack={() => navigate({ to: "/teacher/result", search: { tab: "dashboard" } as any })}
               />
             </motion.div>
