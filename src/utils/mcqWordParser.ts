@@ -69,65 +69,23 @@ export function parseMCQFromDOM(doc: Document, fileName?: string): ParsedMCQResu
   let detectedClass = "";
   let detectedMedium: "marathi" | "semi" = "marathi";
 
-  // 1. Parse Answer Key from Tables (उत्तरसूची तक्ता)
+  // 1. Parse Answer Key from Tables or Blocks
   const answerKeyMap: Record<string, number> = {};
-  const tables = Array.from(doc.querySelectorAll("table"));
-
-  for (const table of tables) {
-    const text = table.textContent || "";
-    const prevEl = table.previousElementSibling;
-    const isAnswerTable =
-      (prevEl && prevEl.textContent?.includes("उत्तर")) ||
-      text.includes("उत्तरसूची") ||
-      text.includes("विषय / प्रश्न") ||
-      (text.includes("मराठी") && (text.includes("गणित") || text.includes("इंग्रजी")));
-
-    if (isAnswerTable) {
-      const rows = Array.from(table.querySelectorAll("tr"));
-      for (const row of rows) {
-        const cells = Array.from(row.querySelectorAll("td, th")).map((c) => (c.textContent || "").trim());
-        if (cells.length > 2) {
-          const firstCell = cells[0];
-          // Skip header row if it only has numbers or "विषय / प्रश्न"
-          if (firstCell.includes("विषय") || firstCell.includes("प्रश्न") || /^[0-9०-९]+$/.test(firstCell)) {
-            continue;
-          }
-
-          const subject = firstCell.replace(/[^a-zA-Z\u0900-\u097F\s()]/g, "").trim();
-
-          for (let col = 1; col < cells.length; col++) {
-            const rawVal = toWesternNum(cells[col]).trim();
-            const valNum = parseInt(rawVal, 10);
-            if (!isNaN(valNum) && valNum >= 1 && valNum <= 4) {
-              answerKeyMap[`${subject}_${col}`] = valNum - 1;
-              answerKeyMap[`col_${col}`] = valNum - 1;
-            }
-          }
-        }
-      }
-    }
-  }
 
   // 2. Extract linear blocks: headings, paragraphs, and non-answer table cells
-  const blocks: string[] = [];
+  const allBlocks: string[] = [];
 
   function collectBlocks(node: Element) {
     if (!node) return;
 
     if (node.tagName === "TABLE") {
-      const text = node.textContent || "";
-      if (text.includes("उत्तरसूची") || text.includes("विषय / प्रश्न")) {
-        return; // Skip answer key table from question flow
-      }
-
-      // If it's a content table (e.g. 2x2 options grid), process row by row
       const rows = Array.from(node.querySelectorAll("tr"));
       for (const row of rows) {
         const cellTexts = Array.from(row.querySelectorAll("td, th"))
           .map((td) => (td.textContent || "").trim())
           .filter(Boolean);
         if (cellTexts.length > 0) {
-          blocks.push(cellTexts.join("    "));
+          allBlocks.push("| " + cellTexts.join(" | ") + " |");
         }
       }
       return;
@@ -135,7 +93,7 @@ export function parseMCQFromDOM(doc: Document, fileName?: string): ParsedMCQResu
 
     if (["P", "H1", "H2", "H3", "H4", "LI"].includes(node.tagName)) {
       const t = (node.textContent || "").trim();
-      if (t) blocks.push(t);
+      if (t) allBlocks.push(t);
       return;
     }
 
@@ -145,6 +103,57 @@ export function parseMCQFromDOM(doc: Document, fileName?: string): ParsedMCQResu
   }
 
   collectBlocks(doc.body);
+
+  // Separate question blocks from answer key blocks
+  let inAnswerKeyMode = false;
+  const blocks: string[] = [];
+  const answerKeyBlocks: string[] = [];
+
+  for (const b of allBlocks) {
+    if (/^(?:\|?\s*(?:उत्तरसूची|उत्तरपत्रिका|Answer\s*Key)\s*\|?)/i.test(b)) {
+      inAnswerKeyMode = true;
+      continue;
+    }
+    if (inAnswerKeyMode) {
+      answerKeyBlocks.push(b);
+    } else {
+      blocks.push(b);
+    }
+  }
+
+  // Parse Answer Key from both blocks and any tables
+  for (const aLine of answerKeyBlocks) {
+    if (aLine.includes("|")) {
+      const cells = aLine.split("|").map((c) => c.trim()).filter(Boolean);
+      if (cells.length > 2) {
+        const subjectName = cells[0].replace(/[^a-zA-Z\u0900-\u097F]/g, "").trim();
+        if (subjectName.includes("विषय") || subjectName.includes("प्रश्न")) continue;
+
+        for (let colIdx = 1; colIdx < cells.length; colIdx++) {
+          const val = toWesternNum(cells[colIdx]).trim();
+          const optNum = parseInt(val, 10);
+          if (!isNaN(optNum) && optNum >= 1 && optNum <= 4) {
+            answerKeyMap[`${subjectName}_${colIdx}`] = optNum - 1;
+          }
+        }
+      }
+    } else {
+      const matches = aLine.matchAll(/(?:([0-9०-९]+)[\s:.\-\)]+([1-4१-४A-Da-dअ-ड]))/g);
+      for (const m of matches) {
+        const qNum = parseInt(toWesternNum(m[1]), 10);
+        const rawAns = toWesternNum(m[2]);
+        let optIdx = 0;
+        if (/[1-4]/.test(rawAns)) optIdx = parseInt(rawAns, 10) - 1;
+        else if (/[A-Da-d]/.test(rawAns)) optIdx = rawAns.toUpperCase().charCodeAt(0) - 65;
+        else if (rawAns === "अ") optIdx = 0;
+        else if (rawAns === "ब") optIdx = 1;
+        else if (rawAns === "क") optIdx = 2;
+        else if (rawAns === "ड") optIdx = 3;
+
+        answerKeyMap[`q_${qNum}`] = optIdx;
+      }
+    }
+  }
 
   // 3. Process blocks into Questions
   const questions: (MCQQuestion & { section?: string; qNumber?: number })[] = [];
@@ -161,14 +170,26 @@ export function parseMCQFromDOM(doc: Document, fileName?: string): ParsedMCQResu
       currentQ.options = currentQ.options.slice(0, 4);
 
       if (currentQ.correctIndex === undefined || currentQ.correctIndex < 0 || currentQ.correctIndex > 3) {
-        const bySubject = answerKeyMap[`${currentQ.section}_${currentQ.qNumber}`];
-        const byCol = answerKeyMap[`col_${currentQ.qNumber}`];
-        const byQNum = answerKeyMap[`q_${currentQ.qNumber}`];
-
-        if (bySubject !== undefined) currentQ.correctIndex = bySubject;
-        else if (byCol !== undefined) currentQ.correctIndex = byCol;
-        else if (byQNum !== undefined) currentQ.correctIndex = byQNum;
-        else currentQ.correctIndex = 0;
+        const cleanSec = (currentQ.section || "").replace(/[^a-zA-Z\u0900-\u097F]/g, "").trim();
+        let matchedAns = answerKeyMap[`${currentQ.section}_${currentQ.qNumber}`];
+        if (matchedAns === undefined) {
+          matchedAns = answerKeyMap[`${cleanSec}_${currentQ.qNumber}`];
+        }
+        if (matchedAns === undefined) {
+          for (const k of Object.keys(answerKeyMap)) {
+            if (k.endsWith(`_${currentQ.qNumber}`)) {
+              const sub = k.split("_")[0];
+              if (cleanSec.includes(sub) || sub.includes(cleanSec)) {
+                matchedAns = answerKeyMap[k];
+                break;
+              }
+            }
+          }
+        }
+        if (matchedAns === undefined) {
+          matchedAns = answerKeyMap[`q_${currentQ.qNumber}`];
+        }
+        currentQ.correctIndex = matchedAns !== undefined ? matchedAns : 0;
       }
 
       const qItem: MCQQuestion = {
@@ -402,14 +423,26 @@ export function parseMCQRawText(rawText: string, fileName?: string): ParsedMCQRe
       currentQ.options = currentQ.options.slice(0, 4);
 
       if (currentQ.correctIndex === undefined || currentQ.correctIndex < 0 || currentQ.correctIndex > 3) {
-        const bySubject = answerKeyMap[`${currentQ.section}_${currentQ.qNumber}`];
-        const byCol = answerKeyMap[`col_${currentQ.qNumber}`];
-        const byQNum = answerKeyMap[`q_${currentQ.qNumber}`];
-
-        if (bySubject !== undefined) currentQ.correctIndex = bySubject;
-        else if (byCol !== undefined) currentQ.correctIndex = byCol;
-        else if (byQNum !== undefined) currentQ.correctIndex = byQNum;
-        else currentQ.correctIndex = 0;
+        const cleanSec = (currentQ.section || "").replace(/[^a-zA-Z\u0900-\u097F]/g, "").trim();
+        let matchedAns = answerKeyMap[`${currentQ.section}_${currentQ.qNumber}`];
+        if (matchedAns === undefined) {
+          matchedAns = answerKeyMap[`${cleanSec}_${currentQ.qNumber}`];
+        }
+        if (matchedAns === undefined) {
+          for (const k of Object.keys(answerKeyMap)) {
+            if (k.endsWith(`_${currentQ.qNumber}`)) {
+              const sub = k.split("_")[0];
+              if (cleanSec.includes(sub) || sub.includes(cleanSec)) {
+                matchedAns = answerKeyMap[k];
+                break;
+              }
+            }
+          }
+        }
+        if (matchedAns === undefined) {
+          matchedAns = answerKeyMap[`q_${currentQ.qNumber}`];
+        }
+        currentQ.correctIndex = matchedAns !== undefined ? matchedAns : 0;
       }
 
       const qItem: MCQQuestion = {
@@ -521,46 +554,48 @@ export async function parseMCQWordFile(file: File): Promise<ParsedMCQResult> {
   const arrayBuffer = await file.arrayBuffer();
   const mammoth = await import("mammoth");
 
-  // 1. Try HTML conversion first (DOM parser handles tables & answer keys accurately)
-  let html = "";
+  let htmlResult: any = null;
+  let textResult: any = null;
+
   try {
-    const htmlResult = await mammoth.convertToHtml({ arrayBuffer });
-    html = htmlResult.value || "";
+    htmlResult = await mammoth.convertToHtml({ arrayBuffer });
   } catch (err) {
     console.warn("mammoth convertToHtml failed", err);
   }
 
-  // 2. Try raw text extraction as fallback
-  let rawText = "";
   try {
-    const textResult = await mammoth.extractRawText({ arrayBuffer });
-    rawText = textResult.value || "";
+    textResult = await mammoth.extractRawText({ arrayBuffer });
   } catch (err) {
     console.warn("mammoth extractRawText failed", err);
   }
 
-  // Run DOM parser if in browser and html exists
-  if (html && typeof window !== "undefined" && typeof DOMParser !== "undefined") {
+  let fromDOM: ParsedMCQResult | null = null;
+  if (htmlResult?.value && typeof window !== "undefined" && typeof DOMParser !== "undefined") {
     try {
-      const dom = new DOMParser().parseFromString(html, "text/html");
-      const htmlRes = parseMCQFromDOM(dom, file.name);
-      if (htmlRes.questions.length > 0) {
-        return htmlRes;
-      }
+      const dom = new DOMParser().parseFromString(htmlResult.value, "text/html");
+      fromDOM = parseMCQFromDOM(dom, file.name);
     } catch (e) {
-      console.warn("DOM parsing error, falling back to raw text:", e);
+      console.warn("DOM parsing error", e);
     }
   }
 
-  // Fallback to raw text parser
-  if (rawText.trim()) {
-    const textRes = parseMCQRawText(rawText, file.name);
-    if (textRes.questions.length > 0) {
-      return textRes;
+  let fromText: ParsedMCQResult | null = null;
+  if (textResult?.value) {
+    try {
+      fromText = parseMCQRawText(textResult.value, file.name);
+    } catch (e) {
+      console.warn("Raw text parsing error", e);
     }
   }
 
-  throw new Error("Word फाईलमधून प्रश्न ओळखता आले नाहीत. कृपया प्रश्नांचे फॉरमॅट 1), 2) आणि पर्यायांचे फॉरमॅट (1), (2), (3), (4) असल्याची खात्री करा.");
+  // Pick whichever result fetched more questions
+  if (fromDOM && fromText) {
+    return fromText.questions.length > fromDOM.questions.length ? fromText : fromDOM;
+  }
+  if (fromDOM && fromDOM.questions.length > 0) return fromDOM;
+  if (fromText && fromText.questions.length > 0) return fromText;
+
+  throw new Error("Word फाईलमधून प्रश्न ओळखता आले नाहीत. कृपया फॉरमॅट तपासा.");
 }
 
 /**

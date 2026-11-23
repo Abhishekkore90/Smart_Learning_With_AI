@@ -13,7 +13,6 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import type { MCQHomeworkSet, MCQQuestion, LocalMCQSubmission } from "@/types/mcqHomework";
-import { SEED_MCQ_HOMEWORK } from "@/data/seedMCQHomework";
 
 const COLLECTION_NAME = "mcq_homework";
 
@@ -111,34 +110,61 @@ export async function updateMCQHomeworkShareDetails(
   }
 }
 
+const DELETED_MCQ_KEY = "mcq_deleted_quiz_ids";
+
+export function getDeletedMCQIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(DELETED_MCQ_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+export function markMCQAsDeleted(id: string): void {
+  if (typeof window === "undefined" || !id) return;
+  try {
+    const set = getDeletedMCQIds();
+    set.add(id);
+    localStorage.setItem(DELETED_MCQ_KEY, JSON.stringify(Array.from(set)));
+  } catch (e) {
+    console.warn("Failed to save deleted MCQ ID to localStorage:", e);
+  }
+}
+
 /**
- * Deletes an MCQ Homework Set
+ * Deletes an MCQ Homework Set (from Firestore database, localStorage blacklist, and local caches)
  */
 export async function deleteMCQHomework(id: string): Promise<void> {
-  const docRef = doc(db, COLLECTION_NAME, id);
-  await deleteDoc(docRef);
+  if (!id) return;
+  markMCQAsDeleted(id);
+  clearLocalQuizData(id);
+  try {
+    const docRef = doc(db, COLLECTION_NAME, id);
+    await deleteDoc(docRef);
+  } catch (err) {
+    console.warn("Firestore delete notice (document may have been seed or already removed):", err);
+  }
 }
 
 /**
  * Fetches a single MCQ Homework Set by ID (supports public access without auth)
  */
 export async function getMCQHomeworkById(id: string): Promise<MCQHomeworkSet | null> {
-  if (id.startsWith("seed_")) {
-    const seed = SEED_MCQ_HOMEWORK.find((s) => s.id === id);
-    if (seed) return seed;
+  if (getDeletedMCQIds().has(id)) {
+    return null;
   }
   try {
     const docRef = doc(db, COLLECTION_NAME, id);
     const snap = await getDoc(docRef);
     if (!snap.exists()) {
-      const seed = SEED_MCQ_HOMEWORK.find((s) => s.id === id);
-      return seed || null;
+      return null;
     }
     return normalizeMCQHomework(snap.id, snap.data());
   } catch (err) {
     console.error("Error fetching MCQ homework by ID:", err);
-    const seed = SEED_MCQ_HOMEWORK.find((s) => s.id === id);
-    return seed || null;
+    return null;
   }
 }
 
@@ -154,9 +180,10 @@ export function subscribeToMCQHomework(
     return onSnapshot(
       q,
       (snapshot) => {
-        const items = snapshot.docs.map((docSnap) =>
-          normalizeMCQHomework(docSnap.id, docSnap.data())
-        );
+        const deleted = getDeletedMCQIds();
+        const items = snapshot.docs
+          .map((docSnap) => normalizeMCQHomework(docSnap.id, docSnap.data()))
+          .filter((item) => !deleted.has(item.id));
         callback(items);
       },
       (err) => {
@@ -165,8 +192,10 @@ export function subscribeToMCQHomework(
         return onSnapshot(
           fallbackQ,
           (snapshot) => {
+            const deleted = getDeletedMCQIds();
             const items = snapshot.docs
               .map((docSnap) => normalizeMCQHomework(docSnap.id, docSnap.data()))
+              .filter((item) => !deleted.has(item.id))
               .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
             callback(items);
           },

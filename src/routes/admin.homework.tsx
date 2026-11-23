@@ -209,6 +209,23 @@ function AdminHomeworkPage() {
   const currentClassObj = CLASS_OPTIONS.find((c) => c.id === selectedClass);
   const currentMediumObj = MEDIUM_OPTIONS.find((m) => m.id === selectedMedium);
 
+  // Filter for Calendar View: matches class, medium, subject, search (date-based filtering and dots handled by calendar)
+  const classHomework = useMemo(() => {
+    return homeworkList.filter((item) => {
+      const matchMedium = item.medium === selectedMedium;
+      const matchClass = item.class === selectedClass;
+      const matchSubject =
+        !selectedSubject ||
+        item.subject?.trim().toLowerCase() === selectedSubject.trim().toLowerCase();
+      const matchSearch =
+        !searchTerm ||
+        item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.subject?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchMedium && matchClass && matchSubject && matchSearch;
+    });
+  }, [homeworkList, selectedMedium, selectedClass, selectedSubject, searchTerm]);
+
   // Filter ONLY what matches selected medium, class, subject filter, date filter, and search
   const filteredHomework = useMemo(() => {
     return homeworkList.filter((item) => {
@@ -579,6 +596,7 @@ function AdminHomeworkPage() {
                 {previewTab === "doc" && (activeHomework.fileUrl || activeHomework.wordFileUrl) ? (
                   isWordHomework(activeHomework) ? (
                     <WordQuestionPaperEditor
+                      key={`${activeHomework.id}_${activeHomework.homeworkDate || calendarDate}`}
                       fileUrl={activeHomework.wordFileUrl || activeHomework.fileUrl}
                       file={selectedFile && (activeHomework.fileName === selectedFile.name || activeHomework.wordFileName === selectedFile.name) ? selectedFile : null}
                       paperTitle={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate || "दैनिक"})`}
@@ -587,6 +605,8 @@ function AdminHomeworkPage() {
                       userId="super_admin"
                       userRole="admin"
                       documentType="homework"
+                      homeworkDate={activeHomework.homeworkDate || calendarDate}
+                      homeworkClass={activeHomework.class || selectedClass}
                       onClose={() => setActiveHomework(null)}
                     />
                   ) : (
@@ -984,11 +1004,10 @@ function AdminHomeworkPage() {
                     {/* CALENDAR VIEW */}
                     {viewMode === "calendar" && (
                       <DailyHomeworkCalendar
-                        homeworkList={filteredHomework}
+                        homeworkList={classHomework}
                         selectedDate={calendarDate}
                         onSelectDate={(d) => {
                           setCalendarDate(d);
-                          setFilterDate(d);
                         }}
                         onPreviewHomework={(item) => setActiveHomework(item)}
                         onUploadForDate={(d) => handleOpenAddModal(d)}

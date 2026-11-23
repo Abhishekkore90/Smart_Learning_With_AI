@@ -17,6 +17,7 @@ import {
   Trash2,
   Calendar,
   GraduationCap,
+  ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -26,11 +27,12 @@ import {
   getMCQHomeworkById,
   subscribeToMCQHomework,
   deleteMCQHomework,
+  getDeletedMCQIds,
 } from "@/services/mcqHomeworkService";
 import { MCQQuizPlayer } from "./MCQQuizPlayer";
 import { MCQCreatorModal } from "./MCQCreatorModal";
 import { MCQHomeworkCalendar } from "./MCQHomeworkCalendar";
-import { SEED_MCQ_HOMEWORK } from "@/data/seedMCQHomework";
+import { MCQAdminDashboard } from "./MCQAdminDashboard";
 
 const CLASS_LIST = [
   { id: "1st", mr: "१ ली", en: "1st" },
@@ -64,6 +66,8 @@ export interface MCQHomeworkSectionProps {
   defaultRole?: "teacher" | "student" | "admin" | "user";
   userName?: string;
   initialClass?: string;
+  onClassChange?: (classId: string) => void;
+  onBackStep?: () => void;
   initialSubject?: string;
   initialQuizId?: string;
   sharedTeacherName?: string;
@@ -78,6 +82,8 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
   defaultRole = "teacher",
   userName = "शिक्षक / प्रशासन",
   initialClass = "1st",
+  onClassChange,
+  onBackStep,
   initialSubject = "all",
   initialQuizId,
   sharedTeacherName,
@@ -152,17 +158,13 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
     return d.toISOString().split("T")[0];
   }, []);
 
-  // Combine Firestore quizzes with SEED_MCQ_HOMEWORK
+  // Deleted quiz IDs blacklist (persisted in localStorage)
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(() => getDeletedMCQIds());
+
+  // Only authentic quizzes from Firestore (excluding any deleted quizzes; demo questions removed)
   const allQuizzes = useMemo(() => {
-    const existingIds = new Set(quizzes.map((q) => q.id));
-    const combined = [...quizzes];
-    for (const seed of SEED_MCQ_HOMEWORK) {
-      if (!existingIds.has(seed.id)) {
-        combined.push(seed);
-      }
-    }
-    return combined;
-  }, [quizzes]);
+    return quizzes.filter((q) => !deletedIds.has(q.id));
+  }, [quizzes, deletedIds]);
 
   // Quizzes count per class (for badges on class pills)
   const countByClass = useMemo(() => {
@@ -271,6 +273,10 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
   const handleDeleteQuiz = async (quizId: string, title: string) => {
     if (!window.confirm(`"${title}" हा स्वाध्याय नक्की हटवायचा आहे का?`)) return;
     try {
+      // Immediate optimistic removal so the card vanishes right away
+      setDeletedIds((prev) => new Set([...prev, quizId]));
+      setQuizzes((prev) => prev.filter((q) => q.id !== quizId));
+
       await deleteMCQHomework(quizId);
       toast.success("स्वाध्याय यशस्वीपणे हटवला!");
     } catch (err: any) {
@@ -363,38 +369,78 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
 
           {/* Embedded Mini Header for Class-wise Homework Integration */}
           {embedded && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 dark:from-purple-950/40 dark:via-indigo-950/40 dark:to-pink-950/40 p-4 rounded-2xl border border-purple-200 dark:border-purple-800/60 shadow-xs">
-              <div className="flex items-center gap-2">
-                <div className="size-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                  <GraduationCap className="size-5" />
+            <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 dark:from-purple-950/40 dark:via-indigo-950/40 dark:to-pink-950/40 p-4 rounded-2xl border border-purple-200 dark:border-purple-800/60 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  {onBackStep && (
+                    <button
+                      type="button"
+                      onClick={onBackStep}
+                      className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer flex items-center gap-1 active:scale-95 transition-all"
+                      title="मागील पायरीवर जा (Go Back)"
+                    >
+                      <ChevronLeft className="size-4 text-purple-600" />
+                      <span>मागे जा (Back)</span>
+                    </button>
+                  )}
+                  <div className="size-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <GraduationCap className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+                      <span>इयत्तानिहाय ऑनलाईन MCQ स्वाध्याय</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-600 text-white font-bold">
+                        {CLASS_LIST.find((c) => c.id === selectedClass)?.mr || selectedClass}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">
+                      या इयत्तेचे प्रश्न सोडवा किंवा स्वतः तयार करून WhatsApp द्वारे थेट विद्यार्थ्यांना पाठवा.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
-                    <span>इयत्तानिहाय ऑनलाईन MCQ स्वाध्याय</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-600 text-white font-bold">
-                      {CLASS_LIST.find((c) => c.id === selectedClass)?.mr || selectedClass}
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-500 font-medium">
-                    या इयत्तेचे प्रश्न सोडवा किंवा स्वतः तयार करून WhatsApp द्वारे थेट विद्यार्थ्यांना पाठवा.
-                  </p>
+
+                {/* Subject Filter inside embedded mode */}
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">विषय:</span>
+                  <select
+                    value={selectedSubject}
+                    onChange={(e) => setSelectedSubject(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-xs"
+                  >
+                    {SUBJECTS.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              {/* Subject Filter inside embedded mode */}
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">विषय:</span>
-                <select
-                  value={selectedSubject}
-                  onChange={(e) => setSelectedSubject(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-xs"
-                >
-                  {SUBJECTS.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
+              {/* Quick Class Switcher Tabs inside embedded mode */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none border-t border-purple-200/60 dark:border-purple-800/40">
+                <span className="text-[11px] font-black text-slate-500 uppercase shrink-0 mr-1">
+                  इयत्ता बदला:
+                </span>
+                {CLASS_LIST.map((cls) => {
+                  const isSelected = selectedClass === cls.id;
+                  return (
+                    <button
+                      key={cls.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedClass(cls.id);
+                        onClassChange?.(cls.id);
+                      }}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-purple-600 text-white shadow-xs font-black scale-102"
+                          : "bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-white"
+                      }`}
+                    >
+                      इ. {cls.mr}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -573,15 +619,31 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
             </div>
           </div>
 
-          {/* Date-wise MCQ Questions via Calendar */}
+          {/* Admin Panel vs Teacher/Student Panel */}
           {loadingList ? (
             <div className="flex justify-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs">
               <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
             </div>
+          ) : defaultRole === "admin" && activeSubTab === "admin" ? (
+            <MCQAdminDashboard
+              quizzes={adminQuizzes}
+              selectedClass={selectedClass}
+              onSelectClass={setSelectedClass}
+              selectedMedium={selectedMedium}
+              selectedSubject={selectedSubject}
+              selectedDate={selectedDate}
+              onSelectDate={handleDateSelect}
+              onOpenManualCreator={(d) => {
+                if (d) setSelectedDate(d);
+                setCreatorModalMode("admin");
+              }}
+              onDeleteQuiz={handleDeleteQuiz}
+              userName={userName}
+            />
           ) : (
             <MCQHomeworkCalendar
               quizzes={currentTabQuizzes}
-              selectedDate={selectedDate !== "all" ? selectedDate : todayStr}
+              selectedDate={selectedDate}
               onSelectDate={handleDateSelect}
               onTakeQuiz={(id) => setActiveQuizId(id)}
               defaultRole={defaultRole}

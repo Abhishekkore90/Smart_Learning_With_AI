@@ -187,6 +187,7 @@ function StudentHomeworkPage() {
               {previewTab === "doc" && (activeHomework.fileUrl || activeHomework.wordFileUrl) ? (
                 isWordHomework(activeHomework) ? (
                   <WordQuestionPaperEditor
+                    key={`${activeHomework.id}_${activeHomework.homeworkDate}`}
                     fileUrl={activeHomework.wordFileUrl || activeHomework.fileUrl}
                     paperTitle={`${activeHomework.title} — ${activeHomework.class} (${activeHomework.homeworkDate})`}
                     paperId={activeHomework.id}
@@ -194,6 +195,8 @@ function StudentHomeworkPage() {
                     userId={user?.uid || "student_user"}
                     userRole={profile?.role || "student"}
                     documentType="homework"
+                    homeworkDate={activeHomework.homeworkDate}
+                    homeworkClass={activeHomework.class}
                     onClose={() => setActiveHomework(null)}
                   />
                 ) : (

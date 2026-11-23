@@ -31,6 +31,7 @@ import {
   formatHomeworkFileName,
   addCanvasPagesToPdf,
   addHomeworkFooterLinksToPdf,
+  formatHomeworkDateToMarathi,
   HOMEWORK_WHATSAPP_LINK,
   HOMEWORK_WEBSITE_URL,
   HOMEWORK_WEBSITE_LABEL,
@@ -699,36 +700,17 @@ export function DailyHomeworkTemplate({
 
 function getMarathiWeekday(dateStr: string): string {
   try {
-    const d = new Date(dateStr);
-    const day = d.getDay();
-    const days = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
-    return days[day] || "बुधवार";
+    const { dayOfWeek } = formatHomeworkDateToMarathi(dateStr);
+    return dayOfWeek;
   } catch {
-    return "बुधवार";
+    return "सोमवार";
   }
 }
 
 function formatMarathiDate(dateStr: string): string {
   try {
-    const d = new Date(dateStr);
-    const day = d.getDate();
-    const months = [
-      "जानेवारी",
-      "फेब्रुवारी",
-      "मार्च",
-      "एप्रिल",
-      "मे",
-      "जून",
-      "जुलै",
-      "ऑगस्ट",
-      "सप्टेंबर",
-      "ऑक्टोबर",
-      "नोव्हेंबर",
-      "डिसेंबर",
-    ];
-    const month = months[d.getMonth()];
-    const year = d.getFullYear();
-    return `${day} ${month} ${year}`;
+    const { dateStr: formatted } = formatHomeworkDateToMarathi(dateStr);
+    return formatted;
   } catch {
     return dateStr;
   }

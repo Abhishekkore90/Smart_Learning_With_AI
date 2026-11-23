@@ -320,15 +320,34 @@ function HomeworkPage() {
 
       <main className="pt-20 pb-16 px-3 sm:px-6 max-w-7xl mx-auto space-y-6">
         <ModulePaywall moduleId="homework" defaultTitle="दैनिक गृहपाठ (Daily Homework)">
-          {/* Back to Dashboard Button */}
-          <div className="no-print">
-            <Link
-              to="/teacher"
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
-            >
-              <ArrowLeft className="size-4 text-indigo-600" />
-              <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
-            </Link>
+          {/* Back Navigation Bar: Go One Step Back + Back to Main Dashboard */}
+          <div className="no-print flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {step !== "medium" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (step === "list") setStep("class");
+                    else if (step === "class") setStep("medium");
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all shadow-md cursor-pointer active:scale-95 shrink-0 border border-purple-500"
+                  title="एक पायरी मागे जा (Go One Step Back)"
+                >
+                  <ArrowLeft className="size-4" />
+                  <span>
+                    ← एक पायरी मागे जा ({step === "list" ? "इयत्ता निवडीवर जा" : "माध्यम निवडीवर जा"})
+                  </span>
+                </button>
+              )}
+
+              <Link
+                to="/teacher"
+                className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+              >
+                <ArrowLeft className="size-4 text-indigo-600" />
+                <span>मुख्य डॅशबोर्ड (Main Dashboard)</span>
+              </Link>
+            </div>
           </div>
 
           {/* SECTION 1: Clean Header with only Information Fill Option */}
@@ -523,11 +542,13 @@ function HomeworkPage() {
                           </div>
 
                           <button
+                            type="button"
                             onClick={() => setStep("class")}
-                            className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer flex items-center gap-1.5 transition-all shadow-2xs active:scale-95"
+                            className="px-4 py-2 rounded-xl text-xs sm:text-sm font-black text-amber-950 bg-gradient-to-r from-amber-300 to-amber-400 hover:from-amber-400 hover:to-amber-500 cursor-pointer flex items-center gap-1.5 transition-all shadow-sm active:scale-95 border border-amber-400"
+                            title="मागील पायरीवर जा (इयत्ता बदला)"
                           >
-                            <ChevronLeft className="size-3.5" />
-                            <span>इयत्ता बदला (Change Class)</span>
+                            <ArrowLeft className="size-4" />
+                            <span>← मागे जा (इयत्ता बदला)</span>
                           </button>
                         </div>
                       </div>
@@ -611,6 +632,8 @@ function HomeworkPage() {
                           defaultRole="teacher"
                           userName={profile?.fullName || (profile as any)?.name || user?.displayName || "शिक्षक"}
                           initialClass={selectedClass || "1st"}
+                          onClassChange={(cls) => setSelectedClass(cls)}
+                          onBackStep={() => setStep("class")}
                           initialMedium={(selectedMedium as any) || "marathi"}
                           initialSubject={selectedSubject || "all"}
                           initialDate={calendarDate}
@@ -646,6 +669,7 @@ function HomeworkPage() {
                             <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[600px]">
                               {isWordHomework(currentHomework) ? (
                                 <WordQuestionPaperEditor
+                                  key={`${currentHomework.id}_${currentHomework.homeworkDate || calendarDate}`}
                                   fileUrl={currentHomework.wordFileUrl || currentHomework.fileUrl}
                                   paperTitle={`${currentHomework.title} — ${currentHomework.class} (${currentHomework.homeworkDate || "दैनिक"})`}
                                   paperId={currentHomework.id}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Save,
   Download,
@@ -176,9 +176,14 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
   const [hwKendra, setHwKendra] = useState("");
   const [hwTaluka, setHwTaluka] = useState("");
   const [hwDistrict, setHwDistrict] = useState("");
-  const [hwDayOfWeek, setHwDayOfWeek] = useState("शुक्रवार");
-  const [hwDateStr, setHwDateStr] = useState("१२ ऑक्टोबर २०२६");
-  const [hwClassName, setHwClassName] = useState("१ ली");
+
+  const initialDateInfo = useMemo(() => {
+    return formatHomeworkDateToMarathi(homeworkDate);
+  }, [homeworkDate]);
+
+  const [hwDayOfWeek, setHwDayOfWeek] = useState(() => initialDateInfo.dayOfWeek);
+  const [hwDateStr, setHwDateStr] = useState(() => initialDateInfo.dateStr);
+  const [hwClassName, setHwClassName] = useState(() => getMarathiClassLabel(homeworkClass));
   const [hwStudentName, setHwStudentName] = useState("");
   const [hwTeacherName, setHwTeacherName] = useState("");
   const [hwHeadmasterName, setHwHeadmasterName] = useState("");
@@ -219,35 +224,25 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       setHwTeacherName(hwProf.teacherName);
       setHwHeadmasterName(hwProf.headmasterName);
 
-      // Auto-inject into container if already rendered
-      if (documentType === "homework" && containerRef.current && containerRef.current.innerHTML.trim().length > 50) {
-        applyHomeworkHeaderInfo(false, hwProf);
-      }
-
       const today = new Date();
       const dd = String(today.getDate()).padStart(2, "0");
       const mm = String(today.getMonth() + 1).padStart(2, "0");
       const yyyy = today.getFullYear();
       setExamDateInput(`${dd}/${mm}/${yyyy}`);
 
-      // Set Marathi Day and Date from admin-uploaded homework date, or fallback to today
-      if (homeworkDate) {
-        const { dayOfWeek, dateStr } = formatHomeworkDateToMarathi(homeworkDate);
-        setHwDayOfWeek(dayOfWeek);
-        setHwDateStr(dateStr);
-      } else {
-        const marathiDays = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
-        const marathiMonths = [
-          "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून",
-          "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"
-        ];
-        setHwDayOfWeek(marathiDays[today.getDay()]);
-        setHwDateStr(`${today.getDate()} ${marathiMonths[today.getMonth()]} ${yyyy}`);
+      // Set Marathi Day and Date dynamically from admin-uploaded homework date, or fallback to today
+      const dateInfo = formatHomeworkDateToMarathi(homeworkDate);
+      setHwDayOfWeek(dateInfo.dayOfWeek);
+      setHwDateStr(dateInfo.dateStr);
+
+      const resolvedClassName = getMarathiClassLabel(homeworkClass);
+      if (homeworkClass) {
+        setHwClassName(resolvedClassName);
       }
 
-      // Set Marathi Class from admin-uploaded homework class
-      if (homeworkClass) {
-        setHwClassName(getMarathiClassLabel(homeworkClass));
+      // Auto-inject into container if already rendered
+      if (documentType === "homework" && containerRef.current && containerRef.current.innerHTML.trim().length > 50) {
+        applyHomeworkHeaderInfo(false, hwProf, dateInfo.dayOfWeek, dateInfo.dateStr, resolvedClassName);
       }
     } catch (e) {
       console.warn("Could not load initial school name:", e);
@@ -463,15 +458,17 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           } else {
             // For homework: auto-fit header and format teacher & headmaster signatures cleanly!
             const freshProf = getHomeworkHeaderProfile(userId);
-            applyHomeworkHeaderInfo(false, freshProf);
+            const dateInfo = formatHomeworkDateToMarathi(homeworkDate);
+            const curClass = getMarathiClassLabel(homeworkClass);
+            applyHomeworkHeaderInfo(false, freshProf, dateInfo.dayOfWeek, dateInfo.dateStr, curClass);
             setTimeout(() => {
-              applyHomeworkHeaderInfo(false, getHomeworkHeaderProfile(userId));
+              applyHomeworkHeaderInfo(false, getHomeworkHeaderProfile(userId), dateInfo.dayOfWeek, dateInfo.dateStr, curClass);
             }, 100);
             setTimeout(() => {
-              applyHomeworkHeaderInfo(false, getHomeworkHeaderProfile(userId));
+              applyHomeworkHeaderInfo(false, getHomeworkHeaderProfile(userId), dateInfo.dayOfWeek, dateInfo.dateStr, curClass);
             }, 350);
             setTimeout(() => {
-              applyHomeworkHeaderInfo(false, getHomeworkHeaderProfile(userId));
+              applyHomeworkHeaderInfo(false, getHomeworkHeaderProfile(userId), dateInfo.dayOfWeek, dateInfo.dateStr, curClass);
             }, 750);
           }
 
@@ -1814,7 +1811,13 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
   };
 
   // Apply all homework header fields and fit them properly across the page
-  const applyHomeworkHeaderInfo = (notify = true, overrideProfile?: HomeworkHeaderProfile) => {
+  const applyHomeworkHeaderInfo = (
+    notify = true,
+    overrideProfile?: HomeworkHeaderProfile,
+    overrideDay?: string,
+    overrideDate?: string,
+    overrideClass?: string
+  ) => {
     if (!containerRef.current) return;
 
     // Resolve profile values from: 1) overrideProfile, 2) fresh from localStorage, 3) React state
@@ -1825,6 +1828,12 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     const activeDistrict = (hwDistrict || savedProf.district || "").trim();
     const activeTeacher = (hwTeacherName || savedProf.teacherName || "").trim();
     const activeHeadmaster = (hwHeadmasterName || savedProf.headmasterName || "").trim();
+
+    // Dynamically format Marathi day and date from current homework date
+    const dateInfo = formatHomeworkDateToMarathi(homeworkDate);
+    const activeDay = (overrideDay || (notify ? hwDayOfWeek : dateInfo.dayOfWeek) || dateInfo.dayOfWeek).trim();
+    const activeDate = (overrideDate || (notify ? hwDateStr : dateInfo.dateStr) || dateInfo.dateStr).trim();
+    const activeClass = (overrideClass || (notify ? hwClassName : getMarathiClassLabel(homeworkClass)) || getMarathiClassLabel(homeworkClass)).trim();
 
     // Synchronize React states if state was empty but profile had values
     if (!hwSchoolName && activeSchool) setHwSchoolName(activeSchool);
@@ -1899,13 +1908,13 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
         <!-- Strip 2: Day, Date, Class Session Details -->
         <div style="display: flex !important; justify-content: space-between !important; align-items: center !important; padding: 6px 14px !important; background-color: #ffffff !important; font-size: 11.5pt !important; color: #0f172a !important; box-sizing: border-box !important;">
           <div style="text-align: left !important; flex: 1 !important;">
-            <strong style="font-weight: 800; color: #0f172a;">वार : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwDayOfWeek || "शुक्रवार")}</span>
+            <strong style="font-weight: 800; color: #0f172a;">वार : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(activeDay)}</span>
           </div>
           <div style="text-align: center !important; flex: 1.5 !important;">
-            <strong style="font-weight: 800; color: #0f172a;">दिनांक : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwDateStr || "२० नोव्हेंबर २०२६")}</span>
+            <strong style="font-weight: 800; color: #0f172a;">दिनांक : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(activeDate)}</span>
           </div>
           <div style="text-align: right !important; flex: 1 !important;">
-            <strong style="font-weight: 800; color: #0f172a;">इयत्ता : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(hwClassName || "१ ली")}</span>
+            <strong style="font-weight: 800; color: #0f172a;">इयत्ता : </strong><span contenteditable="true" style="font-weight: 700; color: #0f172a;">${escapeHtmlStr(activeClass)}</span>
           </div>
         </div>
       </div>
@@ -2431,7 +2440,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       // Ensure homework documents are paginated and signatures formatted before PDF render
       if (documentType === "homework") {
         paginateHomeworkDocument();
-        applyHomeworkHeaderInfo(false);
+        const dateInfo = formatHomeworkDateToMarathi(homeworkDate);
+        applyHomeworkHeaderInfo(false, undefined, dateInfo.dayOfWeek, dateInfo.dateStr);
       }
 
       // Unfocus any active element to remove editor focus outlines
@@ -2519,7 +2529,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
     // Ensure homework documents are paginated and signatures formatted before PDF share
     if (documentType === "homework") {
       paginateHomeworkDocument();
-      applyHomeworkHeaderInfo(false);
+      const dateInfo = formatHomeworkDateToMarathi(homeworkDate);
+      applyHomeworkHeaderInfo(false, undefined, dateInfo.dayOfWeek, dateInfo.dateStr);
     }
 
     try {
@@ -3579,7 +3590,7 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
                       value={hwDateStr}
                       onChange={(e) => setHwDateStr(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") applyHomeworkHeaderInfo(true); }}
-                      placeholder="उदा. १२ ऑक्टोबर २०२६"
+                      placeholder="उदा. २४ नोव्हेंबर २०२६"
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-xs font-semibold outline-none transition-all bg-white"
                     />
                   </div>

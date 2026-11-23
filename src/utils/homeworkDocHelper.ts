@@ -127,9 +127,22 @@ export const saveHomeworkHeaderProfile = (
   saveMulti("hw_v2_headmaster", profile.headmasterName);
 };
 
+export const toMarathiDigits = (val: number | string): string => {
+  const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+  return String(val).replace(/[0-9]/g, (d) => marathiDigits[parseInt(d, 10)]);
+};
+
+export const toAsciiDigits = (str: string): string => {
+  const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+  return String(str).replace(/[०-९]/g, (ch) => {
+    const idx = marathiDigits.indexOf(ch);
+    return idx >= 0 ? String(idx) : ch;
+  });
+};
+
 export const formatHomeworkDateToMarathi = (
   dateInput?: string
-): { dayOfWeek: string; dateStr: string } => {
+): { dayOfWeek: string; dateStr: string; dateStrNumeric: string } => {
   const marathiDays = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
   const marathiMonths = [
     "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून",
@@ -138,7 +151,7 @@ export const formatHomeworkDateToMarathi = (
 
   let d = new Date();
   if (dateInput) {
-    const clean = dateInput.trim();
+    const clean = toAsciiDigits(dateInput.trim());
     if (clean.includes("-") || clean.includes("/")) {
       const parts = clean.split(/[-/]/);
       if (parts.length === 3) {
@@ -157,16 +170,22 @@ export const formatHomeworkDateToMarathi = (
         }
       }
     } else {
-      const parsed = new Date(dateInput);
+      const parsed = new Date(clean);
       if (!isNaN(parsed.getTime())) {
         d = parsed;
       }
     }
   }
 
-  const dayOfWeek = marathiDays[d.getDay()] || "शुक्रवार";
-  const dateStr = `${d.getDate()} ${marathiMonths[d.getMonth()] || "ऑक्टोबर"} ${d.getFullYear()}`;
-  return { dayOfWeek, dateStr };
+  if (isNaN(d.getTime())) {
+    d = new Date();
+  }
+
+  const dayOfWeek = marathiDays[d.getDay()] || "सोमवार";
+  const mName = marathiMonths[d.getMonth()] || "नोव्हेंबर";
+  const dateStr = `${toMarathiDigits(d.getDate())} ${mName} ${toMarathiDigits(d.getFullYear())}`;
+  const dateStrNumeric = `${d.getDate()} ${mName} ${d.getFullYear()}`;
+  return { dayOfWeek, dateStr, dateStrNumeric };
 };
 
 export const getMarathiClassLabel = (cls?: string): string => {
