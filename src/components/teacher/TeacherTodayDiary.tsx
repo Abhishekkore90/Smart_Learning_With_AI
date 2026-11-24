@@ -21,8 +21,13 @@ import {
   Eye,
   Trash2,
   Save,
-  AlertTriangle
+  AlertTriangle,
+  Lock,
+  CheckCircle2,
+  CreditCard,
+  X
 } from "lucide-react";
+import { processRazorpayPayment } from "@/lib/razorpayService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
@@ -118,6 +123,49 @@ function getWorkingDatesRange(startDateStr: string, count: number): string[] {
   return result;
 }
 
+
+export const isDayInFuture = (date: Date, referenceDate: Date = new Date()): boolean => {
+  // Free preview: allow past dates, today, and at most TOMORROW (1 day ahead)
+  const tomorrow = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    referenceDate.getDate() + 1,
+    23, 59, 59, 999
+  );
+  return date.getTime() > tomorrow.getTime();
+};
+
+export const isAcademicMonthInFuture = (monthId: string, referenceDate: Date = new Date()): boolean => {
+  const mNum = parseInt(monthId, 10);
+  const monthOrder = mNum >= 6 ? mNum - 6 : mNum + 6;
+  const currentMonthNum = referenceDate.getMonth() + 1;
+  const currentMonthOrder = currentMonthNum >= 6 ? currentMonthNum - 6 : currentMonthNum + 6;
+  return monthOrder > currentMonthOrder;
+};
+
+export const isSlotInFuture = (
+  monthStr: string | null | undefined,
+  slotId: string,
+  referenceDate: Date = new Date()
+): boolean => {
+  if (!monthStr) return false;
+  const mNum = parseInt(monthStr, 10);
+  const monthOrder = mNum >= 6 ? mNum - 6 : mNum + 6;
+  const currentMonthNum = referenceDate.getMonth() + 1;
+  const currentMonthOrder = currentMonthNum >= 6 ? currentMonthNum - 6 : currentMonthNum + 6;
+
+  // Future month -> slot is locked
+  if (monthOrder > currentMonthOrder) return true;
+  // Past month -> slot is unlocked
+  if (monthOrder < currentMonthOrder) return false;
+
+  // Current month -> release by day of month
+  const todayDay = referenceDate.getDate();
+  if (slotId === "1 to 10") return false;
+  if (slotId === "11 to 20") return todayDay < 11;
+  if (slotId === "21 to 31" || slotId === "21 to 30") return todayDay < 21;
+  return false;
+};
 
 export function isDocMatchingMonth(docItem: any, monthStr: string | null): boolean {
   if (!monthStr) return true;
@@ -411,6 +459,9 @@ interface Props {
     className?: string;
     academicYear?: string;
   };
+  isUnlocked?: boolean;
+  onBuyAccess?: () => void;
+  price?: number;
 }
 
 export const TeacherTodayDiary: React.FC<Props> = ({ 
@@ -421,13 +472,17 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   onSelectWeek,
   onBack,
   isStudent = false,
-  schoolProfile: propSchoolProfile
+  schoolProfile: propSchoolProfile,
+  isUnlocked = false,
+  onBuyAccess,
+  price = 199
 }) => {
   const [activeDate, setActiveDate] = useState<Date | null>(null);
   const [todayDiary, setTodayDiary] = useState<DailyDiary | null>(null);
   const [specialRemarks, setSpecialRemarks] = useState("");
   const specialRemarksRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingRangeMaster, setLoadingRangeMaster] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -437,6 +492,131 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   const [customHolidays, setCustomHolidays] = useState<TeachingDiaryHoliday[]>([]);
   const { user, profile } = useAuth();
   const printRef = useRef<HTMLDivElement>(null);
+
+  // ₹199 Payment & Subscription State
+  const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
+  const [isPaid, setIsPaid] = useState<boolean>(false);
+  const [isPurchasing, setIsPurchasing] = useState<boolean>(false);
+
+  const normMedium = selectedMedium === "Semi English" || selectedMedium === "semi" ? "semi" : "marathi";
+  const normClassMap: Record<string, string> = {
+    "Class 1": "1st", "Class 2": "2nd", "Class 3": "3rd", "Class 4": "4th",
+    "Class 5": "5th", "Class 6": "6th", "Class 7": "7th", "Class 8": "8th",
+  };
+  const normClass = normClassMap[selectedClass || ""] || (selectedClass || "").toLowerCase();
+  const currentClassKey = `${normMedium}_${normClass}`;
+
+  useEffect(() => {
+    const effectiveUserId = user?.uid || "guest_teacher";
+    const docKey = `${effectiveUserId}_teaching_${normMedium}_${normClass}`;
+
+    const checkAccess = async () => {
+      try {
+        const snap = await getDoc(doc(db, "teacher_module_access", docKey));
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.status === "GRANTED") {
+            if (!data.validTill || new Date(data.validTill) >= new Date()) {
+              setIsPaid(true);
+              return;
+            }
+          }
+        }
+        const snapAll = await getDoc(doc(db, "teacher_module_access", `${effectiveUserId}_ALL`));
+        if (snapAll.exists() && snapAll.data()?.status === "GRANTED") {
+          setIsPaid(true);
+          return;
+        }
+        const snapMod = await getDoc(doc(db, "teacher_module_access", `${effectiveUserId}_teaching-record`));
+        if (snapMod.exists() && snapMod.data()?.status === "GRANTED") {
+          setIsPaid(true);
+          return;
+        }
+      } catch {}
+    };
+
+    checkAccess();
+  }, [user?.uid, normMedium, normClass]);
+
+  const isSuperAdmin = (profile as any)?.role === "superadmin" || user?.email === "admin@brainova.com";
+  const hasFullAccess = Boolean(isUnlocked || isPaid || isSuperAdmin);
+
+  const handleTriggerBuyAccess = async () => {
+    if (onBuyAccess) {
+      onBuyAccess();
+      setShowPaymentModal(false);
+      return;
+    }
+
+    try {
+      setIsPurchasing(true);
+      const effectiveUserId = user?.uid || "guest_teacher";
+      const teacherEmail = user?.email || localStorage.getItem("teacher_email") || "";
+      const teacherName = user?.displayName || propSchoolProfile?.teacherName || "शिक्षक";
+      const now = new Date();
+      const expYear = now.getMonth() >= 5 ? now.getFullYear() + 1 : now.getFullYear();
+      const academicYearEnd = new Date(expYear, 4, 31, 23, 59, 59, 999).toISOString();
+      const academicYearLabel = `${now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1}-${(now.getMonth() >= 5 ? now.getFullYear() + 1 : now.getFullYear()).toString().slice(-2)}`;
+
+      await processRazorpayPayment({
+        amount: price || 199,
+        moduleId: "teaching-record",
+        moduleTitle: `दैनिक अध्यापन टाचणवही (${selectedClass} - ${selectedMedium})`,
+        teacherName,
+        teacherEmail,
+        onSuccess: async (paymentId: string) => {
+          const docKey = `${effectiveUserId}_teaching_${normMedium}_${normClass}`;
+
+          await setDoc(doc(db, "teacher_module_payments", `${docKey}_${Date.now()}`), {
+            id: `${docKey}_${Date.now()}`,
+            teacherId: effectiveUserId,
+            teacherEmail,
+            teacherName,
+            moduleId: "teaching-record",
+            moduleTitle: `दैनिक अध्यापन टाचणवही (${selectedClass} - ${selectedMedium})`,
+            unlockedClass: normClass,
+            unlockedMedium: normMedium,
+            targetClassKey: currentClassKey,
+            unlockedKey: currentClassKey,
+            amount: price || 199,
+            razorpayPaymentId: paymentId,
+            status: "SUCCESS",
+            paidAt: new Date().toISOString(),
+            validTill: academicYearEnd,
+            academicYear: academicYearLabel,
+          });
+
+          await setDoc(doc(db, "teacher_module_access", docKey), {
+            id: docKey,
+            teacherId: effectiveUserId,
+            teacherEmail,
+            teacherName,
+            moduleId: "teaching-record",
+            moduleTitle: `दैनिक अध्यापन टाचणवही (${selectedClass} - ${selectedMedium})`,
+            unlockedClass: normClass,
+            unlockedMedium: normMedium,
+            targetClassKey: currentClassKey,
+            unlockedKey: currentClassKey,
+            status: "GRANTED",
+            grantedAt: new Date().toISOString(),
+            validTill: academicYearEnd,
+            academicYear: academicYearLabel,
+          });
+
+          setIsPaid(true);
+          setShowPaymentModal(false);
+          toast.success("🎉 टाचणवही वार्षिक ॲक्सेस यशस्वीरित्या अनलॉक झाला!");
+        },
+        onError: (err: any) => {
+          toast.error("पेमेंट अयशस्वी: " + (err.message || err));
+        }
+      });
+    } catch (err: any) {
+      toast.error("पेमेंट प्रक्रिया सुरू करताना अडचण आली: " + (err?.message || err));
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
 
   useEffect(() => {
     const unsub = subscribeTeachingDiaryHolidays((list) => {
@@ -525,12 +705,22 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   }, [currentTabId, activeMonthNum, activeYearNum]);
 
   const handleTabClick = (tabId: string) => {
+    const effectiveMonth = selectedMonth || (activeDate ? format(activeDate, "MM") : "06");
+    if (isSlotInFuture(effectiveMonth, tabId)) {
+      toast.error("हा कालावधी अद्याप सुरू झालेला नाही. नियोजित तारखेवर उपलब्ध होईल.");
+      return;
+    }
+
     let targetDay = 1;
     if (tabId === "11 to 20") targetDay = 11;
     if (tabId === "21 to 31") targetDay = 21;
 
     const newDate = new Date(activeYearNum, activeMonthNum - 1, targetDay);
-    setActiveDate(newDate);
+    if (isDayInFuture(newDate)) {
+      setActiveDate(new Date());
+    } else {
+      setActiveDate(newDate);
+    }
     if (onSelectWeek) onSelectWeek(tabId);
   };
 
@@ -554,7 +744,11 @@ export const TeacherTodayDiary: React.FC<Props> = ({
         startDay = 21;
       }
       const newDateObj = new Date(year, monthIdx, startDay);
-      setActiveDate(newDateObj);
+      if (isDayInFuture(newDateObj)) {
+        setActiveDate(today);
+      } else {
+        setActiveDate(newDateObj);
+      }
     } else if (!activeDate) {
       setActiveDate(new Date());
     }
@@ -613,6 +807,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
   useEffect(() => {
     async function fetchRangeMasterRecord() {
+      setLoadingRangeMaster(true);
       try {
         const targetMonthStr = selectedMonth || (activeDate ? format(activeDate, "MM") : "08");
         const colRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
@@ -654,6 +849,17 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               dayEntriesMap.set(docId, dayObj);
             }
           }
+        });
+
+        // Prioritize documents with larger structuredData and actual master file docs
+        masterDocs.sort((a, b) => {
+          const aIsFile = a.id?.startsWith("file_") || a.id === "master_diary";
+          const bIsFile = b.id?.startsWith("file_") || b.id === "master_diary";
+          if (aIsFile && !bIsFile) return -1;
+          if (!aIsFile && bIsFile) return 1;
+          const aLen = Array.isArray(a.structuredData) ? a.structuredData.length : 0;
+          const bLen = Array.isArray(b.structuredData) ? b.structuredData.length : 0;
+          return bLen - aLen;
         });
 
         let matchedDoc: any = null;
@@ -698,6 +904,45 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 break;
               }
             }
+          }
+        }
+
+        // If no master doc matched directly, synthesize from matching daily entries in dayEntriesMap
+        if (!matchedDoc && dayEntriesMap.size > 0) {
+          const matchingDays: any[] = [];
+          dayEntriesMap.forEach((entry, dKey) => {
+            const cleanDStr = toAsciiDigits(entry.date || entry.displayDate || dKey || "");
+            const iso = formatDateToIso(cleanDStr);
+            let dayNum = 0;
+            if (iso && iso.includes("-")) {
+              dayNum = parseInt(iso.split("-")[2], 10);
+            } else {
+              const parts = cleanDStr.split(/[\/\-\.]/);
+              if (parts.length === 3) {
+                dayNum = parts[0].length === 4 ? parseInt(parts[2], 10) : parseInt(parts[0], 10);
+              }
+            }
+            if (dayNum > 0) {
+              if (targetCategory === "1 to 10" && dayNum >= 1 && dayNum <= 10) matchingDays.push(entry);
+              else if (targetCategory === "11 to 20" && dayNum >= 11 && dayNum <= 20) matchingDays.push(entry);
+              else if (targetCategory === "21 to 31" && dayNum >= 21 && dayNum <= 31) matchingDays.push(entry);
+            }
+          });
+
+          if (matchingDays.length > 0) {
+            matchingDays.sort((a, b) => {
+              const aD = parseInt((a.date || a.displayDate || "").replace(/\D/g, ""), 10) || 0;
+              const bD = parseInt((b.date || b.displayDate || "").replace(/\D/g, ""), 10) || 0;
+              return aD - bD;
+            });
+            matchedDoc = {
+              id: `synthesized_${targetCategory}_${targetMonthStr}`,
+              week: currentTabId,
+              month: targetMonthStr,
+              className: selectedClass,
+              medium: selectedMedium,
+              structuredData: matchingDays,
+            };
           }
         }
 
@@ -756,6 +1001,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
         setRangeMasterRecord(matchedDoc);
       } catch (e) {
         console.error("Error fetching range master record:", e);
+      } finally {
+        setLoadingRangeMaster(false);
       }
     }
 
@@ -789,8 +1036,11 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
   const activeTabMasterRecord = React.useMemo(() => {
     const targetCategory = getTabCategory(currentTabId);
-    if (rangeMasterRecord && getTabCategory(rangeMasterRecord.week || rangeMasterRecord.selectedWeek || rangeMasterRecord.range || "", rangeMasterRecord) === targetCategory) {
-      return rangeMasterRecord;
+    if (rangeMasterRecord) {
+      const recCategory = getTabCategory(rangeMasterRecord.week || rangeMasterRecord.selectedWeek || rangeMasterRecord.range || "", rangeMasterRecord);
+      if (recCategory === targetCategory || (Array.isArray(rangeMasterRecord.structuredData) && rangeMasterRecord.structuredData.length > 1)) {
+        return rangeMasterRecord;
+      }
     }
     if (todayDiary) {
       const todayCat = getTabCategory((todayDiary as any).week || (todayDiary as any).selectedWeek || (todayDiary as any).range || "", todayDiary);
@@ -1525,6 +1775,10 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   // ── Download Handler (Direct PDF File Download matching Screenshot 1) ──────
   const handleDownload = async () => {
     if (!todayDiary || !activeDate) return;
+    if (!hasFullAccess) {
+      setShowPaymentModal(true);
+      return;
+    }
     const toastId = toast.loading("पीडीएफ फाईल जनरेट व डाऊनलोड होत आहे...");
     try {
       const html2pdfModule = await import("html2pdf.js");
@@ -1700,7 +1954,9 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                   onClick={handleDownload}
                   className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/25 cursor-pointer active:scale-95"
                 >
-                  <Download className="size-3.5" /> <span>PDF डाऊनलोड</span>
+                  {!hasFullAccess ? <Lock className="size-3.5 text-amber-300" /> : <Download className="size-3.5" />}
+                  <span>PDF डाऊनलोड</span>
+                  {!hasFullAccess && <span className="bg-amber-400/20 text-amber-200 px-1.5 py-0.5 rounded text-[10px] ml-1">₹१९९</span>}
                 </button>
               </>
             )}
@@ -1714,26 +1970,41 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             { id: "11 to 20", mr: "11 ते 20 तारीख", sub: "11 to 20 Date Range" },
             { id: "21 to 31", mr: "21 ते 30/31 तारीख", sub: "21 to 30/31 Date Range" },
           ].map((tab) => {
+            const effectiveMonth = selectedMonth || (activeDate ? format(activeDate, "MM") : "06");
+            const isFutureSlot = isSlotInFuture(effectiveMonth, tab.id);
             const isActive = currentTabId === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
+                disabled={isFutureSlot}
                 onClick={() => handleTabClick(tab.id)}
-                className={`py-4 px-4 sm:px-6 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 flex flex-col items-center justify-center gap-1 cursor-pointer relative overflow-hidden ${
-                  isActive
-                    ? "bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-xl shadow-orange-500/30 scale-[1.02] border-2 border-amber-300"
-                    : "bg-slate-50/80 hover:bg-slate-100 text-slate-700 border-2 border-slate-200/80 hover:border-orange-300"
+                className={`py-4 px-4 sm:px-6 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 flex flex-col items-center justify-center gap-1 relative overflow-hidden ${
+                  isFutureSlot
+                    ? "bg-slate-100/70 text-slate-400 border-2 border-slate-200/70 cursor-not-allowed opacity-60"
+                    : isActive
+                    ? "bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-xl shadow-orange-500/30 scale-[1.02] border-2 border-amber-300 cursor-pointer"
+                    : "bg-slate-50/80 hover:bg-slate-100 text-slate-700 border-2 border-slate-200/80 hover:border-orange-300 cursor-pointer"
                 }`}
+                title={isFutureSlot ? "हा कालावधी नियोजित तारखेवर उपलब्ध होईल (लवकरच)" : undefined}
               >
-                {isActive && (
+                {isActive && !isFutureSlot && (
                   <div className="absolute top-0 right-0 size-16 bg-white/20 rounded-full blur-md pointer-events-none" />
                 )}
                 <div className="flex items-center gap-2">
-                  <Sparkles className={`size-4 ${isActive ? "text-amber-200 animate-pulse" : "text-slate-400"}`} />
+                  {isFutureSlot ? (
+                    <Clock className="size-4 text-slate-400" />
+                  ) : (
+                    <Sparkles className={`size-4 ${isActive ? "text-amber-200 animate-pulse" : "text-slate-400"}`} />
+                  )}
                   <span className="text-sm sm:text-base font-extrabold">{tab.mr}</span>
+                  {isFutureSlot && (
+                    <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold ml-1">
+                      लवकरच
+                    </span>
+                  )}
                 </div>
-                <span className={`text-[11px] font-bold ${isActive ? "text-orange-100" : "text-slate-400"}`}>
+                <span className={`text-[11px] font-bold ${isFutureSlot ? "text-slate-400" : isActive ? "text-orange-100" : "text-slate-400"}`}>
                   {tab.sub}
                 </span>
               </button>
@@ -1750,15 +2021,23 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setIsAllDaysMode(true)}
+                onClick={() => {
+                  const effectiveMonth = selectedMonth || (activeDate ? format(activeDate, "MM") : "06");
+                  if (isSlotInFuture(effectiveMonth, currentTabId)) {
+                    toast.error("या कालावधीची १० दिवसांची फाईल नियोजित तारखेवर उपलब्ध होईल.");
+                    return;
+                  }
+                  setIsAllDaysMode(true);
+                }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
                   isAllDaysMode
                     ? "bg-slate-950 text-amber-300 border border-amber-400 ring-2 ring-orange-500/40"
                     : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
                 }`}
               >
-                <FileText className="size-3.5" />
+                {!hasFullAccess ? <Lock className="size-3.5 text-amber-300" /> : <FileText className="size-3.5" />}
                 <span>१० दिवसांची फाईल पहा (All Days File)</span>
+                {!hasFullAccess && <span className="bg-amber-400/20 text-amber-200 px-1.5 py-0.5 rounded text-[10px]">₹१९९</span>}
               </button>
               <span className="text-[11px] font-black text-rose-500 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
                 (रविवार व कस्टम सुट्टी)
@@ -1769,7 +2048,14 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             {/* All Days Pill */}
             <button
               type="button"
-              onClick={() => setIsAllDaysMode(true)}
+              onClick={() => {
+                const effectiveMonth = selectedMonth || (activeDate ? format(activeDate, "MM") : "06");
+                if (isSlotInFuture(effectiveMonth, currentTabId)) {
+                  toast.error("या कालावधीची १० दिवसांची फाईल नियोजित तारखेवर उपलब्ध होईल.");
+                  return;
+                }
+                setIsAllDaysMode(true);
+              }}
               className={`py-2.5 px-1.5 rounded-2xl text-xs font-black transition-all flex flex-col items-center justify-center cursor-pointer shadow-sm ${
                 isAllDaysMode
                   ? "bg-slate-950 text-amber-300 shadow-xl ring-4 ring-orange-500/40 scale-105 border-2 border-amber-400"
@@ -1778,10 +2064,10 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               title="निवडलेल्या १० दिवसांची संपूर्ण फाईल व सर्व पाठ टाचण तक्ता पहा"
             >
               <span className="text-xs font-black leading-none flex items-center gap-0.5">
-                <Sparkles className="size-3 text-amber-200" /> All Days
+                {!hasFullAccess ? <Lock className="size-3 text-amber-200" /> : <Sparkles className="size-3 text-amber-200" />} All Days
               </span>
               <span className="text-[9px] font-extrabold mt-1 uppercase opacity-90">
-                (१० दिवस)
+                {!hasFullAccess ? "₹१९९ अनलॉक" : "(१० दिवस)"}
               </span>
             </button>
 
@@ -1795,31 +2081,49 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 selectedMedium
               );
               const isHolidayPill = isSunday || Boolean(customHoliday);
+              const isFutureDay = isDayInFuture(dObj.dateObj);
 
               return (
                 <button
                   key={dObj.dateIso}
                   type="button"
+                  disabled={isFutureDay}
                   onClick={() => {
+                    if (isFutureDay) {
+                      toast.error("केवळ उद्यापर्यंतचे (पुढील १ दिवस) पाठ टाचण पाहता येईल. पुढील तारखा वेळेवर उपलब्ध होतील.");
+                      return;
+                    }
                     setIsAllDaysMode(false);
                     setActiveDate(dObj.dateObj);
                   }}
                   className={`py-2.5 px-2 rounded-2xl text-xs font-black transition-all flex flex-col items-center justify-center cursor-pointer shadow-sm ${
-                    isSelected
+                    isFutureDay
+                      ? "bg-slate-100/60 text-slate-400 border-2 border-slate-200/60 cursor-not-allowed opacity-50"
+                      : isSelected
                       ? "bg-slate-950 text-amber-300 shadow-xl ring-4 ring-orange-500/40 scale-105 border-2 border-amber-400"
                       : isHolidayPill
                       ? "bg-rose-50 text-rose-600 border-2 border-rose-200 hover:bg-rose-100"
                       : "bg-slate-100/90 text-slate-800 hover:bg-orange-500 hover:text-white border-2 border-slate-200/80 hover:border-orange-500"
                   }`}
                   title={
-                    customHoliday
+                    isFutureDay
+                      ? `${dObj.displayDate} — नियोजित तारखेवर उपलब्ध होईल (लवकरच)`
+                      : customHoliday
                       ? `${dObj.displayDate} (${dObj.dayName}) — सुट्टी: ${customHoliday.reason}`
                       : `${dObj.displayDate} (${dObj.dayName})`
                   }
                 >
                   <span className="text-base font-black leading-none">{dObj.dayNum}</span>
-                  <span className={`text-[10px] font-extrabold mt-1 uppercase ${isSelected ? "text-amber-300" : isHolidayPill ? "text-rose-600" : "opacity-80"}`}>
-                    {customHoliday ? "सुट्टी" : dObj.dayShort}
+                  <span className={`text-[10px] font-extrabold mt-1 uppercase ${
+                    isFutureDay
+                      ? "text-slate-400 flex items-center gap-0.5"
+                      : isSelected
+                      ? "text-amber-300"
+                      : isHolidayPill
+                      ? "text-rose-600"
+                      : "opacity-80"
+                  }`}>
+                    {isFutureDay ? <Clock className="size-2.5" /> : customHoliday ? "सुट्टी" : dObj.dayShort}
                   </span>
                 </button>
               );
@@ -1830,53 +2134,163 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
       {/* All Days Mode vs Daily View */}
       {isAllDaysMode ? (
-        <div className="w-full space-y-4 sm:space-y-5 max-w-full">
-          <div className="bg-white border-2 border-slate-300 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="size-11 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black shadow-md shrink-0">
-                <FileText className="size-6" />
+        !hasFullAccess ? (
+          <div className="w-full space-y-4 sm:space-y-5 max-w-full">
+            <div className="bg-white border-2 border-slate-300 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="size-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black shadow-md shrink-0">
+                  <Lock className="size-6" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-base sm:text-lg">
+                    संपूर्ण १० दिवसांची पाठ टाचण फाईल (All 10 Days Document View)
+                  </h3>
+                  <p className="text-xs text-slate-500 font-semibold">
+                    कालावधी: {currentTabId === "1 to 10" ? "१ ते १० तारीख" : currentTabId === "11 to 20" ? "११ ते २० तारीख" : "२१ ते ३०/३१ तारीख"} • {selectedClass} ({selectedMedium})
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-black text-slate-900 text-base sm:text-lg">
-                  संपूर्ण १० दिवसांची पाठ टाचण फाईल (All 10 Days Document View)
-                </h3>
-                <p className="text-xs text-slate-500 font-semibold">
-                  कालावधी: {currentTabId === "1 to 10" ? "१ ते १० तारीख" : currentTabId === "11 to 20" ? "११ ते २० तारीख" : "२१ ते ३०/३१ तारीख"} • {selectedClass} ({selectedMedium})
+              <button
+                type="button"
+                onClick={() => setIsAllDaysMode(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0"
+              >
+                <RotateCcw className="size-4" />
+                <span>दिवस-निहाय मोफत व्ह्यू वर जा (Single Day View)</span>
+              </button>
+            </div>
+
+            {/* Premium Paywall Card for 10-Days Mode */}
+            <div className="p-8 sm:p-12 text-center bg-gradient-to-b from-amber-50/70 via-white to-amber-50/40 rounded-3xl border-2 border-amber-300 shadow-xl space-y-6 max-w-2xl mx-auto">
+              <div className="size-16 rounded-3xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-orange-500/30">
+                <Lock className="size-8" />
+              </div>
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-black uppercase tracking-wider">
+                  <Sparkles className="size-3.5 text-amber-600" /> संपूर्ण शैक्षणिक वर्ष सबस्क्रिप्शन
+                </div>
+                <h4 className="font-black text-slate-900 text-2xl sm:text-3xl">
+                  १० दिवसांची एकत्रित फाईल अनलॉक करा
+                </h4>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed max-w-lg mx-auto">
+                  दिवस-निहाय (१ दिवस) पाठ टाचण पाहणे सर्वांसाठी मोफत आहे. संपूर्ण १० दिवसांची एकत्रित फाईल पाहण्यासाठी व डाऊनलोड करण्यासाठी वार्षिक सबस्क्रिप्शन आवश्यक आहे.
                 </p>
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsAllDaysMode(false)}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0"
-            >
-              <RotateCcw className="size-4" />
-              <span>दिवस-निहाय व्ह्यू वर जा (Single Day View)</span>
-            </button>
-          </div>
 
-          {activeTabMasterRecord ? (
-            <div className="w-full">
-              <DocumentLivePreview
-                selectedFile={null}
-                savedRecord={activeTabMasterRecord}
-                onBack={() => setIsAllDaysMode(false)}
-              />
-            </div>
-          ) : (
-            <div className="p-12 text-center space-y-4 bg-amber-50/60 rounded-3xl border-2 border-amber-200">
-              <div className="size-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
-                <AlertTriangle className="size-7" />
+              {/* Benefits list */}
+              <div className="bg-white/80 border border-amber-200/80 rounded-2xl p-5 text-left space-y-3 shadow-xs">
+                <p className="font-black text-xs uppercase tracking-wider text-amber-900">या सबस्क्रिप्शनमध्ये काय मिळेल:</p>
+                <div className="space-y-2.5 text-xs sm:text-sm font-bold text-slate-800">
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>संपूर्ण १० दिवसांच्या एकत्रित फाईल्स (All 10 Days Combined Files) थेट पाहणे व अभ्यासणे</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>सर्व १-दिवस व १०-दिवसांच्या फाईल्सचे अमर्यादित PDF डाऊनलोड</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>संपूर्ण शैक्षणिक वर्ष २०२६-२७ (१ जून ते ३१ मे) साठी पूर्ण ॲक्सेस</span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <CheckCircle2 className="size-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>लाइव्ह एडिट, शाळा व शिक्षकांचे नाव बदलून कस्टमाईझ प्रिंट सुविधा</span>
+                  </div>
+                </div>
               </div>
-              <h4 className="font-black text-slate-900 text-lg">
-                या {currentTabId === "1 to 10" ? "१ ते १०" : currentTabId === "11 to 20" ? "११ ते २०" : "२१ ते ३०/३१"} तारीख कालावधीची फाईल उपलब्ध नाही
-              </h4>
-              <p className="text-xs text-slate-600 font-bold max-w-md mx-auto leading-relaxed">
-                अ‍ॅडमिनद्वारे १ ते १०, ११ ते २० किंवा २१ ते ३० तारीख कालावधीची फाईल अपलोड केली असल्यास ती संपूर्ण १० दिवसांच्या टाचण तक्त्यासह येथे दिसेल.
-              </p>
+
+              {/* Price & Action */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+                <div className="text-center sm:text-left">
+                  <div className="flex items-baseline justify-center sm:justify-start gap-2">
+                    <span className="text-3xl sm:text-4xl font-black text-slate-900">₹{price || 199}</span>
+                    <span className="text-xs font-bold text-slate-500 line-through">₹499</span>
+                  </div>
+                  <p className="text-[11px] font-bold text-emerald-700">एकदाच भरा • वर्षभर वापरा (३१ मे पर्यंत)</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={isPurchasing}
+                  onClick={handleTriggerBuyAccess}
+                  className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-orange-600 via-amber-500 to-orange-600 hover:from-orange-500 hover:to-amber-500 text-white rounded-2xl text-sm font-black shadow-lg shadow-orange-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  {isPurchasing ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      <span>पेमेंट सुरू आहे...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="size-4" />
+                      <span>₹{price || 199} भरून आताच अनलॉक करा</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="w-full space-y-4 sm:space-y-5 max-w-full">
+            <div className="bg-white border-2 border-slate-300 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="size-11 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 text-white flex items-center justify-center font-black shadow-md shrink-0">
+                  <FileText className="size-6" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-base sm:text-lg">
+                    संपूर्ण १० दिवसांची पाठ टाचण फाईल (All 10 Days Document View)
+                  </h3>
+                  <p className="text-xs text-slate-500 font-semibold">
+                    कालावधी: {currentTabId === "1 to 10" ? "१ ते १० तारीख" : currentTabId === "11 to 20" ? "११ ते २० तारीख" : "२१ ते ३०/३१ तारीख"} • {selectedClass} ({selectedMedium})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAllDaysMode(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0"
+              >
+                <RotateCcw className="size-4" />
+                <span>दिवस-निहाय व्ह्यू वर जा (Single Day View)</span>
+              </button>
+            </div>
+
+            {loadingRangeMaster ? (
+              <div className="p-12 text-center space-y-4 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                <Loader2 className="size-8 animate-spin text-orange-500 mx-auto" />
+                <p className="text-sm font-black text-slate-800">
+                  १० दिवसांची संपूर्ण पाठ टाचण फाईल लोड होत आहे... (Loading All Days File...)
+                </p>
+              </div>
+            ) : activeTabMasterRecord ? (
+              <div className="w-full">
+                <DocumentLivePreview
+                  selectedFile={null}
+                  savedRecord={activeTabMasterRecord}
+                  selectedMonth={selectedMonth || (activeDate ? format(activeDate, "MM") : null)}
+                  selectedDateIso={undefined}
+                  schoolProfile={activeProfile}
+                  onBack={() => setIsAllDaysMode(false)}
+                  isUnlocked={hasFullAccess}
+                  onRequirePayment={() => setShowPaymentModal(true)}
+                />
+              </div>
+            ) : (
+              <div className="p-12 text-center space-y-4 bg-amber-50/60 rounded-3xl border-2 border-amber-200">
+                <div className="size-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+                  <AlertTriangle className="size-7" />
+                </div>
+                <h4 className="font-black text-slate-900 text-lg">
+                  या {currentTabId === "1 to 10" ? "१ ते १०" : currentTabId === "11 to 20" ? "११ ते २०" : "२१ ते ३०/३१"} तारीख कालावधीची फाईल उपलब्ध नाही
+                </h4>
+                <p className="text-xs text-slate-600 font-bold max-w-md mx-auto leading-relaxed">
+                  अ‍ॅडमिनद्वारे १ ते १०, ११ ते २० किंवा २१ ते ३० तारीख कालावधीची फाईल अपलोड केली असल्यास ती संपूर्ण १० दिवसांच्या टाचण तक्त्यासह येथे दिसेल.
+                </p>
+              </div>
+            )}
+          </div>
+        )
       ) : loading ? (
         <div className="p-12 rounded-3xl bg-white border border-slate-200/80 text-slate-700 shadow-sm flex flex-col items-center justify-center min-h-[300px]">
           <Loader2 className="w-10 h-10 animate-spin text-orange-500 mb-4" />
@@ -2203,6 +2617,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               savedRecord={activeTabMasterRecord}
               selectedDateIso={isoDate}
               onBack={() => {}}
+              isUnlocked={hasFullAccess}
+              onRequirePayment={() => setShowPaymentModal(true)}
             />
           </div>
         </div>
@@ -2216,9 +2632,96 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               <DocumentLivePreview
                 selectedFile={null}
                 savedRecord={activeTabMasterRecord}
+                selectedMonth={selectedMonth || (activeDate ? format(activeDate, "MM") : null)}
                 selectedDateIso={isAllDaysMode ? undefined : isoDate}
+                schoolProfile={activeProfile}
                 onBack={() => setIsPreviewModalOpen(false)}
+                isUnlocked={hasFullAccess}
+                onRequirePayment={() => setShowPaymentModal(true)}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ₹199 Full Academic Year Subscription Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border-2 border-amber-300 relative space-y-6">
+            <button
+              type="button"
+              onClick={() => setShowPaymentModal(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+            >
+              <X className="size-5" />
+            </button>
+
+            <div className="text-center space-y-2">
+              <div className="size-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center mx-auto shadow-md">
+                <Lock className="size-7" />
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900">
+                टाचण वही वार्षिक सबस्क्रिप्शन
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">
+                {toMarathiClassName(selectedClass)} • {selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}
+              </p>
+            </div>
+
+            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 space-y-2.5">
+              <div className="flex items-center justify-between border-b border-amber-200/80 pb-2">
+                <span className="text-xs font-bold text-slate-700">कालावधी (Validity):</span>
+                <span className="text-xs font-black text-amber-900">संपूर्ण शैक्षणिक वर्ष (३१ मे पर्यंत)</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-amber-200/80 pb-2">
+                <span className="text-xs font-bold text-slate-700">शुल्क (Subscription Fee):</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-400 line-through">₹499</span>
+                  <span className="text-lg font-black text-slate-900">₹{price || 199}</span>
+                </div>
+              </div>
+              <div className="pt-1 space-y-2 text-xs font-bold text-slate-800">
+                <p className="flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                  <span>सर्व दिवसांचे अमर्यादित PDF डाऊनलोड</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                  <span>संपूर्ण १० दिवसांच्या एकत्रित फाईल्स पाहणे व डाऊनलोड</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                  <span>वर्षभरातील सर्व महिन्यांचे नियोजन व अपडेट्स</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                type="button"
+                disabled={isPurchasing}
+                onClick={handleTriggerBuyAccess}
+                className="w-full py-3.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white rounded-2xl text-sm font-black shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              >
+                {isPurchasing ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>पेमेंट सुरू आहे...</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="size-4" />
+                    <span>₹{price || 199} सुरक्षित पेमेंट करा (Razorpay)</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
+                className="w-full py-2.5 text-xs font-bold text-slate-500 hover:text-slate-700 transition-colors cursor-pointer"
+              >
+                रद्द करा आणि दिवस-निहाय मोफत पहा
+              </button>
             </div>
           </div>
         </div>

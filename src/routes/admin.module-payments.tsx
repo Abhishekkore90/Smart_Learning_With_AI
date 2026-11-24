@@ -98,7 +98,7 @@ const DEFAULT_MODULES: { id: string; title: string; defaultPrice: number }[] = [
   { id: "hpc-card", title: "८. Holistic Progress Card (HPC)", defaultPrice: 199 },
   { id: "stats-teacher", title: "९. शिक्षक संचिका (Teacher Portfolio)", defaultPrice: 99 },
   { id: "annual-monthly-planning", title: "१०. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी (Planning & Question Bank)", defaultPrice: 149 },
-  { id: "teaching-record", title: "११. दैनिक अध्यापन टाचणवही (Teaching Diary)", defaultPrice: 99 },
+  { id: "teaching-record", title: "११. दैनिक अध्यापन टाचणवही (Teaching Diary)", defaultPrice: 199 },
   { id: "stats-student", title: "१२. विद्यार्थी संचिका (Student Portfolio)", defaultPrice: 99 },
   { id: "homework", title: "१३. दैनिक गृहपाठ (Daily Homework)", defaultPrice: 149 },
   { id: "question-paper", title: "१४. प्रश्नपत्रिका (Question Paper)", defaultPrice: 199 },
@@ -153,7 +153,12 @@ function AdminModulePaymentsPage() {
             title: mod.title,
             price: mod.defaultPrice,
             enabled: mod.defaultPrice > 0,
-            features: [
+            features: mod.id === "teaching-record" ? [
+              "१-दिवस पाठ टाचण पाहणे मोफत (Free Preview)",
+              "संपूर्ण १० दिवसांच्या एकत्रित फाईल्स ॲक्सेस",
+              "अमर्यादित PDF डाऊनलोड व प्रिंट सुविधा",
+              "संपूर्ण शैक्षणिक वर्ष २०२६-२७ (३१ मे पर्यंत) वैधता",
+            ] : [
               "PDF & एक्सेल रिपोर्ट डाऊनलोड",
               "सुरक्षित क्लाऊड बॅकअप",
               "24/7 व्हॉट्सॲप आणि फोन सपोर्ट सुविधा",
@@ -450,6 +455,11 @@ function AdminModulePaymentsPage() {
         toast.success(`'${DEFAULT_MODULES.find((m) => m.id === moduleId)?.title || moduleId}' ॲक्सेस बंद केला!`);
       } else {
         // TURN ON
+        const now = new Date();
+        const expYear = now.getMonth() >= 5 ? now.getFullYear() + 1 : now.getFullYear();
+        const academicYearEnd = new Date(expYear, 4, 31, 23, 59, 59, 999).toISOString();
+        const academicYearLabel = `${now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1}-${(now.getMonth() >= 5 ? now.getFullYear() + 1 : now.getFullYear()).toString().slice(-2)}`;
+
         const modTitle = DEFAULT_MODULES.find((m) => m.id === moduleId)?.title || moduleId;
         await setDoc(doc(db, "teacher_module_access", docKey), {
           id: docKey,
@@ -460,6 +470,8 @@ function AdminModulePaymentsPage() {
           moduleTitle: modTitle,
           status: "GRANTED",
           grantedAt: new Date().toISOString(),
+          validTill: academicYearEnd,
+          academicYear: academicYearLabel,
         });
         toast.success(`'${modTitle}' ॲक्सेस चालू केला!`);
       }
@@ -484,6 +496,11 @@ function AdminModulePaymentsPage() {
         toast.success(`'${teacher.teacherName}' चे सर्व मॉड्यूल्स बंद केले!`);
       } else {
         // TURN ON ALL
+        const now = new Date();
+        const expYear = now.getMonth() >= 5 ? now.getFullYear() + 1 : now.getFullYear();
+        const academicYearEnd = new Date(expYear, 4, 31, 23, 59, 59, 999).toISOString();
+        const academicYearLabel = `${now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1}-${(now.getMonth() >= 5 ? now.getFullYear() + 1 : now.getFullYear()).toString().slice(-2)}`;
+
         await setDoc(doc(db, "teacher_module_access", allDocKey), {
           id: allDocKey,
           teacherId: tId,
@@ -493,6 +510,8 @@ function AdminModulePaymentsPage() {
           moduleTitle: "सर्व मॉड्यूल्स (All Sections)",
           status: "GRANTED",
           grantedAt: new Date().toISOString(),
+          validTill: academicYearEnd,
+          academicYear: academicYearLabel,
         });
 
         for (const mod of DEFAULT_MODULES) {
@@ -506,6 +525,8 @@ function AdminModulePaymentsPage() {
             moduleTitle: mod.title,
             status: "GRANTED",
             grantedAt: new Date().toISOString(),
+            validTill: academicYearEnd,
+            academicYear: academicYearLabel,
           });
         }
         toast.success(`'${teacher.teacherName}' ला सर्व मॉड्यूल्सचा मोफत ॲक्सेस दिला!`);
@@ -909,7 +930,9 @@ function AdminModulePaymentsPage() {
                           </div>
 
                           <div>
-                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">वैधता (दिवस)</label>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
+                              वैधता (दिवस)
+                            </label>
                             <input
                               type="number"
                               min="1"
@@ -946,7 +969,7 @@ function AdminModulePaymentsPage() {
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 {["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"].map((clsId) => {
                                   const key = `marathi_${clsId}`;
-                                  const classPrice = item.classPrices?.[key] ?? item.price ?? 299;
+                                  const classPrice = item.classPrices?.[key] ?? item.price ?? (mod.id === "teaching-record" ? 199 : 299);
                                   return (
                                     <div key={key} className="bg-white p-2 rounded-xl border border-slate-200">
                                       <label className="text-[10px] font-black text-slate-600 block">
@@ -988,7 +1011,7 @@ function AdminModulePaymentsPage() {
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 {["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"].map((clsId) => {
                                   const key = `semi_${clsId}`;
-                                  const classPrice = item.classPrices?.[key] ?? item.price ?? 299;
+                                  const classPrice = item.classPrices?.[key] ?? item.price ?? (mod.id === "teaching-record" ? 199 : 299);
                                   return (
                                     <div key={key} className="bg-white p-2 rounded-xl border border-slate-200">
                                       <label className="text-[10px] font-black text-slate-600 block">

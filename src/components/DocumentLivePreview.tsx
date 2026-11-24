@@ -1102,11 +1102,14 @@ export function groupStructuredPagesByDay(pages: StructuredDayPage[], defaultBas
   }
 
   const currentDateCursor = new Date(startYear, startMonth, startDay);
+  while (currentDateCursor.getDay() === 0) { // Skip Sundays on start date
+    currentDateCursor.setDate(currentDateCursor.getDate() + 1);
+  }
 
   partitionedPages.forEach((p, idx) => {
     let assignedDate = "";
 
-    if (p.date) {
+    if (p.date && p.date.trim()) {
       const cleaned = p.date.trim().replace(/\s+/g, "");
       const parts = cleaned.split(/[\/\-\.]/);
       if (parts.length === 3) {
@@ -1133,7 +1136,7 @@ export function groupStructuredPagesByDay(pages: StructuredDayPage[], defaultBas
     }
 
     if (!assignedDate) {
-      if (idx > 0 || !p.date) {
+      if (idx > 0) {
         currentDateCursor.setDate(currentDateCursor.getDate() + 1);
       }
       while (currentDateCursor.getDay() === 0) { // Skip Sundays
@@ -1631,6 +1634,8 @@ export interface DocumentLivePreviewProps {
   loadingPdf?: boolean;
   onBack?: () => void;
   schoolProfile?: any;
+  isUnlocked?: boolean;
+  onRequirePayment?: () => void;
 }
 
 export interface DocumentLivePreviewRef {
@@ -1645,7 +1650,9 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   authenticatedPdfUrl,
   loadingPdf = false,
   onBack,
-  schoolProfile
+  schoolProfile,
+  isUnlocked = true,
+  onRequirePayment
 }, ref) => {
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [structuredPages, setStructuredPages] = useState<StructuredDayPage[]>([]);
@@ -1662,6 +1669,8 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
   const [excelPreviewData, setExcelPreviewData] = useState<any[] | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [generatedPdfPreviewUrl, setGeneratedPdfPreviewUrl] = useState<string | null>(null);
+  const [isGeneratingPdfPreview, setIsGeneratingPdfPreview] = useState(false);
   const [loadingContent, setLoadingContent] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [localPdfBlobUrl, setLocalPdfBlobUrl] = useState<string | null>(null);
@@ -1795,10 +1804,27 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   }, [selectedFile, activeExt]);
 
   useEffect(() => {
+    return () => {
+      if (generatedPdfPreviewUrl && generatedPdfPreviewUrl.startsWith("blob:")) {
+        try {
+          URL.revokeObjectURL(generatedPdfPreviewUrl);
+        } catch {}
+      }
+    };
+  }, [generatedPdfPreviewUrl]);
+
+  useEffect(() => {
     setHtmlContent(null);
     setStructuredPages([]);
     setExcelPreviewData(null);
     setErrorMsg(null);
+    if (generatedPdfPreviewUrl && generatedPdfPreviewUrl.startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(generatedPdfPreviewUrl);
+      } catch {}
+    }
+    setGeneratedPdfPreviewUrl(null);
+    setIsGeneratingPdfPreview(false);
     setViewMode(isPdf ? "original" : "structured");
     setFilterSingleDate(false);
 
@@ -2072,23 +2098,21 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     const weekStr = savedRecord?.week || savedRecord?.selectedWeek || "";
     const fileNameStr = savedRecord?.fileName || selectedFile?.name || "";
     
+    // Resolve year and month accurately
+    const yearStr = savedRecord?.year || (savedRecord?.date ? savedRecord.date.split("-")[0] : (selectedDateIso ? selectedDateIso.split("-")[0] : "2026"));
+    const monthStr = savedRecord?.month || selectedMonth || (savedRecord?.date ? savedRecord.date.split("-")[1] : (selectedDateIso ? selectedDateIso.split("-")[1] : "06"));
+
     if (weekStr.includes("1 to 10") || weekStr === "Week 1" || fileNameStr.includes("1_to_10") || fileNameStr.includes("1-10") || fileNameStr.includes("1_10")) {
-      const yearStr = savedRecord?.year || "2026";
-      const monthStr = savedRecord?.month || selectedMonth || "08";
       return `${yearStr}-${String(monthStr).padStart(2, "0")}-01`;
     }
     if (weekStr.includes("11 to 20") || weekStr === "Week 2" || fileNameStr.includes("11_to_20") || fileNameStr.includes("11-20") || fileNameStr.includes("11_20")) {
-      const yearStr = savedRecord?.year || "2026";
-      const monthStr = savedRecord?.month || selectedMonth || "08";
       return `${yearStr}-${String(monthStr).padStart(2, "0")}-11`;
     }
     if (weekStr.includes("21 to 31") || weekStr.includes("21 to 30") || weekStr === "Week 3" || weekStr === "Week 4" || weekStr === "Week 5" || fileNameStr.includes("21_to_31") || fileNameStr.includes("21-31")) {
-      const yearStr = savedRecord?.year || "2026";
-      const monthStr = savedRecord?.month || selectedMonth || "08";
       return `${yearStr}-${String(monthStr).padStart(2, "0")}-21`;
     }
-    return savedRecord?.diaryDate || savedRecord?.date || "2026-08-01";
-  }, [savedRecord, selectedFile, selectedMonth]);
+    return savedRecord?.diaryDate || savedRecord?.date || (selectedDateIso || `${yearStr}-${String(monthStr).padStart(2, "0")}-01`);
+  }, [savedRecord, selectedFile, selectedMonth, selectedDateIso]);
 
   const pdfUrlToDisplay = isPdf
     ? (selectedFile ? localPdfBlobUrl : (authenticatedPdfUrl || savedRecord?.masterPdfUrl || savedRecord?.pageUrl || null))
@@ -2369,6 +2393,10 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   const downloadUrl = savedRecord?.pageUrl || (selectedFile ? localPdfBlobUrl : null);
 
   const handleDownloadWord = async () => {
+    if (!isUnlocked && onRequirePayment) {
+      onRequirePayment();
+      return;
+    }
     if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -2556,7 +2584,296 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     }
   };
 
+  const buildDiaryPagesHtml = (pagesToUse: any[], profile: any) => {
+    const isSundayDate = (dayName: string, dateStr: string) => {
+      return isSunday(dayName, dateStr);
+    };
+
+    const defaultHeaders = [
+      "तासिका/ विषय",
+      "पाठ / घटक",
+      "अध्ययन मुद्दा",
+      "अध्ययन निष्पत्ती",
+      "अध्ययन अनुभवाचे स्वरूप",
+      "साधन तंत्रे",
+      "शैक्षणिक साहित्य"
+    ];
+
+    const validPages = pagesToUse.filter((p: any) => {
+      if (!p) return false;
+      if (p.isSunday || p.isHoliday) return false;
+      if (
+        findHolidayForDate(
+          customHolidays,
+          p.date || p.displayDate,
+          savedRecord?.className || p.std,
+          savedRecord?.medium
+        )
+      ) {
+        return false;
+      }
+      if (isSundayDate(p.day, p.date)) return false;
+      const validPeriods = (p.periods || []).filter((r: any) => 
+        r && (r.subject || r.topic || r.outcome || r.experience || r.period)
+      );
+      return validPeriods.length > 0;
+    });
+
+    const colWidths = ["8%", "9%", "13%", "33%", "19%", "9%", "9%"];
+
+    const isDash = (v: any) => {
+      const s = String(v ?? "").trim();
+      return !s || s === "-" || s === "--" || s === "—";
+    };
+
+    const dayBlocks = validPages.map((p: any, idx: number) => {
+      const rows = (p.periods || []).map((row: any, rIdx: number) => `
+        <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
+          <td style="box-sizing:border-box;text-align:center;font-weight:900;color:#000000;width:${colWidths[0]};font-size:11.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
+            <div style="color:#000000;font-weight:900;line-height:1.2;margin-bottom:2px;">${row.period}</div>
+            <div style="color:#000000;font-weight:900;line-height:1.2;">${row.subject || "-"}</div>
+          </td>
+          <td style="box-sizing:border-box;text-align:${isDash(row.topic) ? "center" : "left"};font-weight:800;color:#000000;width:${colWidths[1]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.topic || "-"}</td>
+          <td style="box-sizing:border-box;text-align:${isDash(row.subtopic) ? "center" : "left"};font-weight:800;color:#000000;width:${colWidths[2]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.subtopic || "-"}</td>
+          <td style="box-sizing:border-box;text-align:${isDash(row.outcome) ? "center" : "left"};color:#000000;font-weight:800;width:${colWidths[3]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.outcome || "-"}</td>
+          <td style="box-sizing:border-box;text-align:${isDash(row.experience) ? "center" : "left"};color:#000000;font-weight:700;width:${colWidths[4]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.experience || "-"}</td>
+          <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[5]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.tools || "-"}</td>
+          <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[6]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.materials || "-"}</td>
+        </tr>`).join("");
+
+      const headers = defaultHeaders
+        .map((h: string, hIdx: number) => {
+          return `<th style="box-sizing:border-box;width:${colWidths[hIdx] || "auto"};background-color:#e2e8f0 !important;color:#0f172a !important;padding:6px 3px;text-align:center;font-size:12px;font-weight:700;border:1.5px solid #475569;line-height:1.22;word-wrap:break-word;overflow-wrap:break-word;white-space:normal;">${h}</th>`;
+        }).join("");
+
+      const dayVal = toMarathiDayName(p.day, p.date);
+      const teacherVal = toMarathiDigits(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-"));
+      const schoolVal = toMarathiDigits(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-"));
+      const stdVal = toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-"));
+      const yearVal = toMarathiDigits(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27"));
+
+      return `
+        <div class="pdf-day-page ${idx > 0 ? "html2pdf-page-break" : ""}" style="width: 794px; height: 1116px; box-sizing: border-box; padding: 36px 20px; background: #ffffff; overflow: hidden; position: relative;">
+          <div class="pdf-day-inner" style="width: 754px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; min-height: 1040px;">
+            <div>
+              <div style="text-align: center; margin-bottom: 6px;">
+                <h2 style="font-size: 20px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; margin: 0;">दैनंदिन पाठ टाचण</h2>
+              </div>
+              <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 6px; margin-bottom: 6px; background: #ffffff;">
+                <tr>
+                  <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
+                    <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">दिनांक</div>
+                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${formatMarathiDate(p.date)}</div>
+                  </td>
+                  <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
+                    <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">वार</div>
+                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
+                  </td>
+                  <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
+                    <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">वर्गशिक्षक</div>
+                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${teacherVal}</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
+                    <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">शाळा</div>
+                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${schoolVal}</div>
+                  </td>
+                  <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
+                    <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">इयत्ता</div>
+                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${stdVal}</div>
+                  </td>
+                  <td style="width: 33.33%; padding: 4px 8px; vertical-align: middle; text-align: center;">
+                    <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">सन</div>
+                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${yearVal}</div>
+                  </td>
+                </tr>
+              </table>
+              ${p.thought ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 12px; color: #000000; text-align: center;"><strong style="font-weight: 900; color: #000000;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #000000;">"${p.thought}"</strong></div>` : ""}
+              <table class="main-diary-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #475569; margin-bottom: 6px; background: #ffffff;">
+                <thead>
+                  <tr>
+                    ${headers}
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+            <div style="margin-top: 6px; shrink-0;">
+              ${(() => {
+                let rawRemarks = (p.specialRemarks || "").trim();
+                if (!rawRemarks && p.date) {
+                  try {
+                    rawRemarks = (localStorage.getItem(`special_remarks_${p.date}`) || "").trim();
+                  } catch {}
+                }
+                if (!rawRemarks) {
+                  return `<div style="display: flex; align-items: flex-end; gap: 6px; margin-bottom: 4px; width: 100%;">
+                    <span style="font-size: 11px; font-weight: 900; color: #0f172a; white-space: nowrap; line-height: 1.2; flex-shrink: 0;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span>
+                    <div style="flex: 1; border-bottom: 1px dashed #cbd5e1; height: 12px;"></div>
+                  </div>`;
+                }
+                const safeRemarks = rawRemarks
+                  .replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;");
+                const len = safeRemarks.length;
+                const fontSize = len > 95 ? "8.5px" : len > 70 ? "9.5px" : len > 45 ? "10.5px" : "11px";
+                return `<div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; width: 100%; overflow: hidden;">
+                  <span style="font-size: 11px; font-weight: 900; color: #0f172a; white-space: nowrap; line-height: 1.2; flex-shrink: 0;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span>
+                  <span style="font-size: ${fontSize}; font-weight: 700; color: #0f172a; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">${safeRemarks}</span>
+                </div>`;
+              })()}
+              <table style="width: 100%; border: none; margin-top: 12px; background: transparent;">
+                <tr>
+                  <td style="text-align: left; font-size: 12px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">वर्गशिक्षक स्वाक्षरी</td>
+                  <td style="text-align: right; font-size: 12px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">मुख्याध्यापक स्वाक्षरी</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+
+    return { dayBlocks, validPagesCount: validPages.length };
+  };
+
+  const generateDiaryPdfBlob = async (pagesToUse: any[]): Promise<Blob> => {
+    const profile = schoolProfile || getStoredSchoolProfile();
+    const { dayBlocks, validPagesCount } = buildDiaryPagesHtml(pagesToUse, profile);
+
+    if (validPagesCount === 0) {
+      throw new Error("No valid diary pages to generate PDF.");
+    }
+
+    const html2pdfModule = await import("html2pdf.js");
+    let html2pdfFn: any = html2pdfModule.default || html2pdfModule;
+    if (html2pdfFn && html2pdfFn.default) html2pdfFn = html2pdfFn.default;
+    if (typeof html2pdfFn !== "function" && typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
+      html2pdfFn = (window as any).html2pdf;
+    }
+
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "absolute";
+    wrapper.style.top = "0px";
+    wrapper.style.left = "0px";
+    wrapper.style.zIndex = "-99999";
+    wrapper.style.opacity = "1";
+    wrapper.style.pointerEvents = "none";
+    wrapper.style.width = "794px";
+    wrapper.style.backgroundColor = "#ffffff";
+    wrapper.style.overflow = "hidden";
+
+    const container = document.createElement("div");
+    container.style.width = "794px";
+    container.style.boxSizing = "border-box";
+    container.style.backgroundColor = "#ffffff";
+    container.style.color = "#0f172a";
+    container.style.fontFamily = "'Noto Sans Devanagari', sans-serif";
+    container.innerHTML = dayBlocks;
+
+    wrapper.appendChild(container);
+    document.body.appendChild(wrapper);
+
+    // Auto-fit & vertically fill every single day page onto 1 A4 page with safe print gaps
+    const dayPages = container.querySelectorAll<HTMLElement>(".pdf-day-page");
+    dayPages.forEach((pageEl) => {
+      fitPdfDayPageToA4(pageEl, 754, 1040);
+    });
+
+    if (document.fonts && document.fonts.ready) {
+      try {
+        await document.fonts.ready;
+      } catch {}
+    }
+
+    const baseName = activeFileName.replace(/\.[^/.]+$/, "") || "Teaching_Diary";
+    const opt = {
+      margin:       [0, 0, 0, 0],
+      filename:     `${baseName}.pdf`,
+      image:        { type: 'png', quality: 1.0 },
+      html2canvas:  { scale: 2.5, useCORS: true, logging: false, backgroundColor: '#ffffff', windowWidth: 794 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+      pagebreak:    { mode: 'css', before: '.html2pdf-page-break' }
+    };
+
+    try {
+      const pdfBlob = await html2pdfFn().set(opt).from(container).outputPdf("blob");
+      return pdfBlob;
+    } finally {
+      if (document.body.contains(wrapper)) {
+        document.body.removeChild(wrapper);
+      }
+    }
+  };
+
+  const handleShowPdfPreview = async () => {
+    // If already in native PDF mode or local pdf blob exists, switch immediately
+    if (pdfUrlToDisplay) {
+      setViewMode("original");
+      return;
+    }
+
+    // If we already generated preview blob and user hasn't made new edits
+    if (generatedPdfPreviewUrl) {
+      setViewMode("original");
+      return;
+    }
+
+    const currentEdited = structuredListRef.current?.getEditedData();
+    const pagesToUse = (currentEdited && currentEdited.length > 0)
+      ? currentEdited
+      : (structuredPages && structuredPages.length > 0)
+        ? structuredPages
+        : (savedRecord as any)?.structuredData || pagesToDisplay;
+
+    if (pagesToUse && pagesToUse.length > 0) {
+      setIsGeneratingPdfPreview(true);
+      setViewMode("original");
+      try {
+        const blob = await generateDiaryPdfBlob(pagesToUse);
+        const url = URL.createObjectURL(blob);
+        setGeneratedPdfPreviewUrl(url);
+        toast.success("✅ PDF प्रिव्ह्यू तयार झाला!");
+      } catch (err) {
+        console.error("Failed to generate PDF preview:", err);
+        toast.error("PDF प्रिव्ह्यू तयार करताना अडचण आली.");
+        setViewMode("structured");
+      } finally {
+        setIsGeneratingPdfPreview(false);
+      }
+      return;
+    }
+
+    // Fallback: convert selected DOCX file directly
+    if (selectedFile) {
+      setIsGeneratingPdfPreview(true);
+      setViewMode("original");
+      try {
+        const { convertDocxToPdfBlob } = await import("@/services/docxToPdfConverter");
+        const buffer = await selectedFile.arrayBuffer();
+        const res = await convertDocxToPdfBlob(buffer, activeFileName);
+        const url = URL.createObjectURL(res.pdfBlob);
+        setGeneratedPdfPreviewUrl(url);
+        toast.success("✅ PDF प्रिव्ह्यू तयार झाला!");
+      } catch (err) {
+        console.error("DOCX to PDF conversion error:", err);
+        toast.error("PDF प्रिव्ह्यू तयार होऊ शकला नाही.");
+        setViewMode("structured");
+      } finally {
+        setIsGeneratingPdfPreview(false);
+      }
+      return;
+    }
+
+    toast.warning("प्रिव्ह्यू करण्यासाठी PDF किंवा टाचण डेटा उपलब्ध नाही.");
+  };
+
   const handleLocalDownloadPdf = async () => {
+    if (!isUnlocked && onRequirePayment) {
+      onRequirePayment();
+      return;
+    }
     if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -2571,213 +2888,33 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       return handleDownloadWord();
     }
 
-    const profile = schoolProfile || getStoredSchoolProfile();
-
     setIsGeneratingPdf(true);
     toast.success("PDF डाउनलोड तयार होत आहे... (Generating PDF...)");
 
     try {
-      const html2pdfModule = await import("html2pdf.js");
-      let html2pdfFn: any = html2pdfModule.default || html2pdfModule;
-      if (html2pdfFn && html2pdfFn.default) html2pdfFn = html2pdfFn.default;
-      if (typeof html2pdfFn !== "function" && typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
-        html2pdfFn = (window as any).html2pdf;
-      }
-
-      const isSundayDate = (dayName: string, dateStr: string) => {
-        return isSunday(dayName, dateStr);
-      };
-
-      const defaultHeaders = [
-        "तासिका/ विषय",
-        "पाठ / घटक",
-        "अध्ययन मुद्दा",
-        "अध्ययन निष्पत्ती",
-        "अध्ययन अनुभवाचे स्वरूप",
-        "साधन तंत्रे",
-        "शैक्षणिक साहित्य"
-      ];
-
-      const validPages = pagesToUse.filter((p: any) => {
-        if (!p) return false;
-        if (p.isSunday || p.isHoliday) return false;
-        if (
-          findHolidayForDate(
-            customHolidays,
-            p.date || p.displayDate,
-            savedRecord?.className || p.std,
-            savedRecord?.medium
-          )
-        ) {
-          return false;
-        }
-        if (isSundayDate(p.day, p.date)) return false;
-        const validPeriods = (p.periods || []).filter((r: any) => 
-          r && (r.subject || r.topic || r.outcome || r.experience || r.period)
-        );
-        return validPeriods.length > 0;
-      });
-
-      const colWidths = ["8%", "9%", "13%", "33%", "19%", "9%", "9%"];
-
-      const isDash = (v: any) => {
-        const s = String(v ?? "").trim();
-        return !s || s === "-" || s === "--" || s === "—";
-      };
-
-      const dayBlocks = validPages.map((p: any, idx: number) => {
-        const rows = (p.periods || []).map((row: any, rIdx: number) => `
-          <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
-            <td style="box-sizing:border-box;text-align:center;font-weight:900;color:#000000;width:${colWidths[0]};font-size:11.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
-              <div style="color:#000000;font-weight:900;line-height:1.2;margin-bottom:2px;">${row.period}</div>
-              <div style="color:#000000;font-weight:900;line-height:1.2;">${row.subject || "-"}</div>
-            </td>
-            <td style="box-sizing:border-box;text-align:${isDash(row.topic) ? "center" : "left"};font-weight:800;color:#000000;width:${colWidths[1]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.topic || "-"}</td>
-            <td style="box-sizing:border-box;text-align:${isDash(row.subtopic) ? "center" : "left"};font-weight:800;color:#000000;width:${colWidths[2]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.subtopic || "-"}</td>
-            <td style="box-sizing:border-box;text-align:${isDash(row.outcome) ? "center" : "left"};color:#000000;font-weight:800;width:${colWidths[3]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.outcome || "-"}</td>
-            <td style="box-sizing:border-box;text-align:${isDash(row.experience) ? "center" : "left"};color:#000000;font-weight:700;width:${colWidths[4]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.experience || "-"}</td>
-            <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[5]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.tools || "-"}</td>
-            <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[6]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.materials || "-"}</td>
-          </tr>`).join("");
-
-        const headers = defaultHeaders
-          .map((h: string, hIdx: number) => {
-            return `<th style="box-sizing:border-box;width:${colWidths[hIdx] || "auto"};background-color:#e2e8f0 !important;color:#0f172a !important;padding:6px 3px;text-align:center;font-size:12px;font-weight:700;border:1.5px solid #475569;line-height:1.22;word-wrap:break-word;overflow-wrap:break-word;white-space:normal;">${h}</th>`;
-          }).join("");
-
-        const dayVal = toMarathiDayName(p.day, p.date);
-        const teacherVal = toMarathiDigits(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-"));
-        const schoolVal = toMarathiDigits(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-"));
-        const stdVal = toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-"));
-        const yearVal = toMarathiDigits(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27"));
-
-        return `
-          <div class="pdf-day-page ${idx > 0 ? "html2pdf-page-break" : ""}" style="width: 794px; height: 1116px; box-sizing: border-box; padding: 36px 20px; background: #ffffff; overflow: hidden; position: relative;">
-            <div class="pdf-day-inner" style="width: 754px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; min-height: 1040px;">
-              <div>
-                <div style="text-align: center; margin-bottom: 6px;">
-                  <h2 style="font-size: 20px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; margin: 0;">दैनंदिन पाठ टाचण</h2>
-                </div>
-                <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 6px; margin-bottom: 6px; background: #ffffff;">
-                  <tr>
-                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
-                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">दिनांक</div>
-                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${formatMarathiDate(p.date)}</div>
-                    </td>
-                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
-                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">वार</div>
-                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
-                    </td>
-                    <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
-                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">वर्गशिक्षक</div>
-                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${teacherVal}</div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
-                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">शाळा</div>
-                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${schoolVal}</div>
-                    </td>
-                    <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: middle; text-align: center;">
-                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">इयत्ता</div>
-                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${stdVal}</div>
-                    </td>
-                    <td style="width: 33.33%; padding: 4px 8px; vertical-align: middle; text-align: center;">
-                      <div style="font-size: 11.5px; font-weight: 900; color: #1e293b;">सन</div>
-                      <div style="font-size: 13px; font-weight: 900; color: #0f172a; margin-top: 1px;">${yearVal}</div>
-                    </td>
-                  </tr>
-                </table>
-                ${p.thought ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 12px; color: #000000; text-align: center;"><strong style="font-weight: 900; color: #000000;">आजचा सुविचार :</strong> <strong style="font-weight: 900; color: #000000;">"${p.thought}"</strong></div>` : ""}
-                <table class="main-diary-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #475569; margin-bottom: 6px; background: #ffffff;">
-                  <thead>
-                    <tr>
-                      ${headers}
-                    </tr>
-                  </thead>
-                  <tbody>${rows}</tbody>
-                </table>
-              </div>
-              <div style="margin-top: 6px; shrink-0;">
-                ${(() => {
-                  let rawRemarks = (p.specialRemarks || "").trim();
-                  if (!rawRemarks && p.date) {
-                    try {
-                      rawRemarks = (localStorage.getItem(`special_remarks_${p.date}`) || "").trim();
-                    } catch {}
-                  }
-                  if (!rawRemarks) {
-                    return `<div style="display: flex; align-items: flex-end; gap: 6px; margin-bottom: 4px; width: 100%;">
-                      <span style="font-size: 11px; font-weight: 900; color: #0f172a; white-space: nowrap; line-height: 1.2; flex-shrink: 0;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span>
-                      <div style="flex: 1; border-bottom: 1px dashed #cbd5e1; height: 12px;"></div>
-                    </div>`;
-                  }
-                  const safeRemarks = rawRemarks
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;");
-                  const len = safeRemarks.length;
-                  const fontSize = len > 95 ? "8.5px" : len > 70 ? "9.5px" : len > 45 ? "10.5px" : "11px";
-                  return `<div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; width: 100%; overflow: hidden;">
-                    <span style="font-size: 11px; font-weight: 900; color: #0f172a; white-space: nowrap; line-height: 1.2; flex-shrink: 0;">दिवसभरातील वैशिष्टपूर्ण बाबी:</span>
-                    <span style="font-size: ${fontSize}; font-weight: 700; color: #0f172a; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">${safeRemarks}</span>
-                  </div>`;
-                })()}
-                <table style="width: 100%; border: none; margin-top: 12px; background: transparent;">
-                  <tr>
-                    <td style="text-align: left; font-size: 12px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">वर्गशिक्षक स्वाक्षरी</td>
-                    <td style="text-align: right; font-size: 12px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">मुख्याध्यापक स्वाक्षरी</td>
-                  </tr>
-                </table>
-              </div>
-            </div>
-          </div>`;
-      }).join("");
-
-      const wrapper = document.createElement("div");
-      wrapper.style.position = "fixed";
-      wrapper.style.top = "0";
-      wrapper.style.left = "-9999px";
-      wrapper.style.width = "794px";
-      wrapper.style.backgroundColor = "#ffffff";
-      wrapper.style.overflow = "hidden";
-
-      const container = document.createElement("div");
-      container.style.width = "794px";
-      container.style.boxSizing = "border-box";
-      container.style.backgroundColor = "#ffffff";
-      container.style.color = "#0f172a";
-      container.style.fontFamily = "'Noto Sans Devanagari', sans-serif";
-      container.innerHTML = dayBlocks;
-
-      wrapper.appendChild(container);
-      document.body.appendChild(wrapper);
-
-      // Auto-fit & vertically fill every single day page onto 1 A4 page with safe print gaps
-      const dayPages = container.querySelectorAll<HTMLElement>(".pdf-day-page");
-      dayPages.forEach((pageEl) => {
-        fitPdfDayPageToA4(pageEl, 754, 1040);
-      });
-
-      if (document.fonts && document.fonts.ready) {
-        try {
-          await document.fonts.ready;
-        } catch {}
-      }
-
       const baseName = activeFileName.replace(/\.[^/.]+$/, "") || "Teaching_Diary";
-      
-      const opt = {
-        margin:       [0, 0, 0, 0],
-        filename:     `${baseName}.pdf`,
-        image:        { type: 'png', quality: 1.0 },
-        html2canvas:  { scale: 3, useCORS: true, logging: false, backgroundColor: '#ffffff', windowWidth: 794 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-        pagebreak:    { mode: 'css', before: '.html2pdf-page-break' }
-      };
 
-      await html2pdfFn().set(opt).from(container).save();
-      if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
+      // If we already have a generated blob and no active unsaved edits, download directly
+      if (generatedPdfPreviewUrl && !currentEdited) {
+        const a = document.createElement("a");
+        a.href = generatedPdfPreviewUrl;
+        a.download = `${baseName}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast.success(`✅ "${baseName}.pdf" डाउनलोड झाली!`);
+        return;
+      }
+
+      const blob = await generateDiaryPdfBlob(pagesToUse);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${baseName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       toast.success(`✅ "${baseName}.pdf" डाउनलोड झाली!`);
     } catch (err) {
       console.error("Local PDF generation error:", err);
@@ -2822,10 +2959,47 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         <div className="flex items-center gap-2 shrink-0">
 
 
-          {/* Single PDF View Mode Badge (Dual options removed as requested) */}
-          <div className="flex items-center bg-indigo-600 px-3 py-1.5 rounded-xl text-white text-xs font-bold gap-1.5 shadow-sm">
-            <Eye className="size-3.5" /> PDF प्रिव्ह्यू
-          </div>
+          {/* PDF Preview Mode Button (Interactive) */}
+          <button
+            type="button"
+            onClick={handleShowPdfPreview}
+            disabled={isGeneratingPdfPreview}
+            className={`flex items-center px-4 py-1.5 rounded-full text-xs font-black gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer ${
+              viewMode === "original"
+                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white ring-2 ring-white/70 shadow-orange-500/30"
+                : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
+            }`}
+            title="निवडलेल्या फाईलचा PDF प्रिव्ह्यू पहा (View PDF Preview)"
+          >
+            {isGeneratingPdfPreview ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                <span>PDF तयार होत आहे...</span>
+              </>
+            ) : (
+              <>
+                <Eye className="size-3.5" />
+                <span>PDF प्रिव्ह्यू</span>
+              </>
+            )}
+          </button>
+
+          {/* Structured View Mode Button */}
+          {hasStructuredView && (
+            <button
+              type="button"
+              onClick={() => setViewMode("structured")}
+              className={`flex items-center px-3.5 py-1.5 rounded-xl text-xs font-bold gap-1.5 transition-all cursor-pointer border ${
+                viewMode === "structured"
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-sm"
+                  : "bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border-slate-700"
+              }`}
+              title="स्ट्रक्चर्ड टाचण (Structured Edit)"
+            >
+              <LayoutGrid className="size-3.5" />
+              <span>स्ट्रक्चर्ड टाचण</span>
+            </button>
+          )}
 
           {(downloadUrl || hasStructuredView) && (
             <div className="flex items-center gap-2">
@@ -2840,7 +3014,15 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
                   {isGeneratingPdf ? (
                     <><Loader2 className="size-3.5 animate-spin" /> Generating PDF...</>
                   ) : (
-                    <><Download className="size-3.5" /> Download to PDF</>
+                    <>
+                      <Download className="size-3.5" />
+                      <span>Download to PDF</span>
+                      {!isUnlocked && (
+                        <span className="text-[10px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded font-black ml-0.5">
+                          ₹१९९
+                        </span>
+                      )}
+                    </>
                   )}
                 </button>
               )}
@@ -2865,21 +3047,39 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
       <div className="flex-1 w-full bg-slate-50 overflow-y-auto overflow-x-hidden relative p-1 sm:p-3">
         {loadingContent || loadingPdf ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400 min-h-[400px]">
             <Loader2 className="size-8 animate-spin text-indigo-600" />
             <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
               Loading document preview...
             </span>
           </div>
-        ) : (isPdf || pdfUrlToDisplay) && pdfUrlToDisplay && isRecordMatchingMonth ? (
-          <div className="w-full h-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner flex flex-col relative">
+        ) : isGeneratingPdfPreview ? (
+          <div className="flex flex-col items-center justify-center h-full min-h-[450px] gap-3 text-slate-500 bg-white rounded-2xl border border-slate-200 p-8 shadow-xs">
+            <Loader2 className="size-10 animate-spin text-orange-500" />
+            <span className="text-sm font-black text-slate-800">
+              निवडलेल्या फाईलचा PDF प्रिव्ह्यू तयार होत आहे...
+            </span>
+            <span className="text-xs text-slate-500 font-semibold">
+              कृपया काही सेकंद थांबा, A4 फॉरमॅट तयार होत आहे...
+            </span>
+          </div>
+        ) : viewMode === "original" && (pdfUrlToDisplay || generatedPdfPreviewUrl) ? (
+          <div className="w-full h-full min-h-[650px] rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner flex flex-col relative">
             <iframe
-              src={pdfUrlToDisplay.includes("#") ? pdfUrlToDisplay : `${pdfUrlToDisplay}#view=FitH`}
+              src={
+                (pdfUrlToDisplay || generatedPdfPreviewUrl)!.includes("#")
+                  ? (pdfUrlToDisplay || generatedPdfPreviewUrl)!.replace(/#.*$/, "#toolbar=1&navpanes=0&zoom=100")
+                  : `${pdfUrlToDisplay || generatedPdfPreviewUrl}#toolbar=1&navpanes=0&zoom=100`
+              }
               title="PDF Document Live Preview"
-              className="w-full h-full border-none rounded-2xl bg-white"
+              className="w-full h-full min-h-[650px] border-none rounded-2xl bg-white"
             />
           </div>
         ) : viewMode === "structured" && pagesToDisplay.length > 0 ? (
+          <div className="w-full">
+            <StructuredDayPageList ref={structuredListRef} pages={pagesToDisplay} schoolProfile={schoolProfile} defaultBaseDate={effectiveBaseDate} />
+          </div>
+        ) : pagesToDisplay.length > 0 ? (
           <div className="w-full">
             <StructuredDayPageList ref={structuredListRef} pages={pagesToDisplay} schoolProfile={schoolProfile} defaultBaseDate={effectiveBaseDate} />
           </div>
@@ -2932,7 +3132,11 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         ) : isPdf && pdfUrlToDisplay && isRecordMatchingMonth ? (
           /* PDF IFRAME FALLBACK */
           <iframe
-            src={pdfUrlToDisplay.includes("#") ? pdfUrlToDisplay : `${pdfUrlToDisplay}#view=FitH`}
+            src={
+              pdfUrlToDisplay.includes("#")
+                ? pdfUrlToDisplay.replace(/#.*$/, "#toolbar=1&navpanes=0&zoom=100")
+                : `${pdfUrlToDisplay}#toolbar=1&navpanes=0&zoom=100`
+            }
             title="Document Live Preview"
             className="w-full h-full border-none rounded-2xl bg-white"
           />
