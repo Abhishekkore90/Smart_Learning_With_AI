@@ -272,6 +272,14 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
         origin: { y: 0.6 },
       });
     } catch {}
+
+    // Auto scroll down to certificate smoothly
+    setTimeout(() => {
+      const certEl = document.getElementById("mcq-certificate-section");
+      if (certEl) {
+        certEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 200);
   };
 
   // Reset local state to practice again
@@ -746,50 +754,6 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
           </motion.div>
         )}
 
-        {/* ATTRACTIVE CERTIFICATE SECTION (Shown if quiz is submitted) */}
-        {submission && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="mb-8"
-          >
-            {/* Teacher & School verification bar on certificate */}
-            <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-2.5 mb-3 shadow-xs flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap text-xs">
-                <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                  प्रमाणपत्रावरील स्वाक्षरी तपशील:
-                </span>
-                <span className="text-slate-700 dark:text-slate-300 font-semibold">
-                  {effectiveTeacherName ? `वर्ग शिक्षक: ${effectiveTeacherName} • ` : "वर्ग शिक्षक (नोंद नाही) • "}
-                  {effectiveSchoolName ? `शाळा: ${effectiveSchoolName}` : "शाळा (नोंद नाही)"}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsShareModalOpen(true)}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 underline cursor-pointer"
-              >
-                नाव बदला किंवा शेअर करा
-              </button>
-            </div>
-
-            <MCQCertificate
-              studentName={currentStudentName || "विद्यार्थी"}
-              quizTitle={quiz.title}
-              subject={quiz.subject}
-              classId={quiz.classId}
-              score={submission.score}
-              totalMarks={submission.totalMarks}
-              percentage={submission.percentage}
-              dateStr={quiz.date || new Date().toISOString().split("T")[0]}
-              shareableUrl={shareableUrl}
-              teacherName={effectiveTeacherName}
-              schoolName={effectiveSchoolName}
-            />
-          </motion.div>
-        )}
-
         {/* QUESTIONS LIST */}
         <div className="space-y-6">
           {quiz.questions.map((q, idx) => {
@@ -946,37 +910,82 @@ export const MCQQuizPlayer: React.FC<MCQQuizPlayerProps> = ({
             </div>
           </div>
         ) : (
-          <div className="mt-8 text-center bg-slate-50 dark:bg-slate-850 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <h4 className="font-bold text-slate-800 dark:text-white text-base">
-              हा स्वाध्याय पूर्ण झाला आहे!
-            </h4>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              आपले दिलेले सर्व पर्याय फक्त या ब्राउझरमध्ये तात्पुरते सेव्ह आहेत. पेज बंद केल्यावर ते आपोआप मिटवले जातील.
-            </p>
-            <div className="flex justify-center gap-3 mt-4">
-              <button
-                type="button"
-                onClick={handleShareResult}
-                disabled={isSharing}
-                className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-75 text-white font-bold text-sm flex items-center gap-2 shadow cursor-pointer active:scale-95 transition-all"
-              >
-                {isSharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
-                <span>{isSharing ? "तयार होत आहे..." : "निकाल शेअर करा"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleDownloadScorecardPDF}
-                disabled={isDownloadingPDF}
-                className="px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-semibold text-sm flex items-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-60"
-              >
-                {isDownloadingPDF ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
-                ) : (
-                  <Download className="w-4 h-4 text-slate-700 dark:text-slate-300" />
-                )}
-                <span>{isDownloadingPDF ? "गुणपत्रिका PDF तयार होत आहे..." : "गुणपत्रिका PDF डाउनलोड"}</span>
-              </button>
+          <div className="space-y-6 mt-8">
+            <div className="text-center bg-slate-50 dark:bg-slate-850 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <h4 className="font-bold text-slate-800 dark:text-white text-base">
+                हा स्वाध्याय पूर्ण झाला आहे!
+              </h4>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                आपले दिलेले सर्व पर्याय फक्त या ब्राउझरमध्ये तात्पुरते सेव्ह आहेत. पेज बंद केल्यावर ते आपोआप मिटवले जातील.
+              </p>
+              <div className="flex justify-center gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={handleShareResult}
+                  disabled={isSharing}
+                  className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-75 text-white font-bold text-sm flex items-center gap-2 shadow cursor-pointer active:scale-95 transition-all"
+                >
+                  {isSharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+                  <span>{isSharing ? "तयार होत आहे..." : "निकाल शेअर करा"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadScorecardPDF}
+                  disabled={isDownloadingPDF}
+                  className="px-5 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-700 font-semibold text-sm flex items-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer disabled:opacity-60"
+                >
+                  {isDownloadingPDF ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+                  ) : (
+                    <Download className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                  )}
+                  <span>{isDownloadingPDF ? "गुणपत्रिका PDF तयार होत आहे..." : "गुणपत्रिका PDF डाउनलोड"}</span>
+                </button>
+              </div>
             </div>
+
+            {/* ATTRACTIVE CERTIFICATE SECTION (Shown directly below completion bar) */}
+            <motion.div
+              id="mcq-certificate-section"
+              initial={{ opacity: 0, scale: 0.98, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="space-y-3 pt-2"
+            >
+              {/* Teacher & School verification bar on certificate */}
+              <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-2.5 shadow-xs flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                    प्रमाणपत्रावरील स्वाक्षरी तपशील:
+                  </span>
+                  <span className="text-slate-700 dark:text-slate-300 font-semibold">
+                    {effectiveTeacherName ? `वर्ग शिक्षक: ${effectiveTeacherName} • ` : "वर्ग शिक्षक (नोंद नाही) • "}
+                    {effectiveSchoolName ? `शाळा: ${effectiveSchoolName}` : "शाळा (नोंद नाही)"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 underline cursor-pointer"
+                >
+                  नाव बदला किंवा शेअर करा
+                </button>
+              </div>
+
+              <MCQCertificate
+                studentName={currentStudentName || "विद्यार्थी"}
+                quizTitle={quiz.title}
+                subject={quiz.subject}
+                classId={quiz.classId}
+                score={submission.score}
+                totalMarks={submission.totalMarks}
+                percentage={submission.percentage}
+                dateStr={quiz.date || new Date().toISOString().split("T")[0]}
+                shareableUrl={shareableUrl}
+                teacherName={effectiveTeacherName}
+                schoolName={effectiveSchoolName}
+              />
+            </motion.div>
           </div>
         )}
 
