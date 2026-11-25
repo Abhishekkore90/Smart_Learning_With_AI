@@ -3,7 +3,7 @@ import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Languages, Eye, School, CheckCircle2, ChevronRight, Upload, Trash2, FileText, Edit, MapPin, User, Building2, X, Printer, Download, Link2, ExternalLink, ImageIcon, Plus } from "lucide-react";
+import { ArrowLeft, Languages, Eye, School, CheckCircle2, ChevronRight, Upload, Trash2, FileText, Edit, MapPin, User, Building2, X, Printer, Download, Link2, ExternalLink, ImageIcon, Plus, Save, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { showToast as toast } from "@/lib/custom-toast";
 import { uploadBlobToBunny } from "@/lib/bunnyStorage";
@@ -161,12 +161,14 @@ const PhotoUploader = ({
   standardId,
   lang,
   evidenceUrl,
-  selectedOptionIdx
+  selectedOptionIdx,
+  onRegisterSave
 }: {
   standardId: number;
   lang: "mr" | "en";
   evidenceUrl?: string;
   selectedOptionIdx?: number;
+  onRegisterSave?: (fn: (() => Promise<void>) | null) => void;
 }) => {
   const { profile } = useAuth();
   const [configuredOptions, setConfiguredOptions] = useState<string[]>([]);
@@ -379,11 +381,36 @@ const PhotoUploader = ({
     }
   };
 
+  useEffect(() => {
+    if (!onRegisterSave) return;
+    onRegisterSave(async () => {
+      if (selectedOptionIdx === undefined) return;
+      Object.entries(checkedStates).forEach(([k, v]) => {
+        localStorage.setItem(`sqaaf_checked_${standardId}_${selectedOptionIdx}_${k}`, v ? "true" : "false");
+      });
+      // Sync file entries to localStorage
+      Object.keys(fileNames).forEach((k) => {
+        const idx = Number(k);
+        try {
+          if (fileNames[idx]) localStorage.setItem(`sqaaf_file_name_${standardId}_${selectedOptionIdx}_${idx}`, fileNames[idx]);
+          if (filePreviews[idx]) localStorage.setItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`, filePreviews[idx]);
+          if (fileTypes[idx]) localStorage.setItem(`sqaaf_file_type_${standardId}_${selectedOptionIdx}_${idx}`, fileTypes[idx]);
+        } catch (e) {}
+      });
+      await saveResponseToFirestore(checkedStates, fileNames, filePreviews, fileTypes);
+    });
+    return () => {
+      onRegisterSave(null);
+    };
+  }, [onRegisterSave, standardId, selectedOptionIdx, checkedStates, fileNames, filePreviews, fileTypes]);
+
   const handleCheckboxChange = async (idx: number, checked: boolean) => {
     const updated = { ...checkedStates, [idx]: checked };
     setCheckedStates(updated);
-    localStorage.setItem(`sqaaf_checked_${standardId}_${selectedOptionIdx}_${idx}`, checked ? "true" : "false");
-    await saveResponseToFirestore(updated, fileNames, filePreviews, fileTypes);
+    if (!onRegisterSave) {
+      localStorage.setItem(`sqaaf_checked_${standardId}_${selectedOptionIdx}_${idx}`, checked ? "true" : "false");
+      await saveResponseToFirestore(updated, fileNames, filePreviews, fileTypes);
+    }
   };
 
   const handleMultiFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -454,7 +481,9 @@ const PhotoUploader = ({
     setFileNames(newNames);
     setFilePreviews(newPreviews);
     setFileTypes(newTypes);
-    await saveResponseToFirestore(checkedStates, newNames, newPreviews, newTypes);
+    if (!onRegisterSave) {
+      await saveResponseToFirestore(checkedStates, newNames, newPreviews, newTypes);
+    }
     toast.success(lang === "mr" ? "सर्व फाईल्स अपलोड झाल्या!" : "All files uploaded!");
   };
 
@@ -474,7 +503,9 @@ const PhotoUploader = ({
     localStorage.removeItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`);
     localStorage.removeItem(`sqaaf_file_type_${standardId}_${selectedOptionIdx}_${idx}`);
 
-    await saveResponseToFirestore(checkedStates, updatedNames, updatedPreviews, updatedTypes);
+    if (!onRegisterSave) {
+      await saveResponseToFirestore(checkedStates, updatedNames, updatedPreviews, updatedTypes);
+    }
   };
 
   const isPdf = (type: string | null) => type?.includes("pdf") || false;
@@ -5523,6 +5554,11 @@ function TeacherSqaafPage() {
   const [selectedLang, setSelectedLang] = useState<"mr" | "en">("mr");
   const [pdfLang, setPdfLang] = useState<"mr" | "en">("mr");
   const [activeStandardDetails, setActiveStandardDetails] = useState<number | null>(null);
+  const [savingManak, setSavingManak] = useState(false);
+  const photoUploaderSaveRef = useRef<(() => Promise<void>) | null>(null);
+  const registerPhotoUploaderSave = useCallback((fn: (() => Promise<void>) | null) => {
+    photoUploaderSaveRef.current = fn;
+  }, []);
   const [pdfFormat, setPdfFormat] = useState<"table" | "responses" | "summary">("table");
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [isEditingTable, setIsEditingTable] = useState(false);
@@ -6260,28 +6296,58 @@ function TeacherSqaafPage() {
     return getGroupedOptions(activeStandardDetails, selectedLang);
   }, [activeStandardDetails, selectedLang]);
 
-  const selectOption = (standardId: number, optionIdx: number) => {
+  const selectOption = (standardId: number, optionIdx: number, skipAutoSave = false) => {
     const updated = { ...selectedOptions, [standardId]: optionIdx };
     setSelectedOptions(updated);
-    localStorage.setItem("sqaaf_selected_options", JSON.stringify(updated));
-    if (academicYear) {
-      localStorage.setItem(`sqaaf_selected_options_${academicYear}`, JSON.stringify(updated));
-    }
 
     // Also mark the standard as completed
     const updatedCompleted = new Set(completedStandards);
     if (!updatedCompleted.has(standardId)) {
       updatedCompleted.add(standardId);
       setCompletedStandards(updatedCompleted);
+    }
+
+    if (!skipAutoSave) {
+      localStorage.setItem("sqaaf_selected_options", JSON.stringify(updated));
+      if (academicYear) {
+        localStorage.setItem(`sqaaf_selected_options_${academicYear}`, JSON.stringify(updated));
+      }
       localStorage.setItem("sqaaf_completed_standards", JSON.stringify(Array.from(updatedCompleted)));
       if (academicYear) {
         localStorage.setItem(`sqaaf_completed_standards_${academicYear}`, JSON.stringify(Array.from(updatedCompleted)));
       }
+      saveSqaafDataToCloud(updated, updatedCompleted, externalOptions, undefined, academicYear);
+      toast.success(selectedLang === "mr" ? `पर्याय निवडला.` : `Option selected.`);
     }
+  };
 
-    saveSqaafDataToCloud(updated, updatedCompleted, externalOptions, undefined, academicYear);
+  const handleSaveManak = async () => {
+    if (activeStandardDetails === null || savingManak) return;
+    setSavingManak(true);
+    try {
+      localStorage.setItem("sqaaf_selected_options", JSON.stringify(selectedOptions));
+      localStorage.setItem("sqaaf_completed_standards", JSON.stringify(Array.from(completedStandards)));
+      if (academicYear) {
+        localStorage.setItem(`sqaaf_selected_options_${academicYear}`, JSON.stringify(selectedOptions));
+        localStorage.setItem(`sqaaf_completed_standards_${academicYear}`, JSON.stringify(Array.from(completedStandards)));
+      }
 
-    toast.success(selectedLang === "mr" ? `पर्याय निवडला.` : `Option selected.`);
+      await Promise.all([
+        saveSqaafDataToCloud(selectedOptions, completedStandards, externalOptions, undefined, academicYear),
+        photoUploaderSaveRef.current ? photoUploaderSaveRef.current() : Promise.resolve(),
+      ]);
+
+      toast.success(
+        selectedLang === "mr"
+          ? `मानक क्र. ${toMarathiNumerals(activeStandardDetails)} ची माहिती यशस्वीरित्या जतन झाली!`
+          : `Standard No. ${activeStandardDetails} saved successfully!`
+      );
+    } catch (err) {
+      console.error("Error saving Manak:", err);
+      toast.error(selectedLang === "mr" ? "माहिती जतन करताना त्रुटी आली." : "Error saving standard data.");
+    } finally {
+      setSavingManak(false);
+    }
   };
 
   const toggleStandard = (num: number) => {
@@ -8683,7 +8749,7 @@ function TeacherSqaafPage() {
                           return (
                             <div
                               key={idx}
-                              onClick={() => selectOption(activeStandardDetails, idx)}
+                              onClick={() => selectOption(activeStandardDetails, idx, true)}
                               className={`rounded-2xl p-5 border transition-all text-[13px] font-extrabold leading-relaxed cursor-pointer hover:scale-[1.01] hover:border-slate-300 whitespace-pre-line ${isSelected
                                 ? "bg-[#22c55e] text-slate-950 border-[#22c55e] shadow-md"
                                 : "bg-[#f1eff7] text-slate-700 border-slate-200/60 shadow-sm"
@@ -8702,6 +8768,7 @@ function TeacherSqaafPage() {
                       lang={selectedLang}
                       evidenceUrl={currentDetail[selectedLang].evidenceUrl}
                       selectedOptionIdx={selectedOptions[activeStandardDetails]}
+                      onRegisterSave={registerPhotoUploaderSave}
                     />
 
                     {/* Divider */}
@@ -8710,8 +8777,26 @@ function TeacherSqaafPage() {
                     {/* Photo / Google Drive Links Tab */}
                     <DrivePhotoTab standardId={activeStandardDetails} lang={selectedLang} />
 
-                    {/* Dark Pill "Go Back" Button at Bottom Center */}
-                    <div className="flex justify-center pt-8 pb-10">
+                    {/* Action Buttons at Bottom Center: Save + Go Back */}
+                    <div className="flex flex-wrap items-center justify-center gap-4 pt-8 pb-10">
+                      <button
+                        type="button"
+                        onClick={handleSaveManak}
+                        disabled={savingManak}
+                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 text-white font-black px-10 py-4 rounded-full transition-colors uppercase tracking-widest text-[13px] shadow-xl shadow-emerald-600/20 active:scale-95 flex items-center gap-2 cursor-pointer"
+                      >
+                        {savingManak ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Save className="size-4" />
+                        )}
+                        <span>
+                          {savingManak
+                            ? (selectedLang === "mr" ? "जतन होत आहे..." : "Saving...")
+                            : (selectedLang === "mr" ? "जतन करा (Save)" : "Save")}
+                        </span>
+                      </button>
+
                       <button
                         onClick={() => setActiveStandardDetails(null)}
                         className="bg-[#0f1123] text-white font-black px-12 py-4 rounded-full hover:bg-slate-800 transition-colors uppercase tracking-widest text-[13px] shadow-xl shadow-slate-900/20 active:scale-95"

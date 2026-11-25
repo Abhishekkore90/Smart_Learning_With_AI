@@ -152,18 +152,29 @@ export function DailyHomeworkCalendar({
     }
   }, [activeDate]);
 
-  // Group homework items by date for quick calendar badges/dots
+  // Check if a homework item actually has an uploaded file
+  const hasUploadedFile = (hw: HomeworkItem): boolean => {
+    return Boolean(
+      (hw.fileUrl && String(hw.fileUrl).trim()) ||
+      (hw.wordFileUrl && String(hw.wordFileUrl).trim()) ||
+      (hw.originalFileUrl && String(hw.originalFileUrl).trim())
+    );
+  };
+
+  // Group homework items with uploaded files by date for calendar dots
   const homeworkByDate = useMemo(() => {
     const map = new Map<string, HomeworkItem[]>();
     homeworkList.forEach((hw) => {
+      if (!hasUploadedFile(hw)) return;
       const d = hw.homeworkDate || (hw as any).date;
       if (!d) return;
       const norm = normalizeDate(d);
+      if (userRole !== "admin" && norm > tomorrowStr) return;
       if (!map.has(norm)) map.set(norm, []);
       map.get(norm)!.push(hw);
     });
     return map;
-  }, [homeworkList]);
+  }, [homeworkList, tomorrowStr, userRole]);
 
   // Compute 7-day grid cells for the active month
   const calendarGrid = useMemo(() => {
@@ -224,14 +235,14 @@ export function DailyHomeworkCalendar({
 
   // Filter homework items for the active date (today or chosen date)
   const displayItems = useMemo(() => {
-    if (activeDate > tomorrowStr) return [];
+    if (userRole !== "admin" && activeDate > tomorrowStr) return [];
 
     return homeworkList.filter((item) => {
       const d = item.homeworkDate || (item as any).date || (item as any).createdAt;
       if (!d) return false;
       return normalizeDate(d) === activeDate;
     });
-  }, [homeworkList, activeDate, tomorrowStr]);
+  }, [homeworkList, activeDate, tomorrowStr, userRole]);
 
   // Marathi formatted date for active date
   const activeDateFormatted = useMemo(() => {
@@ -371,19 +382,13 @@ export function DailyHomeworkCalendar({
                     {cell.dayNum}
                   </span>
 
-                  {/* Indicator Dot for Homework */}
+                  {/* Indicator Dot for Homework (only when a file is uploaded for this date) */}
                   {hwCount > 0 ? (
                     <span
                       className={`size-1.5 rounded-full mt-0.5 ${
                         cell.isSelected ? "bg-white" : isAmber ? "bg-amber-500" : "bg-emerald-500"
                       }`}
                       title={`${hwCount} गृहपाठ उपलब्ध`}
-                    />
-                  ) : cell.isToday ? (
-                    <span
-                      className={`size-1 rounded-full mt-0.5 ${
-                        cell.isSelected ? "bg-white" : isAmber ? "bg-amber-600" : "bg-emerald-600"
-                      }`}
                     />
                   ) : (
                     <span className="size-1.5 mt-0.5 opacity-0" />
