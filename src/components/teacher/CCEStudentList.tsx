@@ -179,6 +179,7 @@ export function CCEStudentList({
   // Quota & Payment Control States
   const [paymentRecord, setPaymentRecord] = useState<any>(null);
   const [perStudentPrice, setPerStudentPrice] = useState<number>(5);
+  const [freeStudentQuota, setFreeStudentQuota] = useState<number>(5);
   const [totalTeacherStudents, setTotalTeacherStudents] = useState<number>(0);
   const [isAdminGranted, setIsAdminGranted] = useState<boolean>(false);
   const [upgradingQuota, setUpgradingQuota] = useState<boolean>(false);
@@ -224,6 +225,9 @@ export function CCEStudentList({
           const data = snap.data();
           if (data.perStudentPrice) {
             setPerStudentPrice(data.perStudentPrice);
+          }
+          if (typeof data.freeStudentQuota === "number") {
+            setFreeStudentQuota(data.freeStudentQuota);
           }
           if (data.enabled === false || data.price === 0 || data.perStudentPrice === 0) {
             isPaywallDisabled = true;
@@ -289,7 +293,10 @@ export function CCEStudentList({
     ? (paymentRecord.paidQuota || paymentRecord.studentsCount || Math.floor((paymentRecord.amount || 0) / perStudentPrice) || 0)
     : 0;
 
-  const isQuotaExceeded = isPaidUser && !isAdminGranted && totalTeacherStudents >= paidQuota;
+  // First 5 students are 100% free; if paid, quota is at least paidQuota or freeStudentQuota
+  const effectiveQuota = isPaidUser ? Math.max(freeStudentQuota, paidQuota) : freeStudentQuota;
+
+  const isQuotaExceeded = !isAdminGranted && totalTeacherStudents >= effectiveQuota;
 
   const handleUpgradeQuota = async () => {
     setUpgradingQuota(true);
@@ -308,7 +315,7 @@ export function CCEStudentList({
         onSuccess: async (paymentId) => {
           try {
             const paymentDocKey = `${teacherId}_cce-result`;
-            const currentQuota = paidQuota > 0 ? paidQuota : totalTeacherStudents;
+            const currentQuota = effectiveQuota;
             const newQuota = currentQuota + 1;
             const currentAmount = paymentRecord?.amount || 0;
             const newAmount = currentAmount + perStudentPrice;
@@ -316,11 +323,22 @@ export function CCEStudentList({
             await setDoc(
               doc(db, "teacher_module_payments", paymentDocKey),
               {
+                id: paymentDocKey,
+                teacherId,
+                teacherName,
+                teacherEmail,
+                teacherPhone,
+                moduleId: "cce-result",
+                moduleTitle: "CCE निकाल (CCE Result)",
                 paidQuota: newQuota,
                 studentsCount: newQuota,
                 amount: newAmount,
                 lastUpgradeAt: new Date().toISOString(),
                 status: "SUCCESS",
+                freeQuota: freeStudentQuota,
+                perStudentRate: perStudentPrice,
+                paymentMethod: "RAZORPAY",
+                razorpayPaymentId: paymentId,
               },
               { merge: true }
             );
@@ -563,6 +581,48 @@ export function CCEStudentList({
         </button>
       </div>
 
+      {/* Top Quota / Free Students Banner */}
+      {!isAdminGranted && (
+        <div className="mx-4 mt-3">
+          {totalTeacherStudents <= freeStudentQuota ? (
+            <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-2xl flex items-center justify-between text-xs shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">🎁</span>
+                <div>
+                  <span className="font-black text-emerald-900">पहिले {freeStudentQuota} विद्यार्थी १००% मोफत:</span>
+                  <span className="text-emerald-700 ml-1.5 font-bold">
+                    तुम्ही {totalTeacherStudents}/{freeStudentQuota} विद्यार्थी जोडले आहेत (शिल्लक मोफत जागा: {Math.max(0, freeStudentQuota - totalTeacherStudents)})
+                  </span>
+                </div>
+              </div>
+              <span className="px-2.5 py-0.5 bg-emerald-600 text-white font-black rounded-full text-[10px] tracking-wide shrink-0">
+                १००% मोफत
+              </span>
+            </div>
+          ) : (
+            <div className="p-3 bg-blue-50 border border-blue-200/80 rounded-2xl flex items-center justify-between text-xs shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="size-4 text-blue-600 shrink-0" />
+                <div>
+                  <span className="font-black text-blue-900">विद्यार्थी कोटा:</span>
+                  <span className="text-blue-700 ml-1.5 font-bold">
+                    एकूण {totalTeacherStudents} विद्यार्थी / उपलब्ध कोटा: {effectiveQuota} ({freeStudentQuota} मोफत + {Math.max(0, effectiveQuota - freeStudentQuota)} सशुल्क)
+                  </span>
+                </div>
+              </div>
+              {totalTeacherStudents >= effectiveQuota && (
+                <button
+                  onClick={() => setShowQuotaModal(true)}
+                  className="px-3 py-1 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black rounded-xl text-[10px] shadow-xs cursor-pointer shrink-0"
+                >
+                  + अतिरिक्त कोटा वाढवा
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Student List Content */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {loading ? (
@@ -622,8 +682,15 @@ export function CCEStudentList({
             <div className="space-y-2">
               <h3 className="text-xl font-black text-slate-900">विद्यार्थी कोटा संपला आहे!</h3>
               <p className="text-xs font-bold text-slate-600 leading-relaxed">
-                तुम्ही भरणा केलेला <b>{paidQuota}</b> विद्यार्थ्यांचा कोटा पूर्ण झाला आहे ({totalTeacherStudents}/{paidQuota} विद्यार्थी जोडले आहेत). 
-                नवीन विद्यार्थी जोडण्यासाठी ₹{perStudentPrice} भरून अतिरिक्त १ विद्यार्थी कोटा वाढवा.
+                {isPaidUser ? (
+                  <>
+                    तुम्ही घेतलेला <b>{effectiveQuota}</b> विद्यार्थ्यांचा कोटा पूर्ण झाला आहे ({totalTeacherStudents}/{effectiveQuota} विद्यार्थी जोडले आहेत). नवीन विद्यार्थी जोडण्यासाठी ₹{perStudentPrice} भरून अतिरिक्त १ विद्यार्थी कोटा वाढवा.
+                  </>
+                ) : (
+                  <>
+                    तुम्हाला मिळालेला <b>{freeStudentQuota} मोफत विद्यार्थ्यांचा कोटा</b> पूर्ण झाला आहे ({totalTeacherStudents}/{freeStudentQuota} विद्यार्थी जोडले आहेत). पुढील अतिरिक्त विद्यार्थी जोडण्यासाठी ₹{perStudentPrice} भरून अतिरिक्त १ विद्यार्थी कोटा वाढवा.
+                  </>
+                )}
               </p>
             </div>
 

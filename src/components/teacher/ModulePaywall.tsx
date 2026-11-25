@@ -357,14 +357,29 @@ export function ModulePaywall({
 
   const isPerStudentModule = moduleId === "cce-result" || (pricing && pricing.perStudentPrice !== undefined);
   const perStudentRate = pricing?.perStudentPrice ?? 5;
-  const effectiveStudentsCount = totalStudentsCount > 0 ? totalStudentsCount : 1;
-  
+  const freeStudentQuota = (pricing as any)?.freeStudentQuota ?? 5;
+
+  const paidQuota = paymentInfo?.paidQuota || paymentInfo?.studentsCount || 0;
+  const allowedQuota = paymentInfo ? Math.max(freeStudentQuota, paidQuota) : freeStudentQuota;
+
+  // Unlocked if:
+  // 1. Admin explicitly granted access
+  // 2. For perStudentModule: teacher's student count is within allowed quota (e.g. <= 5 free students)
+  // 3. For other modules: payment verified
+  const isFreeWithinQuota = isPerStudentModule && totalStudentsCount <= allowedQuota;
+  const isEffectivelyUnlocked = paymentInfo?.grantedByAdmin || isFreeWithinQuota || (!isPerStudentModule && isUnlocked);
+
+  // Billable students count (only students beyond the allowed quota):
+  const billableStudentsCount = isPerStudentModule
+    ? Math.max(0, totalStudentsCount - allowedQuota)
+    : totalStudentsCount;
+
   const monthlyRate = pricing?.monthlyPrice ?? pricing?.price ?? defaultMonthly;
   const yearlyRate = pricing?.yearlyPrice ?? defaultYearly;
 
   let targetPrice = 149;
   if (isPerStudentModule) {
-    targetPrice = Math.max(1, effectiveStudentsCount) * perStudentRate;
+    targetPrice = Math.max(1, billableStudentsCount) * perStudentRate;
   } else if (isMonthlyOptionModule) {
     targetPrice = meetingPlan === "yearly" ? yearlyRate : monthlyRate;
   } else {
@@ -422,7 +437,10 @@ export function ModulePaywall({
               expiresAt.setDate(paidAt.getDate() + validityDays);
             }
 
-            const quota = totalStudentsCount > 0 ? totalStudentsCount : 1;
+            const newTotalQuota = isPerStudentModule
+              ? Math.max(totalStudentsCount, allowedQuota + billableStudentsCount)
+              : (totalStudentsCount > 0 ? totalStudentsCount : 1);
+
             const record: Record<string, any> = {
               id: paymentDocKey,
               teacherId,
@@ -442,9 +460,12 @@ export function ModulePaywall({
               status: "SUCCESS",
               paidAt: paidAt.toISOString(),
               expiresAt: expiresAt.toISOString(),
-              studentsCount: quota,
-              paidQuota: quota,
-              paymentType: isMonthlyOptionModule ? (meetingPlan === "yearly" ? "FULL_YEAR" : "MONTHLY") : "FULL",
+              studentsCount: newTotalQuota,
+              paidQuota: newTotalQuota,
+              freeQuota: freeStudentQuota,
+              paymentType: isMonthlyOptionModule
+                ? (meetingPlan === "yearly" ? "FULL_YEAR" : "MONTHLY")
+                : (isPerStudentModule ? "PER_STUDENT" : "FULL"),
             };
 
             // Only include optional fields if they have valid values (Firestore rejects undefined)
@@ -503,9 +524,9 @@ export function ModulePaywall({
     );
   }
 
-  // Free or Paywall disabled by Admin OR already unlocked by Teacher OR non-paid tab
-  const isFree = !pricing || !pricing.enabled || targetPrice <= 0;
-  if (isFree || isUnlocked || !isPaidTab) {
+  // Free or Paywall disabled by Admin OR already unlocked by Teacher OR non-paid tab OR within allowed quota
+  const isFree = !pricing || pricing.enabled === false;
+  if (isFree || isEffectivelyUnlocked || !isPaidTab) {
     return <>{children}</>;
   }
 
@@ -538,33 +559,54 @@ export function ModulePaywall({
         {/* Main Content Area */}
         <div className="p-6 sm:p-10 relative z-10 space-y-8">
           
-          {/* Per-Student Fee Breakdown Banner */}
+          {/* Per-Student Fee Breakdown Banner with First 5 Free Offer */}
           {isPerStudentModule && (
-            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-emerald-500/10 border-2 border-amber-200/80 p-5 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-              <div className="flex items-center gap-3.5">
-                <div className="size-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-xl shadow-md shrink-0">
-                  ₹
+            <div className="space-y-4">
+              {/* Highlight Banner: 5 Students 100% Free Offer */}
+              <div className="bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/15 border-2 border-emerald-400 p-5 rounded-3xl shadow-xs flex items-center gap-4">
+                <div className="size-14 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-2xl shadow-md shrink-0">
+                  🎁
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-black text-amber-800 uppercase tracking-wider bg-amber-100 px-2 py-0.5 rounded-full">
-                      CCE प्रति विद्यार्थी दर रचना
+                    <span className="text-[11px] font-black text-emerald-800 uppercase tracking-wider bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                      खास शिक्षक सवलत ऑफर
                     </span>
                   </div>
                   <h4 className="text-base sm:text-lg font-black text-slate-900 mt-1">
-                    ₹{perStudentRate} प्रति विद्यार्थी × {totalStudentsCount > 0 ? totalStudentsCount : 1} विद्यार्थी
+                    पहिले {freeStudentQuota} विद्यार्थी पूर्णपणे मोफत (100% Free)!
                   </h4>
-                  <p className="text-xs text-slate-500 font-medium">
-                    {totalStudentsCount > 0
-                      ? `तुमच्या खात्यात एकूण ${totalStudentsCount} विद्यार्थी जोडलेले आहेत.`
-                      : "नुकतीच सुरुवात! (न्यूनतम १ विद्यार्थी दर)"}
+                  <p className="text-xs text-slate-600 font-bold mt-0.5 leading-relaxed">
+                    सर्व शिक्षक मित्रांसाठी पहिले {freeStudentQuota} विद्यार्थी १००% मोफत आहेत. {freeStudentQuota} पेक्षा जास्त विद्यार्थ्यांसाठी फक्त ₹{perStudentRate}/विद्यार्थी नाममात्र शुल्क आकारले जाते.
                   </p>
                 </div>
               </div>
 
-              <div className="text-right bg-white px-5 py-3 rounded-2xl border border-amber-200/80 shadow-xs shrink-0 w-full sm:w-auto">
-                <span className="text-[11px] text-slate-500 font-extrabold block">एकूण देय रक्कम</span>
-                <span className="text-2xl font-black text-emerald-600">₹{targetPrice}</span>
+              {/* Fee Calculation Card */}
+              <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-emerald-500/10 border-2 border-amber-200/80 p-5 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                <div className="flex items-center gap-3.5">
+                  <div className="size-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-xl shadow-md shrink-0">
+                    ₹
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-black text-amber-800 uppercase tracking-wider bg-amber-100 px-2 py-0.5 rounded-full">
+                        CCE निकाल शुल्क रचना
+                      </span>
+                    </div>
+                    <div className="text-xs sm:text-sm font-bold text-slate-800">
+                      एकूण विद्यार्थी: <b>{totalStudentsCount}</b> | मोफत सवलत: <b className="text-emerald-700">- {allowedQuota} मोफत</b> = देय विद्यार्थी: <b className="text-blue-700">{billableStudentsCount}</b>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {billableStudentsCount} देय विद्यार्थी × ₹{perStudentRate} प्रति विद्यार्थी = ₹{targetPrice}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right bg-white px-5 py-3 rounded-2xl border border-amber-200/80 shadow-xs shrink-0 w-full sm:w-auto">
+                  <span className="text-[11px] text-slate-500 font-extrabold block">एकूण देय रक्कम</span>
+                  <span className="text-2xl font-black text-emerald-600">₹{targetPrice}</span>
+                </div>
               </div>
             </div>
           )}
@@ -692,7 +734,11 @@ export function ModulePaywall({
                 ) : (
                   <>
                     <CreditCard className="size-6 text-amber-300" />
-                    <span>₹{targetPrice} भरून आताच अनलॉक करा (Pay Now)</span>
+                    <span>
+                      {isPerStudentModule
+                        ? `₹${targetPrice} भरून अनलॉक करा (${billableStudentsCount} देय विद्यार्थ्यांसाठी)`
+                        : `₹${targetPrice} भरून आताच अनलॉक करा (Pay Now)`}
+                    </span>
                   </>
                 )}
               </button>

@@ -369,27 +369,16 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
 
           {/* Embedded Mini Header for Class-wise Homework Integration */}
           {embedded && (
-            <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 dark:from-purple-950/40 dark:via-indigo-950/40 dark:to-pink-950/40 p-4 rounded-2xl border border-purple-200 dark:border-purple-800/60 shadow-xs space-y-3">
+            <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 dark:from-purple-950/40 dark:via-indigo-950/40 dark:to-pink-950/40 p-4 rounded-2xl border border-purple-200 dark:border-purple-800/60 shadow-xs space-y-2">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  {onBackStep && (
-                    <button
-                      type="button"
-                      onClick={onBackStep}
-                      className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-300 dark:border-slate-700 shadow-2xs cursor-pointer flex items-center gap-1 active:scale-95 transition-all"
-                      title="मागील पायरीवर जा (Go Back)"
-                    >
-                      <ChevronLeft className="size-4 text-purple-600" />
-                      <span>मागे जा (Back)</span>
-                    </button>
-                  )}
                   <div className="size-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
                     <GraduationCap className="size-5" />
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
                       <span>इयत्तानिहाय ऑनलाईन MCQ स्वाध्याय</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-600 text-white font-bold">
+                      <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-600 text-white font-bold">
                         {CLASS_LIST.find((c) => c.id === selectedClass)?.mr || selectedClass}
                       </span>
                     </h3>
@@ -398,33 +387,6 @@ export const MCQHomeworkSection: React.FC<MCQHomeworkSectionProps> = ({
                     </p>
                   </div>
                 </div>
-              </div>
-
-              {/* Quick Class Switcher Tabs inside embedded mode */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none border-t border-purple-200/60 dark:border-purple-800/40">
-                <span className="text-[11px] font-black text-slate-500 uppercase shrink-0 mr-1">
-                  इयत्ता बदला:
-                </span>
-                {CLASS_LIST.map((cls) => {
-                  const isSelected = selectedClass === cls.id;
-                  return (
-                    <button
-                      key={cls.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedClass(cls.id);
-                        onClassChange?.(cls.id);
-                      }}
-                      className={`px-3 py-1 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer ${
-                        isSelected
-                          ? "bg-purple-600 text-white shadow-xs font-black scale-102"
-                          : "bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-white"
-                      }`}
-                    >
-                      इ. {cls.mr}
-                    </button>
-                  );
-                })}
               </div>
             </div>
           )}

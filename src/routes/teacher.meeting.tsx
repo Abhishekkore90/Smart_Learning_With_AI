@@ -3995,6 +3995,31 @@ function TeacherMeetingPage() {
                             </div>
 
                             <div className="space-y-6">
+                              {/* Meeting Invitation Navbar & Metadata */}
+                              <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-4">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                  <div className="space-y-0.5">
+                                    <label className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider block">
+                                      सभा निमंत्रण पत्र (Select Meeting Invitation)
+                                    </label>
+                                    <p className="text-xs text-slate-500 font-bold">
+                                      सभेचे निमंत्रण पत्र व विषय पत्रिका तयार करण्यासाठी खालील पर्यायावर क्लिक करा.
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => { setSelectedMonth("invitation"); }}
+                                  className={`w-full px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center justify-center text-center leading-tight min-h-[38px] ${selectedMonth === "invitation"
+                                    ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/25 scale-[1.02]"
+                                    : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 active:scale-95"
+                                    }`}
+                                >
+                                  सभा निमंत्रण
+                                </button>
+                              </div>
+
                               {/* Month Selection Navbar & Metadata */}
                               <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-4">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -4131,31 +4156,6 @@ function TeacherMeetingPage() {
                                     </motion.div>
                                   )}
                                 </AnimatePresence>
-                              </div>
-
-                              {/* Meeting Invitation Navbar & Metadata */}
-                              <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-4">
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                                  <div className="space-y-0.5">
-                                    <label className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider block">
-                                      सभा निमंत्रण पत्र (Select Meeting Invitation)
-                                    </label>
-                                    <p className="text-xs text-slate-500 font-bold">
-                                      सभेचे निमंत्रण पत्र व विषय पत्रिका तयार करण्यासाठी खालील पर्यायावर क्लिक करा.
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() => { setSelectedMonth("invitation"); }}
-                                  className={`w-full px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center justify-center text-center leading-tight min-h-[38px] ${selectedMonth === "invitation"
-                                    ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/25 scale-[1.02]"
-                                    : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 active:scale-95"
-                                    }`}
-                                >
-                                  सभा निमंत्रण
-                                </button>
                               </div>
                             </div>
 

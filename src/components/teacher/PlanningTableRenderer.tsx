@@ -2884,7 +2884,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         await new Promise((resolve) => setTimeout(resolve, 30));
 
         const pageCanvas = await html2canvas(pageDiv, {
-          scale: 1.3,
+          scale: 1.75,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
@@ -2899,8 +2899,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           pdf.addPage("a4", "landscape");
         }
 
-        // High efficiency JPEG compression (0.78 retains razor-sharp Devanagari text while saving 75% file size)
-        const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.78);
+        // High efficiency JPEG compression (0.86 retains crisp HD Devanagari text while keeping PDF size under 8-10MB)
+        const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.86);
 
         // Proportional scale to fit strictly within landscape A4 printable area (281mm x 196mm) with zero cutting
         const maxAvailableWidthMm = 281;
@@ -3043,7 +3043,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
       // Hidden container to construct and measure DOM pages
       const tempContainer = document.createElement("div");
-      tempContainer.className = "pdf-export-active";
+      tempContainer.className = isMonthly ? "pdf-export-active" : "pdf-export-active pdf-annual-export";
       tempContainer.style.position = "fixed";
       tempContainer.style.left = "0px";
       tempContainer.style.top = "0px";
@@ -3124,7 +3124,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           secText.includes("teaching experience") ||
           secText.includes("learning outcomes");
 
-        // Format Exam, Assessment, and Vacation rows as clean full-width centered rows
+        // Format Exam, Assessment, and Vacation rows as clean centered rows
+        // IMPORTANT: Only replace tr.innerHTML with colSpan=7 in Monthly Planning (which has 7 cols & no month-wide rowSpans).
+        // In Annual Planning (6 cols with month-wide rowSpans on cols 0,1,2,3,5), keep all <td>s intact so rowSpans never break!
         secClone.querySelectorAll("tbody tr").forEach((tr: any) => {
           const cells = Array.from(tr.querySelectorAll("td")) as HTMLElement[];
           const fullRowText = cells.map((c) => c.textContent?.trim() || "").join(" ").toLowerCase();
@@ -3139,6 +3141,23 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             fullRowText.includes("examination");
 
           if (isExam) {
+            if (!isMonthly) {
+              const topicTd = (tr.querySelector('td[data-cidx="4"]') || cells[cells.length - 1]) as HTMLElement | null;
+              if (topicTd) {
+                topicTd.style.textAlign = "center";
+                topicTd.style.verticalAlign = "middle";
+                topicTd.style.fontWeight = "900";
+                topicTd.style.backgroundColor = "#fffbe6";
+                topicTd.style.color = "#000000";
+                topicTd.style.padding = "5px 8px";
+                topicTd.querySelectorAll("*").forEach((el: any) => {
+                  el.style.textAlign = "center";
+                  el.style.fontWeight = "900";
+                });
+              }
+              return;
+            }
+
             let examTitle = "";
             for (const c of cells) {
               const t = c.textContent?.trim() || "";
@@ -3314,24 +3333,28 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           // Annual Planning: Enforce consistent desktop columns and font sizes in PDF across Web and WebView
           const clonedCols = secClone.querySelectorAll("colgroup col");
           if (clonedCols.length >= 6) {
-            (clonedCols[0] as HTMLElement).style.width = "76px";
-            (clonedCols[1] as HTMLElement).style.width = "72px";
-            (clonedCols[2] as HTMLElement).style.width = "58px";
-            (clonedCols[3] as HTMLElement).style.width = "58px";
-            (clonedCols[4] as HTMLElement).style.width = "536px";
-            (clonedCols[5] as HTMLElement).style.width = "100px";
+            (clonedCols[0] as HTMLElement).style.width = "72px";
+            (clonedCols[1] as HTMLElement).style.width = "74px";
+            (clonedCols[2] as HTMLElement).style.width = "70px";
+            (clonedCols[3] as HTMLElement).style.width = "70px";
+            (clonedCols[4] as HTMLElement).style.width = "518px";
+            (clonedCols[5] as HTMLElement).style.width = "96px";
           }
           secClone.querySelectorAll("thead th").forEach((th: any, idx: number) => {
-            th.style.fontSize = "11px";
-            th.style.padding = "5px 4px";
+            th.style.fontSize = "12.5px";
+            th.style.padding = "6px 4px";
             th.style.textAlign = "center";
+            th.style.verticalAlign = "middle";
             th.style.fontWeight = "900";
-            if (idx === 0) th.style.width = "76px";
-            else if (idx === 1) th.style.width = "72px";
-            else if (idx === 2) th.style.width = "58px";
-            else if (idx === 3) th.style.width = "58px";
-            else if (idx === 4) th.style.width = "536px";
-            else if (idx === 5) th.style.width = "100px";
+            th.style.wordBreak = "keep-all";
+            th.style.overflowWrap = "normal";
+            th.style.hyphens = "none";
+            if (idx === 0) th.style.width = "72px";
+            else if (idx === 1) th.style.width = "74px";
+            else if (idx === 2) th.style.width = "70px";
+            else if (idx === 3) th.style.width = "70px";
+            else if (idx === 4) th.style.width = "518px";
+            else if (idx === 5) th.style.width = "96px";
           });
           secClone.querySelectorAll("tbody td").forEach((tdEl: any) => {
             tdEl.style.fontSize = "11.5px";
@@ -3363,7 +3386,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
           const subline = schoolHeader.querySelector(".pdf-school-subline") as HTMLElement | null;
           if (subline) {
-            subline.style.fontSize = isMonthly ? "16px" : "17px";
+            let targetSubSize = isMonthly ? 17 : 18;
             subline.style.fontWeight = "800";
             subline.style.lineHeight = "1.3";
             subline.style.paddingTop = isMonthly ? "5px" : "7px";
@@ -3372,12 +3395,43 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             subline.style.flexWrap = "nowrap";
             subline.style.justifyContent = "space-between";
             subline.style.alignItems = "center";
+            subline.style.gap = "8px";
             subline.style.width = "100%";
-            subline.style.overflow = "visible";
-            subline.querySelectorAll("*").forEach((el: any) => {
-              el.style.fontSize = isMonthly ? "16px" : "17px";
-              el.style.fontWeight = "800";
-            });
+            subline.style.maxWidth = "100%";
+            subline.style.boxSizing = "border-box";
+            subline.style.overflow = "hidden";
+
+            const applySublineSize = (sz: number) => {
+              subline.style.fontSize = `${sz}px`;
+              subline.querySelectorAll("*").forEach((el: any) => {
+                el.style.fontSize = `${sz}px`;
+                el.style.fontWeight = "800";
+                el.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', Arial, sans-serif";
+                el.style.whiteSpace = "nowrap";
+              });
+            };
+
+            applySublineSize(targetSubSize);
+
+            // Auto-fit if text is wider than container so it never clips outside the right border
+            const measureWrap = document.createElement("div");
+            measureWrap.style.width = "900px";
+            measureWrap.style.margin = "0 auto";
+            const measureHeader = schoolHeader.cloneNode(true) as HTMLElement;
+            measureWrap.appendChild(measureHeader);
+            tempContainer.appendChild(measureWrap);
+            const measureSub = measureHeader.querySelector(".pdf-school-subline") as HTMLElement | null;
+            if (measureSub) {
+              while (targetSubSize > 13 && measureSub.scrollWidth > measureSub.clientWidth && measureSub.clientWidth > 0) {
+                targetSubSize -= 0.5;
+                measureSub.style.fontSize = `${targetSubSize}px`;
+                measureSub.querySelectorAll("*").forEach((el: any) => {
+                  el.style.fontSize = `${targetSubSize}px`;
+                });
+              }
+            }
+            tempContainer.innerHTML = "";
+            applySublineSize(targetSubSize);
           }
         }
         const subjectBanner = secClone.querySelector(".pdf-subject-banner") as HTMLElement | null;
@@ -3703,28 +3757,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             }
           }
         } else {
-          // --- ANNUAL PLANNING (वार्षिक नियोजन) PAGINATION ---
-          // Group rows into Month Blocks (Annual Planning)
-          const trGroups: HTMLElement[][] = [];
-          let currentGroup: HTMLElement[] = [];
-
-          allTrs.forEach((tr) => {
-            const isMonthStart = tr.getAttribute("data-month-start") === "true";
-            const firstTd = tr.querySelector("td");
-            const firstTdText = firstTd?.textContent?.trim() || "";
-            const isMonthByText = isMarathiMonth(firstTdText);
-
-            if ((isMonthStart || isMonthByText) && currentGroup.length > 0) {
-              trGroups.push(currentGroup);
-              currentGroup = [];
-            }
-            currentGroup.push(tr);
-          });
-          if (currentGroup.length > 0) {
-            trGroups.push(currentGroup);
-          }
-
-          const pageList: { pageDiv: HTMLElement; tbody: HTMLElement; isFirstPage: boolean }[] = [];
+          // --- ANNUAL PLANNING (वार्षिक नियोजन) ROW-BY-ROW PAGINATION WITH ROWSPAN CONTINUATION ---
+          // Fill every A4 page up to full printable height (~1365px / ~1395px with signature),
+          // and carry forward only remaining rows + active rowSpan cells to the next page.
+          const ANNUAL_MAX_HEIGHT = 1365;
+          const ANNUAL_MAX_HEIGHT_LAST = 1395;
 
           const createNewPage = (isFirstPage: boolean) => {
             const pageDiv = document.createElement("div");
@@ -3757,56 +3794,116 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
             tempContainer.innerHTML = "";
             tempContainer.appendChild(pageDiv);
-            const pageObj = { pageDiv, tbody: pageTbody, isFirstPage };
-            pageList.push(pageObj);
-            return pageObj;
+            return { pageDiv, tbody: pageTbody, isFirstPage };
           };
 
           let currentPage = createNewPage(true);
+          let pageRowStartIndex = 0;
+          const N = allTrs.length;
 
-          for (let g = 0; g < trGroups.length; g++) {
-            const group = trGroups[g];
-            const clonedRows = group.map((tr) => tr.cloneNode(true) as HTMLElement);
-            clonedRows.forEach((tr) => currentPage.tbody.appendChild(tr));
-
-            const maxAllowed = currentPage.isFirstPage ? PAGE_MAX_HEIGHT_FIRST : PAGE_MAX_HEIGHT_SUBSEQUENT;
-
-            // If adding this group overflows the page, and the page already has previous rows:
-            if (currentPage.pageDiv.offsetHeight > maxAllowed && currentPage.tbody.children.length > group.length) {
-              clonedRows.forEach((tr) => tr.remove());
-              currentPage = createNewPage(false);
-              const freshClonedRows = group.map((tr) => tr.cloneNode(true) as HTMLElement);
-              freshClonedRows.forEach((tr) => currentPage.tbody.appendChild(tr));
-            }
+          if (N === 0) {
+            if (sigBar) currentPage.pageDiv.appendChild(sigBar.cloneNode(true));
+            allPagesToRender.push(currentPage.pageDiv);
           }
 
-          // Add signature bar on the last page of this subject
-          if (sigBar) {
-            const clonedSig = sigBar.cloneNode(true) as HTMLElement;
-            currentPage.pageDiv.appendChild(clonedSig);
+          for (let rIdx = 0; rIdx < N; rIdx++) {
+            const origTr = allTrs[rIdx];
+            const clonedTr = origTr.cloneNode(true) as HTMLElement;
+            currentPage.tbody.appendChild(clonedTr);
 
-            const maxAllowed = currentPage.isFirstPage ? PAGE_MAX_HEIGHT_FIRST : PAGE_MAX_HEIGHT_SUBSEQUENT;
-            // If signature bar causes overflow, place it on a clean new page WITH the last 2 rows
-            if (currentPage.pageDiv.offsetHeight > maxAllowed) {
-              clonedSig.remove();
+            const isLastRow = rIdx === N - 1;
+            let clonedSig: HTMLElement | null = null;
+            if (isLastRow && sigBar) {
+              clonedSig = sigBar.cloneNode(true) as HTMLElement;
+              currentPage.pageDiv.appendChild(clonedSig);
+            }
 
-              const currentTrs = Array.from(currentPage.tbody.children) as HTMLElement[];
-              if (currentTrs.length > 2) {
-                currentPage = createNewPage(false);
-                const rowsToMove = currentTrs.slice(-2);
-                rowsToMove.forEach((r) => {
-                  r.remove();
-                  currentPage.tbody.appendChild(r);
+            const threshold = isLastRow ? ANNUAL_MAX_HEIGHT_LAST : ANNUAL_MAX_HEIGHT;
+
+            if (currentPage.pageDiv.offsetHeight <= threshold || currentPage.tbody.children.length <= 1) {
+              if (isLastRow) {
+                allPagesToRender.push(currentPage.pageDiv);
+              }
+            } else {
+              // Remove overflowing row (and signature if added)
+              clonedTr.remove();
+              if (clonedSig) clonedSig.remove();
+
+              // Split any rowSpan cells that cross from currentPage onto the next page
+              const splitIdx = rIdx;
+              const crossingCells: { cIdx: number; cell: HTMLTableCellElement; remainingSpan: number }[] = [];
+
+              for (let r = pageRowStartIndex; r < splitIdx; r++) {
+                const tds = Array.from(allTrs[r].querySelectorAll("td")) as HTMLTableCellElement[];
+                tds.forEach((td) => {
+                  const span = td.rowSpan && td.rowSpan > 1 ? td.rowSpan : 1;
+                  if (r + span > splitIdx) {
+                    const cIdxAttr = td.getAttribute("data-cidx");
+                    const cIdx = cIdxAttr !== null ? parseInt(cIdxAttr, 10) : -1;
+                    crossingCells.push({
+                      cIdx,
+                      cell: td,
+                      remainingSpan: (r + span) - splitIdx,
+                    });
+
+                    // Cap rowSpan on currentPage
+                    const currentTrs = Array.from(currentPage.tbody.querySelectorAll("tr"));
+                    const relIdx = r - pageRowStartIndex;
+                    if (currentTrs[relIdx]) {
+                      const curTds = Array.from(currentTrs[relIdx].querySelectorAll("td"));
+                      const matchTd = curTds.find(
+                        (t) => (t.getAttribute("data-cidx") !== null ? parseInt(t.getAttribute("data-cidx")!, 10) : -1) === cIdx
+                      );
+                      if (matchTd) {
+                        matchTd.rowSpan = splitIdx - r;
+                      }
+                    }
+                  }
                 });
-                currentPage.pageDiv.appendChild(clonedSig);
-              } else {
-                currentPage.pageDiv.appendChild(clonedSig);
+              }
+
+              // Finalize current page
+              allPagesToRender.push(currentPage.pageDiv);
+
+              // Start continuation page
+              currentPage = createNewPage(false);
+              pageRowStartIndex = splitIdx;
+
+              // Insert continuation rowSpan cells in ascending column order
+              if (crossingCells.length > 0) {
+                crossingCells.sort((a, b) => a.cIdx - b.cIdx);
+                crossingCells.forEach(({ cIdx, cell, remainingSpan }) => {
+                  const contTd = cell.cloneNode(true) as HTMLTableCellElement;
+                  contTd.rowSpan = remainingSpan;
+                  contTd.setAttribute("data-continuation", "true");
+
+                  const existingTds = Array.from(clonedTr.querySelectorAll("td")) as HTMLTableCellElement[];
+                  let inserted = false;
+                  for (const exTd of existingTds) {
+                    const exIdxAttr = exTd.getAttribute("data-cidx");
+                    const exIdx = exIdxAttr !== null ? parseInt(exIdxAttr, 10) : 999;
+                    if (exIdx > cIdx) {
+                      clonedTr.insertBefore(contTd, exTd);
+                      inserted = true;
+                      break;
+                    }
+                  }
+                  if (!inserted) {
+                    clonedTr.appendChild(contTd);
+                  }
+                });
+              }
+
+              currentPage.tbody.appendChild(clonedTr);
+
+              if (isLastRow) {
+                if (sigBar) {
+                  currentPage.pageDiv.appendChild(sigBar.cloneNode(true));
+                }
+                allPagesToRender.push(currentPage.pageDiv);
               }
             }
           }
-
-          // Collect all pages generated for this section
-          pageList.forEach((pObj) => allPagesToRender.push(pObj.pageDiv));
         }
       }
 
@@ -3854,7 +3951,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         const batchCanvases = await Promise.all(
           batchPages.map(async (pageDiv) => {
             const pageCont = document.createElement("div");
-            pageCont.className = "pdf-export-active";
+            pageCont.className = isMonthly ? "pdf-export-active" : "pdf-export-active pdf-annual-export";
             pageCont.style.position = "fixed";
             pageCont.style.left = "0px";
             pageCont.style.top = "0px";
@@ -3871,7 +3968,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             const canvasHeight = Math.ceil(pageDiv.getBoundingClientRect().height || pageDiv.offsetHeight || 1350);
 
             const c = await html2canvas(pageDiv, {
-              scale: 1.1,
+              scale: 1.75,
               useCORS: false,
               logging: false,
               backgroundColor: "#ffffff",
@@ -3902,7 +3999,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           }
           totalPdfPages++;
 
-          const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.75);
+          const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.86);
 
           // ALL pages have the EXACT SAME 100% uniform table width (190mm) and left margin (10mm) - ZERO ZOOM OUT!
           const renderWidthMm = 190;
@@ -5064,6 +5161,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     font-size: 12px !important;
                     font-weight: 900 !important;
                   }
+                  .pdf-export-active.pdf-annual-export th,
+                  .pdf-export-active.pdf-annual-export th:first-child {
+                    font-size: 12.5px !important;
+                    font-weight: 900 !important;
+                    padding: 6px 4px !important;
+                    line-height: 1.25 !important;
+                    overflow: hidden !important;
+                  }
                   .pdf-monthly-export .pdf-signature-bar .h-6,
                   .pdf-monthly-export .pdf-signature-bar .h-10,
                   .pdf-monthly-export .pdf-signature-bar .h-12 {
@@ -5177,7 +5282,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     padding-bottom: 5px !important;
                   }
                   .pdf-export-active .pdf-school-subline {
-                    font-size: 16.5px !important;
+                    font-size: 17.5px;
                     font-weight: 800 !important;
                     line-height: 1.4 !important;
                     padding-top: 6px !important;
@@ -5186,12 +5291,16 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     flex-wrap: nowrap !important;
                     justify-content: space-between !important;
                     align-items: center !important;
+                    gap: 8px !important;
                     width: 100% !important;
-                    overflow: visible !important;
+                    max-width: 100% !important;
+                    box-sizing: border-box !important;
+                    overflow: hidden !important;
                   }
                   .pdf-export-active .pdf-school-subline * {
-                    font-size: 16.5px !important;
+                    font-size: inherit;
                     font-weight: 800 !important;
+                    font-family: inherit !important;
                     white-space: nowrap !important;
                   }
                   .pdf-export-active .pdf-subject-banner {

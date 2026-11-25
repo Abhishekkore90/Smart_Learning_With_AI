@@ -311,7 +311,7 @@ function TeacherDashboard() {
       "cce-result": 199,
       "hpc-card": 199,
       "stats-teacher": 99,
-      "annual-monthly-planning": 149,
+      "annual-monthly-planning": 199,
       "teaching-record": 99,
       "stats-student": 99,
       homework: 149,
@@ -349,13 +349,19 @@ function TeacherDashboard() {
       (modId === "annual-monthly-planning" && (grantedModules.some(isPlanningMatch) || paidModules.some(isPlanningMatch)));
 
     let priceDisplay = "";
-    if (!isFree) {
+    if (modId === "annual-monthly-planning") {
+      const price = itemPricing?.price || 199;
+      priceDisplay = `वार्षिक मोफत / ₹${price}`;
+    } else if (!isFree) {
       if (hasClassPrices && itemPricing?.classPrices) {
         const prices = Object.values(itemPricing.classPrices).filter((p): p is number => typeof p === "number" && p > 0);
         const minPrice = prices.length > 0 ? Math.min(...prices) : (itemPricing?.price || 299);
         priceDisplay = `₹${minPrice}/इयत्ता`;
       } else if (modId === "mdm-register" && itemPricing?.yearlyPrice) {
         priceDisplay = `₹${itemPricing.yearlyPrice}`;
+      } else if (modId === "cce-result") {
+        const rate = itemPricing?.perStudentPrice || 5;
+        priceDisplay = `५ मोफत / ₹${rate}`;
       } else if (modId === "hpc-card" && itemPricing?.perStudentPrice) {
         priceDisplay = `₹${itemPricing.perStudentPrice}`;
       } else if (itemPricing?.price) {

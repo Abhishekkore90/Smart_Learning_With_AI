@@ -202,7 +202,7 @@ function TeachingRecordPage() {
   const hasSpecificClassPrice =
     teachingPricing.classPrices &&
     typeof teachingPricing.classPrices[currentClassKey] === "number";
-  const currentClassPrice = 199;
+  const currentClassPrice: number = 199;
 
   const isCurrentClassUnlocked =
     !selectedClass ||

@@ -57,6 +57,7 @@ interface ModulePricing {
   upiId?: string;
   qrImageUrl?: string;
   perStudentPrice?: number;
+  freeStudentQuota?: number;
   monthlyPrice?: number;
   yearlyPrice?: number;
   classPrices?: Record<string, number>;
@@ -97,7 +98,7 @@ const DEFAULT_MODULES: { id: string; title: string; defaultPrice: number }[] = [
   { id: "cce-result", title: "७. CCE निकाल (CCE Result)", defaultPrice: 199 },
   { id: "hpc-card", title: "८. Holistic Progress Card (HPC)", defaultPrice: 199 },
   { id: "stats-teacher", title: "९. शिक्षक संचिका (Teacher Portfolio)", defaultPrice: 99 },
-  { id: "annual-monthly-planning", title: "१०. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी (Planning & Question Bank)", defaultPrice: 149 },
+  { id: "annual-monthly-planning", title: "१०. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी (Planning & Question Bank)", defaultPrice: 199 },
   { id: "teaching-record", title: "११. दैनिक अध्यापन टाचणवही (Teaching Diary)", defaultPrice: 199 },
   { id: "stats-student", title: "१२. विद्यार्थी संचिका (Student Portfolio)", defaultPrice: 99 },
   { id: "homework", title: "१३. दैनिक गृहपाठ (Daily Homework)", defaultPrice: 149 },
@@ -819,7 +820,7 @@ function AdminModulePaymentsPage() {
 
                     {mod.id === "cce-result" ? (
                       <div className="space-y-3 pt-2">
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
                             <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
                               विद्यार्थी दर (₹ / विद्यार्थी)*
@@ -847,9 +848,33 @@ function AdminModulePaymentsPage() {
                           </div>
 
                           <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
+                              मोफत विद्यार्थी संख्या (Free Quota)*
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min="0"
+                                value={item.freeStudentQuota ?? 5}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  setPricings((prev) => ({
+                                    ...prev,
+                                    [mod.id]: {
+                                      ...prev[mod.id],
+                                      freeStudentQuota: val,
+                                    },
+                                  }));
+                                }}
+                                className="w-full px-3.5 py-2.5 bg-amber-50/60 border border-amber-300 focus:border-amber-500 rounded-xl text-sm font-black text-amber-950 outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
                             <label className="text-[11px] font-extrabold text-slate-600 block mb-1">शुल्क पद्धत</label>
                             <div className="px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1">
-                              <span>प्रति विद्यार्थी शुल्क (Per Student)</span>
+                              <span>पहिले {item.freeStudentQuota ?? 5} मोफत, नंतर ₹{item.perStudentPrice ?? 5}/विद्यार्थी</span>
                             </div>
                           </div>
                         </div>
@@ -912,6 +937,11 @@ function AdminModulePaymentsPage() {
                       </div>
                     ) : (mod.id === "annual-monthly-planning" || mod.id === "teaching-record" || mod.id === "homework" || mod.id === "question-paper" || mod.id === "question-bank") ? (
                       <div className="space-y-4 pt-2">
+                        {mod.id === "annual-monthly-planning" && (
+                          <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl p-3 text-xs font-semibold leading-relaxed">
+                            💡 <strong>नियोजन व प्रश्नपेढी धोरण:</strong> वार्षिक नियोजन (Annual Planning) सर्व शिक्षकांसाठी <strong>१००% मोफत</strong> आहे. हा दर (₹{item.price}) मासिक नियोजन व प्रश्नपेढी अनलॉक करण्यासाठी प्रति इयत्ता आकारला जाईल.
+                          </div>
+                        )}
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
