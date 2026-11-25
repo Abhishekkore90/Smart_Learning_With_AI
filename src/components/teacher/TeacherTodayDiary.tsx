@@ -290,6 +290,15 @@ function findMatchingEntryForDate(entries: any[], targetIsoDate: string, current
     }
   }
 
+  // If entries already carry explicit dates and none matched targetIsoDate, this day has no tachan
+  const hasExplicitDates = entries.some((e) => {
+    const raw = String(e?.date || e?.displayDate || "").trim();
+    return Boolean(raw && raw !== "-" && toAsciiDigits(raw).match(/\d{1,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,4}/));
+  });
+  if (hasExplicitDates) {
+    return null;
+  }
+
   // 2. Check if entries belong to the SAME month as targetIsoDate
   const firstEntry = entries[0];
   if (firstEntry) {
@@ -970,7 +979,13 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 Array.isArray(d.periods) &&
                 d.periods.some((p: any) => p.subtopic && String(p.subtopic).trim() !== "" && String(p.subtopic).trim() !== "-")
             );
-          if (fetchTarget && isDocx && (!matchedDoc.structuredData || matchedDoc.structuredData.length === 0 || !hasSubtopicData)) {
+          const hasBrokenDates = (() => {
+            if (!Array.isArray(matchedDoc.structuredData) || matchedDoc.structuredData.length <= 1) return false;
+            const dateList = matchedDoc.structuredData.map((d: any) => String(d?.date || d?.displayDate || "").trim()).filter(Boolean);
+            const uniqueDates = new Set(dateList);
+            return dateList.length < matchedDoc.structuredData.length || uniqueDates.size < matchedDoc.structuredData.length;
+          })();
+          if (fetchTarget && isDocx && (!matchedDoc.structuredData || matchedDoc.structuredData.length === 0 || !hasSubtopicData || hasBrokenDates)) {
             try {
               const targetUrl = getBunnyStorageUrl(fetchTarget);
               const headers: Record<string, string> = {
@@ -1182,6 +1197,10 @@ export const TeacherTodayDiary: React.FC<Props> = ({
         return;
       }
 
+      if (loadingRangeMaster) {
+        return;
+      }
+
       try {
         const targetMonthStr = isoDate.split("-")[1]; // e.g. "08" for August, "06" for June
 
@@ -1193,8 +1212,9 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             ? findMatchingEntryForDate(rangeMasterRecord.structuredData, isoDate, currentTabId)
             : null;
 
+          const hasStructuredEntries = Boolean(rangeMasterRecord.structuredData && Array.isArray(rangeMasterRecord.structuredData) && rangeMasterRecord.structuredData.length > 0);
           let periodList: PeriodItem[] = match && match.periods && Array.isArray(match.periods) ? match.periods : [];
-          if (periodList.length === 0 && rangeMasterRecord.periods) {
+          if (periodList.length === 0 && !hasStructuredEntries && rangeMasterRecord.periods) {
             periodList = extractSingleDayPeriods(rangeMasterRecord.periods, isoDate, activeDate, currentTabId);
           }
 
@@ -1217,6 +1237,12 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             selectedMedium,
             (match ? match.thought : "") || rangeMasterRecord.thought
           );
+
+          if (hasStructuredEntries && !match && periodList.length === 0) {
+            setTodayDiary(null);
+            setLoading(false);
+            return;
+          }
 
           if (rawPageUrl || periodList.length > 0 || match) {
             setTodayDiary({
@@ -1407,7 +1433,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     }
 
     fetchDiaryForDate();
-  }, [selectedClass, selectedMedium, isoDate, rangeMasterRecord, currentTabId, customHolidays]);
+  }, [selectedClass, selectedMedium, isoDate, rangeMasterRecord, loadingRangeMaster, currentTabId, customHolidays]);
 
   const handlePrevDay = () => setActiveDate((prev) => subDays(prev ?? new Date(), 1));
   const handleNextDay = () => setActiveDate((prev) => addDays(prev ?? new Date(), 1));
@@ -1590,20 +1616,26 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       const s = String(v ?? "").trim();
       return !s || s === "-" || s === "--" || s === "—";
     };
+    const isDenseDay = todayDiary.periods.length > 6;
+    const rowFontSize = isDenseDay ? "10px" : "11.5px";
+    const rowSmallFontSize = isDenseDay ? "9.5px" : "11px";
+    const rowPad = isDenseDay ? "2.5px 3px" : "4px 4px";
+    const rowWidePad = isDenseDay ? "2.5px 4px" : "4px 5px";
+    const rowLineHeight = isDenseDay ? "1.18" : "1.26";
     const rows = todayDiary.periods
       .map(
         (item, rIdx) =>
           `<tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
-            <td style="box-sizing:border-box;width:${colWidths[0]};text-align:center;font-weight:900;color:#000000;font-size:11.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
-              <div style="color:#000000;font-weight:900;line-height:1.2;margin-bottom:2px;">${item.period}</div>
-              <div style="color:#000000;font-weight:900;line-height:1.2;">${item.subject || "-"}</div>
+            <td style="box-sizing:border-box;width:${colWidths[0]};text-align:center;font-weight:900;color:#000000;font-size:${rowFontSize};padding:${rowPad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">
+              <div style="color:#000000;font-weight:900;line-height:1.15;margin-bottom:1px;">${item.period}</div>
+              <div style="color:#000000;font-weight:900;line-height:1.15;">${item.subject || "-"}</div>
             </td>
-            <td style="box-sizing:border-box;width:${colWidths[1]};text-align:${isDash(item.topic) ? "center" : "left"};font-weight:800;color:#000000;font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.topic || "-"}</td>
-            <td style="box-sizing:border-box;width:${colWidths[2]};text-align:${isDash(item.subtopic) ? "center" : "left"};font-weight:800;color:#000000;font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.subtopic || "-"}</td>
-            <td style="box-sizing:border-box;width:${colWidths[3]};text-align:${isDash(item.outcome) ? "center" : "left"};color:#000000;font-weight:800;font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.outcome || "-"}</td>
-            <td style="box-sizing:border-box;width:${colWidths[4]};text-align:${isDash(item.experience) ? "center" : "left"};color:#000000;font-weight:700;font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.experience || "-"}</td>
-            <td style="box-sizing:border-box;width:${colWidths[5]};text-align:center;color:#000000;font-weight:700;font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.tools || "-"}</td>
-            <td style="box-sizing:border-box;width:${colWidths[6]};text-align:center;color:#000000;font-weight:700;font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${item.materials || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[1]};text-align:${isDash(item.topic) ? "center" : "left"};font-weight:800;color:#000000;font-size:${rowFontSize};padding:${rowPad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${item.topic || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[2]};text-align:${isDash(item.subtopic) ? "center" : "left"};font-weight:800;color:#000000;font-size:${rowFontSize};padding:${rowPad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${item.subtopic || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[3]};text-align:${isDash(item.outcome) ? "center" : "left"};color:#000000;font-weight:800;font-size:${rowFontSize};padding:${rowWidePad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${item.outcome || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[4]};text-align:${isDash(item.experience) ? "center" : "left"};color:#000000;font-weight:700;font-size:${rowFontSize};padding:${rowWidePad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${item.experience || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[5]};text-align:center;color:#000000;font-weight:700;font-size:${rowSmallFontSize};padding:${rowPad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${item.tools || "-"}</td>
+            <td style="box-sizing:border-box;width:${colWidths[6]};text-align:center;color:#000000;font-weight:700;font-size:${rowSmallFontSize};padding:${rowPad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${item.materials || "-"}</td>
           </tr>`
       )
       .join("");
@@ -1852,6 +1884,9 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       const batch = writeBatch(db);
       const targetUrl = todayDiary.pageUrl ? todayDiary.pageUrl.split("?")[0] : "";
       const targetFile = todayDiary.fileName || "";
+      const urlsToDelete = new Set<string>();
+      if (todayDiary.pageUrl) urlsToDelete.add(todayDiary.pageUrl);
+      if ((todayDiary as any).masterPdfUrl) urlsToDelete.add((todayDiary as any).masterPdfUrl);
 
       // 1. Delete matching docs in teacher_diaries/{selectedClass}/{selectedMedium}
       const colRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
@@ -1867,6 +1902,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           (targetFile && data.fileName === targetFile) ||
           dSnap.id === isoDate
         ) {
+          if (data.pageUrl) urlsToDelete.add(data.pageUrl);
+          if (data.masterPdfUrl) urlsToDelete.add(data.masterPdfUrl);
           batch.delete(dSnap.ref);
         }
       });
@@ -1887,12 +1924,21 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             (targetFile && data.fileName === targetFile) ||
             dSnap.id === `${selectedClass}_${selectedMedium}_${isoDate}`
           ) {
+            if (data.pageUrl) urlsToDelete.add(data.pageUrl);
+            if (data.masterPdfUrl) urlsToDelete.add(data.masterPdfUrl);
             batch.delete(dSnap.ref);
           }
         }
       });
 
       await batch.commit();
+
+      if (urlsToDelete.size > 0) {
+        const { deleteUploadedFile } = await import("@/lib/upload");
+        await Promise.allSettled(
+          Array.from(urlsToDelete).map((u) => deleteUploadedFile(u))
+        );
+      }
 
       toast.success(`✅ "${fileNameDisplay}" फाईल व तिच्या सर्व नोंदी यशस्वीरित्या डिलीट झाल्या!`);
       setTodayDiary(null);
@@ -2296,7 +2342,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           <Loader2 className="w-10 h-10 animate-spin text-orange-500 mb-4" />
           <p className="text-slate-500 font-bold text-sm">निवडलेल्या दिनांकाची टाचण नोंद शोधत आहे... (Fetching Diary Data)</p>
         </div>
-      ) : !todayDiary || todayDiary.isHoliday || (!((todayDiary as any)?.pageUrl || (todayDiary as any)?.pageURL || (todayDiary as any)?.masterPdfUrl) && !(todayDiary.periods && todayDiary.periods.length > 0)) ? (
+      ) : !todayDiary || todayDiary.isHoliday || !(todayDiary.periods && todayDiary.periods.length > 0) ? (
         /* FALLBACK UI: Holiday or Missing Data */
         <div className={`p-8 sm:p-10 rounded-3xl border text-slate-800 shadow-sm text-center space-y-4 ${
           todayDiary?.isHoliday || activeDate?.getDay() === 0
@@ -2315,7 +2361,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               ? "रविवार — शासकीय सुट्टी (Sunday School Holiday)"
               : todayDiary?.isHoliday
               ? `शाळा सुट्टी — ${formatMarathiDate(isoDate)} (${getMarathiDayName(isoDate)})`
-              : "या तारखेस टाचण नोंद उपलब्ध नाही (No Teaching Diary Found)"}
+              : "या दिवसासाठी टाचण उपलब्ध नाही (Tachan is not available for this day)"}
           </h3>
           {activeDate?.getDay() === 0 ? (
             <p className="text-slate-600 max-w-md mx-auto text-sm leading-relaxed font-semibold">

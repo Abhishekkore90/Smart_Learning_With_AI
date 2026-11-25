@@ -1004,6 +1004,101 @@ export async function parseDocxHtmlToDiaries(html: string, className: string): P
   }
 
   if (tables.length > 0) {
+    // ── DATE-FIRST SECTION PARSING ───────────────────────────────────────────
+    // First locate every explicit "दिनांक / तारीख / Date" section in document order,
+    // collect all elements/tables belonging to that date until the next date marker,
+    // and parse each date's periods cleanly under that exact date.
+    const bodyChildren = Array.from(doc.body.children);
+    const explicitDateMarkerRe = /(?:तारीख|दिनांक|Date)\s*[:：\-]?\s*([\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{2,4})/i;
+    const dateSections: { date: string; elements: Element[] }[] = [];
+
+    bodyChildren.forEach((el) => {
+      const txt = el.textContent || "";
+      const m = txt.match(explicitDateMarkerRe);
+      if (m) {
+        const parsedD = parseAndStandardizeDate(m[1]) || "";
+        if (parsedD) {
+          const lastSec = dateSections[dateSections.length - 1];
+          if (!lastSec || lastSec.date !== parsedD) {
+            dateSections.push({ date: parsedD, elements: [el] });
+            return;
+          }
+        }
+      }
+      if (dateSections.length > 0) {
+        dateSections[dateSections.length - 1].elements.push(el);
+      }
+    });
+
+    if (dateSections.length > 0) {
+      const dateWiseEntries: ParsedDiaryContent[] = [];
+      dateSections.forEach((sec) => {
+        const secTables: Element[] = [];
+        const textEls: Element[] = [];
+        sec.elements.forEach((el) => {
+          if (el.tagName === "TABLE") {
+            secTables.push(el);
+          } else {
+            textEls.push(el);
+            el.querySelectorAll("table").forEach((t) => secTables.push(t));
+          }
+        });
+
+        const uniqueSecTables = Array.from(new Set(secTables));
+        const allPeriods: ParsedPeriod[] = [];
+        let thought = "";
+        let day = "";
+        let std = "";
+
+        const headerText = sec.elements.map((el) => el.textContent || "").join("\n");
+        const tMatch = headerText.match(/(?:आजचा\s*सुव[\u200C\u200D]?िचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r]+)/i);
+        if (tMatch && tMatch[1]) {
+          const ct = cleanThoughtText(tMatch[1]);
+          if (ct && ct.length > 1 && !ct.includes("प्रविष्ट करा") && !isDefaultFallbackThought(ct)) {
+            thought = ct;
+          }
+        }
+        const stdMatch = headerText.match(/(?:इयत्ता|Class|Std)\s*[:：]?\s*([^\s\n:]+)/i);
+        if (stdMatch && stdMatch[1] && stdMatch[1].length < 20) {
+          std = stdMatch[1].trim();
+        }
+        const dayMatch = headerText.match(/(?:दिवस|वार|Day)\s*[:：]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i);
+        if (dayMatch) {
+          day = dayMatch[1].trim();
+        }
+
+        uniqueSecTables.forEach((tbl) => {
+          const parsedTbl = parseHtmlSection({ textElements: [], table: tbl }, className);
+          if (parsedTbl.periods && parsedTbl.periods.length > 0) {
+            allPeriods.push(...parsedTbl.periods);
+          }
+          if (!thought && parsedTbl.thought && !isDefaultFallbackThought(parsedTbl.thought)) {
+            thought = parsedTbl.thought;
+          }
+          if (!day && parsedTbl.day) {
+            day = parsedTbl.day;
+          }
+        });
+
+        if (allPeriods.length > 0 || thought) {
+          const entryObj: any = {
+            date: sec.date,
+            day,
+            thought,
+            dinvishesh: "",
+            highlights: "",
+            periods: allPeriods,
+          };
+          if (std) entryObj.std = std;
+          dateWiseEntries.push(entryObj);
+        }
+      });
+
+      if (dateWiseEntries.length > 0) {
+        return dateWiseEntries;
+      }
+    }
+
     const rawParsedList: ParsedDiaryContent[] = [];
 
     tables.forEach((tableEl) => {
@@ -1020,10 +1115,14 @@ export async function parseDocxHtmlToDiaries(html: string, className: string): P
       const secData = parseHtmlSection({ textElements: [], table: tableEl }, className);
       const combinedText = (prevText || "") + "\n" + (tableEl.textContent || "");
       if (combinedText) {
-        const dMatch = combinedText.match(/(?:तारीख|दिनांक|Date)\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/i);
+        const dMatch = combinedText.match(/(?:तारीख|दिनांक|Date)\s*[:：]?\s*([\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{2,4})/i);
         if (dMatch && !secData.date) {
           const parsedD = parseAndStandardizeDate(dMatch[1]);
           if (parsedD) secData.date = parsedD;
+        }
+        const stdMatch = combinedText.match(/(?:इयत्ता|Class|Std)\s*[:：]?\s*([^\s\n:]+)/i);
+        if (stdMatch && stdMatch[1] && stdMatch[1].length < 20 && !(secData as any).std) {
+          (secData as any).std = stdMatch[1].trim();
         }
         const tMatch = combinedText.match(/(?:आजचा\s*सुव[\u200C\u200D]?िचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r]+)/i);
         if (tMatch && !secData.thought) {
@@ -1037,6 +1136,8 @@ export async function parseDocxHtmlToDiaries(html: string, className: string): P
     });
 
     if (rawParsedList.length > 0) {
+      const isClass5To8 = /(?:class\s*[5-8]|[5-8](?:th)?|पाचवी|सहावी|सातवी|आठवी)/i.test(className || "");
+
       // Process sections into separate day entries
       const finalEntries: ParsedDiaryContent[] = [];
       rawParsedList.forEach((item) => {
@@ -1044,10 +1145,19 @@ export async function parseDocxHtmlToDiaries(html: string, className: string): P
           finalEntries.push({ ...item, periods: [...(item.periods || [])] });
         } else {
           const last = finalEntries[finalEntries.length - 1];
-          const isNewDayTable =
-            (item.date && last.date && item.date !== last.date) ||
-            (item.periods && item.periods.some((p) => p.period === "1" || p.period === "१")) ||
-            (item.periods && item.periods.length > 0 && last.periods && last.periods.length >= 4);
+          const hasNewDate = Boolean(item.date && last.date && item.date !== last.date);
+          const startsAtPeriod1 = Boolean(
+            item.periods && item.periods.some((p) => {
+              const pStr = String(p.period || "").trim().replace(/\.$/, "");
+              return pStr === "1" || pStr === "१";
+            })
+          );
+
+          // For Class 5 to 8 (up to 9 periods/day): if a table has no new date and doesn't restart at period 1
+          // while the current day still has < 9 periods, merge it as continuation periods (e.g. periods 7, 8, 9).
+          const isNewDayTable = isClass5To8
+            ? (hasNewDate || startsAtPeriod1 || (last.periods && last.periods.length >= 9))
+            : (hasNewDate || startsAtPeriod1 || (item.periods && item.periods.length > 0 && last.periods && last.periods.length >= 4));
 
           if (isNewDayTable) {
             finalEntries.push({ ...item, periods: [...(item.periods || [])] });
@@ -1202,12 +1312,12 @@ function parseHtmlSection(
   const fullSectionText = textElsText + "\n" + tableText;
 
   let date = "";
-  const dateMatch = fullSectionText.match(/(?:तारीख|दिनांक|Date)\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/i);
+  const dateMatch = fullSectionText.match(/(?:तारीख|दिनांक|Date)\s*[:：]?\s*([\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{2,4})/i);
   if (dateMatch) {
     date = parseAndStandardizeDate(dateMatch[1]) || "";
   }
   if (!date) {
-    const standaloneMatch = fullSectionText.match(/\b(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})\b/);
+    const standaloneMatch = fullSectionText.match(/([\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{1,2}\s*[\/\-\.]\s*[\d०-९]{2,4})/);
     if (standaloneMatch) {
       date = parseAndStandardizeDate(standaloneMatch[1]) || "";
     }
@@ -1312,9 +1422,9 @@ function parseHtmlSection(
         let periodNum = rawPeriodStr || (periods.length + 1).toString();
         let subject = colMap.subject !== -1 && cells[colMap.subject] ? cells[colMap.subject] : "";
 
-        // Handle combined column "तासिका/ विषय" (e.g. "१  मराठी" -> period "१", subject "मराठी")
+        // Handle combined column "तासिका/ विषय" (e.g. "१  मराठी" or "9. AEP" -> period "१", subject "मराठी")
         if (colMap.period === colMap.subject && rawPeriodStr) {
-          const combinedMatch = rawPeriodStr.trim().match(/^([\d०-९]+)\s+([\s\S]+)$/);
+          const combinedMatch = rawPeriodStr.trim().match(/^([\d०-९]+)[\.\)\-]?\s+([\s\S]+)$/);
           if (combinedMatch) {
             periodNum = combinedMatch[1].trim();
             subject = combinedMatch[2].trim();
@@ -1643,12 +1753,34 @@ export async function saveParsedEntriesToFirestore({
   for (let idx = 0; idx < count; idx++) {
     const entry = validEntries[idx] || null;
 
-    while (dateCursor.getDay() === 0) { // skip Sundays
+    let targetDateStr = "";
+    let displayDateStr = "";
+    let dayName = "";
+
+    // If the parsed entry already has a valid date extracted from the Word file, preserve it!
+    const parsedEntryIso = entry?.date ? parseAndStandardizeDate(entry.date) : null;
+    if (parsedEntryIso && /^\d{4}-\d{2}-\d{2}$/.test(parsedEntryIso)) {
+      const [yStr, mStr, dStr] = parsedEntryIso.split("-");
+      const parsedDateObj = new Date(parseInt(yStr, 10), parseInt(mStr, 10) - 1, parseInt(dStr, 10));
+      if (!isNaN(parsedDateObj.getTime())) {
+        targetDateStr = parsedEntryIso;
+        displayDateStr = `${parsedDateObj.getDate()}/${parsedDateObj.getMonth() + 1}/${parsedDateObj.getFullYear()}`;
+        dayName = daysOfWeek[parsedDateObj.getDay()];
+        // Advance dateCursor to stay after this parsed date for any subsequent dateless entries
+        dateCursor.setTime(parsedDateObj.getTime());
+        dateCursor.setDate(dateCursor.getDate() + 1);
+      }
+    }
+
+    if (!targetDateStr) {
+      while (dateCursor.getDay() === 0) { // skip Sundays
+        dateCursor.setDate(dateCursor.getDate() + 1);
+      }
+      targetDateStr = format(dateCursor, "yyyy-MM-dd");
+      displayDateStr = `${dateCursor.getDate()}/${dateCursor.getMonth() + 1}/${dateCursor.getFullYear()}`;
+      dayName = daysOfWeek[dateCursor.getDay()];
       dateCursor.setDate(dateCursor.getDate() + 1);
     }
-    const targetDateStr = format(dateCursor, "yyyy-MM-dd");
-    const displayDateStr = `${dateCursor.getDate()}/${dateCursor.getMonth() + 1}/${dateCursor.getFullYear()}`;
-    const dayName = daysOfWeek[dateCursor.getDay()];
 
     if (entry) {
       entry.date = displayDateStr;
@@ -1677,8 +1809,6 @@ export async function saveParsedEntriesToFirestore({
         localStorage.setItem(`suvichar_${targetDateStr}`, finalThought);
       } catch (e) {}
     }
-
-    dateCursor.setDate(dateCursor.getDate() + 1);
 
     const periods = entry?.periods || [];
 

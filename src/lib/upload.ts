@@ -284,15 +284,36 @@ export async function deleteUploadedFile(fileUrl?: string | null): Promise<void>
   const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
   const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
 
-  if (storageApiKey && storageZone && fileUrl.includes(cdnHostname)) {
+  const isBunnyUrl =
+    fileUrl.includes(cdnHostname) ||
+    fileUrl.includes("b-cdn.net") ||
+    fileUrl.includes("storage.bunnycdn.com") ||
+    fileUrl.startsWith("/api/bunny-storage/");
+
+  if (storageApiKey && storageZone && isBunnyUrl) {
     try {
-      const urlObj = new URL(fileUrl);
-      const relativePath = urlObj.pathname.replace(/^\/+/, "");
-      const targetUrl = `https://storage.bunnycdn.com/${storageZone}/${relativePath}`;
-      await fetch(targetUrl, {
-        method: "DELETE",
-        headers: { AccessKey: storageApiKey },
-      });
+      let relativePath = "";
+      if (fileUrl.startsWith("/api/bunny-storage/")) {
+        const prefix = `/api/bunny-storage/${storageZone}/`;
+        relativePath = fileUrl.startsWith(prefix)
+          ? fileUrl.slice(prefix.length)
+          : fileUrl.replace(/^\/api\/bunny-storage\/[^/]+\//, "");
+      } else {
+        const urlObj = new URL(fileUrl);
+        relativePath = urlObj.pathname.replace(/^\/+/, "");
+        if (relativePath.startsWith(`${storageZone}/`)) {
+          relativePath = relativePath.slice(storageZone.length + 1);
+        }
+      }
+      if (relativePath) {
+        const targetUrl = import.meta.env.DEV
+          ? `/api/bunny-storage/${storageZone}/${relativePath}`
+          : `https://storage.bunnycdn.com/${storageZone}/${relativePath}`;
+        await fetch(targetUrl, {
+          method: "DELETE",
+          headers: { AccessKey: storageApiKey },
+        });
+      }
     } catch (err) {
       console.warn("Bunny file deletion notice:", err);
     }

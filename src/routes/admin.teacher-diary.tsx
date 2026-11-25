@@ -724,6 +724,9 @@ function TeacherDiaryAdmin() {
 
       const targetUrl = record.pageUrl ? record.pageUrl.split("?")[0] : "";
       const targetFile = record.fileName || "";
+      const urlsToDelete = new Set<string>();
+      if (record.pageUrl) urlsToDelete.add(record.pageUrl);
+      if ((record as any).masterPdfUrl) urlsToDelete.add((record as any).masterPdfUrl);
 
       // 1. Delete all matching documents in teacher_diaries/{selectedClass}/{selectedMedium}
       const colRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
@@ -739,6 +742,8 @@ function TeacherDiaryAdmin() {
           (targetUrl && docUrl === targetUrl) ||
           (targetFile && data.fileName === targetFile)
         ) {
+          if (data.pageUrl) urlsToDelete.add(data.pageUrl);
+          if (data.masterPdfUrl) urlsToDelete.add(data.masterPdfUrl);
           batch.delete(docSnap.ref);
         }
       });
@@ -758,12 +763,22 @@ function TeacherDiaryAdmin() {
             (targetUrl && docUrl === targetUrl) ||
             (targetFile && data.fileName === targetFile)
           ) {
+            if (data.pageUrl) urlsToDelete.add(data.pageUrl);
+            if (data.masterPdfUrl) urlsToDelete.add(data.masterPdfUrl);
             batch.delete(docSnap.ref);
           }
         }
       });
 
       await batch.commit();
+
+      // 3. Also permanently delete the actual file(s) from backend storage (Bunny CDN / Firebase Storage)
+      if (urlsToDelete.size > 0) {
+        const { deleteUploadedFile } = await import("@/lib/upload");
+        await Promise.allSettled(
+          Array.from(urlsToDelete).map((u) => deleteUploadedFile(u))
+        );
+      }
 
       // Immediately remove from local state so UI updates instantly
       setExistingRecords((prev) =>

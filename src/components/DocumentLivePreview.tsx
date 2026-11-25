@@ -1884,6 +1884,11 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
                   setStructuredPages(parsedFromHtml as any);
                   return;
                 }
+                const fallbackHtmlPages = parseHtmlToStructuredDiaries(result.value);
+                if (fallbackHtmlPages.length > 0) {
+                  setStructuredPages(fallbackHtmlPages);
+                  return;
+                }
               }
             } catch (err) {}
           })
@@ -2066,6 +2071,11 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
                 setStructuredPages(parsedFromHtml as any);
                 return;
               } else {
+                const fallbackHtmlPages = parseHtmlToStructuredDiaries(result.value);
+                if (fallbackHtmlPages.length > 0) {
+                  setStructuredPages(fallbackHtmlPages);
+                  return;
+                }
                 const rawTxt = await mammoth.extractRawText({ arrayBuffer: buffer });
                 const parsed = parseMultiPageTextToStructuredDiaries(rawTxt.value);
                 if (parsed.length > 0) {
@@ -2284,11 +2294,15 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   };
 
   const pagesToDisplay = useMemo(() => {
-    const sourcePages = (structuredPages && structuredPages.length > 0)
+    let sourcePages = (structuredPages && structuredPages.length > 0)
       ? structuredPages
       : (savedRecord?.structuredData && Array.isArray(savedRecord.structuredData) && savedRecord.structuredData.length > 0)
         ? savedRecord.structuredData
         : [];
+
+    if ((!sourcePages || sourcePages.length === 0) && htmlContent) {
+      sourcePages = parseHtmlToStructuredDiaries(htmlContent);
+    }
 
     if (!sourcePages || sourcePages.length === 0) return [];
 
@@ -2297,26 +2311,30 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     // Filter by week range if savedRecord specifies a week/range (e.g. 1 to 10, 11 to 20)
     const weekStr = savedRecord?.week || savedRecord?.selectedWeek || "";
     if (weekStr) {
+      let weekFiltered = filtered;
       if (weekStr.includes("1 to 10") || weekStr === "Week 1") {
-        filtered = filtered.filter((p: any) => {
+        weekFiltered = filtered.filter((p: any) => {
           const dayNum = getDayOfMonthNumber(p.date || p.displayDate);
           return dayNum === 0 || (dayNum >= 1 && dayNum <= 10);
         });
       } else if (weekStr.includes("11 to 20") || weekStr === "Week 2") {
-        filtered = filtered.filter((p: any) => {
+        weekFiltered = filtered.filter((p: any) => {
           const dayNum = getDayOfMonthNumber(p.date || p.displayDate);
           return dayNum === 0 || (dayNum >= 11 && dayNum <= 20);
         });
       } else if (weekStr.includes("21 to 31") || weekStr.includes("21 to 30") || weekStr === "Week 3" || weekStr === "Week 4" || weekStr === "Week 5") {
-        filtered = filtered.filter((p: any) => {
+        weekFiltered = filtered.filter((p: any) => {
           const dayNum = getDayOfMonthNumber(p.date || p.displayDate);
           return dayNum === 0 || dayNum >= 21;
         });
       }
+      if (weekFiltered.length > 0) {
+        filtered = weekFiltered;
+      }
     }
 
     if (selectedMonth) {
-      filtered = filtered.filter((p: any) => {
+      const monthFiltered = filtered.filter((p: any) => {
         const d = p.date || (p as any).displayDate || "";
         if (!d) return true;
         const clean = String(d).trim();
@@ -2326,6 +2344,9 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
         return true;
       });
+      if (monthFiltered.length > 0) {
+        filtered = monthFiltered;
+      }
     }
 
     // Filter down to single date if selectedDateIso is provided
@@ -2387,7 +2408,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       }
       return p;
     });
-  }, [structuredPages, savedRecord?.structuredData, savedRecord?.className, savedRecord?.medium, selectedMonth, savedRecord?.week, savedRecord?.selectedWeek, selectedDateIso, customHolidays]);
+  }, [structuredPages, htmlContent, savedRecord?.structuredData, savedRecord?.className, savedRecord?.medium, selectedMonth, savedRecord?.week, savedRecord?.selectedWeek, selectedDateIso, customHolidays]);
 
   const hasStructuredView = pagesToDisplay && pagesToDisplay.length > 0;
   const downloadUrl = savedRecord?.pageUrl || (selectedFile ? localPdfBlobUrl : null);
@@ -2446,7 +2467,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           const dayVal = cleanText(toMarathiDayName(p.day, p.date));
           const teacherVal = cleanText(toMarathiDigits(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-")));
           const schoolVal = cleanText(toMarathiDigits(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-")));
-          const stdVal = cleanText(toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-")));
+          const stdVal = cleanText(toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (savedRecord?.className || profile?.className || p.std || "-")));
           const yearVal = cleanText(toMarathiDigits(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27")));
 
           return `
@@ -2627,18 +2648,24 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     };
 
     const dayBlocks = validPages.map((p: any, idx: number) => {
+      const isDenseDay = (p.periods || []).length > 6;
+      const rowFontSize = isDenseDay ? "10px" : "11.5px";
+      const rowSmallFontSize = isDenseDay ? "9.5px" : "11px";
+      const rowPad = isDenseDay ? "2.5px 3px" : "4px 4px";
+      const rowWidePad = isDenseDay ? "2.5px 4px" : "4px 5px";
+      const rowLineHeight = isDenseDay ? "1.18" : "1.26";
       const rows = (p.periods || []).map((row: any, rIdx: number) => `
         <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
-          <td style="box-sizing:border-box;text-align:center;font-weight:900;color:#000000;width:${colWidths[0]};font-size:11.5px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">
-            <div style="color:#000000;font-weight:900;line-height:1.2;margin-bottom:2px;">${row.period}</div>
-            <div style="color:#000000;font-weight:900;line-height:1.2;">${row.subject || "-"}</div>
+          <td style="box-sizing:border-box;text-align:center;font-weight:900;color:#000000;width:${colWidths[0]};font-size:${rowFontSize};padding:${rowPad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">
+            <div style="color:#000000;font-weight:900;line-height:1.15;margin-bottom:1px;">${row.period}</div>
+            <div style="color:#000000;font-weight:900;line-height:1.15;">${row.subject || "-"}</div>
           </td>
-          <td style="box-sizing:border-box;text-align:${isDash(row.topic) ? "center" : "left"};font-weight:800;color:#000000;width:${colWidths[1]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.topic || "-"}</td>
-          <td style="box-sizing:border-box;text-align:${isDash(row.subtopic) ? "center" : "left"};font-weight:800;color:#000000;width:${colWidths[2]};font-size:11.5px;padding:4px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.subtopic || "-"}</td>
-          <td style="box-sizing:border-box;text-align:${isDash(row.outcome) ? "center" : "left"};color:#000000;font-weight:800;width:${colWidths[3]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.outcome || "-"}</td>
-          <td style="box-sizing:border-box;text-align:${isDash(row.experience) ? "center" : "left"};color:#000000;font-weight:700;width:${colWidths[4]};font-size:11.5px;padding:4px 5px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.experience || "-"}</td>
-          <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[5]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.tools || "-"}</td>
-          <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[6]};font-size:11px;padding:4px 3px;border:1.5px solid #334155;vertical-align:middle;line-height:1.26;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;white-space:normal;">${row.materials || "-"}</td>
+          <td style="box-sizing:border-box;text-align:${isDash(row.topic) ? "center" : "left"};font-weight:800;color:#000000;width:${colWidths[1]};font-size:${rowFontSize};padding:${rowPad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${row.topic || "-"}</td>
+          <td style="box-sizing:border-box;text-align:${isDash(row.subtopic) ? "center" : "left"};font-weight:800;color:#000000;width:${colWidths[2]};font-size:${rowFontSize};padding:${rowPad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${row.subtopic || "-"}</td>
+          <td style="box-sizing:border-box;text-align:${isDash(row.outcome) ? "center" : "left"};color:#000000;font-weight:800;width:${colWidths[3]};font-size:${rowFontSize};padding:${rowWidePad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${row.outcome || "-"}</td>
+          <td style="box-sizing:border-box;text-align:${isDash(row.experience) ? "center" : "left"};color:#000000;font-weight:700;width:${colWidths[4]};font-size:${rowFontSize};padding:${rowWidePad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${row.experience || "-"}</td>
+          <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[5]};font-size:${rowSmallFontSize};padding:${rowPad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${row.tools || "-"}</td>
+          <td style="box-sizing:border-box;text-align:center;color:#000000;font-weight:700;width:${colWidths[6]};font-size:${rowSmallFontSize};padding:${rowPad};border:1.5px solid #334155;vertical-align:middle;line-height:${rowLineHeight};word-wrap:break-word;overflow-wrap:break-word;word-break:normal;white-space:normal;">${row.materials || "-"}</td>
         </tr>`).join("");
 
       const headers = defaultHeaders
@@ -2649,7 +2676,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       const dayVal = toMarathiDayName(p.day, p.date);
       const teacherVal = toMarathiDigits(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-"));
       const schoolVal = toMarathiDigits(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-"));
-      const stdVal = toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-"));
+      const stdVal = toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (savedRecord?.className || profile?.className || p.std || "-"));
       const yearVal = toMarathiDigits(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27"));
 
       return `
