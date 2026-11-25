@@ -787,21 +787,25 @@ export function detectSubjectFromRow(row: string[], knownSubjects: string[]): st
     return null;
   }
 
-  // If any cell contains long descriptions (> 45 chars), it's a data row, NOT a subject header!
-  if (row.some((c) => String(c || "").trim().length > 45)) {
-    return null;
-  }
-
   // 1. Look for explicit "विषय : <subject>" or "Subject:- <subject>" with colon or hyphen
+  // Check this BEFORE the 45-char length guard because combined title banners
+  // (e.g. "इयत्ता : पहिली वार्षिक नियोजन सन :- 2026-27 विषय : मराठी") exceed 45 chars.
   for (const cell of (row || [])) {
     const cStr = String(cell || "").trim();
-    if (!cStr) continue;
+    if (!cStr || cStr.length > 160) continue;
     const strictMatch = extractStrictSubjectFromLine(cStr);
     if (strictMatch) return strictMatch;
   }
 
-  const strictRowMatch = extractStrictSubjectFromLine(rowLine);
-  if (strictRowMatch) return strictRowMatch;
+  if (rowLine.length <= 160) {
+    const strictRowMatch = extractStrictSubjectFromLine(rowLine);
+    if (strictRowMatch) return strictRowMatch;
+  }
+
+  // If any cell contains long descriptions (> 45 chars), it's a data row, NOT a subject header!
+  if (row.some((c) => String(c || "").trim().length > 45)) {
+    return null;
+  }
 
   // 2. Check if row is a column header row (महिना/Month and आठवडा/Weeks) and has a known subject in one of the cells
   const isColHeaderRow =
