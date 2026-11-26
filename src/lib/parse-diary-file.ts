@@ -1137,6 +1137,7 @@ export async function parseDocxHtmlToDiaries(html: string, className: string): P
 
     if (rawParsedList.length > 0) {
       const isClass5To8 = /(?:class\s*[5-8]|[5-8](?:th)?|पाचवी|सहावी|सातवी|आठवी)/i.test(className || "");
+      const maxPeriodsPerDay = isClass5To8 ? 9 : 6;
 
       // Process sections into separate day entries
       const finalEntries: ParsedDiaryContent[] = [];
@@ -1153,11 +1154,11 @@ export async function parseDocxHtmlToDiaries(html: string, className: string): P
             })
           );
 
-          // For Class 5 to 8 (up to 9 periods/day): if a table has no new date and doesn't restart at period 1
-          // while the current day still has < 9 periods, merge it as continuation periods (e.g. periods 7, 8, 9).
-          const isNewDayTable = isClass5To8
-            ? (hasNewDate || startsAtPeriod1 || (last.periods && last.periods.length >= 9))
-            : (hasNewDate || startsAtPeriod1 || (item.periods && item.periods.length > 0 && last.periods && last.periods.length >= 4));
+          // Uniform continuation-table merging for both Class 1-4 (up to 6 periods/day)
+          // and Class 5-8 (up to 9 periods/day): if a table has no new date and doesn't
+          // restart at period 1 while the current day still has < maxPeriodsPerDay, merge it.
+          const isNewDayTable =
+            hasNewDate || startsAtPeriod1 || (last.periods && last.periods.length >= maxPeriodsPerDay);
 
           if (isNewDayTable) {
             finalEntries.push({ ...item, periods: [...(item.periods || [])] });
@@ -1173,11 +1174,11 @@ export async function parseDocxHtmlToDiaries(html: string, className: string): P
         }
       });
 
-      // Expand entries with >9 periods into 9-period day chunks
+      // Expand entries with >maxPeriodsPerDay periods into day chunks
       const expandedEntries: ParsedDiaryContent[] = [];
       finalEntries.forEach((entry) => {
-        if (entry.periods && entry.periods.length > 9) {
-          const chunkSize = 9;
+        if (entry.periods && entry.periods.length > maxPeriodsPerDay) {
+          const chunkSize = maxPeriodsPerDay;
           const totalChunks = Math.ceil(entry.periods.length / chunkSize);
           for (let c = 0; c < totalChunks; c++) {
             const chunkPeriods = entry.periods.slice(c * chunkSize, (c + 1) * chunkSize).map((p, idx) => ({

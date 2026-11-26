@@ -296,9 +296,15 @@ export function CCEStudentList({
   // First 5 students are 100% free; if paid, quota is at least paidQuota or freeStudentQuota
   const effectiveQuota = isPaidUser ? Math.max(freeStudentQuota, paidQuota) : freeStudentQuota;
 
-  const isQuotaExceeded = !isAdminGranted && totalTeacherStudents >= effectiveQuota;
+  const billableStudents = Math.max(0, totalTeacherStudents - effectiveQuota);
+  const billableAmount = billableStudents * perStudentPrice;
+  const isQuotaExceeded = !isAdminGranted && billableStudents > 0;
 
   const handleUpgradeQuota = async () => {
+    if (billableStudents <= 0 || billableAmount <= 0) {
+      setShowQuotaModal(false);
+      return;
+    }
     setUpgradingQuota(true);
     try {
       const teacherName = localStorage.getItem("teacher_name") || localStorage.getItem("user_name") || "शिक्षक";
@@ -306,19 +312,18 @@ export function CCEStudentList({
       const teacherPhone = localStorage.getItem("teacher_phone") || "";
 
       await processRazorpayPayment({
-        amount: perStudentPrice,
+        amount: billableAmount,
         moduleId: "cce-result",
-        moduleTitle: "अतिरिक्त विद्यार्थी कोटा (+1 Student)",
+        moduleTitle: `अतिरिक्त ${billableStudents} विद्यार्थी कोटा`,
         teacherName,
         teacherEmail,
         teacherPhone,
         onSuccess: async (paymentId) => {
           try {
             const paymentDocKey = `${teacherId}_cce-result`;
-            const currentQuota = effectiveQuota;
-            const newQuota = currentQuota + 1;
+            const newQuota = Math.max(totalTeacherStudents, effectiveQuota + billableStudents);
             const currentAmount = paymentRecord?.amount || 0;
-            const newAmount = currentAmount + perStudentPrice;
+            const newAmount = currentAmount + billableAmount;
 
             await setDoc(
               doc(db, "teacher_module_payments", paymentDocKey),
@@ -333,6 +338,7 @@ export function CCEStudentList({
                 paidQuota: newQuota,
                 studentsCount: newQuota,
                 amount: newAmount,
+                lastPaymentAmount: billableAmount,
                 lastUpgradeAt: new Date().toISOString(),
                 status: "SUCCESS",
                 freeQuota: freeStudentQuota,
@@ -343,10 +349,9 @@ export function CCEStudentList({
               { merge: true }
             );
 
-            toast.success(`अभिनंदन! १ अतिरिक्त विद्यार्थी कोटा वाढवला आहे (नवीन कोटा: ${newQuota} विद्यार्थी)!`);
+            toast.success(`अभिनंदन! ${billableStudents} अतिरिक्त विद्यार्थ्यांचा कोटा अनलॉक झाला (एकूण कोटा: ${newQuota} विद्यार्थी)!`);
             setShowQuotaModal(false);
             setUpgradingQuota(false);
-            openAddInternal();
           } catch (e: any) {
             toast.error("कोटा अपडेट करताना त्रुटी आली: " + e.message);
             setUpgradingQuota(false);
@@ -377,10 +382,8 @@ export function CCEStudentList({
   };
 
   const openAdd = () => {
-    if (isQuotaExceeded) {
-      setShowQuotaModal(true);
-      return;
-    }
+    // Teachers can freely add all students in their class first;
+    // charges apply only for students beyond the free/paid quota.
     openAddInternal();
   };
 
@@ -398,10 +401,6 @@ export function CCEStudentList({
   };
 
   const handleSave = async () => {
-    if (!currentId && isQuotaExceeded) {
-      setShowQuotaModal(true);
-      return;
-    }
     if (!name.trim()) {
       toast.error("कृपया विद्यार्थ्याचे नाव टाका");
       return;
@@ -610,12 +609,12 @@ export function CCEStudentList({
                   </span>
                 </div>
               </div>
-              {totalTeacherStudents >= effectiveQuota && (
+              {billableStudents > 0 && (
                 <button
                   onClick={() => setShowQuotaModal(true)}
                   className="px-3 py-1 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black rounded-xl text-[10px] shadow-xs cursor-pointer shrink-0"
                 >
-                  + अतिरिक्त कोटा वाढवा
+                  ₹{billableAmount} शुल्क भरा ({billableStudents} अतिरिक्त)
                 </button>
               )}
             </div>
@@ -680,23 +679,23 @@ export function CCEStudentList({
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-xl font-black text-slate-900">विद्यार्थी कोटा संपला आहे!</h3>
+              <h3 className="text-xl font-black text-slate-900">अतिरिक्त विद्यार्थी शुल्क</h3>
               <p className="text-xs font-bold text-slate-600 leading-relaxed">
                 {isPaidUser ? (
                   <>
-                    तुम्ही घेतलेला <b>{effectiveQuota}</b> विद्यार्थ्यांचा कोटा पूर्ण झाला आहे ({totalTeacherStudents}/{effectiveQuota} विद्यार्थी जोडले आहेत). नवीन विद्यार्थी जोडण्यासाठी ₹{perStudentPrice} भरून अतिरिक्त १ विद्यार्थी कोटा वाढवा.
+                    तुम्ही आधी <b>{effectiveQuota}</b> विद्यार्थ्यांचा कोटा अनलॉक केला आहे. आता एकूण <b>{totalTeacherStudents}</b> विद्यार्थी आहेत, त्यामुळे फक्त नवीन <b>{billableStudents}</b> अतिरिक्त विद्यार्थ्यांसाठी ({billableStudents} × ₹{perStudentPrice}) शुल्क भरा.
                   </>
                 ) : (
                   <>
-                    तुम्हाला मिळालेला <b>{freeStudentQuota} मोफत विद्यार्थ्यांचा कोटा</b> पूर्ण झाला आहे ({totalTeacherStudents}/{freeStudentQuota} विद्यार्थी जोडले आहेत). पुढील अतिरिक्त विद्यार्थी जोडण्यासाठी ₹{perStudentPrice} भरून अतिरिक्त १ विद्यार्थी कोटा वाढवा.
+                    पहिले <b>{freeStudentQuota}</b> विद्यार्थी मोफत आहेत. तुम्ही एकूण <b>{totalTeacherStudents}</b> विद्यार्थी जोडले आहेत, त्यामुळे उर्वरित <b>{billableStudents}</b> विद्यार्थ्यांसाठी ({billableStudents} × ₹{perStudentPrice}) शुल्क भरा.
                   </>
                 )}
               </p>
             </div>
 
             <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 text-emerald-900 flex items-center justify-between text-xs font-black">
-              <span>अतिरिक्त १ विद्यार्थी शुल्क</span>
-              <span className="text-xl font-black text-emerald-600">₹{perStudentPrice}</span>
+              <span>अतिरिक्त {billableStudents} विद्यार्थी शुल्क (₹{perStudentPrice} × {billableStudents})</span>
+              <span className="text-xl font-black text-emerald-600">₹{billableAmount}</span>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -715,7 +714,7 @@ export function CCEStudentList({
                 className="flex-1 py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {upgradingQuota ? <Loader2 className="size-4 animate-spin" /> : null}
-                <span>₹{perStudentPrice} देऊन कोटा वाढवा</span>
+                <span>₹{billableAmount} देऊन कोटा अनलॉक करा</span>
               </button>
             </div>
           </div>

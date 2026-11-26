@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 // @ts-ignore
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
+import { useCCEQuota } from "@/components/teacher/CCEQuotaContext";
 
 interface Student {
   id: string;
@@ -45,6 +46,7 @@ export function CCEAttendance({
   academicYear: string;
   onBack: () => void;
 }) {
+  const { isStudentUnlocked, requireStudentAccess } = useCCEQuota();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(MONTHS[0]);
   const [attendance, setAttendance] = useState<Record<string, Record<number, "P" | "A" | "">>>({});
@@ -844,7 +846,10 @@ export function CCEAttendance({
                 return (
                   <div
                     key={student.id}
-                    onClick={() => setSelectedStudentForEdit(student)}
+                    onClick={() => {
+                      if (!requireStudentAccess(student.id)) return;
+                      setSelectedStudentForEdit(student);
+                    }}
                     className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-white via-slate-50/40 to-white border border-slate-200/80 hover:border-blue-300 hover:shadow-md hover:translate-y-[-1px] active:scale-[0.995] transition-all cursor-pointer group gap-3"
                   >
                     <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">

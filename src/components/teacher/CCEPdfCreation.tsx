@@ -1,5 +1,8 @@
 import React, { Component, ReactNode, useState, lazy, Suspense } from "react";
 import { ArrowLeft, ChevronRight, FileText, Loader2, AlertCircle } from "lucide-react";
+import { useCCEQuota } from "@/components/teacher/CCEQuotaContext";
+// @ts-ignore
+import { fetchStudentsForClass } from "@/result/firestoreMarksHelper";
 
 // Safe lazy loader to auto-recover from Vite module fetch errors
 const safeLazy = (factory: () => Promise<any>) =>
@@ -112,6 +115,23 @@ export function CCEPdfCreation({ selectedClass, academicYear, selectedMedium, on
 }) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [selectedTerm, setSelectedTerm] = useState<"sem1" | "sem2">("sem2");
+  const { remainingStudents, isStudentUnlocked, openPaymentAlert } = useCCEQuota();
+
+  const handleOpenOption = async (optionId: string) => {
+    if (remainingStudents > 0) {
+      try {
+        const classStudents: any[] = await fetchStudentsForClass(
+          selectedClass,
+          selectedMedium || localStorage.getItem("cce_selected_medium") || "marathi"
+        );
+        if (classStudents.some((s) => s?.id && !isStudentUnlocked(s.id))) {
+          openPaymentAlert();
+          return;
+        }
+      } catch {}
+    }
+    setSelectedOption(optionId);
+  };
 
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center min-h-[350px] text-slate-500">
@@ -283,7 +303,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, selectedMedium, on
         {PDF_OPTIONS.map((option) => (
           <button
             key={option.id}
-            onClick={() => setSelectedOption(option.id)}
+            onClick={() => handleOpenOption(option.id)}
             className="w-full flex items-center justify-between p-4.5 rounded-2xl bg-white border border-slate-200/80 hover:border-blue-400 hover:bg-blue-50/40 transition-all cursor-pointer group text-left shadow-sm hover:shadow-md"
           >
             <div className="flex items-center gap-4 flex-1 pr-4">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useCCEQuota } from "@/components/teacher/CCEQuotaContext";
 // @ts-ignore
 import { matchStudentClassAndMedium, isSemiMedium } from "@/result/firestoreMarksHelper";
 // @ts-ignore
@@ -677,7 +678,9 @@ export function CCEStudentInfo({
   }, [students, searchQuery, selectedClass, selectedMedium, teacherId]);
 
   // Open dedicated separate page for selected student
+  const { isStudentUnlocked, requireStudentAccess } = useCCEQuota();
   const openStudentPage = async (student: StudentRecord, mode: "view" | "edit" = "view") => {
+    if (!requireStudentAccess(student.id)) return;
     setSelectedStudent(student);
     setStudentPageTab(mode);
     setEditName(student.name || student.fullName || "");

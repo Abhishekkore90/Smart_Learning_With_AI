@@ -660,7 +660,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     schoolName: propSchoolProfile?.schoolName || localProfile.schoolName || (profile as any)?.schoolName || (profile as any)?.school || localStorage.getItem("sqaf_cert_school_name") || localStorage.getItem("sqaaf_cert_school_name") || "",
     teacherName: propSchoolProfile?.teacherName || localProfile.teacherName || (profile as any)?.teacherName || (profile as any)?.displayName || (profile as any)?.name || user?.displayName || "",
     headmasterName: propSchoolProfile?.headmasterName || localProfile.headmasterName || (profile as any)?.headmasterName || "",
-    className: propSchoolProfile?.className || localProfile.className || (profile as any)?.className || (profile as any)?.class || selectedClass,
+    className: selectedClass || propSchoolProfile?.className || localProfile.className || (profile as any)?.className || (profile as any)?.class,
     academicYear: propSchoolProfile?.academicYear || localProfile.academicYear || (profile as any)?.academicYear || "2026-27",
   };
 
@@ -1068,7 +1068,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           periods: todayDiary.periods,
           school: activeProfile.schoolName,
           teacher: activeProfile.teacherName,
-          std: activeProfile.className,
+          std: selectedClass || activeProfile.className,
           year: activeProfile.academicYear,
         }] : []);
 
@@ -1648,7 +1648,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     );
     const teacherVal = toMarathiDigits(activeProfile.teacherName || "—");
     const schoolVal = toMarathiDigits(activeProfile.schoolName || "—");
-    const classVal = toMarathiClassName(activeProfile.className || todayDiary.className || selectedClass);
+    const classVal = toMarathiClassName(selectedClass || todayDiary.className || activeProfile.className);
     const yearVal = toMarathiDigits(activeProfile.academicYear || "2026-27");
 
     return `
@@ -2472,7 +2472,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                   className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text"
                   title="इयत्ता बदलण्यासाठी येथे क्लिक करा"
                 >
-                  {toMarathiClassName(activeProfile.className || todayDiary.className || selectedClass)}
+                  {toMarathiClassName(selectedClass || todayDiary.className || activeProfile.className)}
                 </span>
               </div>
               <div>

@@ -421,23 +421,32 @@ function TeacherDashboard() {
                       </div>
 
                       {/* 0. Top Status Badge: FREE vs PAID */}
-                      <div className="relative z-10 flex items-center justify-between gap-2">
-                        {status.isFree ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-emerald-400/25 text-emerald-100 border border-emerald-300/40 backdrop-blur-md shadow-xs tracking-wide">
-                            <Sparkles className="size-3 text-emerald-300" />
-                            <span>मोफत (FREE)</span>
-                          </span>
-                        ) : status.isUnlocked ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-emerald-400/25 text-emerald-100 border border-emerald-300/40 backdrop-blur-md shadow-xs tracking-wide">
-                            <CheckCircle2 className="size-3 text-emerald-300" />
-                            <span>सशुल्क • ॲक्टिव्ह (PAID)</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-amber-400/25 text-amber-100 border border-amber-300/40 backdrop-blur-md shadow-xs tracking-wide">
-                            <Lock className="size-3 text-amber-300" />
-                            <span>सशुल्क (PAID)</span>
-                          </span>
-                        )}
+                      <div className="relative z-10 flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {status.isFree ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-emerald-400/25 text-emerald-100 border border-emerald-300/40 backdrop-blur-md shadow-xs tracking-wide">
+                              <Sparkles className="size-3 text-emerald-300" />
+                              <span>मोफत (FREE)</span>
+                            </span>
+                          ) : status.isUnlocked ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-emerald-400/25 text-emerald-100 border border-emerald-300/40 backdrop-blur-md shadow-xs tracking-wide">
+                              <CheckCircle2 className="size-3 text-emerald-300" />
+                              <span>सशुल्क • ॲक्टिव्ह (PAID)</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-amber-400/25 text-amber-100 border border-amber-300/40 backdrop-blur-md shadow-xs tracking-wide">
+                              <Lock className="size-3 text-amber-300" />
+                              <span>सशुल्क (PAID)</span>
+                            </span>
+                          )}
+
+                          {item.moduleId === "cce-result" && !status.isFree && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-gradient-to-r from-emerald-300 via-teal-200 to-amber-200 text-slate-950 border border-white/60 shadow-md shadow-emerald-500/25 tracking-wide">
+                              <Sparkles className="size-3 text-emerald-800 shrink-0" />
+                              <span>पहिले पाच विद्यार्थी 100% मोफत</span>
+                            </span>
+                          )}
+                        </div>
 
                         <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                           <a

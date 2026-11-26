@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 // @ts-ignore
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
+import { useCCEQuota } from "@/components/teacher/CCEQuotaContext";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -351,6 +352,7 @@ export function CCERemarks({
   selectedMedium?: string;
   onBack: () => void;
 }) {
+  const { isStudentUnlocked, requireStudentAccess } = useCCEQuota();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -674,6 +676,7 @@ export function CCERemarks({
   };
 
   const openStudent = (student: Student) => {
+    if (!requireStudentAccess(student.id)) return;
     setEditingStudent(student);
     const rawRemarks = getStudentRemarksRecord(student);
 

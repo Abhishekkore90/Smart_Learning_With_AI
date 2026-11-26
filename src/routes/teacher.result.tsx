@@ -16,10 +16,15 @@ import {
   Award,
   BookOpen,
   ArrowLeft,
+  Users,
+  CreditCard,
+  X,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
-import { ModulePaywall } from "@/components/teacher/ModulePaywall";
+import { CCEQuotaProvider } from "@/components/teacher/CCEQuotaContext";
 // @ts-ignore
 import { matchStudentClassAndMedium, fetchStudentsForClass } from "@/result/firestoreMarksHelper";
 // @ts-ignore
@@ -28,11 +33,13 @@ import { useState, useMemo, useEffect } from "react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
+import { processRazorpayPayment } from "@/lib/razorpayService";
 import {
   collection,
   addDoc,
   deleteDoc,
   doc,
+  setDoc,
   query,
   orderBy,
   onSnapshot,
@@ -213,12 +220,20 @@ function TeacherResultsPage() {
 
   // Total teacher student count across ALL classes & mediums for per-student pricing
   const [totalTeacherStudents, setTotalTeacherStudents] = useState<number>(0);
+  const [classWiseStudentCounts, setClassWiseStudentCounts] = useState<{ className: string; count: number }[]>([]);
+  const [showStudentPaymentModal, setShowStudentPaymentModal] = useState<boolean>(false);
+  const [ccePaymentRecord, setCcePaymentRecord] = useState<any>(null);
+  const [ccePerStudentPrice, setCcePerStudentPrice] = useState<number>(5);
+  const [cceFreeQuota, setCceFreeQuota] = useState<number>(5);
+  const [payingRemaining, setPayingRemaining] = useState<boolean>(false);
 
   useEffect(() => {
     if (!teacherId) return;
 
     let unsubUsers: (() => void) | undefined;
     let unsubStudents: (() => void) | undefined;
+    let unsubPayment: (() => void) | undefined;
+    let unsubPricing: (() => void) | undefined;
 
     const userKeys = Array.from(
       new Set(
@@ -234,31 +249,56 @@ function TeacherResultsPage() {
       )
     );
 
+    const updateClassBreakdown = (uMap: Map<string, string>, sMap: Map<string, string>) => {
+      const merged = new Map<string, string>([...uMap.entries(), ...sMap.entries()]);
+      setTotalTeacherStudents(merged.size);
+      const byClass = new Map<string, number>();
+      merged.forEach((cls) => {
+        const key = (cls || "इतर").trim();
+        byClass.set(key, (byClass.get(key) || 0) + 1);
+      });
+      const sorted = Array.from(byClass.entries())
+        .map(([className, count]) => ({ className, count }))
+        .sort((a, b) => a.className.localeCompare(b.className, undefined, { numeric: true }));
+      setClassWiseStudentCounts(sorted);
+    };
+
     try {
+      unsubPayment = onSnapshot(doc(db, "teacher_module_payments", `${teacherId}_cce-result`), (snap) => {
+        setCcePaymentRecord(snap.exists() ? snap.data() : null);
+      });
+
+      unsubPricing = onSnapshot(doc(db, "cce_module_pricing", "cce-result"), (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (typeof data.perStudentPrice === "number") setCcePerStudentPrice(data.perStudentPrice);
+          if (typeof data.freeStudentQuota === "number") setCceFreeQuota(data.freeStudentQuota);
+        }
+      });
+
       const qUsers = query(collection(db, "users"), where("role", "==", "student"));
       unsubUsers = onSnapshot(qUsers, (snapUsers) => {
-        const userStudentIds = new Set<string>();
+        const userStudentMap = new Map<string, string>();
         snapUsers.docs.forEach((docSnap) => {
           const data = docSnap.data();
           const sTeacher = data.teacherId || data.createdById || data.userId;
           if (sTeacher && userKeys.includes(sTeacher)) {
-            userStudentIds.add(docSnap.id);
+            userStudentMap.set(docSnap.id, String(data.class || data.className || "इतर"));
           }
         });
 
         const qStudents = query(collection(db, "students"));
         unsubStudents = onSnapshot(qStudents, (snapStudents) => {
-          const studentDocsIds = new Set<string>();
+          const studentDocsMap = new Map<string, string>();
           snapStudents.docs.forEach((docSnap) => {
             const data = docSnap.data();
             const sTeacher = data.teacherId || data.createdById || data.userId;
             if (sTeacher && userKeys.includes(sTeacher)) {
-              studentDocsIds.add(docSnap.id);
+              studentDocsMap.set(docSnap.id, String(data.class || data.className || "इतर"));
             }
           });
 
-          const combinedCount = new Set([...Array.from(userStudentIds), ...Array.from(studentDocsIds)]).size;
-          setTotalTeacherStudents(combinedCount);
+          updateClassBreakdown(userStudentMap, studentDocsMap);
         });
       }, (e) => {
         console.warn("Total teacher students error:", e);
@@ -270,8 +310,80 @@ function TeacherResultsPage() {
     return () => {
       if (unsubUsers) unsubUsers();
       if (unsubStudents) unsubStudents();
+      if (unsubPayment) unsubPayment();
+      if (unsubPricing) unsubPricing();
     };
   }, [teacherId, user, profile]);
+
+  const isCcePaidUser = ccePaymentRecord && ccePaymentRecord.status === "SUCCESS";
+  const ccePaidQuota = isCcePaidUser
+    ? (ccePaymentRecord.paidQuota || ccePaymentRecord.studentsCount || Math.floor((ccePaymentRecord.amount || 0) / (ccePerStudentPrice || 5)) || 0)
+    : 0;
+  const cceEffectiveQuota = isCcePaidUser ? Math.max(cceFreeQuota, ccePaidQuota) : cceFreeQuota;
+  const ccePaidStudentsCount = Math.max(0, cceEffectiveQuota - cceFreeQuota);
+  const cceRemainingStudents = Math.max(0, totalTeacherStudents - cceEffectiveQuota);
+  const cceRemainingAmount = cceRemainingStudents * ccePerStudentPrice;
+
+  const handlePayRemainingFromDashboard = async () => {
+    if (cceRemainingStudents <= 0 || cceRemainingAmount <= 0 || payingRemaining) return;
+    setPayingRemaining(true);
+    try {
+      const teacherName = localStorage.getItem("teacher_name") || localStorage.getItem("user_name") || "शिक्षक";
+      const teacherEmail = localStorage.getItem("teacher_email") || "";
+      const teacherPhone = localStorage.getItem("teacher_phone") || "";
+
+      await processRazorpayPayment({
+        amount: cceRemainingAmount,
+        moduleId: "cce-result",
+        moduleTitle: `अतिरिक्त ${cceRemainingStudents} विद्यार्थी कोटा`,
+        teacherName,
+        teacherEmail,
+        teacherPhone,
+        onSuccess: async (paymentId) => {
+          try {
+            const paymentDocKey = `${teacherId}_cce-result`;
+            const newQuota = Math.max(totalTeacherStudents, cceEffectiveQuota + cceRemainingStudents);
+            const newAmount = (ccePaymentRecord?.amount || 0) + cceRemainingAmount;
+            await setDoc(
+              doc(db, "teacher_module_payments", paymentDocKey),
+              {
+                id: paymentDocKey,
+                teacherId,
+                teacherName,
+                teacherEmail,
+                teacherPhone,
+                moduleId: "cce-result",
+                moduleTitle: "CCE निकाल (CCE Result)",
+                paidQuota: newQuota,
+                studentsCount: newQuota,
+                amount: newAmount,
+                lastPaymentAmount: cceRemainingAmount,
+                lastUpgradeAt: new Date().toISOString(),
+                status: "SUCCESS",
+                freeQuota: cceFreeQuota,
+                perStudentRate: ccePerStudentPrice,
+                paymentMethod: "RAZORPAY",
+                razorpayPaymentId: paymentId,
+              },
+              { merge: true }
+            );
+            toast.success(`₹${cceRemainingAmount} पेमेंट यशस्वी! एकूण ${newQuota} विद्यार्थी अनलॉक झाले आहेत.`);
+          } catch (err: any) {
+            toast.error("पेमेंट सेव्ह करताना त्रुटी आली: " + err.message);
+          } finally {
+            setPayingRemaining(false);
+          }
+        },
+        onError: (err) => {
+          setPayingRemaining(false);
+          toast.error(typeof err === "string" ? err : "पेमेंट रद्द किंवा अयशस्वी झाले.");
+        },
+      });
+    } catch (err: any) {
+      setPayingRemaining(false);
+      toast.error(err?.message || "पेमेंट प्रक्रिया सुरू होऊ शकली नाही.");
+    }
+  };
 
   // Real-time student count sync for selected class AND medium (isolated by teacherId)
   useEffect(() => {
@@ -556,14 +668,8 @@ function TeacherResultsPage() {
     currentPage * entriesPerPage,
   );
 
-  const isFreeTab = activeTab === "dashboard" || activeTab === "settings" || activeTab === "student-progress";
-
   return (
-    <ModulePaywall
-      moduleId="cce-result"
-      totalStudentsCount={totalTeacherStudents || studentsCount || 0}
-      isPaidTab={!isFreeTab}
-    >
+    <CCEQuotaProvider>
       <div className="min-h-screen bg-slate-50/50">
         <TeacherHeader />
         <TeacherSidebar />
@@ -582,7 +688,7 @@ function TeacherResultsPage() {
             )}
 
             {activeTab === "dashboard" && (
-              <div className="mb-4">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <Link
                   to="/teacher"
                   className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
@@ -590,6 +696,120 @@ function TeacherResultsPage() {
                   <ArrowLeft className="size-4 text-indigo-600" />
                   <span>मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)</span>
                 </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setShowStudentPaymentModal(true)}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white hover:bg-blue-50 text-slate-800 border border-slate-200 hover:border-blue-300 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+                >
+                  <Users className="size-4 text-blue-600" />
+                  <span>Added Students &amp; Payment</span>
+                  {cceRemainingAmount > 0 ? (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black border border-amber-200">
+                      ₹{cceRemainingAmount} बाकी
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black border border-emerald-200">
+                      {totalTeacherStudents} विद्यार्थी
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Added Students & Payment Modal */}
+            {showStudentPaymentModal && (
+              <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Users className="size-5 text-blue-100" />
+                      <h3 className="text-base font-black tracking-tight">
+                        जोडलेले विद्यार्थी व पेमेंट तपशील
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowStudentPaymentModal(false)}
+                      className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 transition-colors cursor-pointer"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+
+                  <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+                    {/* Class-wise Added Students */}
+                    <div className="space-y-2.5">
+                      <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                        इयत्तानिहाय जोडलेले विद्यार्थी (एकूण: {totalTeacherStudents})
+                      </h4>
+                      {classWiseStudentCounts.length === 0 ? (
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-500 text-center">
+                          अद्याप कोणताही विद्यार्थी जोडलेला नाही.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                          {classWiseStudentCounts.map((item) => (
+                            <div
+                              key={item.className}
+                              className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between"
+                            >
+                              <span className="text-xs font-extrabold text-slate-700">{item.className}</span>
+                              <span className="px-2 py-0.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-black">
+                                {item.count}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Payment Breakdown */}
+                    <div className="space-y-2.5">
+                      <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                        पेमेंट माहिती (पहिले {cceFreeQuota} विद्यार्थी मोफत)
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
+                          <span className="text-[11px] font-bold text-emerald-700 block">सशुल्क अनलॉक विद्यार्थी</span>
+                          <span className="text-lg font-black text-emerald-800">{ccePaidStudentsCount} विद्यार्थी</span>
+                          <span className="text-[11px] font-bold text-emerald-600 block">
+                            एकूण भरलेले: ₹{ccePaymentRecord?.amount || 0}
+                          </span>
+                        </div>
+                        <div className={`p-3.5 rounded-2xl border ${cceRemainingAmount > 0 ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"}`}>
+                          <span className={`text-[11px] font-bold block ${cceRemainingAmount > 0 ? "text-amber-700" : "text-slate-500"}`}>
+                            उर्वरित पेमेंट (Remaining)
+                          </span>
+                          <span className={`text-lg font-black ${cceRemainingAmount > 0 ? "text-amber-800" : "text-slate-700"}`}>
+                            ₹{cceRemainingAmount}
+                          </span>
+                          <span className={`text-[11px] font-bold block ${cceRemainingAmount > 0 ? "text-amber-700" : "text-slate-500"}`}>
+                            {cceRemainingStudents} विद्यार्थी बाकी ({cceRemainingStudents} × ₹{ccePerStudentPrice})
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Footer */}
+                    {cceRemainingAmount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={handlePayRemainingFromDashboard}
+                        disabled={payingRemaining}
+                        className="w-full py-3.5 px-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.99] text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        {payingRemaining ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />}
+                        <span>उर्वरित ₹{cceRemainingAmount} पेमेंट करा ({cceRemainingStudents} विद्यार्थी)</span>
+                      </button>
+                    ) : (
+                      <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center gap-2 text-emerald-700 text-xs font-black">
+                        <CheckCircle2 className="size-4" />
+                        <span>सर्व विद्यार्थ्यांचे पेमेंट पूर्ण / मोफत कोट्याअंतर्गत आहे!</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1141,6 +1361,6 @@ function TeacherResultsPage() {
             </div>
         </main>
     </div>
-    </ModulePaywall>
+    </CCEQuotaProvider>
   );
 }

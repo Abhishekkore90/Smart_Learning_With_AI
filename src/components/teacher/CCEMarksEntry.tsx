@@ -19,6 +19,7 @@ import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 import { getDefaultSubjectsForClass, deduplicateAndNormalizeSubjects, normalizeSubjectTitle, isClass6 } from "@/data/cceSubjects";
 // @ts-ignore
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
+import { useCCEQuota } from "@/components/teacher/CCEQuotaContext";
 
 const EXAMS_SEM1 = [
   { key: "test1", label: "चाचणी १" },
@@ -139,6 +140,7 @@ export function CCEMarksEntry({
   onBack: () => void;
   selectedMedium?: string;
 }) {
+  const { isStudentUnlocked, requireStudentAccess } = useCCEQuota();
   const [selectedMedium, setSelectedMedium] = useState<"marathi" | "semi">(() => {
     if (propMedium) return propMedium === "semi" ? "semi" : "marathi";
     const stored = localStorage.getItem("cce_selected_medium");
@@ -760,6 +762,28 @@ export function CCEMarksEntry({
         {/* Roster of Students for this Subject */}
         <div className="flex-1 overflow-y-auto px-6 py-6 pb-28 space-y-4">
           {students.map((student, idx) => {
+            if (!isStudentUnlocked(student.id)) {
+              return (
+                <div
+                  key={student.id}
+                  onClick={() => requireStudentAccess(student.id)}
+                  className="bg-amber-50/70 p-4 rounded-3xl border border-amber-200 shadow-sm flex items-center justify-between gap-3 cursor-pointer hover:bg-amber-100/70 transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500 text-white font-black text-xs flex items-center justify-center shadow-md">
+                      {student.rollNo || idx + 1}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">{student.fullName || student.name}</h4>
+                      <p className="text-[11px] text-amber-700 font-bold">हजेरी क्र. {student.rollNo || idx + 1} • गुण भरण्यासाठी अनलॉक करा</p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-black shrink-0">
+                    🔒 अनलॉक करा
+                  </span>
+                </div>
+              );
+            }
             const sm = getSubjectMarks(student.id, subject);
             const activeCols = getActiveColsForStudent(student.rollNo || "", subject);
 
@@ -858,7 +882,9 @@ export function CCEMarksEntry({
 
     const handleNextStudent = () => {
       if (studentIdx < students.length - 1) {
-        setEditingStudent(students[studentIdx + 1]);
+        const nextSt = students[studentIdx + 1];
+        if (!requireStudentAccess(nextSt.id)) return;
+        setEditingStudent(nextSt);
       } else {
         toast.info("हा शेवटचा विद्यार्थी आहे!");
       }
@@ -866,7 +892,9 @@ export function CCEMarksEntry({
 
     const handlePrevStudent = () => {
       if (studentIdx > 0) {
-        setEditingStudent(students[studentIdx - 1]);
+        const prevSt = students[studentIdx - 1];
+        if (!requireStudentAccess(prevSt.id)) return;
+        setEditingStudent(prevSt);
       }
     };
 
@@ -1135,6 +1163,7 @@ export function CCEMarksEntry({
               <div
                 key={student.id}
                 onClick={() => {
+                  if (!requireStudentAccess(student.id)) return;
                   setEditingStudent(student);
                   setSubjectIndex(0);
                 }}
@@ -1153,7 +1182,11 @@ export function CCEMarksEntry({
                 </div>
 
                 <div>
-                  {isComplete ? (
+                  {!isStudentUnlocked(student.id) ? (
+                    <span className="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-800 text-[11px] font-black border border-amber-200">
+                      🔒 अनलॉक करा
+                    </span>
+                  ) : isComplete ? (
                     <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/30">
                       <Check className="size-5 stroke-[3]" />
                     </div>

@@ -664,7 +664,7 @@ export function parseMultiPageTextToStructuredDiaries(fullText: string): Structu
       pageNumber: pageIdx + 1,
       date,
       day,
-      std: std || "पहिली",
+      std: std || "",
       year: year || "2025-26",
       teacher: teacher || "-",
       school: school || "-",
@@ -955,7 +955,7 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
         pageNumber: idx + 1,
         date: finalDate,
         day: finalDay,
-        std: meta.std || "पहिली",
+        std: meta.std || "",
         year: meta.year || "2025-26",
         teacher: meta.teacher || "-",
         school: meta.school || "-",
@@ -1386,7 +1386,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                 </div>
                 <div>
                   <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">इयत्ता</span>
-                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-"))}</span>
+                  <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-base block hover:bg-amber-100/70 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text">{toMarathiClassName(profile?.className || (p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (p.std || "-")))}</span>
                 </div>
                 <div>
                   <span className="text-slate-700 font-black block text-sm uppercase mb-0.5">सन</span>
@@ -2467,7 +2467,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           const dayVal = cleanText(toMarathiDayName(p.day, p.date));
           const teacherVal = cleanText(toMarathiDigits(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-")));
           const schoolVal = cleanText(toMarathiDigits(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-")));
-          const stdVal = cleanText(toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (savedRecord?.className || profile?.className || p.std || "-")));
+          const stdVal = cleanText(toMarathiClassName(savedRecord?.className || (p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-"))));
           const yearVal = cleanText(toMarathiDigits(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27")));
 
           return `
@@ -2676,7 +2676,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       const dayVal = toMarathiDayName(p.day, p.date);
       const teacherVal = toMarathiDigits(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-"));
       const schoolVal = toMarathiDigits(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-"));
-      const stdVal = toMarathiClassName(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (savedRecord?.className || profile?.className || p.std || "-"));
+      const stdVal = toMarathiClassName(savedRecord?.className || (p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-")));
       const yearVal = toMarathiDigits(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27"));
 
       return `

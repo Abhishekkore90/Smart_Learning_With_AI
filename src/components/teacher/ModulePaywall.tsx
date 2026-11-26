@@ -23,6 +23,7 @@ import {
   Check,
   Send,
   HelpCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -99,6 +100,7 @@ export function ModulePaywall({
 }: ModulePaywallProps) {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
+  const [proceedToPayment, setProceedToPayment] = useState(false);
   const [pricing, setPricing] = useState<ModulePricing | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [paymentInfo, setPaymentInfo] = useState<any>(null);
@@ -453,7 +455,8 @@ export function ModulePaywall({
                   ? `${pricing.title || defaultTitle || moduleId} (वार्षिक - संपूर्ण वर्ष)`
                   : `${pricing.title || defaultTitle || moduleId} (मासिक - ${MONTH_NAMES_MAP[targetMonth] || targetMonth} महिना)`
                 : (pricing.title || defaultTitle || moduleId),
-              amount: targetPrice,
+              amount: (paymentInfo?.amount || 0) + targetPrice,
+              lastPaymentAmount: targetPrice,
               paymentMethod: "RAZORPAY",
               razorpayPaymentId: paymentId,
               razorpayOrderId: orderId || "",
@@ -535,6 +538,66 @@ export function ModulePaywall({
   const upiPayload = `upi://pay?pa=${upiId}&pn=${encodeURIComponent("Smart Learning AI")}&am=${targetPrice}&cu=INR&tn=${encodeURIComponent(pricing?.title || moduleId)}`;
   const qrCodeUrl = pricing?.qrImageUrl || `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(upiPayload)}`;
 
+  // ── PER-STUDENT ALERT STEP BEFORE PAYMENT WINDOW ──
+  if (isPerStudentModule && !proceedToPayment) {
+    return (
+      <div className="max-w-2xl mx-auto my-8 p-4 font-sans select-none">
+        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white p-7 sm:p-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl backdrop-blur-md border border-white/30 mb-3 text-3xl">
+              👨‍🎓
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+              तुम्ही एकूण {totalStudentsCount} विद्यार्थी जोडले आहेत!
+            </h2>
+            <p className="text-xs sm:text-sm text-amber-50 font-bold mt-1.5">
+              You added {totalStudentsCount} students in your class
+            </p>
+          </div>
+
+          <div className="p-6 sm:p-8 space-y-6">
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 space-y-2 text-sm text-slate-800 font-bold leading-relaxed">
+              <p>
+                🎁 पहिले <span className="text-emerald-700 font-black">{freeStudentQuota} विद्यार्थी</span> पूर्णपणे मोफत आहेत.
+                {allowedQuota > freeStudentQuota && (
+                  <> (आधीचे अनलॉक केलेले मिळून एकूण <span className="text-blue-700 font-black">{allowedQuota} विद्यार्थी</span> अनलॉक आहेत.)</>
+                )}
+              </p>
+              <p>
+                तुम्ही एकूण <span className="text-slate-950 font-black">{totalStudentsCount} विद्यार्थी</span> जोडले आहेत, त्यामुळे उर्वरित{" "}
+                <span className="text-blue-700 font-black">{billableStudentsCount} विद्यार्थ्यांसाठी</span> तुम्हाला{" "}
+                <span className="text-emerald-700 font-black text-base">₹{targetPrice}</span> ({billableStudentsCount} × ₹{perStudentRate}) शुल्क भरावे लागेल.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                <span className="text-[11px] font-bold text-slate-500 block">एकूण विद्यार्थी</span>
+                <span className="text-xl font-black text-slate-900">{totalStudentsCount}</span>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3">
+                <span className="text-[11px] font-bold text-emerald-700 block">मोफत / अनलॉक</span>
+                <span className="text-xl font-black text-emerald-700">{allowedQuota}</span>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3">
+                <span className="text-[11px] font-bold text-blue-700 block">देय रक्कम</span>
+                <span className="text-xl font-black text-blue-700">₹{targetPrice}</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setProceedToPayment(true)}
+              className="w-full py-4 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.99] text-white font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-emerald-600/20 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>पुढे जा — ₹{targetPrice} भरा (Proceed to Payment)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── PAYWALL UNLOCK DASHBOARD (STRICT BLOCKING) ──
   return (
     <div className="max-w-4xl mx-auto my-8 p-4 font-sans select-none">
@@ -545,6 +608,20 @@ export function ModulePaywall({
 
         {/* Top Header Banner */}
         <div className="bg-gradient-to-r from-blue-700 via-indigo-800 to-purple-900 text-white p-8 sm:p-10 text-center relative z-10">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.history.length > 1) {
+                window.history.back();
+              } else {
+                window.location.href = "/teacher";
+              }
+            }}
+            className="absolute top-4 left-4 sm:top-6 sm:left-6 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold backdrop-blur-md border border-white/20 transition-all cursor-pointer active:scale-95"
+          >
+            <ArrowLeft className="size-4" />
+            <span>मागे जा (Back)</span>
+          </button>
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-3xl backdrop-blur-md border border-white/20 mb-4 shadow-inner">
             <Lock className="size-10 text-amber-300 animate-pulse" />
           </div>
