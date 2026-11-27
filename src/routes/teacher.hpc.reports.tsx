@@ -31,6 +31,8 @@ import {
   getHpcStudentAttendance,
   getHpcSchoolSettings,
   getHpcClassWorkingDays,
+  getHpcDynamicRubrics,
+  getHpcDynamicActivities,
 } from "@/hpc/services/hpcService";
 import { generateHpcPdf, downloadBlob } from "@/hpc/reports/HpcPdfGenerator";
 import { FoundationalHpcPdf } from "@/hpc/reports/FoundationalHpcPdf";
@@ -142,7 +144,7 @@ function TeacherHpcReportsPage() {
     try {
       const existingStudent = students.find((s) => s.id === studentId);
 
-      const [stRes, profRes, s1Res, s2Res, annRes, attRes, schoolRes, classWdRes] = await Promise.allSettled([
+      const [stRes, profRes, s1Res, s2Res, annRes, attRes, schoolRes, classWdRes, rubricsRes, activitiesRes] = await Promise.allSettled([
         getHpcStudentById(studentId),
         getHpcStudentProfile(studentId, academicYear),
         getHpcSessionAssessment(studentId, academicYear, "session1"),
@@ -151,6 +153,8 @@ function TeacherHpcReportsPage() {
         getHpcStudentAttendance(selectedClass, academicYear, studentId),
         getHpcSchoolSettings(),
         getHpcClassWorkingDays(selectedClass, academicYear),
+        getHpcDynamicRubrics(),
+        getHpcDynamicActivities(),
       ]);
 
       const st =
@@ -173,6 +177,8 @@ function TeacherHpcReportsPage() {
       const att = attRes.status === "fulfilled" ? attRes.value : null;
       const school = schoolRes.status === "fulfilled" ? schoolRes.value : {};
       const classWd = classWdRes.status === "fulfilled" && classWdRes.value ? classWdRes.value : {};
+      const stageRubrics = rubricsRes.status === "fulfilled" ? rubricsRes.value : [];
+      const stageActivities = activitiesRes.status === "fulfilled" ? activitiesRes.value : [];
 
       const mergedAtt = att ? { ...att } : { workingDays: {}, attendedDays: {} };
       if (classWd && Object.keys(classWd).length > 0) {
@@ -187,6 +193,8 @@ function TeacherHpcReportsPage() {
         annualSummary: ann,
         attendance: mergedAtt,
         schoolSettings: school,
+        stageRubrics,
+        stageActivities,
       };
 
       setActivePreviewStudent(previewData);
@@ -549,6 +557,8 @@ function TeacherHpcReportsPage() {
                     attendance={activePreviewStudent.attendance}
                     schoolSettings={activePreviewStudent.schoolSettings}
                     academicYear={academicYear}
+                    stageRubrics={activePreviewStudent.stageRubrics || []}
+                    stageActivities={activePreviewStudent.stageActivities || []}
                   />
                 ) : stageId === "preparatory" ? (
                   <PreparatoryHpcPdf

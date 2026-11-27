@@ -6,9 +6,13 @@ import {
   HpcStudentProfile,
   HpcSessionAssessment,
   HpcAnnualSummary,
+  HpcDynamicRubric,
+  HpcDynamicActivity,
 } from "../types/hpc";
 import {
   FOUNDATIONAL_AREAS,
+  HPC_CURRICULAR_GOALS,
+  HPC_COMPETENCIES,
   getGoalsForArea,
   getCompetenciesForGoalAndClass,
 } from "../data/hpcCurricularGoals";
@@ -22,6 +26,7 @@ import {
   FoundationalAreaConfig,
 } from "../data/foundationalHpcData";
 import { CLASSWISE_LEARNING_OUTCOMES } from "../data/hpcClasswiseCurricularData";
+import { HPC_ACTIVITIES_BANK } from "../data/hpcActivitiesBank";
 import { PravinyaEmblem } from "../components/PravinyaEmblem";
 
 export type { FoundationalAreaConfig };
@@ -69,67 +74,39 @@ function SmileyOptions({
 }: {
   selected?: "yes" | "no" | "dont_know" | "" | string;
 }) {
+  const items = [
+    { key: "yes", label: "होय", emoji: "😊", activeBox: "bg-amber-100 border-amber-500 shadow-xs ring-2 ring-amber-400", activeText: "text-amber-800" },
+    { key: "no", label: "नाही", emoji: "😐", activeBox: "bg-slate-200 border-slate-500 shadow-xs ring-2 ring-slate-400", activeText: "text-slate-800" },
+    { key: "dont_know", label: "माहिती नाही", emoji: "🤔", activeBox: "bg-purple-100 border-purple-500 shadow-xs ring-2 ring-purple-400", activeText: "text-purple-800" },
+  ];
   return (
     <div className="flex items-center justify-around gap-1 px-1 py-1">
-      {/* 1. होय */}
-      <div className="flex flex-col items-center">
-        <div
-          className={`size-7 rounded-full flex items-center justify-center border transition-all ${
-            selected === "yes"
-              ? "bg-amber-100 border-amber-500 shadow-xs ring-2 ring-amber-400"
-              : "bg-white border-slate-300"
-          }`}
-        >
-          <span className="text-sm leading-none">😊</span>
-        </div>
-        <span
-          className={`text-[9px] mt-0.5 font-bold leading-none ${
-            selected === "yes" ? "text-amber-800" : "text-slate-600"
-          }`}
-        >
-          होय
-        </span>
-      </div>
-
-      {/* 2. नाही */}
-      <div className="flex flex-col items-center">
-        <div
-          className={`size-7 rounded-full flex items-center justify-center border transition-all ${
-            selected === "no"
-              ? "bg-slate-200 border-slate-500 shadow-xs ring-2 ring-slate-400"
-              : "bg-white border-slate-300"
-          }`}
-        >
-          <span className="text-sm leading-none">😐</span>
-        </div>
-        <span
-          className={`text-[9px] mt-0.5 font-bold leading-none ${
-            selected === "no" ? "text-slate-800" : "text-slate-600"
-          }`}
-        >
-          नाही
-        </span>
-      </div>
-
-      {/* 3. माहिती नाही */}
-      <div className="flex flex-col items-center">
-        <div
-          className={`size-7 rounded-full flex items-center justify-center border transition-all ${
-            selected === "dont_know"
-              ? "bg-purple-100 border-purple-500 shadow-xs ring-2 ring-purple-400"
-              : "bg-white border-slate-300"
-          }`}
-        >
-          <span className="text-sm leading-none">🤔</span>
-        </div>
-        <span
-          className={`text-[9px] mt-0.5 font-bold leading-none ${
-            selected === "dont_know" ? "text-purple-800" : "text-slate-600"
-          }`}
-        >
-          माहिती नाही
-        </span>
-      </div>
+      {items.map((it) => {
+        const isSel = selected === it.key;
+        return (
+          <div key={it.key} className="flex flex-col items-center">
+            <div
+              className={`relative size-7 rounded-full flex items-center justify-center border transition-all ${
+                isSel ? it.activeBox : "bg-white border-slate-300"
+              }`}
+            >
+              <span className="text-sm leading-none">{it.emoji}</span>
+              {isSel && (
+                <span className="absolute -top-1 -right-1 size-3.5 rounded-full bg-[#e6006e] text-white text-[9px] font-black flex items-center justify-center shadow-xs border border-white">
+                  ✓
+                </span>
+              )}
+            </div>
+            <span
+              className={`text-[9px] mt-0.5 font-bold leading-none ${
+                isSel ? it.activeText : "text-slate-600"
+              }`}
+            >
+              {it.label}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -152,13 +129,18 @@ function HelpOptions({ selected = "" }: { selected?: string | string[] }) {
         return (
           <div key={opt.id} className="flex flex-col items-center">
             <div
-              className={`size-7 rounded-lg flex items-center justify-center border text-xs transition-all ${
+              className={`relative size-7 rounded-lg flex items-center justify-center border text-xs transition-all ${
                 isSel
                   ? "bg-rose-100 border-rose-500 ring-2 ring-rose-400 font-bold"
                   : "bg-white border-slate-300 text-slate-700"
               }`}
             >
               {opt.icon}
+              {isSel && (
+                <span className="absolute -top-1 -right-1 size-3.5 rounded-full bg-[#e6006e] text-white text-[9px] font-black flex items-center justify-center shadow-xs border border-white">
+                  ✓
+                </span>
+              )}
             </div>
             <span
               className={`text-[8.5px] mt-0.5 leading-none font-bold text-center ${
@@ -183,6 +165,8 @@ interface FoundationalHpcPdfProps {
   annualSummary?: HpcAnnualSummary | null;
   attendance?: any;
   academicYear?: string;
+  stageRubrics?: HpcDynamicRubric[];
+  stageActivities?: HpcDynamicActivity[];
 }
 
 export function FoundationalHpcPdf({
@@ -194,6 +178,8 @@ export function FoundationalHpcPdf({
   annualSummary,
   attendance,
   academicYear = "२०२५ - २०२६",
+  stageRubrics = [],
+  stageActivities = [],
 }: FoundationalHpcPdfProps) {
   const student: StudentInfoSummary = rawStudent || {
     id: "default",
@@ -253,7 +239,7 @@ export function FoundationalHpcPdf({
   const studentPen = profile?.penNo || (student as any)?.penNo || "-";
   const studentGrNo = profile?.grNo || student.grNo || (student as any)?.generalRegisterNo || "-";
   const studentBloodGroup = profile?.bloodGroup || student.bloodGroup || (student as any)?.bloodGroup || "-";
-  const studentCategory = profile?.category || student.category || (student as any)?.category || "-";
+  const studentCategory = profile?.category || (profile as any)?.casteCategory || student.category || (student as any)?.category || "-";
   const studentCaste = profile?.caste || student.caste || "";
   const studentBirthPlace = profile?.birthPlace || (student as any)?.birthPlace || "";
   const schoolCluster = profile?.cluster || (schoolSettings as any)?.cluster || (schoolSettings as any)?.kendra || "";
@@ -576,16 +562,18 @@ export function FoundationalHpcPdf({
       {/* =========================================================================
           PAGE 2: STUDENT INFORMATION & ATTENDANCE (भाग अ (१) - 100% Exact Match)
       ========================================================================= */}
-      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden px-10 pt-5 pb-3 mx-auto bg-white flex flex-col justify-between relative box-border text-xs font-sans leading-normal">
+      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden px-9 pt-5 pb-4 mx-auto bg-gradient-to-b from-[#fffafd] via-white to-[#fffaf5] flex flex-col justify-between relative box-border text-xs font-sans leading-normal border border-pink-200">
         {/* Title: भाग अ (१) */}
         <div className="text-center">
-          <h2 className="text-lg font-black text-[#e6006e] tracking-wide inline-block border-b-2 border-[#e6006e] pb-0.5 px-4">
-            भाग अ (१)
-          </h2>
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[#e6006e] to-[#c85a28] text-white px-8 py-1.5 rounded-full shadow-xs">
+            <span className="text-amber-200 text-xs">★</span>
+            <h2 className="text-base font-black tracking-wide">भाग अ (१) — विद्यार्थी सर्वसाधारण माहिती</h2>
+            <span className="text-amber-200 text-xs">★</span>
+          </div>
         </div>
 
         {/* Top School & Administrative Details */}
-        <div className="space-y-1.5 pb-0.5">
+        <div className="space-y-2.5 bg-white/95 border border-pink-200/80 rounded-2xl p-3.5 shadow-2xs">
           {/* Row 1: शाळेचे नाव व पत्ता : with full-width underline */}
           <div className="flex items-center w-full gap-2">
             <span className="font-bold text-slate-900 whitespace-nowrap">शाळेचे नाव व पत्ता :</span>
@@ -683,17 +671,17 @@ export function FoundationalHpcPdf({
         </div>
 
         {/* Subheader: सर्वसाधारण माहिती */}
-        <div className="text-center my-0.5 bg-[#fef2f6] py-1 px-4 rounded-lg border border-[#fbcfe8]">
+        <div className="text-center my-0.5 bg-gradient-to-r from-[#fef2f6] via-[#fff5f7] to-[#fef2f6] py-1.5 px-4 rounded-xl border border-[#f472b6]/50 shadow-2xs">
           <h3 className="font-black text-[#e6006e] text-sm tracking-wide">
             सर्वसाधारण माहिती
           </h3>
-          <p className="text-[10px] font-bold text-slate-700">
+          <p className="text-[10px] font-bold text-slate-600">
             (पालकांशी चर्चा करून शिक्षकांनी भरावे.)
           </p>
         </div>
 
         {/* Student Form Section */}
-        <div className="space-y-1.5 text-xs">
+        <div className="space-y-2.5 text-xs bg-white/95 border border-slate-200/90 rounded-2xl p-3.5 shadow-2xs">
           {/* Top Rows beside Photo Box */}
           <div className="flex items-start justify-between gap-4">
             {/* Left lines */}
@@ -1073,21 +1061,21 @@ export function FoundationalHpcPdf({
 
               {/* Row 4: उपस्थिती कमी असल्यास त्याची कारणे */}
               <tr>
-                <td className="border-r border-[#e6006e] bg-[#fef2e6] py-1.5 px-2.5 w-[22%] text-left font-bold text-slate-900 text-[11px] leading-tight">
+                <td className="border-r border-[#e6006e] bg-[#fef2e6] py-2 px-2.5 w-[22%] text-left font-bold text-slate-900 text-[11px] leading-tight">
                   <div>उपस्थिती कमी असल्यास</div>
                   <div>त्याची कारणे :</div>
                 </td>
-                <td colSpan={12} className="py-1 px-3 align-middle bg-white w-[78%] text-left">
-                  <div className="space-y-1 py-0.5">
+                <td colSpan={12} className="py-1.5 px-3 align-middle bg-white w-[78%] text-left">
+                  <div className="space-y-1.5 py-1">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] text-slate-500 font-bold shrink-0">१.</span>
-                      <div className="border-b border-black flex-1 min-h-[16px] px-1 text-[11px] font-medium text-slate-800">
+                      <div className="border-b border-black flex-1 min-h-[18px] px-1 text-[11px] font-medium text-slate-800">
                         {(profile as any)?.attendanceReason1 || ""}
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] text-slate-500 font-bold shrink-0">२.</span>
-                      <div className="border-b border-black flex-1 min-h-[16px] px-1 text-[11px] font-medium text-slate-800">
+                      <div className="border-b border-black flex-1 min-h-[18px] px-1 text-[11px] font-medium text-slate-800">
                         {(profile as any)?.attendanceReason2 || ""}
                       </div>
                     </div>
@@ -1098,46 +1086,8 @@ export function FoundationalHpcPdf({
           </table>
         </div>
 
-        {/* Verification & Official Signatures Section */}
-        <div className="pt-2 border-t border-slate-300">
-          <div className="grid grid-cols-4 gap-4 text-center text-xs">
-            {/* Signature 1: पालक स्वाक्षरी */}
-            <div className="flex flex-col items-center justify-end h-14">
-              <div className="w-32 border-b border-dotted border-black mb-1" />
-              <span className="font-bold text-slate-900 text-[11px]">पालकांची स्वाक्षरी</span>
-            </div>
-
-            {/* Signature 2: वर्गशिक्षक स्वाक्षरी */}
-            <div className="flex flex-col items-center justify-end h-14">
-              <div className="text-[11px] font-bold text-slate-800 mb-0.5 truncate max-w-[140px]">
-                {teacherName}
-              </div>
-              <div className="w-32 border-b border-dotted border-black mb-1" />
-              <span className="font-bold text-slate-900 text-[11px]">वर्गशिक्षकांची स्वाक्षरी</span>
-            </div>
-
-            {/* Signature 3: मुख्याध्यापक स्वाक्षरी व शिक्का */}
-            <div className="flex flex-col items-center justify-end h-14">
-              <div className="text-[11px] font-bold text-slate-800 mb-0.5 truncate max-w-[140px]">
-                {hmName}
-              </div>
-              <div className="w-32 border-b border-dotted border-black mb-1" />
-              <span className="font-bold text-slate-900 text-[11px]">मुख्याध्यापक स्वाक्षरी व शिक्का</span>
-            </div>
-
-            {/* Signature 4: दिनांक */}
-            <div className="flex flex-col items-center justify-end h-14">
-              <div className="text-[11px] font-mono font-bold text-slate-800 mb-0.5">
-                {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })}
-              </div>
-              <div className="w-24 border-b border-dotted border-black mb-1" />
-              <span className="font-bold text-slate-900 text-[11px]">दिनांक</span>
-            </div>
-          </div>
-        </div>
-
         {/* Footer: Cyan Rule with State Department Note and Page Number */}
-        <div className="mt-auto pt-1">
+        <div className="pt-1">
           <div className="w-full h-0.5 bg-[#00a0dc]" />
           <div className="flex items-center justify-between pt-1 text-[10px] font-bold text-slate-600">
             <span>महाराष्ट्र राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद (SCERT), पुणे — समग्र प्रगतिपत्रक</span>
@@ -1149,15 +1099,16 @@ export function FoundationalHpcPdf({
       {/* =========================================================================
           PAGE 3: ME & MY SURROUNDINGS (भाग - अ (२) : मी व माझा परिसर - 100% Exact Match)
       ========================================================================= */}
-      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden px-10 pt-7 pb-5 mx-auto bg-white flex flex-col justify-between border border-slate-300 relative box-border text-slate-900 text-xs">
+      <div className="pdf-page w-[794px] h-[1123px] max-h-[1123px] overflow-hidden px-10 pt-6 pb-4 mx-auto bg-gradient-to-b from-[#fffaf6] via-white to-[#fff7fb] flex flex-col justify-between border border-pink-200 relative box-border text-slate-900 text-xs">
         {/* Top Header */}
         <div className="text-center">
-          <div className="text-sm font-bold text-[#e6006e] tracking-wide mb-1">
+          <div className="text-sm font-black text-[#e6006e] tracking-wide mb-1">
             भाग - अ (२)
           </div>
-          <div className="inline-flex items-center justify-center gap-2 bg-[#c85a28] text-white px-14 py-1.5 rounded-full font-black text-xl tracking-wider shadow-xs">
-            <span className="text-white text-base">★</span>
+          <div className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-[#c85a28] via-[#e6006e] to-[#c85a28] text-white px-14 py-1.5 rounded-full font-black text-xl tracking-wider shadow-sm">
+            <span className="text-amber-200 text-base">★</span>
             <span>मी व माझा परिसर</span>
+            <span className="text-amber-200 text-base">★</span>
           </div>
         </div>
 
@@ -1424,14 +1375,14 @@ export function FoundationalHpcPdf({
         </div>
 
         {/* Section 4: Hobbies & Home Chores matching Image 4 (NO TRUNCATION!) */}
-        <div className="pt-1">
-          <div className="text-xs font-black text-[#e6006e] mb-1">
+        <div className="pt-2">
+          <div className="text-xs font-black text-[#e6006e] mb-1.5">
             माझी आवड आहे :
           </div>
 
-          <div className="border border-[#e6006e] bg-[#fdeee4] p-2.5 rounded-none space-y-2">
+          <div className="border-2 border-[#e6006e]/80 bg-gradient-to-br from-[#fdeee4] via-[#fff5f2] to-[#fdf2f8] p-4 rounded-2xl shadow-2xs space-y-3">
             {/* 12 Hobbies: 2 rows with clean flex spacing - full text, zero truncation */}
-            <div className="space-y-1.5 text-xs">
+            <div className="space-y-2.5 text-xs">
               {/* Row 1 */}
               <div className="flex items-center justify-between gap-1">
                 {[
@@ -1488,7 +1439,7 @@ export function FoundationalHpcPdf({
               <div className="text-xs font-bold text-slate-900">
                 इतर व्यक्तींसोबत (वडील, आई, पालक, भावंड इ.) घरातील खालील कामे नियमित करतो/करते.
               </div>
-              <div className="space-y-1 mt-1">
+              <div className="space-y-2 mt-2">
                 {(() => {
                   const choresText = profile?.regularHomeChores && profile.regularHomeChores !== "-"
                     ? profile.regularHomeChores
@@ -1503,10 +1454,10 @@ export function FoundationalHpcPdf({
                   }
                   return (
                     <>
-                      <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900 truncate">
+                      <div className="border-b border-black h-7 flex items-end px-1 text-xs font-bold text-slate-900 truncate">
                         {line1}
                       </div>
-                      <div className="border-b border-black h-5 flex items-end px-1 text-xs font-bold text-slate-900 truncate">
+                      <div className="border-b border-black h-7 flex items-end px-1 text-xs font-bold text-slate-900 truncate">
                         {line2}
                       </div>
                     </>
@@ -1517,13 +1468,13 @@ export function FoundationalHpcPdf({
           </div>
 
           {/* Footnote */}
-          <div className="text-[10px] text-slate-700 font-medium mt-1">
+          <div className="text-[10px] text-slate-700 font-medium mt-2">
             एकापेक्षा जास्त पर्याय निवडू शकता. पर्यायाच्या चौकटीवर (✓) अशी खूण करावी.
           </div>
         </div>
 
         {/* Footer: Page 3 with Cyan Accent Line & 2 on the Left matching Image 4 */}
-        <div className="mt-auto pt-1">
+        <div className="pt-2">
           <div className="w-full h-0.5 bg-[#00a0dc]" />
           <div className="flex justify-start pl-1 pt-1 text-xs font-bold text-slate-800">
             <span>2</span>
@@ -1556,6 +1507,19 @@ export function FoundationalHpcPdf({
 
           const parentRemark =
             currentAssessment?.threeSixty?.parentFeedback?.parentObservations || "";
+
+          const isSessionAssessed = Boolean(
+            currentAssessment &&
+              (currentAssessment.selectedGoalIds?.length ||
+                currentAssessment.selectedCompetencyIds?.length ||
+                currentAssessment.activity1Title ||
+                currentAssessment.awarenessLevel ||
+                currentAssessment.sensitivityLevel ||
+                currentAssessment.creativityLevel ||
+                (currentAssessment.rubricLevels && Object.keys(currentAssessment.rubricLevels).length > 0) ||
+                teacherRemark ||
+                parentRemark)
+          );
 
           return (
             <div
@@ -1591,11 +1555,61 @@ export function FoundationalHpcPdf({
                     <span className="font-black text-[#c85a28]">
                       अभ्यासक्रमाची ध्येये :{" "}
                     </span>
-                    <span className="font-medium text-slate-900">{area.goalText}</span>
+                    <span className="font-medium text-slate-900">
+                      {(() => {
+                        const savedGoals = (currentAssessment as any)?.selectedGoalTexts;
+                        if (Array.isArray(savedGoals) && savedGoals.length > 0) {
+                          return savedGoals.join(" | ");
+                        }
+                        const selGoalIds = currentAssessment?.selectedGoalIds;
+                        if (Array.isArray(selGoalIds) && selGoalIds.length > 0) {
+                          const goalParts = String(area.goalText || "").split("|").map((p) => p.trim()).filter(Boolean);
+                          const resolvedGoals = selGoalIds
+                            .map((id) => {
+                              const codeMatch = String(id).match(/CG-\d+/i)?.[0] || String(id).trim();
+                              const inArea = goalParts.find((p) => p.toLowerCase().includes(codeMatch.toLowerCase()));
+                              if (inArea) return inArea;
+                              const inStatic = HPC_CURRICULAR_GOALS.find(
+                                (g) => g.id === id || g.code.toLowerCase() === codeMatch.toLowerCase()
+                              );
+                              if (inStatic) return `${inStatic.code}: ${inStatic.titleMarathi}`;
+                              return codeMatch;
+                            })
+                            .filter(Boolean);
+                          if (resolvedGoals.length > 0) return resolvedGoals.join(" | ");
+                        }
+                        return isSessionAssessed ? area.goalText : "— (या सत्राचे ध्येय अद्याप निवडलेले नाही)";
+                      })()}
+                    </span>
                   </div>
                   <div>
                     <span className="font-black text-[#c85a28]">क्षमता : </span>
-                    <span className="font-medium text-slate-900">{area.competencyText}</span>
+                    <span className="font-medium text-slate-900">
+                      {(() => {
+                        const savedTexts = (currentAssessment as any)?.selectedCompetencyTexts;
+                        if (Array.isArray(savedTexts) && savedTexts.length > 0) {
+                          return savedTexts.join(" | ");
+                        }
+                        const selIds = currentAssessment?.selectedCompetencyIds;
+                        if (Array.isArray(selIds) && selIds.length > 0) {
+                          const areaParts = String(area.competencyText || "").split("|").map((p) => p.trim()).filter(Boolean);
+                          const resolved = selIds
+                            .map((id) => {
+                              const codeMatch = String(id).match(/C-\d+\.\d+/i)?.[0] || String(id).trim();
+                              const inArea = areaParts.find((p) => p.toLowerCase().includes(codeMatch.toLowerCase()));
+                              if (inArea) return inArea;
+                              const inStatic = HPC_COMPETENCIES.find(
+                                (c) => c.id === id || c.code.toLowerCase() === codeMatch.toLowerCase()
+                              );
+                              if (inStatic) return `${inStatic.code}: ${inStatic.titleMarathi}`;
+                              return codeMatch;
+                            })
+                            .filter(Boolean);
+                          if (resolved.length > 0) return resolved.join(" | ");
+                        }
+                        return isSessionAssessed ? area.competencyText : "— (या सत्राची क्षमता अद्याप निवडलेली नाही)";
+                      })()}
+                    </span>
                   </div>
                 </div>
 
@@ -1606,7 +1620,7 @@ export function FoundationalHpcPdf({
                   let displayLOs: string[] = [];
                   if (assessedLOs && assessedLOs.length > 0) {
                     displayLOs = assessedLOs;
-                  } else {
+                  } else if (isSessionAssessed) {
                     const compCodes =
                       area.id === "physical_health"
                         ? ["C-1.1", "C-1.2", "C-1.3"]
@@ -1650,15 +1664,90 @@ export function FoundationalHpcPdf({
                       {(() => {
                         const customActs = [
                           currentAssessment?.activity1Title
-                            ? `${currentAssessment.activity1Title}${currentAssessment.activity1Description ? ` - ${currentAssessment.activity1Description}` : ""}`
-                            : "",
+                            ? {
+                                title: currentAssessment.activity1Title,
+                                desc: currentAssessment.activity1Description || "",
+                              }
+                            : null,
                           currentAssessment?.activity2Title
-                            ? `${currentAssessment.activity2Title}${currentAssessment.activity2Description ? ` - ${currentAssessment.activity2Description}` : ""}`
-                            : "",
-                        ].filter(Boolean);
-                        const actsToDisplay = customActs.length > 0 ? customActs : area.activities;
-                        return actsToDisplay.slice(0, 2).map((act, i) => (
-                          <div key={i} className="line-clamp-2">
+                            ? {
+                                title: currentAssessment.activity2Title,
+                                desc: currentAssessment.activity2Description || "",
+                              }
+                            : null,
+                        ].filter(Boolean) as { title: string; desc: string }[];
+
+                        if (customActs.length === 0 && isSessionAssessed) {
+                          const rubKeys = Object.keys(currentAssessment?.rubricLevels || {});
+                          const rubMatch = rubKeys.length > 0
+                            ? (stageRubrics || []).find((r) => r.id && rubKeys.includes(r.id) && r.activityTitle)
+                            : undefined;
+                          const targetActTitle = String(rubMatch?.activityTitle || "").trim().toLowerCase();
+                          const selCompCodes = (currentAssessment?.selectedCompetencyIds || [])
+                            .map((id) => String(id).match(/C-\d+\.\d+/i)?.[0] || String(id).trim())
+                            .filter(Boolean);
+                          const matchedDynAct = (stageActivities || []).find((a) => {
+                            if (targetActTitle && a.activityTitle) {
+                              const aLow = a.activityTitle.trim().toLowerCase();
+                              if (aLow === targetActTitle || aLow.includes(targetActTitle) || targetActTitle.includes(aLow)) {
+                                return true;
+                              }
+                            }
+                            return false;
+                          }) || (selCompCodes.length > 0
+                            ? (stageActivities || []).find((a) =>
+                                a.competencyCode && selCompCodes.some((c) => c.toLowerCase() === a.competencyCode!.trim().toLowerCase())
+                              )
+                            : undefined);
+                          if (matchedDynAct) {
+                            customActs.push({
+                              title: matchedDynAct.activityTitle,
+                              desc: matchedDynAct.activityDescription || "",
+                            });
+                          } else {
+                            const bankActs = selCompCodes.flatMap((c) => HPC_ACTIVITIES_BANK[c]?.activities || []);
+                            const matchedBank =
+                              (targetActTitle &&
+                                bankActs.find((a) => {
+                                  const t = a.title.trim().toLowerCase();
+                                  return t === targetActTitle || t.includes(targetActTitle) || targetActTitle.includes(t);
+                                })) ||
+                              bankActs[0];
+                            if (matchedBank) {
+                              customActs.push({
+                                title: matchedBank.title,
+                                desc: matchedBank.description || "",
+                              });
+                            }
+                          }
+                        }
+
+                        if (customActs.length > 0) {
+                          return customActs.map((act, i) => (
+                            <div key={i} className="leading-snug">
+                              <div>
+                                <span className="font-bold text-[#c85a28] mr-1">•</span>
+                                <span className="font-bold text-slate-900">{act.title}</span>
+                              </div>
+                              {act.desc && (
+                                <div className="text-[9.5px] text-slate-700 pl-3 mt-0.5">
+                                  {act.desc}
+                                </div>
+                              )}
+                            </div>
+                          ));
+                        }
+
+                        if (!isSessionAssessed) {
+                          return (
+                            <div className="text-slate-400 italic">
+                              — या सत्राचा उपक्रम अद्याप भरलेला नाही.
+                            </div>
+                          );
+                        }
+
+                        return area.activities.slice(0, 2).map((act, i) => (
+                          <div key={i}>
                             <span className="font-bold text-[#c85a28] mr-1">•</span>
                             {act}
                           </div>
@@ -1674,9 +1763,61 @@ export function FoundationalHpcPdf({
                     </span>
                     <div className="text-[10px] text-slate-800 space-y-0.5 pl-1 leading-snug font-medium">
                       {(() => {
-                        const customQs = (currentAssessment?.assessmentQuestions || []).filter(Boolean);
-                        const qsToDisplay = customQs.length > 0 ? customQs : area.evalQuestions;
-                        return qsToDisplay.slice(0, 5).map((q, i) => (
+                        let customQs = (currentAssessment?.assessmentQuestions || []).filter(Boolean);
+                        if (customQs.length === 0 && isSessionAssessed) {
+                          const rubKeys = Object.keys(currentAssessment?.rubricLevels || {});
+                          const rubMatch = rubKeys.length > 0
+                            ? (stageRubrics || []).find((r) => r.id && rubKeys.includes(r.id) && r.activityTitle)
+                            : undefined;
+                          const targetActTitle = String(currentAssessment?.activity1Title || rubMatch?.activityTitle || "").trim().toLowerCase();
+                          const selCompCodes = (currentAssessment?.selectedCompetencyIds || [])
+                            .map((id) => String(id).match(/C-\d+\.\d+/i)?.[0] || String(id).trim())
+                            .filter(Boolean);
+                          const matchedDynAct = (stageActivities || []).find((a) => {
+                            if (targetActTitle && a.activityTitle) {
+                              const aLow = a.activityTitle.trim().toLowerCase();
+                              if (aLow === targetActTitle || aLow.includes(targetActTitle) || targetActTitle.includes(aLow)) {
+                                return true;
+                              }
+                            }
+                            return false;
+                          }) || (selCompCodes.length > 0
+                            ? (stageActivities || []).find((a) =>
+                                a.competencyCode && selCompCodes.some((c) => c.toLowerCase() === a.competencyCode!.trim().toLowerCase())
+                              )
+                            : undefined);
+                          if (matchedDynAct && Array.isArray(matchedDynAct.questions)) {
+                            customQs = matchedDynAct.questions.filter(Boolean);
+                          } else {
+                            const bankActs = selCompCodes.flatMap((c) => HPC_ACTIVITIES_BANK[c]?.activities || []);
+                            const matchedBank =
+                              (targetActTitle &&
+                                bankActs.find((a) => {
+                                  const t = a.title.trim().toLowerCase();
+                                  return t === targetActTitle || t.includes(targetActTitle) || targetActTitle.includes(t);
+                                })) ||
+                              bankActs[0];
+                            if (matchedBank && Array.isArray(matchedBank.questions)) {
+                              customQs = matchedBank.questions.filter(Boolean);
+                            }
+                          }
+                        }
+                        if (customQs.length > 0) {
+                          return customQs.slice(0, 5).map((q, i) => (
+                            <div key={i}>
+                              <span className="font-bold text-slate-600 mr-1">{i + 1}.</span>
+                              {q.replace(/^[0-9]+[.)\s]+/, "")}
+                            </div>
+                          ));
+                        }
+                        if (!isSessionAssessed) {
+                          return (
+                            <div className="text-slate-400 italic">
+                              — या सत्राचे प्रश्न अद्याप भरलेले नाहीत.
+                            </div>
+                          );
+                        }
+                        return area.evalQuestions.slice(0, 5).map((q, i) => (
                           <div key={i} className="line-clamp-1">
                             <span className="font-bold text-slate-600 mr-1">{i + 1}.</span>
                             {q.replace(/^[0-9]+[.)\s]+/, "")}
@@ -1711,61 +1852,188 @@ export function FoundationalHpcPdf({
                       </tr>
                     </thead>
                     <tbody>
-                      {FOUNDATIONAL_RUBRICS.map((rubric) => {
-                        const rawLevel =
-                          rubric.dimension === "जाणीवजागृती"
-                            ? awLvl
-                            : rubric.dimension === "संवेदनशीलता"
-                            ? seLvl
-                            : crLvl;
-                        const lvlStr = String(rawLevel || "").toLowerCase();
-                        const isNirjhar =
-                          lvlStr === "beginner" || lvlStr === "nirjhar" || lvlStr === "निर्झर";
-                        const isAkash =
-                          lvlStr === "advanced" || lvlStr === "akash" || lvlStr === "आकाश";
-                        const isParvat =
-                          lvlStr === "proficient" ||
-                          lvlStr === "parvat" ||
-                          lvlStr === "पर्वत";
+                      {(() => {
+                        const targetClass = String(student.class || "1st").trim().toLowerCase();
+                        const normClassKey = (c?: string) => {
+                          const s = String(c || "").trim().toLowerCase();
+                          if (s === "1" || s === "1st" || s.includes("पहिल") || s.includes("१")) return "1st";
+                          if (s === "2" || s === "2nd" || s.includes("दुसर") || s.includes("२")) return "2nd";
+                          return s;
+                        };
+                        const targetClassNorm = normClassKey(targetClass);
+                        const cleanActStr = (s?: string) =>
+                          String(s || "")
+                            .trim()
+                            .toLowerCase()
+                            .replace(/^([०-९0-9]+[.:)\-\s]+)+/, "")
+                            .replace(/\s+/g, " ")
+                            .trim();
+                        const actTitle = cleanActStr(currentAssessment?.activity1Title);
+                        const areaCompCodes =
+                          area.id === "physical_health"
+                            ? ["C-1.1", "C-1.2", "C-1.3", "C-2.1", "C-3.1"]
+                            : area.id === "socio_emotional"
+                            ? ["C-4.1", "C-4.2", "C-4.3", "C-5.1", "C-6.1"]
+                            : area.id === "cognitive"
+                            ? ["C-7.1", "C-7.2", "C-7.3", "C-8.1", "C-8.2"]
+                            : area.id === "language_literacy"
+                            ? ["C-9.1", "C-9.2", "C-9.3", "C-10.1", "C-11.1"]
+                            : area.id === "aesthetic_cultural"
+                            ? ["C-12.1", "C-12.2", "C-12.3"]
+                            : ["C-13.1", "C-13.2", "C-13.3"];
+                        const compCode = String((currentAssessment as any)?.competencyCode || "").trim().toLowerCase();
+                        const allStageRubrics = stageRubrics || [];
+                        const classFiltered = allStageRubrics.filter((r) => !r.classId || normClassKey(r.classId) === targetClassNorm);
+                        const classRubrics = classFiltered.length > 0 ? classFiltered : allStageRubrics;
+                        const cleanRubricTxt = (s?: string) =>
+                          String(s || "")
+                            .replace(/^\[(निर्झर|प्रवाह|पर्वत|आकाश|beginner|proficient|advanced)\]\s*[-:—]?\s*/i, "")
+                            .replace(/^(निर्झर|प्रवाह|पर्वत|आकाश)\s*[-:—]\s*/i, "")
+                            .trim();
 
-                        return (
-                          <tr key={rubric.dimension}>
-                            <td className="border border-slate-400 py-1.5 px-2 font-bold text-slate-900 text-center bg-slate-50">
-                              {rubric.dimension}
-                            </td>
-                            <td
-                              className={`border border-slate-400 py-1.5 px-2 leading-snug ${
-                                isNirjhar ? "bg-amber-50 font-semibold" : ""
-                              }`}
-                            >
-                              <span className="font-bold mr-1">
-                                {isNirjhar ? "▣" : "☐"}
-                              </span>
-                              {rubric.nirjhar}
-                            </td>
-                            <td
-                              className={`border border-slate-400 py-1.5 px-2 leading-snug ${
-                                isParvat ? "bg-emerald-50 font-semibold" : ""
-                              }`}
-                            >
-                              <span className="font-bold mr-1">
-                                {isParvat ? "▣" : "☐"}
-                              </span>
-                              {rubric.parvat}
-                            </td>
-                            <td
-                              className={`border border-slate-400 py-1.5 px-2 leading-snug ${
-                                isAkash ? "bg-blue-50 font-semibold" : ""
-                              }`}
-                            >
-                              <span className="font-bold mr-1">
-                                {isAkash ? "▣" : "☐"}
-                              </span>
-                              {rubric.akash}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                        let matchedRubrics: HpcDynamicRubric[] = [];
+                        const savedRubrics = (currentAssessment as any)?.savedRubrics;
+                        if (Array.isArray(savedRubrics) && savedRubrics.length > 0) {
+                          matchedRubrics = savedRubrics;
+                        }
+                        // Match directly by saved rubricLevels document IDs (works for already-saved assessments!)
+                        if (matchedRubrics.length === 0 && currentAssessment?.rubricLevels) {
+                          const rubKeys = Object.keys(currentAssessment.rubricLevels);
+                          if (rubKeys.length > 0) {
+                            matchedRubrics = allStageRubrics.filter((r) => r.id && rubKeys.includes(r.id));
+                          }
+                        }
+                        if (matchedRubrics.length === 0 && actTitle) {
+                          matchedRubrics = classRubrics.filter((r) => {
+                            const rAct = cleanActStr(r.activityTitle);
+                            return (
+                              rAct &&
+                              (rAct === actTitle ||
+                                (actTitle.length > 5 && rAct.includes(actTitle)) ||
+                                (rAct.length > 5 && actTitle.includes(rAct)))
+                            );
+                          });
+                        }
+                        if (matchedRubrics.length === 0 && compCode) {
+                          matchedRubrics = classRubrics.filter((r) => String(r.competencyCode || "").trim().toLowerCase() === compCode);
+                        }
+                        if (matchedRubrics.length === 0) {
+                          matchedRubrics = classRubrics.filter((r) =>
+                            r.competencyCode && areaCompCodes.some((c) => c.toLowerCase() === String(r.competencyCode).trim().toLowerCase())
+                          );
+                        }
+                        if (matchedRubrics.length === 0 && allStageRubrics !== classRubrics) {
+                          matchedRubrics = allStageRubrics.filter((r) =>
+                            r.competencyCode && areaCompCodes.some((c) => c.toLowerCase() === String(r.competencyCode).trim().toLowerCase())
+                          );
+                        }
+                        // Fallback: match by goalCode prefix (CG-1..CG-13) or competency prefix
+                        if (matchedRubrics.length === 0) {
+                          const areaGoalPrefixes =
+                            area.id === "physical_health"
+                              ? ["cg-1", "cg-2", "cg-3", "c-1", "c-2", "c-3"]
+                              : area.id === "socio_emotional"
+                              ? ["cg-4", "cg-5", "cg-6", "c-4", "c-5", "c-6"]
+                              : area.id === "cognitive"
+                              ? ["cg-7", "cg-8", "c-7", "c-8"]
+                              : area.id === "language_literacy"
+                              ? ["cg-9", "cg-10", "cg-11", "c-9", "c-10", "c-11"]
+                              : area.id === "aesthetic_cultural"
+                              ? ["cg-12", "c-12"]
+                              : ["cg-13", "c-13"];
+                          matchedRubrics = classRubrics.filter((r) => {
+                            const g = String(r.goalCode || "").trim().toLowerCase();
+                            const c = String(r.competencyCode || "").trim().toLowerCase();
+                            return areaGoalPrefixes.some((p) => g.startsWith(p) || c.startsWith(p));
+                          });
+                        }
+
+                        const resolveRubricRow = (staticRow: typeof FOUNDATIONAL_RUBRICS[number]) => {
+                          const dimKey =
+                            staticRow.dimension === "जाणीवजागृती"
+                              ? ["जाणीव", "awareness"]
+                              : staticRow.dimension === "संवेदनशीलता"
+                              ? ["संवेदन", "sensitivity"]
+                              : ["सर्जन", "creativity"];
+                          const dyn = matchedRubrics.find((r) => {
+                            const d = String(r.dimension || "").toLowerCase();
+                            return dimKey.some((k) => d.includes(k));
+                          });
+                          if (dyn) {
+                            return {
+                              id: dyn.id,
+                              dimension: staticRow.dimension,
+                              nirjhar: cleanRubricTxt(dyn.beginner) || staticRow.nirjhar,
+                              parvat: cleanRubricTxt(dyn.proficient) || staticRow.parvat,
+                              akash: cleanRubricTxt(dyn.advanced) || staticRow.akash,
+                            };
+                          }
+                          return { ...staticRow, id: undefined as string | undefined };
+                        };
+
+                        return FOUNDATIONAL_RUBRICS.map((baseRubric) => {
+                          const rubric = resolveRubricRow(baseRubric);
+                          const directRubricLevel =
+                            rubric.id && currentAssessment?.rubricLevels
+                              ? currentAssessment.rubricLevels[rubric.id]
+                              : undefined;
+                          const rawLevel =
+                            directRubricLevel !== undefined
+                              ? directRubricLevel
+                              : rubric.dimension === "जाणीवजागृती"
+                              ? awLvl
+                              : rubric.dimension === "संवेदनशीलता"
+                              ? seLvl
+                              : crLvl;
+                          const lvlStr = String(rawLevel || "").toLowerCase();
+                          const isNirjhar =
+                            lvlStr === "beginner" || lvlStr === "nirjhar" || lvlStr === "निर्झर";
+                          const isAkash =
+                            lvlStr === "advanced" || lvlStr === "akash" || lvlStr === "आकाश";
+                          const isParvat =
+                            lvlStr === "proficient" ||
+                            lvlStr === "parvat" ||
+                            lvlStr === "पर्वत";
+
+                          return (
+                            <tr key={rubric.dimension}>
+                              <td className="border border-slate-400 py-1.5 px-2 font-bold text-slate-900 text-center bg-slate-50">
+                                {rubric.dimension}
+                              </td>
+                              <td
+                                className={`border border-slate-400 py-1.5 px-2 leading-snug ${
+                                  isNirjhar ? "bg-amber-50 font-semibold" : ""
+                                }`}
+                              >
+                                <span className="font-bold mr-1">
+                                  {isNirjhar ? "▣" : "☐"}
+                                </span>
+                                {rubric.nirjhar}
+                              </td>
+                              <td
+                                className={`border border-slate-400 py-1.5 px-2 leading-snug ${
+                                  isParvat ? "bg-emerald-50 font-semibold" : ""
+                                }`}
+                              >
+                                <span className="font-bold mr-1">
+                                  {isParvat ? "▣" : "☐"}
+                                </span>
+                                {rubric.parvat}
+                              </td>
+                              <td
+                                className={`border border-slate-400 py-1.5 px-2 leading-snug ${
+                                  isAkash ? "bg-blue-50 font-semibold" : ""
+                                }`}
+                              >
+                                <span className="font-bold mr-1">
+                                  {isAkash ? "▣" : "☐"}
+                                </span>
+                                {rubric.akash}
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -2177,49 +2445,6 @@ export function FoundationalHpcPdf({
                 </div>
               );
             })()}
-          </div>
-
-          {/* Parent's Annual Remark Box */}
-          <div className="border border-[#059669] rounded-lg p-3 bg-white min-h-[110px] flex flex-col justify-between">
-            <span className="font-black text-xs text-[#c85a28] block mb-1">
-              पालकांचा वार्षिक अभिप्राय :
-            </span>
-            <div className="space-y-2.5 px-1">
-              {(() => {
-                const prRemark =
-                  annualSummary?.finalParentRemarks ||
-                  (annualSummary as any)?.parentRemarks ||
-                  "";
-                return prRemark ? (
-                  <p className="text-xs font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">
-                    {prRemark}
-                  </p>
-                ) : (
-                  <>
-                    <div className="border-b border-slate-300 h-4" />
-                    <div className="border-b border-slate-300 h-4" />
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Term 1 & Term 2 Attendance Summary */}
-          <div className="bg-[#fef9f5] border border-[#e86b24]/40 rounded-lg p-2 flex items-center justify-between text-[11px] font-bold text-slate-800">
-            <div>
-              <span className="text-[#c85a28] font-black">प्रथम सत्र : </span>
-              <span>कामाचे दिवस {t1WorkingTotal} | उपस्थित {t1PresentTotal} {t1Pct ? `(${t1Pct})` : ""}</span>
-            </div>
-            <div className="w-px h-4 bg-slate-300" />
-            <div>
-              <span className="text-[#c85a28] font-black">द्वितीय सत्र : </span>
-              <span>कामाचे दिवस {t2WorkingTotal} | उपस्थित {t2PresentTotal} {t2Pct ? `(${t2Pct})` : ""}</span>
-            </div>
-            <div className="w-px h-4 bg-slate-300" />
-            <div>
-              <span className="text-[#c85a28] font-black">वार्षिक एकूण : </span>
-              <span className="text-slate-900 font-black">{totalPresent} / {totalWorking} दिवस {attendancePct ? `(${attendancePct})` : ""}</span>
-            </div>
           </div>
 
           {/* 3 Signatures */}

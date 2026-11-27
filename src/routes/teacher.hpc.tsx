@@ -3,6 +3,7 @@ import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { HpcNav } from "@/hpc/components/HpcNav";
 import { HpcDashboard } from "@/hpc/components/HpcDashboard";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 
 export const Route = createFileRoute("/teacher/hpc")({
   head: () => ({
@@ -25,7 +26,9 @@ function TeacherHpcLayout() {
         <HpcNav />
 
         <div className="p-4 sm:p-6 md:p-8">
-          {isIndex ? <HpcDashboard /> : <Outlet />}
+          <ModulePaywall moduleId="hpc-card" isPaidTab={true}>
+            {isIndex ? <HpcDashboard /> : <Outlet />}
+          </ModulePaywall>
         </div>
       </main>
     </div>

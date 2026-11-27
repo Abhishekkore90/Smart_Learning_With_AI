@@ -30,6 +30,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
+import { compressImageToDataUrl } from "@/lib/imageCompress";
 import {
   HpcStudentProfile,
   HpcStageId,
@@ -715,17 +716,16 @@ export function HpcStudentProfileForm({
     );
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setPhotoUrl(event.target.result as string);
-        toast.success("विद्यार्थी फोटो यशस्वीरीत्या निवडला!");
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImageToDataUrl(file, 600, 0.78);
+      setPhotoUrl(compressed);
+      toast.success("विद्यार्थी फोटो यशस्वीरीत्या निवडला!");
+    } catch {
+      toast.error("फोटो लोड करताना त्रुटी आली");
+    }
   };
 
   const handleRemovePhoto = async () => {

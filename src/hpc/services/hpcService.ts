@@ -99,9 +99,10 @@ export async function getHpcStudents(
     const snap = await getDocs(q);
     const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
 
+    const resolvedTeacherId = teacherId || getTeacherId();
     const filtered = raw.filter((s) => {
-      if (teacherId) {
-        return matchStudentTeacherClassAndMedium(s, teacherId, classId, selectedMedium);
+      if (resolvedTeacherId && resolvedTeacherId !== "default_teacher") {
+        return matchStudentTeacherClassAndMedium(s, resolvedTeacherId, classId, selectedMedium);
       }
       return matchStudentClassAndMedium(s, classId, selectedMedium);
     });
@@ -781,11 +782,22 @@ export async function saveHpcSessionAssessment(
   assessment: HpcSessionAssessment
 ): Promise<boolean> {
   try {
+    const stripUndefined = (val: any): any => {
+      if (Array.isArray(val)) return val.map(stripUndefined);
+      if (val && typeof val === "object" && !(val instanceof Date)) {
+        const out: Record<string, any> = {};
+        Object.entries(val).forEach(([k, v]) => {
+          if (v !== undefined) out[k] = stripUndefined(v);
+        });
+        return out;
+      }
+      return val;
+    };
     const docId = `${assessment.studentId}_${assessment.academicYear}_${assessment.session}`;
-    await setDoc(doc(db, "hpc_assessments", docId), {
+    await setDoc(doc(db, "hpc_assessments", docId), stripUndefined({
       ...assessment,
       updatedAt: new Date().toISOString(),
-    });
+    }));
     return true;
   } catch (err) {
     console.error("Error saving HPC assessment:", err);
@@ -832,7 +844,8 @@ export async function getHpcProgressForClass(
   selectedMedium: string = "marathi",
   teacherId?: string
 ): Promise<HpcStudentProgressItem[]> {
-  const students = await getHpcStudents(classId, selectedMedium, teacherId);
+  const resolvedTeacherId = teacherId || getTeacherId();
+  const students = await getHpcStudents(classId, selectedMedium, resolvedTeacherId);
 
   // Read all assessments for this class and year
   const profilesSnap = await getDocs(collection(db, "hpc_student_profiles"));

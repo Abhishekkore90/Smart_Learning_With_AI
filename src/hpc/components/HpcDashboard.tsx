@@ -44,6 +44,8 @@ import {
   getHpcAnnualSummary,
   getHpcStudentAttendance,
   getHpcSchoolSettings,
+  getHpcDynamicRubrics,
+  getHpcDynamicActivities,
   StudentInfoSummary,
 } from "../services/hpcService";
 import { generateHpcPdf, downloadBlob } from "../reports/HpcPdfGenerator";
@@ -234,7 +236,7 @@ export function HpcDashboard() {
     try {
       const existingStudent = progressItems.find((p) => p.student.id === studentId)?.student;
 
-      const [stRes, profRes, s1Res, s2Res, annRes, attRes, schoolRes] = await Promise.allSettled([
+      const [stRes, profRes, s1Res, s2Res, annRes, attRes, schoolRes, rubricsRes, activitiesRes] = await Promise.allSettled([
         getHpcStudentById(studentId),
         getHpcStudentProfile(studentId, academicYear),
         getHpcSessionAssessment(studentId, academicYear, "session1"),
@@ -242,6 +244,8 @@ export function HpcDashboard() {
         getHpcAnnualSummary(studentId, academicYear),
         getHpcStudentAttendance(selectedClass, academicYear, studentId),
         getHpcSchoolSettings(),
+        getHpcDynamicRubrics(),
+        getHpcDynamicActivities(),
       ]);
 
       const st =
@@ -263,6 +267,8 @@ export function HpcDashboard() {
       const ann = annRes.status === "fulfilled" ? annRes.value : null;
       const att = attRes.status === "fulfilled" ? attRes.value : null;
       const school = schoolRes.status === "fulfilled" ? schoolRes.value : {};
+      const stageRubrics = rubricsRes.status === "fulfilled" ? rubricsRes.value : [];
+      const stageActivities = activitiesRes.status === "fulfilled" ? activitiesRes.value : [];
 
       setPreviewStudent({
         student: st,
@@ -272,6 +278,8 @@ export function HpcDashboard() {
         annualSummary: ann,
         attendance: att,
         schoolSettings: school,
+        stageRubrics,
+        stageActivities,
       });
     } catch (err: any) {
       console.error("Preview load error:", err);
@@ -971,6 +979,8 @@ export function HpcDashboard() {
                     attendance={previewStudent.attendance}
                     schoolSettings={previewStudent.schoolSettings}
                     academicYear={academicYear}
+                    stageRubrics={previewStudent.stageRubrics || []}
+                    stageActivities={previewStudent.stageActivities || []}
                   />
                 ) : activeStage === "preparatory" ? (
                   <PreparatoryHpcPdf

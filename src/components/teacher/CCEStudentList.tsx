@@ -9,8 +9,9 @@ import {
   setDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { ArrowLeft, Plus, Trash2, Loader2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, ShieldCheck, Eye, X } from "lucide-react";
 import { toast } from "sonner";
+import { compressImageToDataUrl } from "@/lib/imageCompress";
 import { processRazorpayPayment } from "@/lib/razorpayService";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -77,16 +78,16 @@ function ImageBox({
 }: {
   label: string; value: string; onChange: (v: string) => void;
 }) {
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [showPreview, setShowPreview] = useState(false);
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 500 * 1024) {
-      toast.error("फाइल 500KB पेक्षा लहान असावी");
-      return;
+    try {
+      const compressed = await compressImageToDataUrl(file, 600, 0.78);
+      onChange(compressed);
+    } catch {
+      toast.error("फोटो लोड करताना त्रुटी आली");
     }
-    const reader = new FileReader();
-    reader.onloadend = () => onChange(reader.result as string);
-    reader.readAsDataURL(file);
   };
   return (
     <div className="mb-4">
@@ -108,6 +109,49 @@ function ImageBox({
         </div>
         <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
       </label>
+      {value && (
+        <div className="flex items-center gap-2 mt-2">
+          <button
+            type="button"
+            onClick={() => setShowPreview(true)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold cursor-pointer"
+          >
+            <Eye className="size-3.5" />
+            <span>पहा</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold cursor-pointer"
+          >
+            <Trash2 className="size-3.5" />
+            <span>काढा</span>
+          </button>
+        </div>
+      )}
+      {showPreview && value && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setShowPreview(false)}
+        >
+          <div
+            className="bg-white rounded-3xl p-4 max-w-lg w-full shadow-2xl relative space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-sm font-black text-slate-800">{label}</span>
+              <button
+                type="button"
+                onClick={() => setShowPreview(false)}
+                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <img src={value} alt={label} className="w-full max-h-[70vh] object-contain rounded-2xl bg-slate-50" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1010,6 +1010,38 @@ export function HpcAssessmentForm({
     update360("parentFeedback", "learningResourcesAtHome", updated);
   };
 
+  const buildAreaAssessmentsWithRubrics = () => {
+    const next = { ...areaAssessments };
+    if (activeAreaId && next[activeAreaId]) {
+      const cur: any = { ...next[activeAreaId] };
+      if (activeBankCompCode) cur.competencyCode = activeBankCompCode;
+      const selGoalIds = cur.selectedGoalIds || [];
+      if (selGoalIds.length > 0 && availableGoals.length > 0) {
+        const matchedGoals = availableGoals
+          .filter((g) => selGoalIds.includes(g.id))
+          .map((g) => `${g.code}: ${g.titleMarathi}`);
+        if (matchedGoals.length > 0) cur.selectedGoalTexts = matchedGoals;
+      }
+      const selIds = cur.selectedCompetencyIds || [];
+      if (selIds.length > 0 && availableCompetencies.length > 0) {
+        const matchedTexts = availableCompetencies
+          .filter((c) => selIds.includes(c.id))
+          .map((c) => `${c.code}: ${c.titleMarathi}`);
+        if (matchedTexts.length > 0) cur.selectedCompetencyTexts = matchedTexts;
+      }
+      if (dynamicRubricsForAssessment && dynamicRubricsForAssessment.length > 0) {
+        cur.savedRubrics = dynamicRubricsForAssessment.map((r) => ({
+          dimension: r.dimension,
+          beginner: r.beginner,
+          proficient: r.proficient,
+          advanced: r.advanced,
+        }));
+      }
+      next[activeAreaId] = cur;
+    }
+    return next;
+  };
+
   const handleSave = async (markComplete: boolean = false) => {
     setSaving(true);
     try {
@@ -1020,9 +1052,9 @@ export function HpcAssessmentForm({
         classId,
         session,
         status: markComplete ? "completed" : "draft",
-        areaAssessments,
+        areaAssessments: buildAreaAssessmentsWithRubrics(),
         teacherGeneralRemarks,
-        completedAt: markComplete ? new Date().toISOString() : undefined,
+        ...(markComplete ? { completedAt: new Date().toISOString() } : {}),
       };
 
       await saveHpcSessionAssessment(assessmentData);
@@ -1082,7 +1114,7 @@ export function HpcAssessmentForm({
         classId,
         session,
         status: "draft",
-        areaAssessments,
+        areaAssessments: buildAreaAssessmentsWithRubrics(),
         teacherGeneralRemarks,
       };
 
@@ -1924,11 +1956,23 @@ export function HpcAssessmentForm({
                 let textKey: "awarenessText" | "sensitivityText" | "creativityText" = "awarenessText";
                 let dimEnglish = "Awareness";
 
-                if (dimLower.includes("संवेदन") || dimLower.includes("sensitivity") || rIdx === 1) {
+                if (dimLower.includes("जाणीव") || dimLower.includes("awareness")) {
+                  levelKey = "awarenessLevel";
+                  textKey = "awarenessText";
+                  dimEnglish = "Awareness";
+                } else if (dimLower.includes("संवेदन") || dimLower.includes("sensitivity")) {
                   levelKey = "sensitivityLevel";
                   textKey = "sensitivityText";
                   dimEnglish = "Sensitivity";
-                } else if (dimLower.includes("सर्जन") || dimLower.includes("creativity") || rIdx === 2) {
+                } else if (dimLower.includes("सर्जन") || dimLower.includes("creativity")) {
+                  levelKey = "creativityLevel";
+                  textKey = "creativityText";
+                  dimEnglish = "Creativity";
+                } else if (rIdx === 1) {
+                  levelKey = "sensitivityLevel";
+                  textKey = "sensitivityText";
+                  dimEnglish = "Sensitivity";
+                } else if (rIdx === 2) {
                   levelKey = "creativityLevel";
                   textKey = "creativityText";
                   dimEnglish = "Creativity";
