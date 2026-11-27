@@ -804,18 +804,8 @@ function TeachingRecordPage() {
       </div>
 
       <main className="w-full pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
-        {/* Under Development Tip Banner */}
-        <div className="p-3 sm:p-5 md:p-6 pb-0 w-full max-w-[98%] xl:max-w-[96%] mx-auto print:hidden">
-          <div className="w-full p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-center gap-3 shadow-sm">
-            <AlertCircle className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <p className="text-xs sm:text-sm font-bold leading-relaxed">
-              <span className="font-extrabold text-amber-700 dark:text-amber-300">टीप -</span> हा विभाग अजून पूर्ण झालेला नाही हा विभाग तुम्हाला लवकरात लवकर उपलब्ध करून देण्यात येईल
-            </p>
-          </div>
-        </div>
-
         <div className="p-3 sm:p-5 md:p-6 w-full max-w-[98%] xl:max-w-[96%] mx-auto space-y-6 print:p-0 print:max-w-full">
-          <div className="flex items-center justify-between gap-4 print:hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
               <button
                 type="button"
                 onClick={handleBack}
@@ -824,6 +814,18 @@ function TeachingRecordPage() {
                 <ArrowLeft className="size-4 shrink-0" />
                 <span>मागे जा (Back)</span>
               </button>
+
+              {activeMainTab !== "school_profile" && selectedMedium && selectedClass && (
+                <div className="order-last sm:order-none w-full sm:w-auto flex items-center justify-center gap-2">
+                  <span className="px-3.5 py-1.5 rounded-full bg-amber-100/90 text-amber-900 text-xs sm:text-sm font-black shadow-xs">
+                    {MEDIUMS.find((m) => m.id === selectedMedium)?.mr || selectedMedium}
+                  </span>
+                  <span className="text-slate-400 font-bold text-sm">/</span>
+                  <span className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs sm:text-sm font-black shadow-xs">
+                    {DIARY_CLASSES.find((c) => c.id === selectedClass)?.mr || selectedClass}
+                  </span>
+                </div>
+              )}
 
               <button
                 type="button"
@@ -993,30 +995,15 @@ function TeachingRecordPage() {
                         <div className="absolute -left-10 -top-10 size-40 bg-indigo-500/25 rounded-full blur-[50px] pointer-events-none" />
                         <div className="absolute -right-10 -bottom-10 size-40 bg-purple-500/25 rounded-full blur-[50px] pointer-events-none" />
 
-                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                          <div className="space-y-3">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10 text-xs font-semibold tracking-wider text-purple-200">
-                              <Sparkles className="size-3.5 text-amber-300 animate-pulse" />
-                              REPORTS & REGISTERS (शासकीय अहवाल व नोंदी)
-                            </div>
-                            <h2 className="text-4xl md:text-5xl font-black tracking-tight">
-                              Teaching Diary <span className="text-indigo-400">टाचणवही अहवाल.</span>
-                            </h2>
-                            <p className="text-xs md:text-sm text-slate-400 max-w-xl">
-                              Select Medium, Class, and Date to upload or view official Teaching Diaries.
-                            </p>
-                          </div>
-                          <div className="shrink-0 flex items-center justify-center size-16 md:size-20 bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 shadow-inner">
-                            <BookOpen className="size-8 md:size-10 text-indigo-400" />
-                          </div>
+                        <div className="relative z-10 flex items-center">
+                          <h2 className="text-4xl md:text-5xl font-black tracking-tight">
+                            Teaching Diary <span className="text-indigo-400">टाचणवही अहवाल.</span>
+                          </h2>
                         </div>
                       </div>
 
                       <div className="text-center space-y-2 pt-2">
                         <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Medium / माध्यम निवडा</h2>
-                        <p className="text-xs font-bold text-slate-500">
-                          वार्षिक व मासिक नियोजनासाठी प्रथम माध्यम निवडा (मराठी किंवा सेमी-इंग्रजी)
-                        </p>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto w-full">

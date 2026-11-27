@@ -440,7 +440,7 @@ function TeacherDashboard() {
                             </span>
                           )}
 
-                          {item.moduleId === "cce-result" && !status.isFree && (
+                          {((item.moduleId === "cce-result" && !status.isFree) || item.moduleId === "hpc-card") && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-gradient-to-r from-emerald-300 via-teal-200 to-amber-200 text-slate-950 border border-white/60 shadow-md shadow-emerald-500/25 tracking-wide">
                               <Sparkles className="size-3 text-emerald-800 shrink-0" />
                               <span>पहिले पाच विद्यार्थी 100% मोफत</span>

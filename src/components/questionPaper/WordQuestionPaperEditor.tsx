@@ -2602,48 +2602,64 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
       <div ref={styleContainerRef} className="hidden" />
 
       {/* Top Main Action Bar */}
-      <div className="bg-slate-900 text-white px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-800 print:hidden shadow-md">
-        <div className="flex items-center justify-between gap-2.5 min-w-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="size-8 sm:size-9 rounded-xl bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-blue-400 shrink-0">
-              <FileText className="size-4 sm:size-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                <h2 className="font-bold text-xs sm:text-base text-white truncate max-w-[190px] sm:max-w-md">
-                  {paperTitle}
-                </h2>
-                <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shrink-0">
-                  <CheckCircle2 className="size-2.5 sm:size-3" /> {documentType === "homework" ? "Word गृहपाठ" : "Word फाईल"}
-                </span>
-                {hasUnsavedChanges && (
-                  <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1 shrink-0">
-                    <AlertCircle className="size-2.5 sm:size-3" /> न जतन केलेले बदल
-                  </span>
-                )}
+      <div
+        className={`bg-slate-900 text-white px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col md:flex-row md:items-center gap-2.5 sm:gap-3 border-b border-slate-800 print:hidden shadow-md ${
+          documentType === "homework" ? "md:justify-end" : "justify-between"
+        }`}
+      >
+        {(documentType !== "homework" || onClose) && (
+          <div
+            className={`flex items-center gap-2.5 min-w-0 ${
+              documentType === "homework" ? "justify-end md:hidden" : "justify-between"
+            }`}
+          >
+            {documentType !== "homework" && (
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="size-8 sm:size-9 rounded-xl bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-blue-400 shrink-0">
+                  <FileText className="size-4 sm:size-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <h2 className="font-bold text-xs sm:text-base text-white truncate max-w-[190px] sm:max-w-md">
+                      {paperTitle}
+                    </h2>
+                    <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shrink-0">
+                      <CheckCircle2 className="size-2.5 sm:size-3" /> Word फाईल
+                    </span>
+                    {hasUnsavedChanges && (
+                      <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1 shrink-0">
+                        <AlertCircle className="size-2.5 sm:size-3" /> न जतन केलेले बदल
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 hidden xs:block truncate max-w-sm sm:max-w-xl">
+                    {`${userRole === "admin" ? "सुपर ॲडमिन थेट संपादन" : "शिक्षक थेट संपादन"} • प्रश्नपत्रिकेत कुठेही क्लिक करून मजकूर बदला`}
+                  </p>
+                </div>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 hidden xs:block truncate max-w-sm sm:max-w-xl">
-                {documentType === "homework"
-                  ? "गृहपाठ थेट संपादन • मजकूर, कोष्टके, चित्रे व उत्तरे संपादित करा"
-                  : `${userRole === "admin" ? "सुपर ॲडमिन थेट संपादन" : "शिक्षक थेट संपादन"} • प्रश्नपत्रिकेत कुठेही क्लिक करून मजकूर बदला`}
-              </p>
-            </div>
-          </div>
+            )}
 
-          {/* Close button on mobile top-right */}
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="md:hidden p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-all cursor-pointer shrink-0"
-              title="बंद करा"
-            >
-              <X className="size-4" />
-            </button>
-          )}
-        </div>
+            {/* Close button on mobile top-right */}
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="md:hidden p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-all cursor-pointer shrink-0"
+                title="बंद करा"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
+        <div
+          className={`flex items-center justify-end ${
+            documentType === "homework"
+              ? "gap-1 sm:gap-2 flex-nowrap sm:flex-wrap"
+              : "gap-1.5 sm:gap-2 flex-wrap"
+          }`}
+        >
           {/* Mobile Screen Fit Toggle (hidden for homework) */}
           {documentType !== "homework" && (
             <button
@@ -2687,13 +2703,17 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           <button
             onClick={handleDownloadPdf}
             disabled={isDownloadingPdf}
-            className="px-3 sm:px-4 py-1.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+            className={`${
+              documentType === "homework"
+                ? "px-2 sm:px-4 py-1 sm:py-1.5 text-[11px] sm:text-xs gap-1 sm:gap-1.5 whitespace-nowrap"
+                : "px-3 sm:px-4 py-1.5 text-xs gap-1.5"
+            } bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-lg font-bold flex items-center transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50`}
             title="PDF डाऊनलोड करा"
           >
             {isDownloadingPdf ? (
-              <Loader2 className="size-3.5 animate-spin" />
+              <Loader2 className={`${documentType === "homework" ? "size-3 sm:size-3.5" : "size-3.5"} animate-spin`} />
             ) : (
-              <Download className="size-3.5" />
+              <Download className={documentType === "homework" ? "size-3 sm:size-3.5" : "size-3.5"} />
             )}
             <span>PDF</span>
           </button>
@@ -2703,15 +2723,17 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             <button
               onClick={handleSharePdfToWhatsApp}
               disabled={isSharingWhatsApp}
-              className="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+              className="px-2 sm:px-3.5 py-1 sm:py-1.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white rounded-lg text-[11px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 whitespace-nowrap transition-all shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
               title="हा Word गृहपाठ PDF स्वरूपात WhatsApp वर पाठवा"
             >
               {isSharingWhatsApp ? (
-                <Loader2 className="size-3.5 animate-spin" />
+                <Loader2 className="size-3 sm:size-3.5 animate-spin" />
               ) : (
-                <MessageCircle className="size-3.5" />
+                <MessageCircle className="size-3 sm:size-3.5" />
               )}
-              <span>WhatsApp वर पाठवा</span>
+              <span>
+                WhatsApp<span className="hidden sm:inline"> वर पाठवा</span>
+              </span>
             </button>
           )}
 
@@ -2719,10 +2741,10 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           {documentType === "homework" && (
             <button
               onClick={() => setShowHwHeaderModal(true)}
-              className="px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer active:scale-95"
+              className="px-2 sm:px-3.5 py-1 sm:py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg text-[11px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 whitespace-nowrap transition-all shadow-md cursor-pointer active:scale-95"
               title="शाळेचे नाव, केंद्र, तालुका, जिल्हा, वार, दिनांक इत्यादी माहिती भरा"
             >
-              <Edit3 className="size-3.5" />
+              <Edit3 className="size-3 sm:size-3.5" />
               <span>माहिती भरा</span>
             </button>
           )}
@@ -2731,10 +2753,18 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="px-3 sm:px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow cursor-pointer active:scale-95 disabled:opacity-50"
+            className={`${
+              documentType === "homework"
+                ? "px-2 sm:px-4 py-1 sm:py-1.5 text-[11px] sm:text-xs gap-1 sm:gap-1.5 whitespace-nowrap"
+                : "px-3 sm:px-4 py-1.5 text-xs gap-1.5"
+            } bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold flex items-center transition-all shadow cursor-pointer active:scale-95 disabled:opacity-50`}
             title="केलेले बदल जतन करा"
           >
-            {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+            {isSaving ? (
+              <Loader2 className={`${documentType === "homework" ? "size-3 sm:size-3.5" : "size-3.5"} animate-spin`} />
+            ) : (
+              <Save className={documentType === "homework" ? "size-3 sm:size-3.5" : "size-3.5"} />
+            )}
             <span>जतन करा</span>
           </button>
 
@@ -2878,9 +2908,9 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             </div>
           )}
 
-          {/* Floating Action Button directly on homework document page */}
+          {/* Floating Action Button directly on homework document page (desktop/tablet; mobile already has it in top bar) */}
           {documentType === "homework" && !loading && (
-            <div className="absolute top-3 right-4 z-30 print:hidden flex items-center gap-2">
+            <div className="hidden sm:flex absolute top-3 right-4 z-30 print:hidden items-center gap-2">
               <button
                 onClick={() => setShowHwHeaderModal(true)}
                 className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-blue-500/25 transition-all cursor-pointer hover:scale-105 active:scale-95 border border-white/20"
@@ -2896,8 +2926,8 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
             id="word-paper-container"
             ref={containerRef}
             className={`word-editor-paper bg-white shadow-xl rounded-sm text-slate-900 min-h-0 sm:min-h-[1123px] w-full outline-none transition-all print:shadow-none print:max-w-none print:w-full print:m-0 ${
-              mobileFitWidth ? "mobile-fit-active" : ""
-            }`}
+              mobileFitWidth && documentType !== "homework" ? "mobile-fit-active" : ""
+            } ${documentType === "homework" ? "homework-mobile-fit" : ""}`}
             style={{
               padding: "0",
               boxSizing: "border-box",
@@ -3154,6 +3184,61 @@ export const WordQuestionPaperEditor: React.FC<WordQuestionPaperEditorProps> = (
           .word-editor-paper.mobile-fit-active {
             max-width: 100% !important;
             overflow-x: hidden !important;
+          }
+
+          /* Clean, full-width responsive fit for Homework inside mobile frame */
+          .word-editor-paper.homework-mobile-fit {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-x: hidden !important;
+          }
+          .word-editor-paper.homework-mobile-fit .docx-wrapper,
+          .word-editor-paper.homework-mobile-fit .hw-paginated-wrapper {
+            zoom: 1 !important;
+            transform: none !important;
+            -moz-transform: none !important;
+            width: 100% !important;
+            padding: 4px 0 !important;
+            gap: 12px !important;
+          }
+          .word-editor-paper.homework-mobile-fit .homework-page-sheet,
+          .word-editor-paper.homework-mobile-fit .docx-wrapper > section.docx {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            min-height: auto !important;
+            padding: 14px 12px !important;
+            margin-bottom: 12px !important;
+            box-sizing: border-box !important;
+            overflow-x: hidden !important;
+          }
+          .word-editor-paper.homework-mobile-fit .homework-page-sheet table,
+          .word-editor-paper.homework-mobile-fit .docx-wrapper > section.docx table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: auto !important;
+          }
+          .word-editor-paper.homework-mobile-fit .homework-page-sheet col,
+          .word-editor-paper.homework-mobile-fit .docx-wrapper > section.docx col {
+            width: auto !important;
+          }
+          .word-editor-paper.homework-mobile-fit .homework-page-sheet td,
+          .word-editor-paper.homework-mobile-fit .homework-page-sheet th,
+          .word-editor-paper.homework-mobile-fit .homework-page-sheet p,
+          .word-editor-paper.homework-mobile-fit .homework-page-sheet span,
+          .word-editor-paper.homework-mobile-fit .docx-wrapper > section.docx td,
+          .word-editor-paper.homework-mobile-fit .docx-wrapper > section.docx th,
+          .word-editor-paper.homework-mobile-fit .docx-wrapper > section.docx p {
+            max-width: 100% !important;
+            overflow-wrap: break-word !important;
+            word-break: break-word !important;
+            white-space: normal !important;
+            box-sizing: border-box !important;
+          }
+          .word-editor-paper.homework-mobile-fit .homework-page-sheet img,
+          .word-editor-paper.homework-mobile-fit .docx-wrapper > section.docx img {
+            max-width: 100% !important;
+            height: auto !important;
           }
 
           /* Ensure entire VML question paper page fits flush and sharp on mobile */

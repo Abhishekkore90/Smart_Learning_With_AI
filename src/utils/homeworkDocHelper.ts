@@ -279,9 +279,11 @@ export const HOMEWORK_WHATSAPP_LINK =
   "https://chat.whatsapp.com/IUcC4XskSSQF8dFpQWUMb4?s=cl&p=a&mlu=4&ilr=4";
 export const HOMEWORK_WEBSITE_URL = "https://sgkbrainova.com";
 export const HOMEWORK_WEBSITE_LABEL = "sgkbrainova.com";
+export const HOMEWORK_APP_URL =
+  "https://play.google.com/store/apps/details?id=com.spark.sgkbrainova";
 
 /**
- * Adds clickable footer link badges for WhatsApp and Website on the LAST page of a homework PDF (ONE TIME ONLY).
+ * Adds clickable footer link badges for WhatsApp, Website, and App on the LAST page of a homework PDF (ONE TIME ONLY).
  * Ensures the interactive link annotations (URI actions) are registered in the PDF dictionary
  * so that tapping or clicking on the buttons in any PDF reader directly opens the URLs.
  */
@@ -300,10 +302,10 @@ export const addHomeworkFooterLinksToPdf = (pdf: jsPDF | null): jsPDF | null => 
     const pageHeight = pdf.internal.pageSize.getHeight();
 
     const margin = 28;
-    const gap = 14;
+    const gap = 10;
     const btnHeight = 22;
     const footerY = pageHeight - btnHeight - 12; // 12 pt padding from bottom edge
-    const btnWidth = (pageWidth - margin * 2 - gap) / 2;
+    const btnWidth = (pageWidth - margin * 2 - gap * 2) / 3;
 
     // Draw clean solid white background strip behind the footer bar to avoid any overlapping
     pdf.setFillColor(255, 255, 255);
@@ -325,8 +327,8 @@ export const addHomeworkFooterLinksToPdf = (pdf: jsPDF | null): jsPDF | null => 
     // WhatsApp text
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(9);
-    pdf.text("WhatsApp Group: Click to Join", waX + btnWidth / 2, waY + 14.5, {
+    pdf.setFontSize(8.5);
+    pdf.text("WhatsApp Group: Click to Join", waX + btnWidth / 2, waY + 14.2, {
       align: "center",
     });
 
@@ -335,7 +337,7 @@ export const addHomeworkFooterLinksToPdf = (pdf: jsPDF | null): jsPDF | null => 
       url: HOMEWORK_WHATSAPP_LINK,
     });
 
-    // 2. Website Button (Right)
+    // 2. Website Button (Middle)
     const webX = margin + btnWidth + gap;
     const webY = footerY;
     pdf.setFillColor(30, 58, 138); // #1e3a8a (Navy/Blue)
@@ -346,14 +348,35 @@ export const addHomeworkFooterLinksToPdf = (pdf: jsPDF | null): jsPDF | null => 
     // Website text
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(9);
-    pdf.text(`Website: ${HOMEWORK_WEBSITE_LABEL} (Click Here)`, webX + btnWidth / 2, webY + 14.5, {
+    pdf.setFontSize(8.5);
+    pdf.text(`Website: ${HOMEWORK_WEBSITE_LABEL}`, webX + btnWidth / 2, webY + 14.2, {
       align: "center",
     });
 
     // Interactive link annotation for Website
     pdf.link(webX, webY, btnWidth, btnHeight, {
       url: HOMEWORK_WEBSITE_URL,
+    });
+
+    // 3. App Download Button (Right)
+    const appX = margin + (btnWidth + gap) * 2;
+    const appY = footerY;
+    pdf.setFillColor(234, 88, 12); // #ea580c (Orange)
+    pdf.setDrawColor(194, 65, 12); // #c2410c border
+    pdf.setLineWidth(0.6);
+    pdf.roundedRect(appX, appY, btnWidth, btnHeight, 4, 4, "FD");
+
+    // App text
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(8.5);
+    pdf.text("Download App: Click Here", appX + btnWidth / 2, appY + 14.2, {
+      align: "center",
+    });
+
+    // Interactive link annotation for App
+    pdf.link(appX, appY, btnWidth, btnHeight, {
+      url: HOMEWORK_APP_URL,
     });
 
     // Restore originally active page
@@ -366,17 +389,20 @@ export const addHomeworkFooterLinksToPdf = (pdf: jsPDF | null): jsPDF | null => 
 };
 
 /**
- * Returns clean, attractive HTML for the clickable WhatsApp and Website footer bar
+ * Returns clean, attractive HTML for the clickable WhatsApp, Website, and App footer bar
  * to be embedded in printable / previewable homework worksheets.
  */
 export const getHomeworkFooterHtml = (): string => {
   return `
-    <div data-header-field="hw-footer-links" style="margin-top: 14px; padding-top: 10px; border-top: 1.5px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-family: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; width: 100%;">
-      <a href="${HOMEWORK_WHATSAPP_LINK}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background-color: #25D366; color: #ffffff !important; padding: 6px 12px; border-radius: 6px; font-size: 10pt; font-weight: 700; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-        <span>💬 WhatsApp ग्रुप जॉईन करा (Click Here)</span>
+    <div data-header-field="hw-footer-links" style="margin-top: 14px; padding-top: 10px; border-top: 1.5px dashed #cbd5e1; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-family: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; width: 100%;">
+      <a href="${HOMEWORK_WHATSAPP_LINK}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background-color: #25D366; color: #ffffff !important; padding: 6px 10px; border-radius: 6px; font-size: 9.5pt; font-weight: 700; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+        <span>💬 WhatsApp ग्रुप जॉईन करा</span>
       </a>
-      <a href="${HOMEWORK_WEBSITE_URL}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background-color: #1e3a8a; color: #ffffff !important; padding: 6px 12px; border-radius: 6px; font-size: 10pt; font-weight: 700; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-        <span>🌐 ${HOMEWORK_WEBSITE_LABEL} (सराव व माहिती)</span>
+      <a href="${HOMEWORK_WEBSITE_URL}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background-color: #1e3a8a; color: #ffffff !important; padding: 6px 10px; border-radius: 6px; font-size: 9.5pt; font-weight: 700; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+        <span>🌐 ${HOMEWORK_WEBSITE_LABEL}</span>
+      </a>
+      <a href="${HOMEWORK_APP_URL}" target="_blank" rel="noopener noreferrer" style="text-decoration: none; flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background-color: #ea580c; color: #ffffff !important; padding: 6px 10px; border-radius: 6px; font-size: 9.5pt; font-weight: 700; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+        <span>📱 ॲप डाउनलोड करा</span>
       </a>
     </div>
   `.trim();

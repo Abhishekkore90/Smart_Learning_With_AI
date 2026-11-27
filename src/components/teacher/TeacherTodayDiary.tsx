@@ -1951,24 +1951,10 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   return (
     <div className="w-full max-w-full space-y-6" ref={printRef} suppressHydrationWarning>
       {/* ═══ 3 Date Range Tabs (1 to 10, 11 to 20, 21 to 30/31) & Quick Date Selector ═══ */}
-      <div className="bg-white/95 backdrop-blur-md border-2 border-slate-200/90 p-5 sm:p-6 rounded-[2rem] shadow-md space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
-          <div className="flex items-center gap-2.5">
-            <div className="size-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-black">
-              <CalendarIcon className="size-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-slate-900 tracking-tight">तारीख कालावधी निवडा (SELECT DATE RANGE TAB)</h3>
-              <p className="text-[11px] text-slate-500 font-semibold">अ‍ॅडमिन प्रमाणे ३ तारीख टॅब व दिवस-निहाय पाठ टाचण व्ह्यू</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
-            {selectedMonth && (
-              <span className="text-xs font-black text-orange-700 bg-gradient-to-r from-orange-100 to-amber-100 px-4 py-1.5 rounded-full border border-orange-300/80 shadow-sm flex items-center gap-1.5">
-                <Sparkles className="size-3.5 text-orange-500" />
-                <span>{["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"][activeMonthNum - 1]} {activeYearNum}</span>
-              </span>
-            )}
+      <div className="bg-white/95 backdrop-blur-md border-2 border-slate-200/90 p-3 sm:p-4 rounded-2xl sm:rounded-3xl shadow-md space-y-2.5">
+        {(((todayDiary as any)?.pageUrl && !isStudent && profile?.role !== "student") ||
+          (todayDiary && !todayDiary.isHoliday)) && (
+          <div className="flex items-center justify-end gap-2 flex-wrap border-b border-slate-100 pb-3.5">
             {(todayDiary as any)?.pageUrl && !isStudent && profile?.role !== "student" && (
               <button
                 type="button"
@@ -2007,14 +1993,14 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               </>
             )}
           </div>
-        </div>
+        )}
 
         {/* 3 Tabs */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           {[
-            { id: "1 to 10", mr: "1 ते 10 तारीख", sub: "1 to 10 Date Range" },
-            { id: "11 to 20", mr: "11 ते 20 तारीख", sub: "11 to 20 Date Range" },
-            { id: "21 to 31", mr: "21 ते 30/31 तारीख", sub: "21 to 30/31 Date Range" },
+            { id: "1 to 10", mr: "1 ते 10 तारीख" },
+            { id: "11 to 20", mr: "11 ते 20 तारीख" },
+            { id: "21 to 31", mr: "21 ते 30/31 तारीख" },
           ].map((tab) => {
             const effectiveMonth = selectedMonth || (activeDate ? format(activeDate, "MM") : "06");
             const isFutureSlot = isSlotInFuture(effectiveMonth, tab.id);
@@ -2025,46 +2011,43 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 type="button"
                 disabled={isFutureSlot}
                 onClick={() => handleTabClick(tab.id)}
-                className={`py-4 px-4 sm:px-6 rounded-2xl text-xs sm:text-sm font-black transition-all duration-300 flex flex-col items-center justify-center gap-1 relative overflow-hidden ${
+                className={`py-2 px-2 sm:px-4 rounded-xl text-[11px] sm:text-sm font-black transition-all duration-300 flex items-center justify-center relative overflow-hidden ${
                   isFutureSlot
                     ? "bg-slate-100/70 text-slate-400 border-2 border-slate-200/70 cursor-not-allowed opacity-60"
                     : isActive
-                    ? "bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-xl shadow-orange-500/30 scale-[1.02] border-2 border-amber-300 cursor-pointer"
+                    ? "bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-md shadow-orange-500/25 border-2 border-amber-300 cursor-pointer"
                     : "bg-slate-50/80 hover:bg-slate-100 text-slate-700 border-2 border-slate-200/80 hover:border-orange-300 cursor-pointer"
                 }`}
                 title={isFutureSlot ? "हा कालावधी नियोजित तारखेवर उपलब्ध होईल (लवकरच)" : undefined}
               >
                 {isActive && !isFutureSlot && (
-                  <div className="absolute top-0 right-0 size-16 bg-white/20 rounded-full blur-md pointer-events-none" />
+                  <div className="absolute top-0 right-0 size-12 bg-white/20 rounded-full blur-md pointer-events-none" />
                 )}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   {isFutureSlot ? (
-                    <Clock className="size-4 text-slate-400" />
+                    <Clock className="size-3.5 text-slate-400 shrink-0" />
                   ) : (
-                    <Sparkles className={`size-4 ${isActive ? "text-amber-200 animate-pulse" : "text-slate-400"}`} />
+                    <Sparkles className={`size-3.5 shrink-0 ${isActive ? "text-amber-200 animate-pulse" : "text-slate-400"}`} />
                   )}
-                  <span className="text-sm sm:text-base font-extrabold">{tab.mr}</span>
+                  <span className="font-extrabold truncate">{tab.mr}</span>
                   {isFutureSlot && (
-                    <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold ml-1">
+                    <span className="hidden sm:inline text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold ml-1">
                       लवकरच
                     </span>
                   )}
                 </div>
-                <span className={`text-[11px] font-bold ${isFutureSlot ? "text-slate-400" : isActive ? "text-orange-100" : "text-slate-400"}`}>
-                  {tab.sub}
-                </span>
               </button>
             );
           })}
         </div>
 
         {/* Quick Date Selector Pills */}
-        <div className="pt-2 space-y-2.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-bold text-slate-600">
-            <p className="flex items-center gap-1.5 text-slate-700 font-extrabold">
-              <span>खालील तारखेवर क्लिक करून थेट त्या तारखेचे पाठ टाचण पहा:</span>
+        <div className="pt-0.5 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-600">
+            <p className="text-[11px] sm:text-xs text-slate-700 font-extrabold">
+              तारीख निवडा:
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 type="button"
                 onClick={() => {
@@ -2075,22 +2058,22 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                   }
                   setIsAllDaysMode(true);
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all flex items-center gap-1 cursor-pointer shadow-sm ${
                   isAllDaysMode
                     ? "bg-slate-950 text-amber-300 border border-amber-400 ring-2 ring-orange-500/40"
                     : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
                 }`}
               >
-                {!hasFullAccess ? <Lock className="size-3.5 text-amber-300" /> : <FileText className="size-3.5" />}
-                <span>१० दिवसांची फाईल पहा (All Days File)</span>
-                {!hasFullAccess && <span className="bg-amber-400/20 text-amber-200 px-1.5 py-0.5 rounded text-[10px]">₹१९९</span>}
+                {!hasFullAccess ? <Lock className="size-3 text-amber-300" /> : <FileText className="size-3" />}
+                <span>१० दिवसांची फाईल पहा</span>
+                {!hasFullAccess && <span className="bg-amber-400/20 text-amber-200 px-1 py-0.5 rounded text-[9px]">₹१९९</span>}
               </button>
-              <span className="text-[11px] font-black text-rose-500 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
+              <span className="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
                 (रविवार व कस्टम सुट्टी)
               </span>
             </div>
           </div>
-          <div className="grid grid-cols-6 sm:grid-cols-11 gap-2 w-full pt-1">
+          <div className="grid grid-cols-6 sm:grid-cols-11 gap-1.5 w-full">
             {/* All Days Pill */}
             <button
               type="button"
@@ -2102,17 +2085,17 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 }
                 setIsAllDaysMode(true);
               }}
-              className={`py-2.5 px-1.5 rounded-2xl text-xs font-black transition-all flex flex-col items-center justify-center cursor-pointer shadow-sm ${
+              className={`py-1.5 px-1 rounded-xl text-xs font-black transition-all flex flex-col items-center justify-center cursor-pointer shadow-sm ${
                 isAllDaysMode
-                  ? "bg-slate-950 text-amber-300 shadow-xl ring-4 ring-orange-500/40 scale-105 border-2 border-amber-400"
+                  ? "bg-slate-950 text-amber-300 shadow-lg ring-2 ring-orange-500/40 scale-105 border-2 border-amber-400"
                   : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white border-2 border-orange-400"
               }`}
               title="निवडलेल्या १० दिवसांची संपूर्ण फाईल व सर्व पाठ टाचण तक्ता पहा"
             >
-              <span className="text-xs font-black leading-none flex items-center gap-0.5">
-                {!hasFullAccess ? <Lock className="size-3 text-amber-200" /> : <Sparkles className="size-3 text-amber-200" />} All Days
+              <span className="text-[11px] font-black leading-none flex items-center gap-0.5">
+                {!hasFullAccess ? <Lock className="size-2.5 text-amber-200" /> : <Sparkles className="size-2.5 text-amber-200" />} All Days
               </span>
-              <span className="text-[9px] font-extrabold mt-1 uppercase opacity-90">
+              <span className="text-[9px] font-extrabold mt-0.5 uppercase opacity-90">
                 {!hasFullAccess ? "₹१९९ अनलॉक" : "(१० दिवस)"}
               </span>
             </button>
@@ -2142,11 +2125,11 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                     setIsAllDaysMode(false);
                     setActiveDate(dObj.dateObj);
                   }}
-                  className={`py-2.5 px-2 rounded-2xl text-xs font-black transition-all flex flex-col items-center justify-center cursor-pointer shadow-sm ${
+                  className={`py-1.5 px-1.5 rounded-xl text-xs font-black transition-all flex flex-col items-center justify-center cursor-pointer shadow-sm ${
                     isFutureDay
                       ? "bg-slate-100/60 text-slate-400 border-2 border-slate-200/60 cursor-not-allowed opacity-50"
                       : isSelected
-                      ? "bg-slate-950 text-amber-300 shadow-xl ring-4 ring-orange-500/40 scale-105 border-2 border-amber-400"
+                      ? "bg-slate-950 text-amber-300 shadow-lg ring-2 ring-orange-500/40 scale-105 border-2 border-amber-400"
                       : isHolidayPill
                       ? "bg-rose-50 text-rose-600 border-2 border-rose-200 hover:bg-rose-100"
                       : "bg-slate-100/90 text-slate-800 hover:bg-orange-500 hover:text-white border-2 border-slate-200/80 hover:border-orange-500"
@@ -2159,8 +2142,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                       : `${dObj.displayDate} (${dObj.dayName})`
                   }
                 >
-                  <span className="text-base font-black leading-none">{dObj.dayNum}</span>
-                  <span className={`text-[10px] font-extrabold mt-1 uppercase ${
+                  <span className="text-sm font-black leading-none">{dObj.dayNum}</span>
+                  <span className={`text-[9px] font-extrabold mt-0.5 uppercase ${
                     isFutureDay
                       ? "text-slate-400 flex items-center gap-0.5"
                       : isSelected
